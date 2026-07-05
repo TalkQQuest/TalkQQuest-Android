@@ -140,6 +140,8 @@ class LoginViewModel @Inject constructor(
 ) : ViewModel() { ... }
 ```
 
+> **참고: `feature/home`이 이 흐름의 동작하는 예시입니다.** Api → Repository → di → ViewModel(UiState) → Screen(로딩/에러/성공 + Preview)까지 실제로 구현돼 있으니, 화면을 서버에 붙일 때 그 구조를 그대로 복사해서 시작하세요. 화면은 `Screen(viewModel)`(연결)과 `Screen(uiState, onEvent)`(그리기)로 나눠 서버 없이 Preview로 검증할 수 있게 돼 있습니다.
+
 **네비게이션 route(경로) 이름**은 화면 이름을 소문자 스네이크 케이스로 씁니다.
 ```kotlin
 object Screen {

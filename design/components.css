@@ -1,0 +1,2990 @@
+/* 컴포넌트 */
+
+box-sizing: border-box;
+
+position: relative;
+width: 9194px;
+height: 2111px;
+
+background: #353535;
+border: 1px solid rgba(0, 0, 0, 0.1);
+border-radius: 2px;
+
+
+/* Status bar
+
+System bars display important information such as battery level, the time, and notification alerts, and provide direct device interaction from anywhere.
+*/
+
+position: relative;
+width: 452px;
+height: 89px;
+left: 201px;
+top: 505px;
+
+border-radius: 16px;
+
+
+/* extended=false
+
+System bars display important information such as battery level, the time, and notification alerts, and provide direct device interaction from anywhere.
+*/
+
+/* 오토레이아웃 */
+display: flex;
+flex-direction: row;
+align-items: flex-start;
+padding: 0px;
+
+position: absolute;
+height: 40px;
+left: 20px;
+right: 20px;
+top: 20px;
+
+
+
+/* Status */
+
+/* 오토레이아웃 */
+display: flex;
+flex-direction: row;
+justify-content: space-between;
+align-items: center;
+padding: 0px 16px;
+gap: 4px;
+isolation: isolate;
+
+width: 412px;
+height: 40px;
+
+
+/* 내부 오토레이아웃 */
+flex: none;
+order: 0;
+flex-grow: 1;
+
+
+/* Time & Date */
+
+/* 오토레이아웃 */
+display: flex;
+flex-direction: row;
+align-items: center;
+padding: 0px;
+gap: 8px;
+
+margin: 0 auto;
+width: 128px;
+height: 40px;
+
+
+/* 내부 오토레이아웃 */
+flex: none;
+order: 0;
+align-self: stretch;
+flex-grow: 0;
+z-index: 0;
+
+
+/* 9:30 */
+
+width: 29px;
+height: 20px;
+
+/* AOSP/Body/Medium */
+font-family: 'Roboto';
+font-style: normal;
+font-weight: 400;
+font-size: 14px;
+line-height: 20px;
+/* 상자 높이와 동일 또는 143% */
+display: flex;
+align-items: center;
+letter-spacing: 0.25px;
+
+color: #171D1B;
+
+mix-blend-mode: normal;
+
+/* 내부 오토레이아웃 */
+flex: none;
+order: 0;
+flex-grow: 0;
+
+
+/* Tue, Jul 19 */
+
+display: none;
+width: 70px;
+height: 20px;
+
+/* AOSP/Body/Medium */
+font-family: 'Roboto';
+font-style: normal;
+font-weight: 400;
+font-size: 14px;
+line-height: 20px;
+/* 상자 높이와 동일 또는 143% */
+display: flex;
+align-items: center;
+letter-spacing: 0.25px;
+
+/* AOSP/black */
+color: #000000;
+
+mix-blend-mode: normal;
+
+/* 내부 오토레이아웃 */
+flex: none;
+order: 1;
+flex-grow: 0;
+
+
+/* Status Icons */
+
+/* 오토레이아웃 */
+display: flex;
+flex-direction: row;
+justify-content: flex-end;
+align-items: center;
+padding: 0px;
+
+margin: 0 auto;
+width: 46px;
+height: 52px;
+
+
+/* 내부 오토레이아웃 */
+flex: none;
+order: 1;
+flex-grow: 0;
+z-index: 1;
+
+
+/* Wi-Fi Network */
+
+/* 오토레이아웃 */
+display: flex;
+flex-direction: row;
+align-items: flex-start;
+padding: 0px;
+
+width: 30px;
+height: 16px;
+
+
+/* 내부 오토레이아웃 */
+flex: none;
+order: 0;
+flex-grow: 0;
+
+
+/* Wifi */
+
+width: 16px;
+height: 16px;
+
+
+/* 내부 오토레이아웃 */
+flex: none;
+order: 0;
+flex-grow: 0;
+margin: 0px -2px;
+
+
+/* signal */
+
+position: absolute;
+left: 4.17%;
+right: 4.17%;
+top: 18.5%;
+bottom: 16.67%;
+
+background: #171D1B;
+
+
+/* Cellular signal */
+
+width: 16px;
+height: 16px;
+
+
+/* 내부 오토레이아웃 */
+flex: none;
+order: 1;
+flex-grow: 0;
+
+
+/* Vector */
+
+position: absolute;
+left: 8.33%;
+right: 8.33%;
+top: 8.33%;
+bottom: 8.33%;
+
+background: #171D1B;
+
+
+/* Battery */
+
+/* 오토레이아웃 */
+display: flex;
+flex-direction: row;
+align-items: center;
+padding: 0px;
+gap: 2px;
+
+width: 16px;
+height: 52px;
+
+
+/* 내부 오토레이아웃 */
+flex: none;
+order: 1;
+flex-grow: 0;
+
+
+/* Battery */
+
+width: 16px;
+height: 16px;
+
+
+/* 내부 오토레이아웃 */
+flex: none;
+order: 0;
+flex-grow: 0;
+
+
+/* Base */
+
+position: absolute;
+width: 8.5px;
+height: 14.17px;
+left: calc(50% - 8.5px/2);
+top: calc(50% - 14.17px/2 + 0px);
+
+background: #171D1B;
+
+
+/* Until 10:00 AM */
+
+display: none;
+width: 95px;
+height: 20px;
+
+/* AOSP/Body/Medium */
+font-family: 'Roboto';
+font-style: normal;
+font-weight: 400;
+font-size: 14px;
+line-height: 20px;
+/* 상자 높이와 동일 또는 143% */
+display: flex;
+align-items: center;
+letter-spacing: 0.25px;
+
+/* AOSP/black */
+color: #000000;
+
+mix-blend-mode: normal;
+
+/* 내부 오토레이아웃 */
+flex: none;
+order: 1;
+flex-grow: 0;
+
+
+/* Camera */
+
+position: absolute;
+width: 24px;
+height: 24px;
+left: calc(50% - 24px/2);
+top: 8px;
+
+
+/* 내부 오토레이아웃 */
+flex: none;
+order: 2;
+flex-grow: 0;
+z-index: 2;
+
+
+/* Camera */
+
+position: absolute;
+width: 24px;
+height: 24px;
+left: calc(50% - 24px/2);
+top: calc(50% - 24px/2);
+
+background: #2E2E2E;
+border-radius: 100px;
+
+
+/* Navigation bars
+
+System bars display important information such as battery level, the time, and notification alerts, and provide direct device interaction from anywhere.
+
+___
+Navigation bars provide a way for users to navigate their device through back, home, and overview actions through gesture or button variants.
+*/
+
+position: relative;
+width: 452px;
+height: 154px;
+left: 192px;
+top: 300px;
+
+border-radius: 16px;
+
+
+/* Nav type=Buttons - 3 Button Nav
+
+System bars display important information such as battery level, the time, and notification alerts, and provide direct device interaction from anywhere.
+
+___
+Navigation bars provide a way for users to navigate their device through back, home, and overview actions through gesture or button variants.
+*/
+
+/* 오토레이아웃 */
+display: flex;
+flex-direction: row;
+flex-wrap: wrap;
+justify-content: center;
+align-items: center;
+align-content: center;
+padding: 2px 0px;
+gap: 64px;
+
+position: absolute;
+width: 412px;
+left: calc(50% - 412px/2);
+top: 30px;
+bottom: 76px;
+
+mix-blend-mode: normal;
+
+
+/* first button */
+
+width: 44px;
+height: 44px;
+
+
+/* 내부 오토레이아웃 */
+flex: none;
+order: 0;
+flex-grow: 0;
+
+
+/* back */
+
+position: absolute;
+left: 33.52%;
+right: 34.66%;
+top: 32.51%;
+bottom: 31.13%;
+
+background: #171D1B;
+
+
+/* second button */
+
+width: 44px;
+height: 44px;
+
+
+/* 내부 오토레이아웃 */
+flex: none;
+order: 1;
+flex-grow: 0;
+
+
+/* home */
+
+position: absolute;
+left: 34.09%;
+right: 29.55%;
+top: 31.82%;
+bottom: 31.82%;
+
+background: #171D1B;
+border-radius: 100px;
+
+
+/* third button */
+
+width: 44px;
+height: 44px;
+
+
+/* 내부 오토레이아웃 */
+flex: none;
+order: 2;
+flex-grow: 0;
+
+
+/* overview */
+
+position: absolute;
+width: 16px;
+height: 16px;
+left: 14.3px;
+top: 14.3px;
+
+background: #171D1B;
+border-radius: 2px;
+
+
+/* 하단 네비게이션 */
+
+box-sizing: border-box;
+
+position: relative;
+width: 401px;
+height: 422px;
+left: 217px;
+top: 999px;
+
+border: 1px dashed #9747FF;
+border-radius: 5px;
+
+
+/* Property 1=아카이브 */
+
+box-sizing: border-box;
+
+position: absolute;
+width: 361px;
+height: 64px;
+left: 20px;
+top: 43px;
+
+background: rgba(255, 255, 255, 0.8);
+border: 1px solid rgba(255, 255, 255, 0.3);
+box-shadow: 0px -2px 12px rgba(0, 0, 0, 0.06);
+backdrop-filter: blur(10px);
+/* 참고: 배경 필터는 최소한의 브라우저만 지원합니다 */
+border-radius: 36px;
+
+
+/* chip */
+
+box-sizing: border-box;
+
+position: absolute;
+width: 86px;
+height: 44px;
+left: 12px;
+top: 10px;
+
+background: rgba(255, 255, 255, 0.28);
+border: 1px solid rgba(255, 255, 255, 0.4);
+box-shadow: 0px 6px 24px rgba(114, 100, 248, 0.14);
+backdrop-filter: blur(10px);
+/* 참고: 배경 필터는 최소한의 브라우저만 지원합니다 */
+border-radius: 22px;
+
+
+/* Frame 227 */
+
+/* 오토레이아웃 */
+display: flex;
+flex-direction: row;
+align-items: center;
+padding: 0px;
+gap: 40px;
+
+position: absolute;
+width: 296px;
+height: 44px;
+left: calc(50% - 296px/2 + 0.5px);
+top: 10px;
+
+
+
+/* archive */
+
+width: 44px;
+height: 44px;
+
+
+/* 내부 오토레이아웃 */
+flex: none;
+order: 0;
+flex-grow: 0;
+
+
+/* Vector */
+
+position: absolute;
+left: 22.73%;
+right: 22.73%;
+top: 25.76%;
+bottom: 25.76%;
+
+/* Purple/600 MAIN */
+background: #6353F0;
+/* Purple/600 MAIN */
+border: 2px solid #6353F0;
+
+
+/* home */
+
+width: 44px;
+height: 44px;
+
+
+/* 내부 오토레이아웃 */
+flex: none;
+order: 1;
+flex-grow: 0;
+
+
+/* Icon */
+
+position: absolute;
+left: 22.44%;
+right: 24.72%;
+top: 22.73%;
+bottom: 22.73%;
+
+/* Gray/300 */
+background: #CBD5E1;
+/* Gray/300 */
+border: 2px solid #CBD5E1;
+
+
+/* people */
+
+width: 44px;
+height: 44px;
+
+
+/* 내부 오토레이아웃 */
+flex: none;
+order: 2;
+flex-grow: 0;
+
+
+/* Icon */
+
+position: absolute;
+left: 18.86%;
+right: 21.14%;
+top: 30.55%;
+bottom: 23.73%;
+
+/* Gray/300 */
+background: #CBD5E1;
+/* Gray/300 */
+border: 2px solid #CBD5E1;
+
+
+/* profile */
+
+width: 44px;
+height: 44px;
+
+
+/* 내부 오토레이아웃 */
+flex: none;
+order: 3;
+flex-grow: 0;
+
+
+/* Vector */
+
+position: absolute;
+left: 22.73%;
+right: 22.73%;
+top: 22.73%;
+bottom: 22.73%;
+
+/* Gray/300 */
+background: #CBD5E1;
+/* Gray/300 */
+border: 2px solid #CBD5E1;
+
+
+/* Property 1=홈 */
+
+box-sizing: border-box;
+
+position: absolute;
+width: 361px;
+height: 64px;
+left: 20px;
+top: 135px;
+
+background: rgba(255, 255, 255, 0.8);
+border: 1px solid rgba(255, 255, 255, 0.3);
+box-shadow: 0px -2px 12px rgba(0, 0, 0, 0.06);
+backdrop-filter: blur(10px);
+/* 참고: 배경 필터는 최소한의 브라우저만 지원합니다 */
+border-radius: 36px;
+
+
+/* chip */
+
+box-sizing: border-box;
+
+position: absolute;
+width: 92px;
+height: 44px;
+left: 93px;
+top: 10px;
+
+background: rgba(255, 255, 255, 0.28);
+border: 1px solid rgba(255, 255, 255, 0.4);
+box-shadow: 0px 6px 24px rgba(114, 100, 248, 0.14);
+backdrop-filter: blur(10px);
+/* 참고: 배경 필터는 최소한의 브라우저만 지원합니다 */
+border-radius: 22px;
+
+
+/* Frame 224 */
+
+/* 오토레이아웃 */
+display: flex;
+flex-direction: row;
+align-items: center;
+padding: 0px;
+gap: 40px;
+
+position: absolute;
+width: 296px;
+height: 44px;
+left: calc(50% - 296px/2 + 0.5px);
+top: 10px;
+
+
+
+/* archive */
+
+width: 44px;
+height: 44px;
+
+
+/* 내부 오토레이아웃 */
+flex: none;
+order: 0;
+flex-grow: 0;
+
+
+/* Vector */
+
+position: absolute;
+left: 22.73%;
+right: 22.73%;
+top: 25.76%;
+bottom: 25.76%;
+
+/* Gray/300 */
+background: #CBD5E1;
+/* Gray/300 */
+border: 2px solid #CBD5E1;
+
+
+/* home */
+
+width: 44px;
+height: 44px;
+
+
+/* 내부 오토레이아웃 */
+flex: none;
+order: 1;
+flex-grow: 0;
+
+
+/* Icon */
+
+position: absolute;
+left: 22.44%;
+right: 24.72%;
+top: 22.73%;
+bottom: 22.73%;
+
+/* Purple/500 */
+background: #7264F8;
+/* Purple/500 */
+border: 2px solid #7264F8;
+
+
+/* people */
+
+width: 44px;
+height: 44px;
+
+
+/* 내부 오토레이아웃 */
+flex: none;
+order: 2;
+flex-grow: 0;
+
+
+/* Icon */
+
+position: absolute;
+left: 18.86%;
+right: 21.14%;
+top: 30.55%;
+bottom: 23.73%;
+
+/* Gray/300 */
+background: #CBD5E1;
+/* Gray/300 */
+border: 2px solid #CBD5E1;
+
+
+/* profile */
+
+width: 44px;
+height: 44px;
+
+
+/* 내부 오토레이아웃 */
+flex: none;
+order: 3;
+flex-grow: 0;
+
+
+/* Vector */
+
+position: absolute;
+left: 22.73%;
+right: 22.73%;
+top: 22.73%;
+bottom: 22.73%;
+
+/* Gray/300 */
+background: #CBD5E1;
+/* Gray/300 */
+border: 2px solid #CBD5E1;
+
+
+/* Property 1=모임 */
+
+box-sizing: border-box;
+
+position: absolute;
+width: 361px;
+height: 64px;
+left: 20px;
+top: 214px;
+
+background: rgba(255, 255, 255, 0.8);
+border: 1px solid rgba(255, 255, 255, 0.3);
+box-shadow: 0px -2px 12px rgba(0, 0, 0, 0.06);
+backdrop-filter: blur(10px);
+/* 참고: 배경 필터는 최소한의 브라우저만 지원합니다 */
+border-radius: 36px;
+
+
+/* chip */
+
+box-sizing: border-box;
+
+position: absolute;
+width: 92px;
+height: 44px;
+left: 176px;
+top: 10px;
+
+background: rgba(255, 255, 255, 0.28);
+border: 1px solid rgba(255, 255, 255, 0.4);
+box-shadow: 0px 6px 24px rgba(114, 100, 248, 0.14);
+backdrop-filter: blur(10px);
+/* 참고: 배경 필터는 최소한의 브라우저만 지원합니다 */
+border-radius: 22px;
+
+
+/* Frame 225 */
+
+/* 오토레이아웃 */
+display: flex;
+flex-direction: row;
+align-items: center;
+padding: 0px;
+gap: 40px;
+
+position: absolute;
+width: 296px;
+height: 44px;
+left: calc(50% - 296px/2 + 0.5px);
+top: 10px;
+
+
+
+/* archive */
+
+width: 44px;
+height: 44px;
+
+
+/* 내부 오토레이아웃 */
+flex: none;
+order: 0;
+flex-grow: 0;
+
+
+/* Vector */
+
+position: absolute;
+left: 22.73%;
+right: 22.73%;
+top: 25.76%;
+bottom: 25.76%;
+
+/* Gray/300 */
+background: #CBD5E1;
+/* Gray/300 */
+border: 2px solid #CBD5E1;
+
+
+/* home */
+
+width: 44px;
+height: 44px;
+
+
+/* 내부 오토레이아웃 */
+flex: none;
+order: 1;
+flex-grow: 0;
+
+
+/* Icon */
+
+position: absolute;
+left: 22.44%;
+right: 24.72%;
+top: 22.73%;
+bottom: 22.73%;
+
+/* Gray/300 */
+background: #CBD5E1;
+/* Gray/300 */
+border: 2px solid #CBD5E1;
+
+
+/* people */
+
+width: 44px;
+height: 44px;
+
+
+/* 내부 오토레이아웃 */
+flex: none;
+order: 2;
+flex-grow: 0;
+
+
+/* Icon */
+
+position: absolute;
+left: 18.86%;
+right: 21.14%;
+top: 30.55%;
+bottom: 23.73%;
+
+/* Purple/600 MAIN */
+background: #6353F0;
+/* Purple/600 MAIN */
+border: 2px solid #6353F0;
+
+
+/* profile */
+
+width: 44px;
+height: 44px;
+
+
+/* 내부 오토레이아웃 */
+flex: none;
+order: 3;
+flex-grow: 0;
+
+
+/* Vector */
+
+position: absolute;
+left: 22.73%;
+right: 22.73%;
+top: 22.73%;
+bottom: 22.73%;
+
+/* Gray/300 */
+background: #CBD5E1;
+/* Gray/300 */
+border: 2px solid #CBD5E1;
+
+
+/* Property 1=프로필 */
+
+box-sizing: border-box;
+
+position: absolute;
+width: 361px;
+height: 64px;
+left: 20px;
+top: 298px;
+
+background: rgba(255, 255, 255, 0.8);
+border: 1px solid rgba(255, 255, 255, 0.3);
+box-shadow: 0px -2px 12px rgba(0, 0, 0, 0.06);
+backdrop-filter: blur(10px);
+/* 참고: 배경 필터는 최소한의 브라우저만 지원합니다 */
+border-radius: 36px;
+
+
+/* chip */
+
+box-sizing: border-box;
+
+position: absolute;
+width: 92px;
+height: 44px;
+left: 261px;
+top: 10px;
+
+background: rgba(255, 255, 255, 0.28);
+border: 1px solid rgba(255, 255, 255, 0.4);
+box-shadow: 0px 6px 24px rgba(114, 100, 248, 0.14);
+backdrop-filter: blur(10px);
+/* 참고: 배경 필터는 최소한의 브라우저만 지원합니다 */
+border-radius: 22px;
+
+
+/* Frame 226 */
+
+/* 오토레이아웃 */
+display: flex;
+flex-direction: row;
+align-items: center;
+padding: 0px;
+gap: 40px;
+
+position: absolute;
+width: 296px;
+height: 44px;
+left: calc(50% - 296px/2 + 0.5px);
+top: 10px;
+
+
+
+/* archive */
+
+width: 44px;
+height: 44px;
+
+
+/* 내부 오토레이아웃 */
+flex: none;
+order: 0;
+flex-grow: 0;
+
+
+/* Vector */
+
+position: absolute;
+left: 22.73%;
+right: 22.73%;
+top: 25.76%;
+bottom: 25.76%;
+
+/* Gray/300 */
+background: #CBD5E1;
+/* Gray/300 */
+border: 2px solid #CBD5E1;
+
+
+/* home */
+
+width: 44px;
+height: 44px;
+
+
+/* 내부 오토레이아웃 */
+flex: none;
+order: 1;
+flex-grow: 0;
+
+
+/* Icon */
+
+position: absolute;
+left: 22.44%;
+right: 24.72%;
+top: 22.73%;
+bottom: 22.73%;
+
+/* Gray/300 */
+background: #CBD5E1;
+/* Gray/300 */
+border: 2px solid #CBD5E1;
+
+
+/* people */
+
+width: 44px;
+height: 44px;
+
+
+/* 내부 오토레이아웃 */
+flex: none;
+order: 2;
+flex-grow: 0;
+
+
+/* Icon */
+
+position: absolute;
+left: 18.86%;
+right: 21.14%;
+top: 30.55%;
+bottom: 23.73%;
+
+/* Gray/300 */
+background: #CBD5E1;
+/* Gray/300 */
+border: 2px solid #CBD5E1;
+
+
+/* profile */
+
+width: 44px;
+height: 44px;
+
+
+/* 내부 오토레이아웃 */
+flex: none;
+order: 3;
+flex-grow: 0;
+
+
+/* Vector */
+
+position: absolute;
+left: 22.73%;
+right: 22.73%;
+top: 22.73%;
+bottom: 22.73%;
+
+/* Gray/200 */
+background: #E2E8F0;
+
+
+/* 네이버 로고 */
+
+box-sizing: border-box;
+
+/* 오토레이아웃 */
+display: flex;
+flex-direction: row;
+align-items: center;
+padding: 32px;
+gap: 32px;
+
+position: relative;
+width: 132px;
+height: 84px;
+left: 727px;
+top: 273px;
+
+background: #03C75A;
+/* component */
+border: 1px dashed #9747FF;
+border-radius: 5px;
+
+
+/* size=sm */
+
+width: 16px;
+height: 16px;
+
+
+/* 내부 오토레이아웃 */
+flex: none;
+order: 0;
+flex-grow: 0;
+
+
+/* Path */
+
+position: absolute;
+left: 0%;
+right: 0%;
+top: 0%;
+bottom: 0%;
+
+background: #FFFFFF;
+transform: matrix(1, 0, 0, -1, 0, 0);
+
+
+/* size=md */
+
+width: 20px;
+height: 20px;
+
+
+/* 내부 오토레이아웃 */
+flex: none;
+order: 1;
+flex-grow: 0;
+
+
+/* Path */
+
+position: absolute;
+left: 0%;
+right: 0%;
+top: 0%;
+bottom: 0%;
+
+background: #FFFFFF;
+transform: matrix(1, 0, 0, -1, 0, 0);
+
+
+/* 카카오 로고 */
+
+box-sizing: border-box;
+
+/* 오토레이아웃 */
+display: flex;
+flex-direction: row;
+align-items: center;
+padding: 32px;
+gap: 32px;
+
+position: relative;
+width: 194px;
+height: 100px;
+left: 704px;
+top: 405px;
+
+background: #FEE500;
+/* component */
+border: 1px dashed #9747FF;
+border-radius: 4px;
+
+
+/* Size=sm */
+
+width: 12px;
+height: 12px;
+
+
+/* 내부 오토레이아웃 */
+flex: none;
+order: 0;
+flex-grow: 0;
+
+
+/* Path */
+
+position: absolute;
+left: 0%;
+right: 0%;
+top: 3.33%;
+bottom: 3.33%;
+
+background: #000000;
+
+
+/* Size=md */
+
+width: 18px;
+height: 18px;
+
+
+/* 내부 오토레이아웃 */
+flex: none;
+order: 1;
+flex-grow: 0;
+
+
+/* Path */
+
+position: absolute;
+left: 0%;
+right: 0%;
+top: 3.33%;
+bottom: 3.33%;
+
+background: #000000;
+
+
+/* Size=lg */
+
+width: 36px;
+height: 36px;
+
+
+/* 내부 오토레이아웃 */
+flex: none;
+order: 2;
+flex-grow: 0;
+
+
+/* Path */
+
+position: absolute;
+left: 0%;
+right: 0%;
+top: 3.33%;
+bottom: 3.33%;
+
+background: #000000;
+
+
+/* System/Keyboards/iPhone/Light/Numbers */
+
+position: relative;
+left: 11.01%;
+right: 84.75%;
+top: 10.99%;
+bottom: 75.23%;
+
+background: #CCCED3;
+
+
+/* Background */
+
+position: absolute;
+left: 0%;
+right: 0%;
+top: 0%;
+bottom: 0%;
+
+
+
+/* Background */
+
+position: absolute;
+left: 0px;
+right: 0px;
+top: 0px;
+bottom: 0px;
+
+background: linear-gradient(0deg, rgba(127, 127, 127, 0.3), rgba(127, 127, 127, 0.3)), linear-gradient(0deg, #DEDEDE, #DEDEDE), linear-gradient(0deg, rgba(235, 240, 247, 0.5), rgba(235, 240, 247, 0.5)), rgba(255, 255, 255, 0.5);
+background-blend-mode: normal, color-burn, normal, normal;
+backdrop-filter: blur(26.5761px);
+/* 참고: 배경 필터는 최소한의 브라우저만 지원합니다 */
+
+
+/* Home Indicator */
+
+position: absolute;
+left: 0%;
+right: 0%;
+top: 88.32%;
+bottom: 0%;
+
+
+
+/* Home Indicator */
+
+position: absolute;
+width: 134px;
+height: 5px;
+left: calc(50% - 134px/2);
+bottom: 8px;
+
+background: #000000;
+border-radius: 100px;
+
+
+/* Keys */
+
+position: absolute;
+left: 1.03%;
+right: 1.03%;
+top: 2.06%;
+bottom: 26.8%;
+
+
+
+/* Delete */
+
+position: absolute;
+width: 24px;
+height: 17.99px;
+left: calc(50% - 24px/2 + 132.07px);
+top: calc(50% - 17.99px/2 + 79.5px);
+
+background: #000000;
+
+
+/* Exclude */
+
+position: absolute;
+width: 24px;
+height: 17.99px;
+left: 311.07px;
+top: 174px;
+
+background: #DADADA;
+
+
+/* Path */
+
+position: absolute;
+left: 82.43%;
+right: 17.48%;
+top: 86.13%;
+bottom: 13.7%;
+
+background: #000000;
+
+
+/* Path */
+
+position: absolute;
+left: 82.44%;
+right: 17.48%;
+top: 90.68%;
+bottom: 9.16%;
+
+background: #000000;
+
+
+/* Path */
+
+position: absolute;
+left: 81.43%;
+right: 12.29%;
+top: 84.06%;
+bottom: 7.25%;
+
+background: #000000;
+
+
+/* Path */
+
+position: absolute;
+left: 82.65%;
+right: 17.26%;
+top: 86.64%;
+bottom: 13.2%;
+
+background: #000000;
+
+
+/* Path */
+
+position: absolute;
+left: 81.78%;
+right: 12.63%;
+top: 84.7%;
+bottom: 7.89%;
+
+background: #000000;
+
+
+/* path */
+
+position: absolute;
+left: 84.31%;
+right: 13.84%;
+top: 86.69%;
+bottom: 9.89%;
+
+background: #000000;
+
+
+/* path */
+
+position: absolute;
+left: 84.3%;
+right: 13.84%;
+top: 86.69%;
+bottom: 9.89%;
+
+background: #000000;
+
+
+/* Path */
+
+position: absolute;
+left: 85.89%;
+right: 13.8%;
+top: 86.6%;
+bottom: 12.82%;
+
+background: #000000;
+
+
+/* Path */
+
+position: absolute;
+left: 84.26%;
+right: 15.43%;
+top: 89.61%;
+bottom: 9.81%;
+
+background: #000000;
+
+
+/* Path */
+
+position: absolute;
+left: 85.89%;
+right: 13.8%;
+top: 89.61%;
+bottom: 9.81%;
+
+background: #000000;
+
+
+/* Path */
+
+position: absolute;
+left: 84.26%;
+right: 15.43%;
+top: 86.6%;
+bottom: 12.82%;
+
+background: #000000;
+
+
+/* 0 */
+
+position: absolute;
+left: 33.88%;
+right: 33.88%;
+top: 77.78%;
+bottom: 0%;
+
+
+
+/* Key Background */
+
+position: absolute;
+left: 0%;
+right: 0%;
+top: 0%;
+bottom: 0%;
+
+background: #FCFCFE;
+box-shadow: 0px 1px 0px #898A8D;
+border-radius: 5px;
+
+
+/* Number */
+
+position: absolute;
+height: 30px;
+left: 0px;
+right: 0.12px;
+bottom: 9px;
+
+font-family: 'SF Pro';
+font-style: normal;
+font-weight: 400;
+font-size: 25px;
+line-height: 30px;
+/* 상자 높이와 동일 */
+text-align: center;
+
+color: #000000;
+
+
+
+/* 9 */
+
+position: absolute;
+left: 67.77%;
+right: 0%;
+top: 51.69%;
+bottom: 25.6%;
+
+
+
+/* Key Background */
+
+position: absolute;
+left: 0%;
+right: 0%;
+top: 0%;
+bottom: 0%;
+
+background: #FCFCFE;
+box-shadow: 0px 1px 0px #898A8D;
+border-radius: 5px;
+
+
+/* Label */
+
+position: absolute;
+height: 12px;
+left: 0px;
+right: 0.12px;
+bottom: 5px;
+
+font-family: 'SF Pro';
+font-style: normal;
+font-weight: 700;
+font-size: 10px;
+line-height: 12px;
+/* 상자 높이와 동일 */
+text-align: center;
+
+color: #000000;
+
+
+
+/* Number */
+
+position: absolute;
+height: 30px;
+left: 0px;
+right: 0.12px;
+bottom: 15px;
+
+font-family: 'SF Pro';
+font-style: normal;
+font-weight: 400;
+font-size: 25px;
+line-height: 30px;
+/* 상자 높이와 동일 */
+text-align: center;
+
+color: #000000;
+
+
+
+/* 8 */
+
+position: absolute;
+left: 33.88%;
+right: 33.88%;
+top: 51.69%;
+bottom: 25.6%;
+
+
+
+/* Key Background */
+
+position: absolute;
+left: 0%;
+right: 0%;
+top: 0%;
+bottom: 0%;
+
+background: #FCFCFE;
+box-shadow: 0px 1px 0px #898A8D;
+border-radius: 5px;
+
+
+/* Label */
+
+position: absolute;
+height: 12px;
+left: 0px;
+right: 0.12px;
+bottom: 5px;
+
+font-family: 'SF Pro';
+font-style: normal;
+font-weight: 700;
+font-size: 10px;
+line-height: 12px;
+/* 상자 높이와 동일 */
+text-align: center;
+
+color: #000000;
+
+
+
+/* Number */
+
+position: absolute;
+height: 30px;
+left: 0px;
+right: 0.12px;
+bottom: 15px;
+
+font-family: 'SF Pro';
+font-style: normal;
+font-weight: 400;
+font-size: 25px;
+line-height: 30px;
+/* 상자 높이와 동일 */
+text-align: center;
+
+color: #000000;
+
+
+
+/* 7 */
+
+position: absolute;
+left: 0%;
+right: 67.77%;
+top: 51.69%;
+bottom: 25.6%;
+
+
+
+/* Key Background */
+
+position: absolute;
+left: 0%;
+right: 0%;
+top: 0%;
+bottom: 0%;
+
+background: #FCFCFE;
+box-shadow: 0px 1px 0px #898A8D;
+border-radius: 5px;
+
+
+/* Label */
+
+position: absolute;
+height: 12px;
+left: 0px;
+right: 0.12px;
+bottom: 5px;
+
+font-family: 'SF Pro';
+font-style: normal;
+font-weight: 700;
+font-size: 10px;
+line-height: 12px;
+/* 상자 높이와 동일 */
+text-align: center;
+
+color: #000000;
+
+
+
+/* Number */
+
+position: absolute;
+height: 30px;
+left: 0px;
+right: 0.12px;
+bottom: 15px;
+
+font-family: 'SF Pro';
+font-style: normal;
+font-weight: 400;
+font-size: 25px;
+line-height: 30px;
+/* 상자 높이와 동일 */
+text-align: center;
+
+color: #000000;
+
+
+
+/* 6 */
+
+position: absolute;
+left: 67.77%;
+right: 0%;
+top: 25.6%;
+bottom: 51.69%;
+
+
+
+/* Key Background */
+
+position: absolute;
+left: 0%;
+right: 0%;
+top: 0%;
+bottom: 0%;
+
+background: #FCFCFE;
+box-shadow: 0px 1px 0px #898A8D;
+border-radius: 5px;
+
+
+/* Label */
+
+position: absolute;
+height: 12px;
+left: 0px;
+right: 0.12px;
+bottom: 5px;
+
+font-family: 'SF Pro';
+font-style: normal;
+font-weight: 700;
+font-size: 10px;
+line-height: 12px;
+/* 상자 높이와 동일 */
+text-align: center;
+
+color: #000000;
+
+
+
+/* Number */
+
+position: absolute;
+height: 30px;
+left: 0px;
+right: 0.12px;
+bottom: 15px;
+
+font-family: 'SF Pro';
+font-style: normal;
+font-weight: 400;
+font-size: 25px;
+line-height: 30px;
+/* 상자 높이와 동일 */
+text-align: center;
+
+color: #000000;
+
+
+
+/* 5 */
+
+position: absolute;
+left: 33.88%;
+right: 33.88%;
+top: 25.6%;
+bottom: 51.69%;
+
+
+
+/* Key Background */
+
+position: absolute;
+left: 0%;
+right: 0%;
+top: 0%;
+bottom: 0%;
+
+background: #FCFCFE;
+box-shadow: 0px 1px 0px #898A8D;
+border-radius: 5px;
+
+
+/* Label */
+
+position: absolute;
+height: 12px;
+left: 0px;
+right: 0.12px;
+bottom: 5px;
+
+font-family: 'SF Pro';
+font-style: normal;
+font-weight: 700;
+font-size: 10px;
+line-height: 12px;
+/* 상자 높이와 동일 */
+text-align: center;
+
+color: #000000;
+
+
+
+/* Number */
+
+position: absolute;
+height: 30px;
+left: 0px;
+right: 0.12px;
+bottom: 15px;
+
+font-family: 'SF Pro';
+font-style: normal;
+font-weight: 400;
+font-size: 25px;
+line-height: 30px;
+/* 상자 높이와 동일 */
+text-align: center;
+
+color: #000000;
+
+
+
+/* 4 */
+
+position: absolute;
+left: 0%;
+right: 67.77%;
+top: 25.6%;
+bottom: 51.69%;
+
+
+
+/* Key Background */
+
+position: absolute;
+left: 0%;
+right: 0%;
+top: 0%;
+bottom: 0%;
+
+background: #FCFCFE;
+box-shadow: 0px 1px 0px #898A8D;
+border-radius: 5px;
+
+
+/* Label */
+
+position: absolute;
+height: 12px;
+left: 0px;
+right: 0.12px;
+bottom: 5px;
+
+font-family: 'SF Pro';
+font-style: normal;
+font-weight: 700;
+font-size: 10px;
+line-height: 12px;
+/* 상자 높이와 동일 */
+text-align: center;
+
+color: #000000;
+
+
+
+/* Number */
+
+position: absolute;
+height: 30px;
+left: 0px;
+right: 0.12px;
+bottom: 15px;
+
+font-family: 'SF Pro';
+font-style: normal;
+font-weight: 400;
+font-size: 25px;
+line-height: 30px;
+/* 상자 높이와 동일 */
+text-align: center;
+
+color: #000000;
+
+
+
+/* 3 */
+
+position: absolute;
+left: 67.77%;
+right: 0%;
+top: 0%;
+bottom: 77.78%;
+
+
+
+/* Key Background */
+
+position: absolute;
+left: 0%;
+right: 0%;
+top: 0%;
+bottom: 0%;
+
+background: #FCFCFE;
+box-shadow: 0px 1px 0px #898A8D;
+border-radius: 5px;
+
+
+/* Label */
+
+position: absolute;
+height: 12px;
+left: 0px;
+right: 0.12px;
+bottom: 5px;
+
+font-family: 'SF Pro';
+font-style: normal;
+font-weight: 700;
+font-size: 10px;
+line-height: 12px;
+/* 상자 높이와 동일 */
+text-align: center;
+
+color: #000000;
+
+
+
+/* Number */
+
+position: absolute;
+height: 30px;
+left: 0px;
+right: 0.12px;
+bottom: 15px;
+
+font-family: 'SF Pro';
+font-style: normal;
+font-weight: 400;
+font-size: 25px;
+line-height: 30px;
+/* 상자 높이와 동일 */
+text-align: center;
+
+color: #000000;
+
+
+
+/* 2 */
+
+position: absolute;
+left: 33.88%;
+right: 33.88%;
+top: 0%;
+bottom: 77.78%;
+
+
+
+/* Key Background */
+
+position: absolute;
+left: 0%;
+right: 0%;
+top: 0%;
+bottom: 0%;
+
+background: #FCFCFE;
+box-shadow: 0px 1px 0px #898A8D;
+border-radius: 5px;
+
+
+/* Label */
+
+position: absolute;
+height: 12px;
+left: 0px;
+right: 0.12px;
+bottom: 5px;
+
+font-family: 'SF Pro';
+font-style: normal;
+font-weight: 700;
+font-size: 10px;
+line-height: 12px;
+/* 상자 높이와 동일 */
+text-align: center;
+
+color: #000000;
+
+
+
+/* Number */
+
+position: absolute;
+height: 30px;
+left: 0px;
+right: 0.12px;
+bottom: 15px;
+
+font-family: 'SF Pro';
+font-style: normal;
+font-weight: 400;
+font-size: 25px;
+line-height: 30px;
+/* 상자 높이와 동일 */
+text-align: center;
+
+color: #000000;
+
+
+
+/* 1 */
+
+position: absolute;
+left: 0%;
+right: 67.77%;
+top: 0%;
+bottom: 77.78%;
+
+
+
+/* Key Background */
+
+position: absolute;
+left: 0%;
+right: 0%;
+top: 0%;
+bottom: 0%;
+
+background: #FCFCFE;
+box-shadow: 0px 1px 0px #898A8D;
+border-radius: 5px;
+
+
+/* Label */
+
+position: absolute;
+height: 12px;
+left: 0px;
+right: 0.12px;
+bottom: 5px;
+
+font-family: 'SF Pro';
+font-style: normal;
+font-weight: 700;
+font-size: 10px;
+line-height: 12px;
+/* 상자 높이와 동일 */
+text-align: center;
+
+color: #000000;
+
+
+
+/* Number */
+
+position: absolute;
+height: 30px;
+left: 0px;
+right: 0.12px;
+bottom: 15px;
+
+font-family: 'SF Pro';
+font-style: normal;
+font-weight: 400;
+font-size: 25px;
+line-height: 30px;
+/* 상자 높이와 동일 */
+text-align: center;
+
+color: #000000;
+
+
+
+/* Component 17 */
+
+box-sizing: border-box;
+
+position: relative;
+width: 180px;
+height: 328px;
+left: 201px;
+top: 1493px;
+
+border: 1px dashed #9747FF;
+border-radius: 5px;
+
+
+/* Property 1=Frame 282 */
+
+position: absolute;
+width: 140px;
+height: 140px;
+left: 20px;
+top: 20px;
+
+
+
+/* Group 2 */
+
+position: absolute;
+width: 101.19px;
+height: 98.88px;
+left: 19px;
+top: 21px;
+
+
+
+/* 좌 */
+
+position: absolute;
+height: 98.88px;
+left: 13.57%;
+right: 48.55%;
+top: calc(50% - 98.88px/2 + 0.44px);
+
+background: linear-gradient(165.1deg, rgba(255, 255, 255, 0.95) 2.96%, rgba(247, 248, 255, 0.78) 45.58%, rgba(221, 226, 255, 0.58) 97.68%);
+
+
+/* 우 */
+
+position: absolute;
+height: 97.31px;
+left: 51.46%;
+right: 14.15%;
+top: calc(50% - 97.31px/2 + 1.22px);
+
+background: linear-gradient(169.26deg, rgba(255, 255, 255, 0.95) 2.15%, rgba(247, 248, 255, 0.78) 45.54%, rgba(221, 226, 255, 0.58) 98.57%);
+
+
+/* 좌 하이라이트 */
+
+position: absolute;
+visibility: hidden;
+width: 44.89px;
+height: 96.41px;
+left: 20.85px;
+top: 22.7px;
+
+
+
+/* 우 하이라이트 */
+
+position: absolute;
+visibility: hidden;
+width: 44.35px;
+height: 95.33px;
+left: 73.99px;
+top: 23.78px;
+
+
+
+/* Property 1=Frame 283 */
+
+position: absolute;
+width: 140px;
+height: 140px;
+left: 20px;
+top: 168px;
+
+
+
+/* Group 3 */
+
+position: absolute;
+width: 113.52px;
+height: 104.22px;
+left: 13px;
+top: 18px;
+
+
+
+/* 좌 */
+
+position: absolute;
+height: 98.88px;
+left: 9.29%;
+right: 52.83%;
+top: calc(50% - 98.88px/2 - 2.56px);
+
+background: linear-gradient(165.1deg, rgba(255, 255, 255, 0.95) 2.96%, rgba(247, 248, 255, 0.78) 45.58%, rgba(221, 226, 255, 0.58) 97.68%);
+transform: rotate(-6.47deg);
+
+
+/* 우 */
+
+position: absolute;
+height: 97.31px;
+left: 47.96%;
+right: 17.66%;
+top: calc(50% - 97.31px/2 - 3.04px);
+
+background: linear-gradient(169.26deg, rgba(255, 255, 255, 0.95) 2.15%, rgba(247, 248, 255, 0.78) 45.54%, rgba(221, 226, 255, 0.58) 98.57%);
+transform: rotate(6.84deg);
+
+
+/* 좌 하이라이트 */
+
+position: absolute;
+visibility: hidden;
+width: 44.89px;
+height: 96.41px;
+left: 15.03px;
+top: 20.4px;
+
+transform: rotate(-6.47deg);
+
+
+/* 우 하이라이트 */
+
+position: absolute;
+visibility: hidden;
+width: 44.35px;
+height: 95.33px;
+left: 69.16px;
+top: 19.74px;
+
+transform: rotate(6.84deg);
+
+
+/* 버튼L */
+
+box-sizing: border-box;
+
+position: relative;
+width: 401px;
+height: 96px;
+left: 859px;
+top: 999px;
+
+border: 1px dashed #9747FF;
+border-radius: 5px;
+
+
+/* Property 1=다음 */
+
+/* 오토레이아웃 */
+display: flex;
+flex-direction: row;
+justify-content: center;
+align-items: center;
+padding: 0px 20px;
+gap: 10px;
+
+position: absolute;
+width: 361px;
+height: 52px;
+left: 20px;
+top: 20px;
+
+/* Purple/600 MAIN */
+background: #6353F0;
+border-radius: 16px;
+
+
+/* 다음 */
+
+width: 28px;
+height: 24px;
+
+/* Button/Primary */
+font-family: 'Pretendard';
+font-style: normal;
+font-weight: 600;
+font-size: 16px;
+line-height: 24px;
+/* 상자 높이와 동일 또는 150% */
+letter-spacing: -0.01em;
+
+/* Gray/50 BG */
+color: #F8FAFC;
+
+
+/* 내부 오토레이아웃 */
+flex: none;
+order: 0;
+flex-grow: 0;
+
+
+/* select chip */
+
+box-sizing: border-box;
+
+position: relative;
+width: 288px;
+height: 80px;
+left: 859px;
+top: 1589px;
+
+border: 1px dashed #9747FF;
+border-radius: 5px;
+
+
+/* Property 1=not selected */
+
+box-sizing: border-box;
+
+/* 오토레이아웃 */
+display: flex;
+flex-direction: row;
+justify-content: center;
+align-items: center;
+padding: 0px 16px;
+gap: 10px;
+
+position: absolute;
+width: 119px;
+height: 40px;
+left: 20px;
+top: 20px;
+
+background: #FFFFFF;
+/* Gray/200 */
+border: 1px solid #E2E8F0;
+border-radius: 20px;
+
+
+/* 침묵이 두려움 */
+
+width: 87px;
+height: 24px;
+
+/* Body/L */
+font-family: 'Pretendard';
+font-style: normal;
+font-weight: 400;
+font-size: 16px;
+line-height: 24px;
+/* 상자 높이와 동일 또는 150% */
+
+/* Gray/900 */
+color: #1E293B;
+
+
+/* 내부 오토레이아웃 */
+flex: none;
+order: 0;
+flex-grow: 0;
+
+
+/* Property 1=selected */
+
+box-sizing: border-box;
+
+/* 오토레이아웃 */
+display: flex;
+flex-direction: row;
+justify-content: center;
+align-items: center;
+padding: 0px 16px;
+gap: 10px;
+
+position: absolute;
+width: 119px;
+height: 40px;
+left: 149px;
+top: 20px;
+
+/* Purple/100 */
+background: #F1EEFF;
+/* Purple/600 MAIN */
+border: 1px solid #6353F0;
+border-radius: 20px;
+
+
+/* 침묵이 두려움 */
+
+width: 87px;
+height: 24px;
+
+/* Body/L */
+font-family: 'Pretendard';
+font-style: normal;
+font-weight: 400;
+font-size: 16px;
+line-height: 24px;
+/* 상자 높이와 동일 또는 150% */
+
+/* Purple/900 */
+color: #342A8F;
+
+
+/* 내부 오토레이아웃 */
+flex: none;
+order: 0;
+flex-grow: 0;
+
+
+/* 온보딩 선택지 */
+
+box-sizing: border-box;
+
+position: relative;
+width: 405px;
+height: 242px;
+left: 855px;
+top: 1294px;
+
+border: 1px dashed #9747FF;
+border-radius: 5px;
+
+
+/* Property 1=unselect */
+
+box-sizing: border-box;
+
+position: absolute;
+width: 361px;
+height: 88px;
+left: 24px;
+top: 129px;
+
+/* Gray/50 BG */
+background: #F8FAFC;
+/* Gray/200 */
+border: 2px solid #E2E8F0;
+border-radius: 16px;
+
+
+/* 조용하고 신중해요 */
+
+position: absolute;
+width: 128px;
+height: 28px;
+left: 20px;
+top: 18px;
+
+/* Title/L */
+font-family: 'Pretendard';
+font-style: normal;
+font-weight: 600;
+font-size: 18px;
+line-height: 28px;
+/* 상자 높이와 동일 또는 156% */
+letter-spacing: -0.01em;
+
+/* Gray/600 */
+color: #475569;
+
+
+
+/* 말보다 생각이 먼저에요 */
+
+position: absolute;
+width: 119px;
+height: 20px;
+left: 20px;
+top: 50px;
+
+/* Body/S */
+font-family: 'Pretendard';
+font-style: normal;
+font-weight: 400;
+font-size: 13px;
+line-height: 20px;
+/* 상자 높이와 동일 또는 154% */
+
+/* Gray/500 */
+color: #64748B;
+
+
+
+/* Group 4 */
+
+position: absolute;
+width: 26px;
+height: 26px;
+left: 319px;
+top: 31px;
+
+
+
+/* Ellipse 20 */
+
+box-sizing: border-box;
+
+position: absolute;
+width: 26px;
+height: 26px;
+left: 319px;
+top: 31px;
+
+/* Gray/300 */
+border: 2px solid #CBD5E1;
+
+
+/* Property 1=select */
+
+box-sizing: border-box;
+
+position: absolute;
+width: 365px;
+height: 88px;
+left: 20px;
+top: 20px;
+
+/* Purple/100 */
+background: #F1EEFF;
+/* Purple/600 MAIN */
+border: 2px solid #6353F0;
+border-radius: 16px;
+
+
+/* 조용하고 신중해요 */
+
+position: absolute;
+width: 128px;
+height: 28px;
+left: 20px;
+top: 18px;
+
+/* Title/L */
+font-family: 'Pretendard';
+font-style: normal;
+font-weight: 600;
+font-size: 18px;
+line-height: 28px;
+/* 상자 높이와 동일 또는 156% */
+letter-spacing: -0.01em;
+
+/* Gray/600 */
+color: #475569;
+
+
+
+/* 말보다 생각이 먼저에요 */
+
+position: absolute;
+width: 119px;
+height: 20px;
+left: 20px;
+top: 50px;
+
+/* Body/S */
+font-family: 'Pretendard';
+font-style: normal;
+font-weight: 400;
+font-size: 13px;
+line-height: 20px;
+/* 상자 높이와 동일 또는 154% */
+
+/* Gray/500 */
+color: #64748B;
+
+
+
+/* Group 4 */
+
+position: absolute;
+width: 26px;
+height: 26px;
+left: 319px;
+top: 31px;
+
+
+
+/* Ellipse 20 */
+
+position: absolute;
+width: 26px;
+height: 26px;
+left: 319px;
+top: 31px;
+
+/* Purple/600 MAIN */
+background: #6353F0;
+
+
+/* Vector 55 */
+
+position: absolute;
+width: 15.5px;
+height: 9px;
+left: 324px;
+top: 41px;
+
+/* Purple/50 */
+border: 2px solid #F8F7FF;
+
+
+/* 버튼M */
+
+box-sizing: border-box;
+
+position: relative;
+width: 369px;
+height: 84px;
+left: 859px;
+top: 1148px;
+
+border: 1px dashed #9747FF;
+border-radius: 5px;
+
+
+/* Property 1=Default */
+
+/* 오토레이아웃 */
+display: flex;
+flex-direction: row;
+justify-content: center;
+align-items: center;
+padding: 0px;
+gap: 10px;
+
+position: absolute;
+width: 329px;
+height: 44px;
+left: 20px;
+top: 20px;
+
+/* Purple/600 MAIN */
+background: #6353F0;
+border-radius: 12px;
+
+
+/* 미션 시작하기 */
+
+width: 86px;
+height: 24px;
+
+/* Button/Primary */
+font-family: 'Pretendard';
+font-style: normal;
+font-weight: 600;
+font-size: 16px;
+line-height: 24px;
+/* 상자 높이와 동일 또는 150% */
+letter-spacing: -0.01em;
+
+/* Gray/50 BG */
+color: #F8FAFC;
+
+
+/* 내부 오토레이아웃 */
+flex: none;
+order: 0;
+flex-grow: 0;
+
+
+/* Component 18 */
+
+box-sizing: border-box;
+
+position: relative;
+width: 120px;
+height: 112px;
+left: 1309px;
+top: 1148px;
+
+border: 1px dashed #9747FF;
+border-radius: 5px;
+
+
+/* Property 1=쉬움 */
+
+/* 오토레이아웃 */
+display: flex;
+flex-direction: row;
+justify-content: center;
+align-items: center;
+padding: 0px;
+gap: 10px;
+
+position: absolute;
+width: 21px;
+height: 18px;
+left: 20px;
+top: 20px;
+
+
+
+/* 쉬움 */
+
+width: 21px;
+height: 18px;
+
+/* Label/M */
+font-family: 'Pretendard';
+font-style: normal;
+font-weight: 500;
+font-size: 12px;
+line-height: 18px;
+/* 상자 높이와 동일 또는 150% */
+text-align: center;
+
+/* GREEN */
+color: #36DA21;
+
+
+/* 내부 오토레이아웃 */
+flex: none;
+order: 0;
+flex-grow: 0;
+
+
+/* Property 1=보통 */
+
+/* 오토레이아웃 */
+display: flex;
+flex-direction: row;
+justify-content: center;
+align-items: center;
+padding: 0px;
+gap: 10px;
+
+position: absolute;
+width: 21px;
+height: 18px;
+left: 20px;
+top: 47px;
+
+
+
+/* 보통 */
+
+width: 21px;
+height: 18px;
+
+/* Label/M */
+font-family: 'Pretendard';
+font-style: normal;
+font-weight: 500;
+font-size: 12px;
+line-height: 18px;
+/* 상자 높이와 동일 또는 150% */
+text-align: center;
+
+/* ORANGE */
+color: #EF8F22;
+
+
+/* 내부 오토레이아웃 */
+flex: none;
+order: 0;
+flex-grow: 0;
+
+
+/* Property 1=어려움 */
+
+/* 오토레이아웃 */
+display: flex;
+flex-direction: row;
+justify-content: center;
+align-items: center;
+padding: 0px;
+gap: 10px;
+
+position: absolute;
+width: 32px;
+height: 18px;
+left: 20px;
+top: 74px;
+
+
+
+/* 어려움 */
+
+width: 32px;
+height: 18px;
+
+/* Label/M */
+font-family: 'Pretendard';
+font-style: normal;
+font-weight: 500;
+font-size: 12px;
+line-height: 18px;
+/* 상자 높이와 동일 또는 150% */
+text-align: center;
+
+/* RED */
+color: #F14444;
+
+
+/* 내부 오토레이아웃 */
+flex: none;
+order: 0;
+flex-grow: 0;
+
+
+/* Frame 312 */
+
+box-sizing: border-box;
+
+position: relative;
+width: 80px;
+height: 62px;
+left: 1309px;
+top: 999px;
+
+border: 1px dashed #9747FF;
+border-radius: 5px;
+
+
+/* Property 1=Default */
+
+/* 오토레이아웃 */
+display: flex;
+flex-direction: row;
+justify-content: center;
+align-items: center;
+padding: 0px;
+gap: 10px;
+
+position: absolute;
+width: 40px;
+height: 22px;
+left: 20px;
+top: 20px;
+
+/* Purple/100 */
+background: #F1EEFF;
+border-radius: 4px;
+
+
+/* 추천 */
+
+width: 21px;
+height: 18px;
+
+/* Label/M */
+font-family: 'Pretendard';
+font-style: normal;
+font-weight: 500;
+font-size: 12px;
+line-height: 18px;
+/* 상자 높이와 동일 또는 150% */
+
+/* Purple/600 MAIN */
+color: #6353F0;
+
+
+/* 내부 오토레이아웃 */
+flex: none;
+order: 0;
+flex-grow: 0;
+
+
+/* select chip */
+
+box-sizing: border-box;
+
+position: relative;
+width: 100px;
+height: 131px;
+left: 859px;
+top: 1697px;
+
+border: 1px dashed #9747FF;
+border-radius: 5px;
+
+
+/* Property 1=stroke */
+
+/* 오토레이아웃 */
+display: flex;
+flex-direction: row;
+justify-content: center;
+align-items: center;
+padding: 4px 18px;
+gap: 10px;
+
+position: absolute;
+width: 61px;
+height: 34px;
+left: 20px;
+top: 71px;
+
+background: #FFFFFF;
+/* 카드 그림자 */
+box-shadow: 0px 8px 24px rgba(15, 23, 42, 0.06);
+border-radius: 20px;
+
+
+/* 전체 */
+
+width: 25px;
+height: 22px;
+
+/* Body/M
+
+본문/설명/가이드 문구
+*/
+font-family: 'Pretendard';
+font-style: normal;
+font-weight: 400;
+font-size: 14px;
+line-height: 22px;
+/* 상자 높이와 동일 또는 157% */
+
+/* Gray/900 */
+color: #1E293B;
+
+
+/* 내부 오토레이아웃 */
+flex: none;
+order: 0;
+flex-grow: 0;
+
+
+/* Property 1=fill */
+
+box-sizing: border-box;
+
+/* 오토레이아웃 */
+display: flex;
+flex-direction: row;
+justify-content: center;
+align-items: center;
+padding: 4px 18px;
+gap: 10px;
+
+position: absolute;
+width: 61px;
+height: 34px;
+left: 20px;
+top: 20px;
+
+/* Purple/600 MAIN */
+background: #6353F0;
+/* Purple/600 MAIN */
+border: 1px solid #6353F0;
+border-radius: 20px;
+
+
+/* 전체 */
+
+width: 25px;
+height: 22px;
+
+font-family: 'Pretendard';
+font-style: normal;
+font-weight: 500;
+font-size: 14px;
+line-height: 22px;
+/* 상자 높이와 동일 또는 157% */
+
+/* Purple/50 */
+color: #F8F7FF;
+
+
+/* 내부 오토레이아웃 */
+flex: none;
+order: 0;
+flex-grow: 0;
+
+
+/* ChatGPT Image 2026년 7월 3일 오후 10_09_15 1 */
+
+position: absolute;
+width: 411px;
+height: 434px;
+left: 8497px;
+top: 949px;
+
+background: url(bg_removal [Background removed]);
+
+
+/* ChatGPT Image 2026년 7월 3일 오후 10_13_19 1 */
+
+position: absolute;
+width: 470px;
+height: 470px;
+left: 8438px;
+top: 1411px;
+
+background: url(bg_removal [Background removed]);
+
+
+/* ChatGPT Image 2026년 7월 3일 오후 11_34_13 2 */
+
+position: absolute;
+width: 168px;
+height: 196px;
+left: 8647px;
+top: 574px;
+
+background: url(ChatGPT Image 2026년 7월 3일 오후 11_34_13);
+
+
+/* Frame 427320996 */
+
+position: relative;
+width: 221.28px;
+height: 257.5px;
+left: 7785px;
+top: 1216px;
+
+
+
+/* ChatGPT Image 2026년 7월 4일 오전 12_53_42 1 */
+
+position: absolute;
+width: 140.16px;
+height: 218.22px;
+left: 0px;
+top: 0px;
+
+background: url(bg_removal [Background removed]);
+transform: rotate(25.85deg);

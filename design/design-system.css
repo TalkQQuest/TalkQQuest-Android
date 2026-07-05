@@ -1,0 +1,3298 @@
+/* 디자인 시스템 */
+
+box-sizing: border-box;
+
+position: relative;
+width: 9194px;
+height: 2111px;
+
+background: #353535;
+border: 1px solid rgba(0, 0, 0, 0.1);
+border-radius: 2px;
+
+
+/* 타이포그래피 */
+
+position: relative;
+width: 1920px;
+height: 1668px;
+left: 258px;
+top: 221px;
+
+background: #FFFFFF;
+
+
+/* Typhography */
+
+position: absolute;
+width: 399px;
+height: 76px;
+left: 128px;
+top: 107px;
+
+font-family: 'Pretendard';
+font-style: normal;
+font-weight: 700;
+font-size: 64px;
+line-height: 76px;
+
+color: #000000;
+
+
+
+/* 사용자가 정보를 빠르게 이해하고 자연스럽게 탐색할 수 있도록 일관된 타이포그래피 시스템을 구축했습니다. 명확한 정보 위계와 높은 가독성에 중점을 두어 설계했습니다. */
+
+position: absolute;
+width: 1484px;
+height: 96px;
+left: 128px;
+top: 233px;
+
+font-family: 'Pretendard';
+font-style: normal;
+font-weight: 400;
+font-size: 32px;
+line-height: 150%;
+/* 또는 48px */
+
+color: #000000;
+
+
+
+/* Style */
+
+position: absolute;
+width: 75px;
+height: 44px;
+left: 128px;
+top: 380px;
+
+/* Display/L */
+font-family: 'Pretendard';
+font-style: normal;
+font-weight: 700;
+font-size: 32px;
+line-height: 44px;
+/* 상자 높이와 동일 또는 138% */
+letter-spacing: -0.02em;
+
+color: #94A3B8;
+
+
+
+/* Display */
+
+position: absolute;
+width: 178px;
+height: 44px;
+left: 128px;
+top: 471px;
+
+font-family: 'Pretendard';
+font-style: normal;
+font-weight: 500;
+font-size: 32px;
+line-height: 44px;
+/* 상자 높이와 동일 또는 138% */
+letter-spacing: -0.02em;
+
+color: #1E293B;
+
+
+
+/* Bold (700) */
+
+position: absolute;
+width: 147px;
+height: 44px;
+left: 446px;
+top: 477px;
+
+font-family: 'Pretendard';
+font-style: normal;
+font-weight: 500;
+font-size: 32px;
+line-height: 44px;
+/* 상자 높이와 동일 또는 138% */
+letter-spacing: -0.02em;
+
+color: #1E293B;
+
+
+
+/* 32px */
+
+position: absolute;
+width: 73px;
+height: 44px;
+left: 766px;
+top: 471px;
+
+font-family: 'Pretendard';
+font-style: normal;
+font-weight: 500;
+font-size: 32px;
+line-height: 44px;
+/* 상자 높이와 동일 또는 138% */
+letter-spacing: -0.02em;
+
+color: #1E293B;
+
+
+
+/* 44px */
+
+position: absolute;
+width: 74px;
+height: 44px;
+left: 1083px;
+top: 477px;
+
+font-family: 'Pretendard';
+font-style: normal;
+font-weight: 500;
+font-size: 32px;
+line-height: 44px;
+/* 상자 높이와 동일 또는 138% */
+letter-spacing: -0.02em;
+
+color: #1E293B;
+
+
+
+/* -2% */
+
+position: absolute;
+width: 60px;
+height: 44px;
+left: 1412px;
+top: 477px;
+
+font-family: 'Pretendard';
+font-style: normal;
+font-weight: 500;
+font-size: 32px;
+line-height: 44px;
+/* 상자 높이와 동일 또는 138% */
+letter-spacing: -0.02em;
+
+color: #1E293B;
+
+
+
+/* -2% */
+
+position: absolute;
+width: 60px;
+height: 44px;
+left: 1412px;
+top: 581px;
+
+font-family: 'Pretendard';
+font-style: normal;
+font-weight: 500;
+font-size: 32px;
+line-height: 44px;
+/* 상자 높이와 동일 또는 138% */
+letter-spacing: -0.02em;
+
+color: #1E293B;
+
+
+
+/* -1% */
+
+position: absolute;
+width: 56px;
+height: 44px;
+left: 1412px;
+top: 685px;
+
+font-family: 'Pretendard';
+font-style: normal;
+font-weight: 500;
+font-size: 32px;
+line-height: 44px;
+/* 상자 높이와 동일 또는 138% */
+letter-spacing: -0.02em;
+
+color: #1E293B;
+
+
+
+/* -1% */
+
+position: absolute;
+width: 56px;
+height: 44px;
+left: 1412px;
+top: 789px;
+
+font-family: 'Pretendard';
+font-style: normal;
+font-weight: 500;
+font-size: 32px;
+line-height: 44px;
+/* 상자 높이와 동일 또는 138% */
+letter-spacing: -0.02em;
+
+color: #1E293B;
+
+
+
+/* -1% */
+
+position: absolute;
+width: 56px;
+height: 44px;
+left: 1412px;
+top: 893px;
+
+font-family: 'Pretendard';
+font-style: normal;
+font-weight: 500;
+font-size: 32px;
+line-height: 44px;
+/* 상자 높이와 동일 또는 138% */
+letter-spacing: -0.02em;
+
+color: #1E293B;
+
+
+
+/* 0% */
+
+position: absolute;
+width: 48px;
+height: 44px;
+left: 1420px;
+top: 997px;
+
+font-family: 'Pretendard';
+font-style: normal;
+font-weight: 500;
+font-size: 32px;
+line-height: 44px;
+/* 상자 높이와 동일 또는 138% */
+letter-spacing: -0.02em;
+
+color: #1E293B;
+
+
+
+/* 0% */
+
+position: absolute;
+width: 48px;
+height: 44px;
+left: 1420px;
+top: 1101px;
+
+font-family: 'Pretendard';
+font-style: normal;
+font-weight: 500;
+font-size: 32px;
+line-height: 44px;
+/* 상자 높이와 동일 또는 138% */
+letter-spacing: -0.02em;
+
+color: #1E293B;
+
+
+
+/* 0% */
+
+position: absolute;
+width: 48px;
+height: 44px;
+left: 1420px;
+top: 1205px;
+
+font-family: 'Pretendard';
+font-style: normal;
+font-weight: 500;
+font-size: 32px;
+line-height: 44px;
+/* 상자 높이와 동일 또는 138% */
+letter-spacing: -0.02em;
+
+color: #1E293B;
+
+
+
+/* 0% */
+
+position: absolute;
+width: 48px;
+height: 44px;
+left: 1420px;
+top: 1309px;
+
+font-family: 'Pretendard';
+font-style: normal;
+font-weight: 500;
+font-size: 32px;
+line-height: 44px;
+/* 상자 높이와 동일 또는 138% */
+letter-spacing: -0.02em;
+
+color: #1E293B;
+
+
+
+/* 0% */
+
+position: absolute;
+width: 48px;
+height: 44px;
+left: 1420px;
+top: 1413px;
+
+font-family: 'Pretendard';
+font-style: normal;
+font-weight: 500;
+font-size: 32px;
+line-height: 44px;
+/* 상자 높이와 동일 또는 138% */
+letter-spacing: -0.02em;
+
+color: #1E293B;
+
+
+
+/* 0% */
+
+position: absolute;
+width: 48px;
+height: 44px;
+left: 1420px;
+top: 1517px;
+
+font-family: 'Pretendard';
+font-style: normal;
+font-weight: 500;
+font-size: 32px;
+line-height: 44px;
+/* 상자 높이와 동일 또는 138% */
+letter-spacing: -0.02em;
+
+color: #1E293B;
+
+
+
+/* 40px */
+
+position: absolute;
+width: 74px;
+height: 44px;
+left: 1083px;
+top: 581px;
+
+font-family: 'Pretendard';
+font-style: normal;
+font-weight: 500;
+font-size: 32px;
+line-height: 44px;
+/* 상자 높이와 동일 또는 138% */
+letter-spacing: -0.02em;
+
+color: #1E293B;
+
+
+
+/* 34px */
+
+position: absolute;
+width: 74px;
+height: 44px;
+left: 1083px;
+top: 685px;
+
+font-family: 'Pretendard';
+font-style: normal;
+font-weight: 500;
+font-size: 32px;
+line-height: 44px;
+/* 상자 높이와 동일 또는 138% */
+letter-spacing: -0.02em;
+
+color: #1E293B;
+
+
+
+/* 30px */
+
+position: absolute;
+width: 73px;
+height: 44px;
+left: 1083px;
+top: 789px;
+
+font-family: 'Pretendard';
+font-style: normal;
+font-weight: 500;
+font-size: 32px;
+line-height: 44px;
+/* 상자 높이와 동일 또는 138% */
+letter-spacing: -0.02em;
+
+color: #1E293B;
+
+
+
+/* 28px */
+
+position: absolute;
+width: 72px;
+height: 44px;
+left: 1083px;
+top: 893px;
+
+font-family: 'Pretendard';
+font-style: normal;
+font-weight: 500;
+font-size: 32px;
+line-height: 44px;
+/* 상자 높이와 동일 또는 138% */
+letter-spacing: -0.02em;
+
+color: #1E293B;
+
+
+
+/* 24px */
+
+position: absolute;
+width: 72px;
+height: 44px;
+left: 1083px;
+top: 997px;
+
+font-family: 'Pretendard';
+font-style: normal;
+font-weight: 500;
+font-size: 32px;
+line-height: 44px;
+/* 상자 높이와 동일 또는 138% */
+letter-spacing: -0.02em;
+
+color: #1E293B;
+
+
+
+/* 22px */
+
+position: absolute;
+width: 72px;
+height: 44px;
+left: 1083px;
+top: 1101px;
+
+font-family: 'Pretendard';
+font-style: normal;
+font-weight: 500;
+font-size: 32px;
+line-height: 44px;
+/* 상자 높이와 동일 또는 138% */
+letter-spacing: -0.02em;
+
+color: #1E293B;
+
+
+
+/* 20px */
+
+position: absolute;
+width: 72px;
+height: 44px;
+left: 1083px;
+top: 1205px;
+
+font-family: 'Pretendard';
+font-style: normal;
+font-weight: 500;
+font-size: 32px;
+line-height: 44px;
+/* 상자 높이와 동일 또는 138% */
+letter-spacing: -0.02em;
+
+color: #1E293B;
+
+
+
+/* 20px */
+
+position: absolute;
+width: 72px;
+height: 44px;
+left: 1083px;
+top: 1309px;
+
+font-family: 'Pretendard';
+font-style: normal;
+font-weight: 500;
+font-size: 32px;
+line-height: 44px;
+/* 상자 높이와 동일 또는 138% */
+letter-spacing: -0.02em;
+
+color: #1E293B;
+
+
+
+/* 18px */
+
+position: absolute;
+width: 68px;
+height: 44px;
+left: 1083px;
+top: 1413px;
+
+font-family: 'Pretendard';
+font-style: normal;
+font-weight: 500;
+font-size: 32px;
+line-height: 44px;
+/* 상자 높이와 동일 또는 138% */
+letter-spacing: -0.02em;
+
+color: #1E293B;
+
+
+
+/* 18px */
+
+position: absolute;
+width: 68px;
+height: 44px;
+left: 1083px;
+top: 1517px;
+
+font-family: 'Pretendard';
+font-style: normal;
+font-weight: 500;
+font-size: 32px;
+line-height: 44px;
+/* 상자 높이와 동일 또는 138% */
+letter-spacing: -0.02em;
+
+color: #1E293B;
+
+
+
+/* 28px */
+
+position: absolute;
+width: 72px;
+height: 44px;
+left: 766px;
+top: 581px;
+
+font-family: 'Pretendard';
+font-style: normal;
+font-weight: 500;
+font-size: 32px;
+line-height: 44px;
+/* 상자 높이와 동일 또는 138% */
+letter-spacing: -0.02em;
+
+color: #1E293B;
+
+
+
+/* 24px */
+
+position: absolute;
+width: 72px;
+height: 44px;
+left: 766px;
+top: 685px;
+
+font-family: 'Pretendard';
+font-style: normal;
+font-weight: 500;
+font-size: 32px;
+line-height: 44px;
+/* 상자 높이와 동일 또는 138% */
+letter-spacing: -0.02em;
+
+color: #1E293B;
+
+
+
+/* 20px */
+
+position: absolute;
+width: 72px;
+height: 44px;
+left: 766px;
+top: 789px;
+
+font-family: 'Pretendard';
+font-style: normal;
+font-weight: 500;
+font-size: 32px;
+line-height: 44px;
+/* 상자 높이와 동일 또는 138% */
+letter-spacing: -0.02em;
+
+color: #1E293B;
+
+
+
+/* 18px */
+
+position: absolute;
+width: 68px;
+height: 44px;
+left: 766px;
+top: 893px;
+
+font-family: 'Pretendard';
+font-style: normal;
+font-weight: 500;
+font-size: 32px;
+line-height: 44px;
+/* 상자 높이와 동일 또는 138% */
+letter-spacing: -0.02em;
+
+color: #1E293B;
+
+
+
+/* 16px */
+
+position: absolute;
+width: 68px;
+height: 44px;
+left: 766px;
+top: 997px;
+
+font-family: 'Pretendard';
+font-style: normal;
+font-weight: 500;
+font-size: 32px;
+line-height: 44px;
+/* 상자 높이와 동일 또는 138% */
+letter-spacing: -0.02em;
+
+color: #1E293B;
+
+
+
+/* 14px */
+
+position: absolute;
+width: 68px;
+height: 44px;
+left: 766px;
+top: 1101px;
+
+font-family: 'Pretendard';
+font-style: normal;
+font-weight: 500;
+font-size: 32px;
+line-height: 44px;
+/* 상자 높이와 동일 또는 138% */
+letter-spacing: -0.02em;
+
+color: #1E293B;
+
+
+
+/* 13px */
+
+position: absolute;
+width: 68px;
+height: 44px;
+left: 766px;
+top: 1205px;
+
+font-family: 'Pretendard';
+font-style: normal;
+font-weight: 500;
+font-size: 32px;
+line-height: 44px;
+/* 상자 높이와 동일 또는 138% */
+letter-spacing: -0.02em;
+
+color: #1E293B;
+
+
+
+/* 14px */
+
+position: absolute;
+width: 68px;
+height: 44px;
+left: 766px;
+top: 1309px;
+
+font-family: 'Pretendard';
+font-style: normal;
+font-weight: 500;
+font-size: 32px;
+line-height: 44px;
+/* 상자 높이와 동일 또는 138% */
+letter-spacing: -0.02em;
+
+color: #1E293B;
+
+
+
+/* 12px */
+
+position: absolute;
+width: 67px;
+height: 44px;
+left: 766px;
+top: 1413px;
+
+font-family: 'Pretendard';
+font-style: normal;
+font-weight: 500;
+font-size: 32px;
+line-height: 44px;
+/* 상자 높이와 동일 또는 138% */
+letter-spacing: -0.02em;
+
+color: #1E293B;
+
+
+
+/* 12px */
+
+position: absolute;
+width: 67px;
+height: 44px;
+left: 766px;
+top: 1517px;
+
+font-family: 'Pretendard';
+font-style: normal;
+font-weight: 500;
+font-size: 32px;
+line-height: 44px;
+/* 상자 높이와 동일 또는 138% */
+letter-spacing: -0.02em;
+
+color: #1E293B;
+
+
+
+/* Bold (700) */
+
+position: absolute;
+width: 147px;
+height: 44px;
+left: 446px;
+top: 581px;
+
+font-family: 'Pretendard';
+font-style: normal;
+font-weight: 500;
+font-size: 32px;
+line-height: 44px;
+/* 상자 높이와 동일 또는 138% */
+letter-spacing: -0.02em;
+
+color: #1E293B;
+
+
+
+/* Bold (700) */
+
+position: absolute;
+width: 147px;
+height: 44px;
+left: 449px;
+top: 685px;
+
+font-family: 'Pretendard';
+font-style: normal;
+font-weight: 500;
+font-size: 32px;
+line-height: 44px;
+/* 상자 높이와 동일 또는 138% */
+letter-spacing: -0.02em;
+
+color: #1E293B;
+
+
+
+/* Semi Bold (600) */
+
+position: absolute;
+width: 227px;
+height: 44px;
+left: 449px;
+top: 789px;
+
+font-family: 'Pretendard';
+font-style: normal;
+font-weight: 500;
+font-size: 32px;
+line-height: 44px;
+/* 상자 높이와 동일 또는 138% */
+letter-spacing: -0.02em;
+
+color: #1E293B;
+
+
+
+/* Semi Bold (600) */
+
+position: absolute;
+width: 227px;
+height: 44px;
+left: 449px;
+top: 893px;
+
+font-family: 'Pretendard';
+font-style: normal;
+font-weight: 500;
+font-size: 32px;
+line-height: 44px;
+/* 상자 높이와 동일 또는 138% */
+letter-spacing: -0.02em;
+
+color: #1E293B;
+
+
+
+/* Regular (400) */
+
+position: absolute;
+width: 194px;
+height: 44px;
+left: 449px;
+top: 997px;
+
+font-family: 'Pretendard';
+font-style: normal;
+font-weight: 500;
+font-size: 32px;
+line-height: 44px;
+/* 상자 높이와 동일 또는 138% */
+letter-spacing: -0.02em;
+
+color: #1E293B;
+
+
+
+/* Regular (400) */
+
+position: absolute;
+width: 194px;
+height: 44px;
+left: 449px;
+top: 1101px;
+
+font-family: 'Pretendard';
+font-style: normal;
+font-weight: 500;
+font-size: 32px;
+line-height: 44px;
+/* 상자 높이와 동일 또는 138% */
+letter-spacing: -0.02em;
+
+color: #1E293B;
+
+
+
+/* Regular (400) */
+
+position: absolute;
+width: 194px;
+height: 44px;
+left: 449px;
+top: 1205px;
+
+font-family: 'Pretendard';
+font-style: normal;
+font-weight: 500;
+font-size: 32px;
+line-height: 44px;
+/* 상자 높이와 동일 또는 138% */
+letter-spacing: -0.02em;
+
+color: #1E293B;
+
+
+
+/* Medium (500) */
+
+position: absolute;
+width: 200px;
+height: 44px;
+left: 449px;
+top: 1309px;
+
+font-family: 'Pretendard';
+font-style: normal;
+font-weight: 500;
+font-size: 32px;
+line-height: 44px;
+/* 상자 높이와 동일 또는 138% */
+letter-spacing: -0.02em;
+
+color: #1E293B;
+
+
+
+/* Medium (500) */
+
+position: absolute;
+width: 200px;
+height: 44px;
+left: 446px;
+top: 1413px;
+
+font-family: 'Pretendard';
+font-style: normal;
+font-weight: 500;
+font-size: 32px;
+line-height: 44px;
+/* 상자 높이와 동일 또는 138% */
+letter-spacing: -0.02em;
+
+color: #1E293B;
+
+
+
+/* Regular (400) */
+
+position: absolute;
+width: 194px;
+height: 44px;
+left: 449px;
+top: 1517px;
+
+font-family: 'Pretendard';
+font-style: normal;
+font-weight: 500;
+font-size: 32px;
+line-height: 44px;
+/* 상자 높이와 동일 또는 138% */
+letter-spacing: -0.02em;
+
+color: #1E293B;
+
+
+
+/* Heading/ XL */
+
+position: absolute;
+width: 178px;
+height: 44px;
+left: 128px;
+top: 581px;
+
+font-family: 'Pretendard';
+font-style: normal;
+font-weight: 500;
+font-size: 32px;
+line-height: 44px;
+/* 상자 높이와 동일 또는 138% */
+letter-spacing: -0.02em;
+
+color: #1E293B;
+
+
+
+/* Heading/ L */
+
+position: absolute;
+width: 178px;
+height: 44px;
+left: 128px;
+top: 685px;
+
+font-family: 'Pretendard';
+font-style: normal;
+font-weight: 500;
+font-size: 32px;
+line-height: 44px;
+/* 상자 높이와 동일 또는 138% */
+letter-spacing: -0.02em;
+
+color: #1E293B;
+
+
+
+/* Heading/ M */
+
+position: absolute;
+width: 178px;
+height: 44px;
+left: 128px;
+top: 789px;
+
+font-family: 'Pretendard';
+font-style: normal;
+font-weight: 500;
+font-size: 32px;
+line-height: 44px;
+/* 상자 높이와 동일 또는 138% */
+letter-spacing: -0.02em;
+
+color: #1E293B;
+
+
+
+/* Title/ L */
+
+position: absolute;
+width: 178px;
+height: 44px;
+left: 128px;
+top: 893px;
+
+font-family: 'Pretendard';
+font-style: normal;
+font-weight: 500;
+font-size: 32px;
+line-height: 44px;
+/* 상자 높이와 동일 또는 138% */
+letter-spacing: -0.02em;
+
+color: #1E293B;
+
+
+
+/* Body/ L */
+
+position: absolute;
+width: 178px;
+height: 44px;
+left: 128px;
+top: 997px;
+
+font-family: 'Pretendard';
+font-style: normal;
+font-weight: 500;
+font-size: 32px;
+line-height: 44px;
+/* 상자 높이와 동일 또는 138% */
+letter-spacing: -0.02em;
+
+color: #1E293B;
+
+
+
+/* Body/ M */
+
+position: absolute;
+width: 178px;
+height: 44px;
+left: 128px;
+top: 1101px;
+
+font-family: 'Pretendard';
+font-style: normal;
+font-weight: 500;
+font-size: 32px;
+line-height: 44px;
+/* 상자 높이와 동일 또는 138% */
+letter-spacing: -0.02em;
+
+color: #1E293B;
+
+
+
+/* Body/ S */
+
+position: absolute;
+width: 178px;
+height: 44px;
+left: 128px;
+top: 1205px;
+
+font-family: 'Pretendard';
+font-style: normal;
+font-weight: 500;
+font-size: 32px;
+line-height: 44px;
+/* 상자 높이와 동일 또는 138% */
+letter-spacing: -0.02em;
+
+color: #1E293B;
+
+
+
+/* Label/ L */
+
+position: absolute;
+width: 178px;
+height: 44px;
+left: 128px;
+top: 1309px;
+
+font-family: 'Pretendard';
+font-style: normal;
+font-weight: 500;
+font-size: 32px;
+line-height: 44px;
+/* 상자 높이와 동일 또는 138% */
+letter-spacing: -0.02em;
+
+color: #1E293B;
+
+
+
+/* Label/ M */
+
+position: absolute;
+width: 178px;
+height: 44px;
+left: 128px;
+top: 1413px;
+
+font-family: 'Pretendard';
+font-style: normal;
+font-weight: 500;
+font-size: 32px;
+line-height: 44px;
+/* 상자 높이와 동일 또는 138% */
+letter-spacing: -0.02em;
+
+color: #1E293B;
+
+
+
+/* Caption */
+
+position: absolute;
+width: 178px;
+height: 44px;
+left: 128px;
+top: 1517px;
+
+font-family: 'Pretendard';
+font-style: normal;
+font-weight: 500;
+font-size: 32px;
+line-height: 44px;
+/* 상자 높이와 동일 또는 138% */
+letter-spacing: -0.02em;
+
+color: #1E293B;
+
+
+
+/* Font Weight */
+
+position: absolute;
+width: 175px;
+height: 44px;
+left: 449px;
+top: 380px;
+
+/* Display/L */
+font-family: 'Pretendard';
+font-style: normal;
+font-weight: 700;
+font-size: 32px;
+line-height: 44px;
+/* 상자 높이와 동일 또는 138% */
+letter-spacing: -0.02em;
+
+color: #94A3B8;
+
+
+
+/* Font Size */
+
+position: absolute;
+width: 133px;
+height: 44px;
+left: 765px;
+top: 380px;
+
+/* Display/L */
+font-family: 'Pretendard';
+font-style: normal;
+font-weight: 700;
+font-size: 32px;
+line-height: 44px;
+/* 상자 높이와 동일 또는 138% */
+letter-spacing: -0.02em;
+
+color: #94A3B8;
+
+
+
+/* Line-Height */
+
+position: absolute;
+width: 172px;
+height: 44px;
+left: 1033px;
+top: 380px;
+
+/* Display/L */
+font-family: 'Pretendard';
+font-style: normal;
+font-weight: 700;
+font-size: 32px;
+line-height: 44px;
+/* 상자 높이와 동일 또는 138% */
+letter-spacing: -0.02em;
+
+color: #94A3B8;
+
+
+
+/* Letter spacing */
+
+position: absolute;
+width: 209px;
+height: 44px;
+left: 1345px;
+top: 380px;
+
+/* Display/L */
+font-family: 'Pretendard';
+font-style: normal;
+font-weight: 700;
+font-size: 32px;
+line-height: 44px;
+/* 상자 높이와 동일 또는 138% */
+letter-spacing: -0.02em;
+
+color: #94A3B8;
+
+
+
+/* 컬러 시스템 */
+
+position: relative;
+width: 1920px;
+height: 1668px;
+left: 2327px;
+top: 221px;
+
+background: #FFFFFF;
+
+
+/* Colors */
+
+position: absolute;
+width: 198px;
+height: 76px;
+left: 128px;
+top: 107px;
+
+font-family: 'Pretendard';
+font-style: normal;
+font-weight: 700;
+font-size: 64px;
+line-height: 76px;
+
+color: #000000;
+
+
+
+/* 200 */
+
+position: absolute;
+width: 160px;
+height: 29px;
+left: 452px;
+top: 360px;
+
+font-family: 'Pretendard';
+font-style: normal;
+font-weight: 500;
+font-size: 24px;
+line-height: 29px;
+/* 상자 높이와 동일 */
+text-align: center;
+
+color: #94A3B8;
+
+
+
+/* Frame 51 */
+
+/* 오토레이아웃 */
+display: flex;
+flex-direction: row;
+align-items: flex-start;
+padding: 0px;
+
+position: absolute;
+width: 1601px;
+height: 135px;
+left: 132px;
+top: 254px;
+
+
+
+/* Frame 42 */
+
+/* 오토레이아웃 */
+display: flex;
+flex-direction: column;
+align-items: center;
+padding: 0px;
+gap: 4px;
+
+width: 160px;
+height: 135px;
+
+
+/* 내부 오토레이아웃 */
+flex: none;
+order: 0;
+flex-grow: 0;
+
+
+/* Frame 35 */
+
+width: 160px;
+height: 102px;
+
+background: #F8F7FF;
+border-radius: 24px 0px 0px 24px;
+
+/* 내부 오토레이아웃 */
+flex: none;
+order: 0;
+align-self: stretch;
+flex-grow: 0;
+
+
+/* 50 */
+
+width: 160px;
+height: 29px;
+
+font-family: 'Pretendard';
+font-style: normal;
+font-weight: 500;
+font-size: 24px;
+line-height: 29px;
+/* 상자 높이와 동일 */
+text-align: center;
+
+color: #94A3B8;
+
+
+/* 내부 오토레이아웃 */
+flex: none;
+order: 1;
+align-self: stretch;
+flex-grow: 0;
+
+
+/* Frame 43 */
+
+/* 오토레이아웃 */
+display: flex;
+flex-direction: column;
+align-items: center;
+padding: 0px;
+gap: 4px;
+
+width: 160px;
+height: 135px;
+
+
+/* 내부 오토레이아웃 */
+flex: none;
+order: 1;
+flex-grow: 0;
+
+
+/* Frame 34 */
+
+width: 160px;
+height: 102px;
+
+background: #F1EEFF;
+
+/* 내부 오토레이아웃 */
+flex: none;
+order: 0;
+align-self: stretch;
+flex-grow: 0;
+
+
+/* 100 */
+
+width: 160px;
+height: 29px;
+
+font-family: 'Pretendard';
+font-style: normal;
+font-weight: 500;
+font-size: 24px;
+line-height: 29px;
+/* 상자 높이와 동일 */
+text-align: center;
+
+color: #94A3B8;
+
+
+/* 내부 오토레이아웃 */
+flex: none;
+order: 1;
+align-self: stretch;
+flex-grow: 0;
+
+
+/* Frame 33 */
+
+width: 160px;
+height: 102px;
+
+background: #E4DFFF;
+
+/* 내부 오토레이아웃 */
+flex: none;
+order: 2;
+flex-grow: 0;
+
+
+/* Frame 44 */
+
+/* 오토레이아웃 */
+display: flex;
+flex-direction: column;
+align-items: flex-start;
+padding: 0px;
+gap: 4px;
+
+width: 160px;
+height: 135px;
+
+
+/* 내부 오토레이아웃 */
+flex: none;
+order: 3;
+flex-grow: 0;
+
+
+/* Frame 32 */
+
+width: 160px;
+height: 102px;
+
+background: #CEC4FF;
+
+/* 내부 오토레이아웃 */
+flex: none;
+order: 0;
+align-self: stretch;
+flex-grow: 0;
+
+
+/* 300 */
+
+width: 160px;
+height: 29px;
+
+font-family: 'Pretendard';
+font-style: normal;
+font-weight: 500;
+font-size: 24px;
+line-height: 29px;
+/* 상자 높이와 동일 */
+text-align: center;
+
+color: #94A3B8;
+
+
+/* 내부 오토레이아웃 */
+flex: none;
+order: 1;
+align-self: stretch;
+flex-grow: 0;
+
+
+/* Frame 45 */
+
+/* 오토레이아웃 */
+display: flex;
+flex-direction: column;
+align-items: flex-start;
+padding: 0px;
+gap: 4px;
+
+width: 160px;
+height: 135px;
+
+
+/* 내부 오토레이아웃 */
+flex: none;
+order: 4;
+flex-grow: 0;
+
+
+/* Frame 31 */
+
+width: 160px;
+height: 102px;
+
+background: #AA9CFF;
+
+/* 내부 오토레이아웃 */
+flex: none;
+order: 0;
+align-self: stretch;
+flex-grow: 0;
+
+
+/* 400 */
+
+width: 160px;
+height: 29px;
+
+font-family: 'Pretendard';
+font-style: normal;
+font-weight: 500;
+font-size: 24px;
+line-height: 29px;
+/* 상자 높이와 동일 */
+text-align: center;
+
+color: #94A3B8;
+
+
+/* 내부 오토레이아웃 */
+flex: none;
+order: 1;
+align-self: stretch;
+flex-grow: 0;
+
+
+/* Frame 46 */
+
+/* 오토레이아웃 */
+display: flex;
+flex-direction: column;
+align-items: flex-start;
+padding: 0px;
+gap: 4px;
+
+width: 160px;
+height: 135px;
+
+
+/* 내부 오토레이아웃 */
+flex: none;
+order: 5;
+flex-grow: 0;
+
+
+/* Frame 30 */
+
+width: 160px;
+height: 102px;
+
+background: #7264F8;
+
+/* 내부 오토레이아웃 */
+flex: none;
+order: 0;
+align-self: stretch;
+flex-grow: 0;
+
+
+/* 500 */
+
+width: 160px;
+height: 29px;
+
+font-family: 'Pretendard';
+font-style: normal;
+font-weight: 500;
+font-size: 24px;
+line-height: 29px;
+/* 상자 높이와 동일 */
+text-align: center;
+
+color: #94A3B8;
+
+
+/* 내부 오토레이아웃 */
+flex: none;
+order: 1;
+align-self: stretch;
+flex-grow: 0;
+
+
+/* Frame 47 */
+
+/* 오토레이아웃 */
+display: flex;
+flex-direction: column;
+align-items: flex-start;
+padding: 0px;
+gap: 4px;
+
+width: 160px;
+height: 135px;
+
+
+/* 내부 오토레이아웃 */
+flex: none;
+order: 6;
+flex-grow: 0;
+
+
+/* Frame 36 */
+
+width: 160px;
+height: 102px;
+
+background: #6353F0;
+
+/* 내부 오토레이아웃 */
+flex: none;
+order: 0;
+align-self: stretch;
+flex-grow: 0;
+
+
+/* 600 */
+
+width: 160px;
+height: 29px;
+
+font-family: 'Pretendard';
+font-style: normal;
+font-weight: 500;
+font-size: 24px;
+line-height: 29px;
+/* 상자 높이와 동일 */
+text-align: center;
+
+color: #94A3B8;
+
+
+/* 내부 오토레이아웃 */
+flex: none;
+order: 1;
+align-self: stretch;
+flex-grow: 0;
+
+
+/* Frame 48 */
+
+/* 오토레이아웃 */
+display: flex;
+flex-direction: column;
+align-items: flex-start;
+padding: 0px;
+gap: 4px;
+
+width: 160px;
+height: 135px;
+
+
+/* 내부 오토레이아웃 */
+flex: none;
+order: 7;
+flex-grow: 0;
+
+
+/* Frame 37 */
+
+width: 160px;
+height: 102px;
+
+background: #5443DB;
+
+/* 내부 오토레이아웃 */
+flex: none;
+order: 0;
+align-self: stretch;
+flex-grow: 0;
+
+
+/* 700 */
+
+width: 160px;
+height: 29px;
+
+font-family: 'Pretendard';
+font-style: normal;
+font-weight: 500;
+font-size: 24px;
+line-height: 29px;
+/* 상자 높이와 동일 */
+text-align: center;
+
+color: #94A3B8;
+
+
+/* 내부 오토레이아웃 */
+flex: none;
+order: 1;
+align-self: stretch;
+flex-grow: 0;
+
+
+/* Frame 49 */
+
+/* 오토레이아웃 */
+display: flex;
+flex-direction: column;
+align-items: flex-start;
+padding: 0px;
+gap: 4px;
+
+width: 161px;
+height: 135px;
+
+
+/* 내부 오토레이아웃 */
+flex: none;
+order: 8;
+flex-grow: 0;
+
+
+/* Frame 38 */
+
+width: 161px;
+height: 102px;
+
+background: #4436B6;
+
+/* 내부 오토레이아웃 */
+flex: none;
+order: 0;
+align-self: stretch;
+flex-grow: 0;
+
+
+/* 800 */
+
+width: 161px;
+height: 29px;
+
+font-family: 'Pretendard';
+font-style: normal;
+font-weight: 500;
+font-size: 24px;
+line-height: 29px;
+/* 상자 높이와 동일 */
+text-align: center;
+
+color: #94A3B8;
+
+
+/* 내부 오토레이아웃 */
+flex: none;
+order: 1;
+align-self: stretch;
+flex-grow: 0;
+
+
+/* Frame 50 */
+
+/* 오토레이아웃 */
+display: flex;
+flex-direction: column;
+align-items: flex-start;
+padding: 0px;
+gap: 4px;
+
+width: 160px;
+height: 135px;
+
+
+/* 내부 오토레이아웃 */
+flex: none;
+order: 9;
+flex-grow: 0;
+
+
+/* Frame 39 */
+
+width: 160px;
+height: 102px;
+
+background: #342A8F;
+border-radius: 0px 24px 24px 0px;
+
+/* 내부 오토레이아웃 */
+flex: none;
+order: 0;
+align-self: stretch;
+flex-grow: 0;
+
+
+/* 900 */
+
+width: 160px;
+height: 29px;
+
+font-family: 'Pretendard';
+font-style: normal;
+font-weight: 500;
+font-size: 24px;
+line-height: 29px;
+/* 상자 높이와 동일 */
+text-align: center;
+
+color: #94A3B8;
+
+
+/* 내부 오토레이아웃 */
+flex: none;
+order: 1;
+align-self: stretch;
+flex-grow: 0;
+
+
+/* Frame 63 */
+
+/* 오토레이아웃 */
+display: flex;
+flex-direction: row;
+align-items: center;
+padding: 0px;
+
+position: absolute;
+width: 1600.5px;
+height: 135px;
+left: 132px;
+top: 426px;
+
+
+
+/* Frame 52 */
+
+/* 오토레이아웃 */
+display: flex;
+flex-direction: column;
+align-items: center;
+padding: 0px;
+gap: 4px;
+
+width: 145.5px;
+height: 135px;
+
+
+/* 내부 오토레이아웃 */
+flex: none;
+order: 0;
+flex-grow: 0;
+
+
+/* Frame 35 */
+
+width: 145.5px;
+height: 102px;
+
+background: #F8FAFC;
+border-radius: 24px 0px 0px 24px;
+
+/* 내부 오토레이아웃 */
+flex: none;
+order: 0;
+align-self: stretch;
+flex-grow: 0;
+
+
+/* 50 */
+
+width: 145.5px;
+height: 29px;
+
+font-family: 'Pretendard';
+font-style: normal;
+font-weight: 500;
+font-size: 24px;
+line-height: 29px;
+/* 상자 높이와 동일 */
+text-align: center;
+
+color: #94A3B8;
+
+
+/* 내부 오토레이아웃 */
+flex: none;
+order: 1;
+align-self: stretch;
+flex-grow: 0;
+
+
+/* Frame 53 */
+
+/* 오토레이아웃 */
+display: flex;
+flex-direction: column;
+align-items: flex-start;
+padding: 0px;
+gap: 4px;
+
+width: 145.5px;
+height: 135px;
+
+
+/* 내부 오토레이아웃 */
+flex: none;
+order: 1;
+flex-grow: 0;
+
+
+/* Frame 34 */
+
+width: 145.5px;
+height: 102px;
+
+background: #F1F5F9;
+
+/* 내부 오토레이아웃 */
+flex: none;
+order: 0;
+align-self: stretch;
+flex-grow: 0;
+
+
+/* 100 */
+
+width: 145.5px;
+height: 29px;
+
+font-family: 'Pretendard';
+font-style: normal;
+font-weight: 500;
+font-size: 24px;
+line-height: 29px;
+/* 상자 높이와 동일 */
+text-align: center;
+
+color: #94A3B8;
+
+
+/* 내부 오토레이아웃 */
+flex: none;
+order: 1;
+align-self: stretch;
+flex-grow: 0;
+
+
+/* Frame 54 */
+
+/* 오토레이아웃 */
+display: flex;
+flex-direction: column;
+align-items: flex-start;
+padding: 0px;
+gap: 4px;
+
+width: 145.5px;
+height: 135px;
+
+
+/* 내부 오토레이아웃 */
+flex: none;
+order: 2;
+flex-grow: 0;
+
+
+/* Frame 33 */
+
+width: 145.5px;
+height: 102px;
+
+background: #E2E8F0;
+
+/* 내부 오토레이아웃 */
+flex: none;
+order: 0;
+align-self: stretch;
+flex-grow: 0;
+
+
+/* 200 */
+
+width: 145.5px;
+height: 29px;
+
+font-family: 'Pretendard';
+font-style: normal;
+font-weight: 500;
+font-size: 24px;
+line-height: 29px;
+/* 상자 높이와 동일 */
+text-align: center;
+
+color: #94A3B8;
+
+
+/* 내부 오토레이아웃 */
+flex: none;
+order: 1;
+align-self: stretch;
+flex-grow: 0;
+
+
+/* Frame 55 */
+
+/* 오토레이아웃 */
+display: flex;
+flex-direction: column;
+align-items: flex-start;
+padding: 0px;
+gap: 4px;
+
+width: 145.5px;
+height: 135px;
+
+
+/* 내부 오토레이아웃 */
+flex: none;
+order: 3;
+flex-grow: 0;
+
+
+/* Frame 32 */
+
+width: 145.5px;
+height: 102px;
+
+background: #CBD5E1;
+
+/* 내부 오토레이아웃 */
+flex: none;
+order: 0;
+align-self: stretch;
+flex-grow: 0;
+
+
+/* 300 */
+
+width: 145.5px;
+height: 29px;
+
+font-family: 'Pretendard';
+font-style: normal;
+font-weight: 500;
+font-size: 24px;
+line-height: 29px;
+/* 상자 높이와 동일 */
+text-align: center;
+
+color: #94A3B8;
+
+
+/* 내부 오토레이아웃 */
+flex: none;
+order: 1;
+align-self: stretch;
+flex-grow: 0;
+
+
+/* Frame 56 */
+
+/* 오토레이아웃 */
+display: flex;
+flex-direction: column;
+align-items: center;
+padding: 0px;
+gap: 4px;
+
+width: 145.5px;
+height: 135px;
+
+
+/* 내부 오토레이아웃 */
+flex: none;
+order: 4;
+flex-grow: 0;
+
+
+/* Frame 31 */
+
+width: 145.5px;
+height: 102px;
+
+background: #94A3B8;
+
+/* 내부 오토레이아웃 */
+flex: none;
+order: 0;
+align-self: stretch;
+flex-grow: 0;
+
+
+/* 400 */
+
+width: 145.5px;
+height: 29px;
+
+font-family: 'Pretendard';
+font-style: normal;
+font-weight: 500;
+font-size: 24px;
+line-height: 29px;
+/* 상자 높이와 동일 */
+text-align: center;
+
+color: #94A3B8;
+
+
+/* 내부 오토레이아웃 */
+flex: none;
+order: 1;
+align-self: stretch;
+flex-grow: 0;
+
+
+/* Frame 57 */
+
+/* 오토레이아웃 */
+display: flex;
+flex-direction: column;
+align-items: center;
+padding: 0px;
+gap: 4px;
+
+width: 145.5px;
+height: 135px;
+
+
+/* 내부 오토레이아웃 */
+flex: none;
+order: 5;
+flex-grow: 0;
+
+
+/* Frame 30 */
+
+width: 145.5px;
+height: 102px;
+
+background: #64748B;
+
+/* 내부 오토레이아웃 */
+flex: none;
+order: 0;
+align-self: stretch;
+flex-grow: 0;
+
+
+/* 500 */
+
+width: 145.5px;
+height: 29px;
+
+font-family: 'Pretendard';
+font-style: normal;
+font-weight: 500;
+font-size: 24px;
+line-height: 29px;
+/* 상자 높이와 동일 */
+text-align: center;
+
+color: #94A3B8;
+
+
+/* 내부 오토레이아웃 */
+flex: none;
+order: 1;
+align-self: stretch;
+flex-grow: 0;
+
+
+/* Frame 58 */
+
+/* 오토레이아웃 */
+display: flex;
+flex-direction: column;
+align-items: center;
+padding: 0px;
+gap: 4px;
+
+width: 145.5px;
+height: 135px;
+
+
+/* 내부 오토레이아웃 */
+flex: none;
+order: 6;
+flex-grow: 0;
+
+
+/* Frame 36 */
+
+width: 145.5px;
+height: 102px;
+
+background: #475569;
+
+/* 내부 오토레이아웃 */
+flex: none;
+order: 0;
+align-self: stretch;
+flex-grow: 0;
+
+
+/* 600 */
+
+width: 145.5px;
+height: 29px;
+
+font-family: 'Pretendard';
+font-style: normal;
+font-weight: 500;
+font-size: 24px;
+line-height: 29px;
+/* 상자 높이와 동일 */
+text-align: center;
+
+color: #94A3B8;
+
+
+/* 내부 오토레이아웃 */
+flex: none;
+order: 1;
+align-self: stretch;
+flex-grow: 0;
+
+
+/* Frame 59 */
+
+/* 오토레이아웃 */
+display: flex;
+flex-direction: column;
+align-items: center;
+padding: 0px;
+gap: 4px;
+
+width: 145.5px;
+height: 135px;
+
+
+/* 내부 오토레이아웃 */
+flex: none;
+order: 7;
+flex-grow: 0;
+
+
+/* Frame 37 */
+
+width: 145.5px;
+height: 102px;
+
+background: #334155;
+
+/* 내부 오토레이아웃 */
+flex: none;
+order: 0;
+align-self: stretch;
+flex-grow: 0;
+
+
+/* 700 */
+
+width: 145.5px;
+height: 29px;
+
+font-family: 'Pretendard';
+font-style: normal;
+font-weight: 500;
+font-size: 24px;
+line-height: 29px;
+/* 상자 높이와 동일 */
+text-align: center;
+
+color: #94A3B8;
+
+
+/* 내부 오토레이아웃 */
+flex: none;
+order: 1;
+align-self: stretch;
+flex-grow: 0;
+
+
+/* Frame 60 */
+
+/* 오토레이아웃 */
+display: flex;
+flex-direction: column;
+align-items: center;
+padding: 0px;
+gap: 4px;
+
+width: 145.5px;
+height: 135px;
+
+
+/* 내부 오토레이아웃 */
+flex: none;
+order: 8;
+flex-grow: 0;
+
+
+/* Frame 40 */
+
+width: 145.5px;
+height: 102px;
+
+background: #273449;
+
+/* 내부 오토레이아웃 */
+flex: none;
+order: 0;
+align-self: stretch;
+flex-grow: 0;
+
+
+/* 800 */
+
+width: 145.5px;
+height: 29px;
+
+font-family: 'Pretendard';
+font-style: normal;
+font-weight: 500;
+font-size: 24px;
+line-height: 29px;
+/* 상자 높이와 동일 */
+text-align: center;
+
+color: #94A3B8;
+
+
+/* 내부 오토레이아웃 */
+flex: none;
+order: 1;
+align-self: stretch;
+flex-grow: 0;
+
+
+/* Frame 61 */
+
+/* 오토레이아웃 */
+display: flex;
+flex-direction: column;
+align-items: center;
+padding: 0px;
+gap: 4px;
+
+width: 145.5px;
+height: 135px;
+
+
+/* 내부 오토레이아웃 */
+flex: none;
+order: 9;
+flex-grow: 0;
+
+
+/* Frame 38 */
+
+width: 145.5px;
+height: 102px;
+
+background: #1E293B;
+
+/* 내부 오토레이아웃 */
+flex: none;
+order: 0;
+align-self: stretch;
+flex-grow: 0;
+
+
+/* 900 */
+
+width: 145.5px;
+height: 29px;
+
+font-family: 'Pretendard';
+font-style: normal;
+font-weight: 500;
+font-size: 24px;
+line-height: 29px;
+/* 상자 높이와 동일 */
+text-align: center;
+
+color: #94A3B8;
+
+
+/* 내부 오토레이아웃 */
+flex: none;
+order: 1;
+align-self: stretch;
+flex-grow: 0;
+
+
+/* Frame 62 */
+
+/* 오토레이아웃 */
+display: flex;
+flex-direction: column;
+align-items: center;
+padding: 0px;
+gap: 4px;
+
+width: 145.5px;
+height: 135px;
+
+
+/* 내부 오토레이아웃 */
+flex: none;
+order: 10;
+flex-grow: 0;
+
+
+/* Frame 39 */
+
+width: 145.5px;
+height: 102px;
+
+background: #0F172A;
+border-radius: 0px 24px 24px 0px;
+
+/* 내부 오토레이아웃 */
+flex: none;
+order: 0;
+align-self: stretch;
+flex-grow: 0;
+
+
+/* 1000 */
+
+width: 145.5px;
+height: 29px;
+
+font-family: 'Pretendard';
+font-style: normal;
+font-weight: 500;
+font-size: 24px;
+line-height: 29px;
+/* 상자 높이와 동일 */
+text-align: center;
+
+color: #94A3B8;
+
+
+/* 내부 오토레이아웃 */
+flex: none;
+order: 1;
+align-self: stretch;
+flex-grow: 0;
+
+
+/* 아이콘 */
+
+position: relative;
+width: 1920px;
+height: 1668px;
+left: 7000px;
+top: 221px;
+
+background: #FFFFFF;
+
+
+/* Icongraphy */
+
+position: absolute;
+width: 340px;
+height: 76px;
+left: 128px;
+top: 107px;
+
+font-family: 'Pretendard';
+font-style: normal;
+font-weight: 700;
+font-size: 64px;
+line-height: 76px;
+
+color: #000000;
+
+
+
+/* eye */
+
+box-sizing: border-box;
+
+position: absolute;
+width: 110px;
+height: 64px;
+left: 128px;
+top: 287px;
+
+border: 1px dashed #9747FF;
+border-radius: 5px;
+
+
+/* Property 1=eye-open */
+
+position: absolute;
+width: 24px;
+height: 24px;
+left: 20px;
+top: 20px;
+
+
+
+/* Icon */
+
+position: absolute;
+left: 10%;
+right: 10%;
+top: 21.43%;
+bottom: 21.43%;
+
+/* Gray/500 */
+border: 2px solid #64748B;
+
+
+/* Property 1=eye-closed */
+
+position: absolute;
+width: 24px;
+height: 24px;
+left: 66px;
+top: 20px;
+
+
+
+/* Icon */
+
+position: absolute;
+left: 10%;
+right: 10%;
+top: 18.75%;
+bottom: 18.75%;
+
+/* Gray/400 */
+border: 2px solid #94A3B8;
+
+
+/* Frame 311 */
+
+/* 오토레이아웃 */
+display: flex;
+flex-direction: row;
+align-items: center;
+padding: 0px;
+gap: 22px;
+
+position: absolute;
+width: 440px;
+height: 44px;
+left: 128px;
+top: 224px;
+
+
+
+/* Frame 219 */
+
+width: 44px;
+height: 44px;
+
+
+/* 내부 오토레이아웃 */
+flex: none;
+order: 0;
+flex-grow: 0;
+
+
+/* Vector */
+
+position: absolute;
+left: 22.73%;
+right: 22.73%;
+top: 25.76%;
+bottom: 25.76%;
+
+border: 2px solid #000000;
+
+
+/* Frame 220 */
+
+width: 44px;
+height: 44px;
+
+
+/* 내부 오토레이아웃 */
+flex: none;
+order: 1;
+flex-grow: 0;
+
+
+/* home-03 */
+
+position: absolute;
+left: 13.64%;
+right: 15.91%;
+top: 13.64%;
+bottom: 13.64%;
+
+
+
+/* Icon */
+
+position: absolute;
+left: 12.5%;
+right: 12.5%;
+top: 12.5%;
+bottom: 12.5%;
+
+border: 2px solid #000000;
+
+
+/* Frame 221 */
+
+width: 44px;
+height: 44px;
+
+
+/* 내부 오토레이아웃 */
+flex: none;
+order: 2;
+flex-grow: 0;
+
+
+/* Icon */
+
+position: absolute;
+left: 18.86%;
+right: 21.14%;
+top: 30.55%;
+bottom: 23.73%;
+
+border: 2px solid #000000;
+
+
+/* Frame 222 */
+
+width: 44px;
+height: 44px;
+
+
+/* 내부 오토레이아웃 */
+flex: none;
+order: 3;
+flex-grow: 0;
+
+
+/* Group 1 */
+
+position: absolute;
+width: 24px;
+height: 24px;
+left: 10px;
+top: 10px;
+
+
+
+/* Icon */
+
+position: absolute;
+left: 22.73%;
+right: 22.73%;
+top: 22.73%;
+bottom: 22.73%;
+
+border: 2px solid #000000;
+
+
+/* Icon */
+
+position: absolute;
+left: 30.09%;
+right: 30.09%;
+top: 32.95%;
+bottom: 32.95%;
+
+border: 2px solid #000000;
+
+
+/* Frame 310 */
+
+/* 오토레이아웃 */
+display: flex;
+flex-direction: row;
+justify-content: center;
+align-items: center;
+padding: 0px;
+gap: 10px;
+
+width: 44px;
+height: 44px;
+
+
+/* 내부 오토레이아웃 */
+flex: none;
+order: 4;
+flex-grow: 0;
+
+
+/* bell-02 */
+
+width: 24px;
+height: 24px;
+
+
+/* 내부 오토레이아웃 */
+flex: none;
+order: 0;
+flex-grow: 0;
+
+
+/* Icon */
+
+position: absolute;
+left: 16.67%;
+right: 16.67%;
+top: 12.5%;
+bottom: 12.5%;
+
+/* Gray/700 */
+border: 2px solid #334155;
+
+
+/* chevoren_left */
+
+/* 오토레이아웃 */
+display: flex;
+flex-direction: row;
+justify-content: center;
+align-items: center;
+padding: 0px;
+gap: 10px;
+
+width: 44px;
+height: 44px;
+
+transform: matrix(-1, 0, 0, 1, 0, 0);
+
+/* 내부 오토레이아웃 */
+flex: none;
+order: 5;
+flex-grow: 0;
+
+
+/* chevron-left */
+
+width: 30px;
+height: 32px;
+
+transform: matrix(-1, 0, 0, 1, 0, 0);
+
+/* 내부 오토레이아웃 */
+flex: none;
+order: 0;
+flex-grow: 0;
+
+
+/* Icon */
+
+position: absolute;
+width: 12px;
+height: 6px;
+left: calc(50% - 12px/2 + 3px);
+top: calc(50% - 6px/2 - 3px);
+
+/* Gray/800 */
+border: 2px solid #273449;
+transform: matrix(0, -1, -1, 0, 0, 0);
+
+
+/* chevoren_left */
+
+/* 오토레이아웃 */
+display: flex;
+flex-direction: row;
+justify-content: center;
+align-items: center;
+padding: 0px;
+gap: 10px;
+
+width: 44px;
+height: 44px;
+
+
+/* 내부 오토레이아웃 */
+flex: none;
+order: 6;
+flex-grow: 0;
+
+
+/* chevron-left */
+
+width: 30px;
+height: 32px;
+
+
+/* 내부 오토레이아웃 */
+flex: none;
+order: 0;
+flex-grow: 0;
+
+
+/* Icon */
+
+position: absolute;
+width: 12px;
+height: 6px;
+left: calc(50% - 12px/2 + 3px);
+top: calc(50% - 6px/2 - 3px);
+
+/* Gray/800 */
+border: 2px solid #273449;
+transform: rotate(-90deg);
+
+
+/* check */
+
+box-sizing: border-box;
+
+position: absolute;
+width: 102px;
+height: 64px;
+left: 264px;
+top: 287px;
+
+border: 1px dashed #9747FF;
+border-radius: 5px;
+
+
+/* Property 1=check-contained */
+
+position: absolute;
+width: 24px;
+height: 24px;
+left: 16px;
+top: 19px;
+
+
+
+/* Icon */
+
+position: absolute;
+height: 16px;
+left: 16.67%;
+right: 16.67%;
+top: calc(50% - 16px/2);
+
+/* GREEN */
+border: 1.5px solid #36DA21;
+
+
+/* Property 1=x */
+
+position: absolute;
+width: 24px;
+height: 24px;
+left: 62px;
+top: 19px;
+
+
+
+/* Icon */
+
+position: absolute;
+height: 16px;
+left: 16.67%;
+right: 16.67%;
+top: calc(50% - 16px/2);
+
+/* RED */
+border: 1.5px solid #F14444;
+
+
+/* grid-01 */
+
+position: absolute;
+width: 24px;
+height: 24px;
+left: 581px;
+top: 234px;
+
+
+
+/* Icon */
+
+position: absolute;
+left: 12.5%;
+right: 12.5%;
+top: 12.5%;
+bottom: 12.5%;
+
+border: 2px solid #000000;
+
+
+/* Icon */
+
+position: absolute;
+width: 18px;
+height: 18px;
+left: 629px;
+top: 238px;
+
+
+
+/* Icon */
+
+position: absolute;
+left: 0%;
+right: 0%;
+top: 0%;
+bottom: 0%;
+
+border: 2px solid #000000;
+
+
+/* Frame 353 */
+
+box-sizing: border-box;
+
+position: absolute;
+width: 84px;
+height: 148px;
+left: 402px;
+top: 287px;
+
+border: 1px dashed #9747FF;
+border-radius: 5px;
+
+
+/* Property 1=Default */
+
+/* 오토레이아웃 */
+display: flex;
+flex-direction: row;
+justify-content: center;
+align-items: center;
+padding: 10px;
+gap: 10px;
+
+position: absolute;
+width: 44px;
+height: 44px;
+left: 20px;
+top: 20px;
+
+
+
+/* favourite */
+
+width: 24px;
+height: 24px;
+
+
+/* 내부 오토레이아웃 */
+flex: none;
+order: 0;
+flex-grow: 0;
+
+
+/* Icon */
+
+position: absolute;
+left: 20.83%;
+right: 25%;
+top: 12.5%;
+bottom: 12.5%;
+
+/* Gray/400 */
+border: 2px solid #94A3B8;
+
+
+/* Property 1=Variant2 */
+
+/* 오토레이아웃 */
+display: flex;
+flex-direction: row;
+justify-content: center;
+align-items: center;
+padding: 10px;
+gap: 10px;
+
+position: absolute;
+width: 44px;
+height: 44px;
+left: 20px;
+top: 84px;
+
+
+
+/* favourite */
+
+width: 24px;
+height: 24px;
+
+
+/* 내부 오토레이아웃 */
+flex: none;
+order: 0;
+flex-grow: 0;
+
+
+/* Icon */
+
+position: absolute;
+left: 20.83%;
+right: 25%;
+top: 12.5%;
+bottom: 12.5%;
+
+/* Purple/600 MAIN */
+background: #6353F0;
+/* Purple/600 MAIN */
+border: 2px solid #6353F0;
+
+
+/* Frame 393 */
+
+/* 오토레이아웃 */
+display: flex;
+flex-direction: row;
+align-items: center;
+padding: 3px 0px;
+gap: 10px;
+
+position: absolute;
+width: 28px;
+height: 30px;
+left: 620px;
+top: 340px;
+
+
+
+/* lightbulb-02 */
+
+width: 24px;
+height: 24px;
+
+
+/* 내부 오토레이아웃 */
+flex: none;
+order: 0;
+flex-grow: 0;
+
+
+/* Icon */
+
+position: absolute;
+left: 25%;
+right: 25%;
+top: 10%;
+bottom: 10%;
+
+/* Purple/600 MAIN */
+border: 2px solid #6353F0;
+
+
+/* Frame 424 */
+
+/* 오토레이아웃 */
+display: flex;
+flex-direction: row;
+justify-content: center;
+align-items: center;
+padding: 3px 0px;
+gap: 10px;
+
+position: absolute;
+width: 28px;
+height: 30px;
+left: 573px;
+top: 340px;
+
+
+
+/* message-typing */
+
+width: 24px;
+height: 24px;
+
+
+/* 내부 오토레이아웃 */
+flex: none;
+order: 0;
+flex-grow: 0;
+
+
+/* Icon */
+
+position: absolute;
+left: 12.5%;
+right: 12.5%;
+top: 12.5%;
+bottom: 12.5%;
+
+/* Purple/600 MAIN */
+border: 2px solid #6353F0;
+
+
+/* 로고 */
+
+position: relative;
+width: 1920px;
+height: 1668px;
+left: 4947px;
+top: 221px;
+
+background: #FFFFFF;
+
+
+/* LOGO */
+
+position: absolute;
+width: 177px;
+height: 76px;
+left: 128px;
+top: 107px;
+
+font-family: 'Pretendard';
+font-style: normal;
+font-weight: 700;
+font-size: 64px;
+line-height: 76px;
+
+color: #000000;
+
+
+
+/* 아이콘 */
+
+position: absolute;
+width: 1024px;
+height: 1024px;
+left: 448px;
+top: 322px;
+
+background: linear-gradient(134.43deg, #6A5AF2 0%, #5443DB 49.52%, #4735C8 99.03%);
+box-shadow: 0px 24px 48px rgba(61, 42, 181, 0.2), inset 0px 8px 20px rgba(46, 28, 154, 0.18), inset 0px -4px 12px rgba(255, 255, 255, 0.16);
+border-radius: 230px;
+
+
+/* Group 2 */
+
+position: absolute;
+width: 656px;
+height: 641px;
+left: 184px;
+top: 192px;
+
+
+
+/* Vector */
+
+box-sizing: border-box;
+
+position: absolute;
+height: 641px;
+left: 17.97%;
+right: 48.44%;
+top: calc(50% - 641px/2 + 0.5px);
+
+background: linear-gradient(165.1deg, rgba(255, 255, 255, 0.95) 2.96%, rgba(247, 248, 255, 0.78) 45.58%, rgba(221, 226, 255, 0.58) 97.68%);
+border: 2px solid rgba(255, 255, 255, 0.55);
+box-shadow: 0px 10px 22px rgba(47, 35, 143, 0.18), inset 2px 4px 10px rgba(158, 166, 255, 0.22), inset -2px -2px 6px rgba(255, 255, 255, 0.7);
+
+
+/* Vector */
+
+box-sizing: border-box;
+
+position: absolute;
+height: 631px;
+left: 51.56%;
+right: 17.97%;
+top: calc(50% - 631px/2 + 5.5px);
+
+background: linear-gradient(169.26deg, rgba(255, 255, 255, 0.95) 2.15%, rgba(247, 248, 255, 0.78) 45.54%, rgba(221, 226, 255, 0.58) 98.57%);
+border: 2px solid rgba(255, 255, 255, 0.55);
+box-shadow: 0px 10px 22px rgba(47, 35, 143, 0.18), inset 2px 4px 10px rgba(158, 166, 255, 0.22), inset -2px -2px 6px rgba(255, 255, 255, 0.7);
+
+
+/* 좌 하이라이트 */
+
+position: absolute;
+width: 291px;
+height: 625px;
+left: 196px;
+top: 203px;
+
+
+
+/* 우 하이라이트 */
+
+position: absolute;
+width: 287.5px;
+height: 618px;
+left: 540.5px;
+top: 210px;
+
+
+
+/* 컬러 사용 영역 */
+
+position: relative;
+width: 474px;
+height: 1085px;
+left: 4324px;
+top: 221px;
+
+background: #FFFFFF;
+
+
+/* PRIMARY  50 앱 전체 배경 온보딩 배경 빈 상태(Empty State) 배경  100 선택된 카드 배경 말풍선 배경 하이라이트 영역  200 선택 상태 Hover 보조 배경  300 비활성 태그 선택 전 단계 프로필 배경  400 보조 강조 배지 Progress Track  500 브랜드 메인 컬러 로고 활성 탭 포인트 컬러  600 메인 CTA 버튼 주요 액션 링크 강조  700 Pressed 상태 선택된 버튼 강조 아이콘  800 강조 배경 차트 포인트 중요 상태  900 최강 강조 다크 카드 중요 알림 */
+
+position: absolute;
+width: 154px;
+height: 884px;
+left: 72px;
+top: 66px;
+
+font-family: 'Pretendard';
+font-style: normal;
+font-weight: 400;
+font-size: 14px;
+line-height: 17px;
+
+color: #000000;
+
+
+
+/* GRAY 50 페이지 배경 Section 배경 100 카드 배경 Input 배경 200 Divider Border 비활성 배경 300 비활성 Border Input Outline 400 Placeholder Disabled Text 500 보조 텍스트 설명 문구 600 서브 타이틀 리스트 정보 700 본문 텍스트 카드 제목 800 강조 텍스트 헤더 네비게이션 900 메인 텍스트 고대비 텍스트 1000 최상위 텍스트 다크 모드 배경 최고 대비 영역 */
+
+position: absolute;
+width: 89px;
+height: 952px;
+left: 273px;
+top: 66px;
+
+font-family: 'Pretendard';
+font-style: normal;
+font-weight: 400;
+font-size: 14px;
+line-height: 17px;
+
+color: #000000;
+
+
+
+/* plus-02 */
+
+position: relative;
+width: 10px;
+height: 10px;
+left: 7670px;
+top: 463px;
+
+
+
+/* Icon */
+
+position: absolute;
+left: 25%;
+right: 25%;
+top: 25%;
+bottom: 25%;
+
+border: 1px solid #000000;

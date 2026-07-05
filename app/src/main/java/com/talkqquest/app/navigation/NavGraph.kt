@@ -1,24 +1,29 @@
 package com.talkqquest.app.navigation
 
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Modifier
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
-import androidx.navigation.compose.rememberNavController
+import androidx.navigation.compose.composable
 
-/**
- * 전체 네비게이션 그래프. 뼈대만 있는 상태.
- * 화면 구현이 준비되면 아래 NavHost 블록에 composable(route) { ... } 를 추가해주세요.
- */
+// 네비게이션 그래프.
+// TODO(각 담당): composable(Screen.XXX) { XxxScreen(navController) } 로 자기 화면 등록. route는 Screen.kt 참고.
 @Composable
 fun NavGraph(
-    navController: NavHostController = rememberNavController()
+    navController: NavHostController,
+    modifier: Modifier = Modifier,
 ) {
     NavHost(
         navController = navController,
-        startDestination = Screen.SPLASH
+        startDestination = Screen.HOME,
+        modifier = modifier,
     ) {
-        // TODO(지니/전준호): composable(Screen.SPLASH) { SplashScreen(...) }
-        // TODO(지니/전준호): composable(Screen.LOGIN) { LoginScreen(...) }
-        // TODO: 담당자별 화면이 준비되는 대로 여기에 연결
+        // 하단 네비 4탭 (임시 — 실제 화면으로 교체)
+        composable(Screen.HOME) { PlaceholderScreen("홈") }
+        composable(Screen.ARCHIVE_HOME) { PlaceholderScreen("아카이브") }
+        composable(Screen.COMMUNITY_LIST) { PlaceholderScreen("모임") }
+        composable(Screen.PROFILE) { PlaceholderScreen("프로필") }
+
+        // 예) composable(Screen.LOGIN) { LoginScreen(navController) }
     }
 }

@@ -192,7 +192,8 @@ object Screen {
 
 ## 8. 디자인 토큰 & 공통 컴포넌트 (참고)
 
-> **아직 코드로 구현 안 된 상태입니다.** 아래는 디자이너가 넘긴 `design/design-system.css` / `design/components.css`에서 뽑은 값으로, `core/designsystem`을 만드는 담당자가 참고하라고 남겨둡니다. **실제 값의 출처(source of truth)는 그 두 css 원본**이고, 이 표는 요약입니다. (색/타이포/컴포넌트를 실제 Compose로 만드는 건 별도 작업 — 담당자가 브랜치+PR로)
+> **이제 `core/designsystem`에 코드로 구현·커밋 완료됐습니다.** 색은 `Primary600`·`Gray200` 등 이름으로, 타이포는 `TqType.HeadingL`, 컴포넌트는 `TqButton`/`TqChip`/`TqCard`로 **갖다 쓰면 됩니다**(새로 만들지 마세요). 아래 표는 그 스펙 요약입니다.
+> 원래 값의 출처(source of truth)는 디자이너가 넘긴 `design/design-system.css` / `design/components.css`이고, 지금 코드는 그 기준의 **초안**입니다 — **피그마 확정 시 맞춰야 합니다.** (자세한 사용법은 팀 배포용 `공통 세팅 안내.md` 참고)
 
 ### 색상 (Color)
 
@@ -244,4 +245,4 @@ object Screen {
 | 난이도 라벨 | 쉬움 = GREEN / 보통 / 어려움 (색으로 구분) |
 | 카드 | 흰 배경, radius **20**, 그림자 `0 8px 24px rgba(15,23,42,0.06)`, stroke/fill 2종 |
 
-> **첫 공통 작업 후보 = 하단 네비게이션.** 4탭이 A·B·C 담당 화면 전부에 깔리는 유일한 공통 컴포넌트라, 한 명이 색/타이포 + 하단네비 + 버튼/칩/카드를 먼저 PR로 올리고 나머지가 그 위에서 화면을 만드는 순서를 추천합니다.
+> **위 컴포넌트는 대부분 구현 완료됐습니다.** 색/타이포 + 하단네비 + 버튼(`TqButton`)/칩(`TqChip`)/카드(`TqCard`)는 `core/designsystem`에 커밋돼 있으니 갖다 쓰면 됩니다. 다만 **난이도 라벨은 아직 컴포넌트로 없으니**, 먼저 필요한 담당이 같은 규칙(`core/designsystem/component/`)으로 만들어 PR 올려주세요.

@@ -1,20 +1,16 @@
 package com.talkqquest.app.navigation
 
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.List
-import androidx.compose.material.icons.filled.AccountBox
-import androidx.compose.material.icons.filled.Home
-import androidx.compose.material.icons.filled.Person
-import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.annotation.DrawableRes
+import com.talkqquest.app.R
 
-// 하단 네비 4탭 (CONVENTIONS.md 8번). TODO: 아이콘을 피그마 아이콘으로 교체(지금은 Material 임시).
+// 하단 네비 4탭. 아이콘은 디자인 SVG에서 뽑은 벡터 드로어블(res/drawable/ic_nav_*).
 enum class BottomNavItem(
     val route: String,
     val label: String,
-    val icon: ImageVector,
+    @DrawableRes val iconRes: Int,
 ) {
-    Archive(Screen.ARCHIVE_HOME, "아카이브", Icons.AutoMirrored.Filled.List),
-    Home(Screen.HOME, "홈", Icons.Filled.Home),
-    Community(Screen.COMMUNITY_LIST, "모임", Icons.Filled.Person),
-    Profile(Screen.PROFILE, "프로필", Icons.Filled.AccountBox),
+    Archive(Screen.ARCHIVE_HOME, "아카이브", R.drawable.ic_nav_archive),
+    Home(Screen.HOME, "홈", R.drawable.ic_nav_home),
+    Community(Screen.COMMUNITY_LIST, "모임", R.drawable.ic_nav_community),
+    Profile(Screen.PROFILE, "프로필", R.drawable.ic_nav_profile),
 }

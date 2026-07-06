@@ -1,0 +1,18 @@
+<!-- 하단 네비 '아카이브' 아이콘. 디자인 SVG(하단 네비게이션.svg)의 폴더 path 그대로. 색은 코드에서 tint. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="28dp"
+    android:height="28dp"
+    android:viewportWidth="30"
+    android:viewportHeight="30">
+    <group
+        android:translateX="-60"
+        android:translateY="-60">
+        <path
+            android:fillColor="#000000"
+            android:strokeColor="#000000"
+            android:strokeWidth="2"
+            android:strokeLineCap="round"
+            android:strokeLineJoin="round"
+            android:pathData="M63 66.9999C63 66.2927 63.281 65.6144 63.781 65.1143C64.2811 64.6142 64.9594 64.3333 65.6667 64.3333H70.9067C71.3456 64.3332 71.7777 64.4415 72.1648 64.6485C72.5518 64.8555 72.8817 65.1548 73.1253 65.5199L74.208 67.1466C74.4516 67.5117 74.7815 67.811 75.1686 68.018C75.5556 68.225 75.9878 68.3333 76.4267 68.3333H84.3333C85.0406 68.3333 85.7189 68.6142 86.219 69.1143C86.719 69.6144 87 70.2927 87 70.9999V82.9999C87 83.7072 86.719 84.3854 86.219 84.8855C85.7189 85.3856 85.0406 85.6666 84.3333 85.6666H65.6667C64.9594 85.6666 64.2811 85.3856 63.781 84.8855C63.281 84.3854 63 83.7072 63 82.9999V66.9999Z" />
+    </group>
+</vector>

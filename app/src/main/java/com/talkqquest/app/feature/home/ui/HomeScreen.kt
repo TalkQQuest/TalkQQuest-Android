@@ -22,7 +22,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.talkqquest.app.core.designsystem.Error
 import com.talkqquest.app.core.designsystem.Gray500
 import com.talkqquest.app.core.designsystem.Gray900
-import com.talkqquest.app.core.designsystem.Primary50
+import com.talkqquest.app.core.designsystem.Gray50
 import com.talkqquest.app.core.designsystem.Primary600
 import com.talkqquest.app.core.designsystem.TalkQQuestTheme
 import com.talkqquest.app.core.designsystem.TqType
@@ -61,7 +61,7 @@ private fun HomeScreen(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(Primary50),
+            .background(Gray50),
         contentAlignment = Alignment.Center,
     ) {
         when {

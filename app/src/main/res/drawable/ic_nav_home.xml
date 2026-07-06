@@ -1,12 +1,12 @@
-<!-- 하단 네비 '홈' 아이콘. 디자인 SVG의 집 path 그대로. 색은 코드에서 tint. -->
+<!-- 하단 네비 '홈'(집). 홈 CSS: 44프레임 안 좌 22.44/우 24.72%, 상하 22.73% inset. 색은 tint. -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
-    android:width="28dp"
-    android:height="28dp"
-    android:viewportWidth="30"
-    android:viewportHeight="30">
+    android:width="44dp"
+    android:height="44dp"
+    android:viewportWidth="44"
+    android:viewportHeight="44">
     <group
-        android:translateX="-143.5"
-        android:translateY="-60">
+        android:translateX="-137"
+        android:translateY="-52.9">
         <path
             android:fillColor="#000000"
             android:strokeColor="#000000"

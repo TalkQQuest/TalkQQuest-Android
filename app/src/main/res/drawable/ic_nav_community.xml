@@ -1,12 +1,12 @@
-<!-- 하단 네비 '모임' 아이콘(사람 둘). 디자인 SVG path 그대로: 앞사람=채움, 뒷사람=선. 색은 코드에서 tint. -->
+<!-- 하단 네비 '모임'(사람 둘). 홈 CSS: 44프레임 안 좌 18.86/우 21.14%, 상 30.55/하 23.73% inset. 색은 tint. -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
-    android:width="28dp"
-    android:height="28dp"
-    android:viewportWidth="30"
-    android:viewportHeight="30">
+    android:width="44dp"
+    android:height="44dp"
+    android:viewportWidth="44"
+    android:viewportHeight="44">
     <group
-        android:translateX="-227.5"
-        android:translateY="-61.5">
+        android:translateX="-221"
+        android:translateY="-53">
         <path
             android:fillColor="#000000"
             android:pathData="M229.3 85.4178C229.3 81.4625 232.604 78.256 239.357 78.256C246.11 78.256 249.414 81.4625 249.414 85.4178C249.414 86.047 248.955 86.5572 248.389 86.5572H230.325C229.759 86.5572 229.3 86.047 229.3 85.4178Z" />

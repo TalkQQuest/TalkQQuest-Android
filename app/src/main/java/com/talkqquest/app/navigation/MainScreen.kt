@@ -1,5 +1,6 @@
 package com.talkqquest.app.navigation
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
@@ -9,6 +10,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import com.talkqquest.app.core.designsystem.Gray50
 import dev.chrisbanes.haze.HazeState
 import dev.chrisbanes.haze.hazeSource
 
@@ -27,7 +29,8 @@ fun MainScreen() {
 
     val hazeState = remember { HazeState() }
 
-    Box(modifier = Modifier.fillMaxSize()) {
+    // 앱 페이지 배경(Gray50 = 디자인시스템 '페이지 배경'). 탭 화면들이 같은 톤을 공유하도록 루트에서 한 번 깖.
+    Box(modifier = Modifier.fillMaxSize().background(Gray50)) {
         NavGraph(
             navController = navController,
             // hazeSource: 이 영역(화면 콘텐츠)이 유리에 흐리게 비칠 '원본'.

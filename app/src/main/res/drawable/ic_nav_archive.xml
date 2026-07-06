@@ -1,12 +1,12 @@
-<!-- 하단 네비 '아카이브' 아이콘. 디자인 SVG(하단 네비게이션.svg)의 폴더 path 그대로. 색은 코드에서 tint. -->
+<!-- 하단 네비 '아카이브'(폴더). 홈 CSS: 44프레임 안 좌우 22.73%/상하 25.76% inset 위치 그대로. 색은 tint. -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
-    android:width="28dp"
-    android:height="28dp"
-    android:viewportWidth="30"
-    android:viewportHeight="30">
+    android:width="44dp"
+    android:height="44dp"
+    android:viewportWidth="44"
+    android:viewportHeight="44">
     <group
-        android:translateX="-60"
-        android:translateY="-60">
+        android:translateX="-53"
+        android:translateY="-53">
         <path
             android:fillColor="#000000"
             android:strokeColor="#000000"

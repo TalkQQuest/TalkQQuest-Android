@@ -1,12 +1,14 @@
 package com.talkqquest.app.navigation
 
 import android.graphics.BlurMaskFilter
+import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
@@ -103,32 +105,43 @@ private fun TqBottomBarContent(
     hazeState: HazeState,
     modifier: Modifier = Modifier,
 ) {
-    Row(
+    Box(
         modifier = modifier
             .navigationBarsPadding()
             .padding(horizontal = 16.dp, vertical = 12.dp)
             .height(64.dp)
-            // 그림자: 위로 2px, 흐림 12, 검정 6% (CSS 0 -2 12 rgba(0,0,0,0.06))
+            // 알약 그림자: 위로 2px, 흐림 12, 검정 6% (CSS 0 -2 12 rgba(0,0,0,0.06))
             .softShadow(
                 color = Color.Black.copy(alpha = 0.06f),
                 offsetX = 0.dp,
                 offsetY = (-2).dp,
                 blur = 12.dp,
                 cornerRadius = 32.dp,
-            )
-            .clip(RoundedCornerShape(32.dp))
-            // 유리: 뒤 콘텐츠 블러 10 + 흰색 0.8 틴트.
-            .hazeEffect(state = hazeState) {
-                blurRadius = 10.dp
-                backgroundColor = White
-                tints = listOf(HazeTint(White.copy(alpha = 0.8f)))
-            }
-            .border(1.dp, White.copy(alpha = 0.3f), RoundedCornerShape(32.dp))
-            .padding(horizontal = 32.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(40.dp, Alignment.CenterHorizontally),
+            ),
+        contentAlignment = Alignment.Center,
     ) {
-        BottomNavItem.entries.forEach { item ->
+        // 유리 배경 층: 여기만 둥글게 clip. (그래서 아래 콘텐츠의 칩 글로우는 안 잘림)
+        Box(
+            modifier = Modifier
+                .matchParentSize()
+                .clip(RoundedCornerShape(32.dp))
+                .hazeEffect(state = hazeState) {
+                    blurRadius = 10.dp
+                    backgroundColor = White
+                    tints = listOf(HazeTint(White.copy(alpha = 0.8f)))
+                }
+                .border(1.dp, White.copy(alpha = 0.3f), RoundedCornerShape(32.dp)),
+        )
+        // 아이콘/칩 층: clip 없음 → 칩 보라 글로우가 알약 밖으로도 자연스럽게 번짐(피그마처럼).
+        Row(
+            modifier = Modifier
+                .fillMaxHeight()
+                // 32.5 = (361-296)/2. 아이콘 296폭 + 좌우 32.5 → 알약 폭 정확히 361.
+                .padding(horizontal = 32.5.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(40.dp, Alignment.CenterHorizontally),
+        ) {
+            BottomNavItem.entries.forEach { item ->
             val selected = currentRoute == item.route
             Box(
                 modifier = Modifier
@@ -142,12 +155,13 @@ private fun TqBottomBarContent(
                 contentAlignment = Alignment.Center,
             ) {
                 // 선택 칩(아이콘보다 넓은 둥근 직사각형, 44 박스를 넘어 그려짐).
+                // 칩 자체 유리(haze)는 알약(0.8)보다 덜 하얘 어둡게 보이는 문제가 있어,
+                // 유리(알약) 위에 겹치는 '밝은 흰색 오버레이'로 처리 → 겹쳐서 밝아짐 = 선택 도드라짐.
                 if (selected) {
                     Box(
                         modifier = Modifier
                             .requiredSize(width = 92.dp, height = 44.dp)
                             // 보라 글로우: 아래 6, 흐림 24, 보라 14% (CSS 0 6 24 rgba(114,100,248,0.14))
-                            // 프로스티드 칩 뒤에 깔려 바깥 후광으로만 보임(칩 안으로 안 비침).
                             .softShadow(
                                 color = Primary500.copy(alpha = 0.14f),
                                 offsetX = 0.dp,
@@ -155,13 +169,9 @@ private fun TqBottomBarContent(
                                 blur = 24.dp,
                                 cornerRadius = 22.dp,
                             )
-                            .clip(RoundedCornerShape(22.dp))
-                            // 칩도 유리(프로스티드): 블러 10 + 흰색 0.28. 알약 위 밝은 하이라이트.
-                            .hazeEffect(state = hazeState) {
-                                blurRadius = 10.dp
-                                backgroundColor = White
-                                tints = listOf(HazeTint(White.copy(alpha = 0.28f)))
-                            }
+                            // 피그마 칩은 자체 블러로 또렷·불투명해 보이는데 Haze로 블러겹치기가 안 돼,
+                            // 불투명 밝은 흰색(0.9)으로 근사 → 흰 구분 뚜렷 + 글로우가 칩 안 안 비치고 바깥만.
+                            .background(White.copy(alpha = 0.9f), RoundedCornerShape(22.dp))
                             .border(1.dp, White.copy(alpha = 0.4f), RoundedCornerShape(22.dp)),
                     )
                 }
@@ -169,9 +179,11 @@ private fun TqBottomBarContent(
                     painter = painterResource(item.iconRes),
                     contentDescription = item.label,
                     tint = if (selected) Primary600 else Gray300,
-                    modifier = Modifier.size(28.dp),
+                    // 아이콘 벡터가 44프레임에 CSS inset대로 배치돼 있어 44dp로 채우면 크기·위치 정확.
+                    modifier = Modifier.size(44.dp),
                 )
             }
+        }
         }
     }
 }

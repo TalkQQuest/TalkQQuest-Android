@@ -1,12 +1,12 @@
-<!-- 하단 네비 '프로필' 아이콘(원 안 사람). 디자인 SVG path 그대로: 머리·몸=채움, 바깥 원=선. 색은 코드에서 tint. -->
+<!-- 하단 네비 '프로필'(원 안 사람). 홈 CSS: 44프레임 안 사방 22.73% inset(정중앙). 색은 tint. -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
-    android:width="28dp"
-    android:height="28dp"
-    android:viewportWidth="30"
-    android:viewportHeight="30">
+    android:width="44dp"
+    android:height="44dp"
+    android:viewportWidth="44"
+    android:viewportHeight="44">
     <group
-        android:translateX="-312"
-        android:translateY="-60">
+        android:translateX="-305"
+        android:translateY="-53">
         <path
             android:fillColor="#000000"
             android:pathData="M330.6 71.1C330.6 73.0882 328.988 74.7 327 74.7C325.012 74.7 323.4 73.0882 323.4 71.1C323.4 69.1118 325.012 67.5 327 67.5C328.988 67.5 330.6 69.1118 330.6 71.1Z" />

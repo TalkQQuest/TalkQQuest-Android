@@ -1,0 +1,23 @@
+<!-- 하단 네비 '프로필'(원 안 사람). 홈 CSS: 44프레임 안 사방 22.73% inset(정중앙). 색은 tint. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="44dp"
+    android:height="44dp"
+    android:viewportWidth="44"
+    android:viewportHeight="44">
+    <group
+        android:translateX="-305"
+        android:translateY="-53">
+        <path
+            android:fillColor="#000000"
+            android:pathData="M330.6 71.1C330.6 73.0882 328.988 74.7 327 74.7C325.012 74.7 323.4 73.0882 323.4 71.1C323.4 69.1118 325.012 67.5 327 67.5C328.988 67.5 330.6 69.1118 330.6 71.1Z" />
+        <path
+            android:fillColor="#000000"
+            android:pathData="M327 87C330.79 87 334.169 85.2434 336.368 82.5C335.043 80.2892 331.532 78.7762 327 78.7762C322.468 78.7762 319.192 80.573 317.867 82.7838C320.068 85.3639 323.343 87 327 87Z" />
+        <path
+            android:fillColor="#00000000"
+            android:strokeColor="#000000"
+            android:strokeWidth="2"
+            android:strokeLineCap="round"
+            android:pathData="M327 87C333.627 87 339 81.6274 339 75C339 68.3726 333.627 63 327 63C320.373 63 315 68.3726 315 75C315 81.6274 320.373 87 327 87ZM327 87C330.79 87 334.169 85.2434 336.368 82.5C335.043 80.2892 331.532 78.7762 327 78.7762C322.468 78.7762 319.192 80.573 317.867 82.7838C320.068 85.3639 323.343 87 327 87ZM330.6 71.1C330.6 73.0882 328.988 74.7 327 74.7C325.012 74.7 323.4 73.0882 323.4 71.1C323.4 69.1118 325.012 67.5 327 67.5C328.988 67.5 330.6 69.1118 330.6 71.1Z" />
+    </group>
+</vector>

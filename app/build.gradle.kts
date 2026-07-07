@@ -84,6 +84,9 @@ dependencies {
     implementation(libs.coil.compose)
     implementation(libs.coil.network.okhttp)
 
+    // Glassmorphism blur (하단 네비 유리효과)
+    implementation(libs.haze)
+
     // Local storage
     implementation(libs.androidx.datastore.preferences)
 

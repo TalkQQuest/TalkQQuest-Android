@@ -1,14 +1,21 @@
 package com.talkqquest.app.navigation
 
-import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.Scaffold
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import com.talkqquest.app.core.designsystem.Gray50
+import dev.chrisbanes.haze.HazeState
+import dev.chrisbanes.haze.hazeSource
 
-// 앱 셸. 하단 네비 바 + 화면 영역(NavGraph).
+// 앱 셸. 하단 네비(떠 있는 유리 알약)가 화면 위에 겹쳐 뜬다.
+// hazeState: 뒤 콘텐츠(NavGraph)를 유리(하단 네비)가 흐리게 비추도록 연결하는 상태.
 @Composable
 fun MainScreen() {
     val navController = rememberNavController()
@@ -16,20 +23,27 @@ fun MainScreen() {
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route
 
-    // 하단바는 탭 4개 route에서만 표시(그 외 자동 숨김). 예외로 보이게 하려면 route를 이 목록에 추가.
+    // 하단바는 탭 4개 route에서만 표시(그 외 자동 숨김).
     val bottomBarRoutes = BottomNavItem.entries.map { it.route }
     val showBottomBar = currentRoute in bottomBarRoutes
 
-    Scaffold(
-        bottomBar = {
-            if (showBottomBar) {
-                TqBottomBar(navController)
-            }
-        },
-    ) { innerPadding ->
+    val hazeState = remember { HazeState() }
+
+    // 앱 페이지 배경(Gray50 = 디자인시스템 '페이지 배경'). 탭 화면들이 같은 톤을 공유하도록 루트에서 한 번 깖.
+    Box(modifier = Modifier.fillMaxSize().background(Gray50)) {
         NavGraph(
             navController = navController,
-            modifier = Modifier.padding(innerPadding),
+            // hazeSource: 이 영역(화면 콘텐츠)이 유리에 흐리게 비칠 '원본'.
+            modifier = Modifier
+                .fillMaxSize()
+                .hazeSource(state = hazeState),
         )
+        if (showBottomBar) {
+            TqBottomBar(
+                navController = navController,
+                hazeState = hazeState,
+                modifier = Modifier.align(Alignment.BottomCenter),
+            )
+        }
     }
 }

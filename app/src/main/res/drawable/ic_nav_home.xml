@@ -1,0 +1,18 @@
+<!-- 하단 네비 '홈'(집). 홈 CSS: 44프레임 안 좌 22.44/우 24.72%, 상하 22.73% inset. 색은 tint. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="44dp"
+    android:height="44dp"
+    android:viewportWidth="44"
+    android:viewportHeight="44">
+    <group
+        android:translateX="-137"
+        android:translateY="-52.9">
+        <path
+            android:fillColor="#000000"
+            android:strokeColor="#000000"
+            android:strokeWidth="2"
+            android:strokeLineCap="round"
+            android:strokeLineJoin="round"
+            android:pathData="M146.875 71.5547C146.875 71.0622 147.118 70.6001 147.527 70.3147L157.602 63.2816C158.14 62.9061 158.86 62.9061 159.398 63.2816L169.473 70.3147C169.882 70.6001 170.125 71.0622 170.125 71.5547V84.7176C170.125 85.9781 169.084 87 167.8 87H149.2C147.916 87 146.875 85.9781 146.875 84.7176V71.5547Z" />
+    </group>
+</vector>

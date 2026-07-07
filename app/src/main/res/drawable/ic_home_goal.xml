@@ -1,0 +1,34 @@
+<!-- 다른 미션 보기 앞 target 아이콘 (Frame 326.svg 전사). 26x26, 다색이라 tint 없이 Image로 사용. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="26dp"
+    android:height="26dp"
+    android:viewportWidth="26"
+    android:viewportHeight="26">
+    <path
+        android:pathData="M4,0 h18 a4,4 0 0 1 4,4 v18 a4,4 0 0 1 -4,4 h-18 a4,4 0 0 1 -4,-4 v-18 a4,4 0 0 1 4,-4 z"
+        android:fillColor="#FFFFFF" />
+    <path
+        android:pathData="M5,1 h16 a4,4 0 0 1 4,4 v16 a4,4 0 0 1 -4,4 h-16 a4,4 0 0 1 -4,-4 v-16 a4,4 0 0 1 4,-4 z"
+        android:fillColor="#F1F5F9" />
+    <path
+        android:pathData="M12.9995,11.0606V4.27271L19.7874,7.66664L12.9995,11.0606Z"
+        android:fillColor="#7264F8" />
+    <path
+        android:pathData="M12.9995,13.606V4.27271M12.9995,4.27271L19.7874,7.66664L12.9995,11.0606V4.27271Z"
+        android:strokeColor="#7264F8"
+        android:strokeWidth="2"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round" />
+    <path
+        android:pathData="M20.2637,11.1655C20.7153,12.5571 20.7575,14.0492 20.3855,15.4641C20.0134,16.8791 19.2427,18.1574 18.1651,19.1469C17.0874,20.1365 15.7482,20.7956 14.3067,21.0459C12.8653,21.2963 11.3822,21.1272 10.034,20.559C8.68586,19.9907 7.5293,19.0471 6.70197,17.8404C5.87464,16.6338 5.41136,15.2148 5.36724,13.7525C5.32313,12.2901 5.70004,10.8458 6.45313,9.59145C7.20622,8.33711 8.30379,7.32551 9.61525,6.677"
+        android:strokeColor="#AA9CFF"
+        android:strokeWidth="2"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round" />
+    <path
+        android:pathData="M9.60783,11.0579C9.18266,11.6238 8.90586,12.2872 8.80266,12.9875C8.69945,13.6878 8.77312,14.4028 9.01695,15.0673C9.26078,15.7319 9.66702,16.3249 10.1987,16.7922C10.7303,17.2596 11.3704,17.5865 12.0607,17.7432C12.7511,17.8999 13.4696,17.8813 14.1509,17.6893C14.8322,17.4972 15.4546,17.1377 15.9615,16.6435C16.4683,16.1493 16.8434,15.5362 17.0526,14.8599C17.2618,14.1837 17.2985,13.4658 17.1593,12.7718"
+        android:strokeColor="#AA9CFF"
+        android:strokeWidth="2"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round" />
+</vector>

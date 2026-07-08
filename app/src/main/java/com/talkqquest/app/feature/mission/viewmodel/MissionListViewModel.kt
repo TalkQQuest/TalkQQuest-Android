@@ -24,6 +24,7 @@ data class MissionListUiState(
     val missions: List<MissionListItem> = emptyList(),
     val selectedFilter: String = "전체",
     val errorMessage: String? = null,
+    val saveSheetMissionId: Long? = null, // 방금 북마크로 저장해 시트에 띄울 미션 (null = 시트 닫힘)
 ) {
     // 선택된 칩 기준으로 걸러낸 목록. 난이도 칩이면 난이도로, 아니면 카테고리로 비교.
     val filteredMissions: List<MissionListItem>
@@ -32,6 +33,16 @@ data class MissionListUiState(
             selectedFilter in difficultyFilters -> missions.filter { it.difficulty == selectedFilter }
             else -> missions.filter { it.category == selectedFilter }
         }
+
+    // 시트에 보여줄 "저장됨" 미션. 해제돼도 미션은 그대로 넘겨서(isSaved=false)
+    // 시트가 회색으로 바뀐 아이콘을 보여준 뒤 내려갈 수 있게 함.
+    val saveSheetMission: MissionListItem?
+        get() = missions.firstOrNull { it.id == saveSheetMissionId }
+
+    // 시트 하단 "저장 목록"에 보여줄 다른 저장 미션 (디자인 기준 최대 2개).
+    // TODO(서버 연동): 최근 저장순 정렬 필드가 생기면 그 순서로 교체.
+    val otherSavedMissions: List<MissionListItem>
+        get() = missions.filter { it.isSaved && it.id != saveSheetMissionId }.take(2)
 }
 
 @HiltViewModel
@@ -70,13 +81,22 @@ class MissionListViewModel @Inject constructor(
     }
 
     // 북마크 토글. TODO(서버 연동): POST/DELETE /api/v1/missions/{id}/save 호출로 교체.
+    // 저장하는 순간에만 "저장됨" 시트를 띄움. 해제는 시트 없이 아이콘만 되돌림(피그마에 해제 장면 없음 — 합의된 동작).
     fun toggleSave(missionId: Long) {
         _uiState.update { state ->
+            val toggled = state.missions.map {
+                if (it.id == missionId) it.copy(isSaved = !it.isSaved) else it
+            }
+            val nowSaved = toggled.firstOrNull { it.id == missionId }?.isSaved == true
             state.copy(
-                missions = state.missions.map {
-                    if (it.id == missionId) it.copy(isSaved = !it.isSaved) else it
-                },
+                missions = toggled,
+                saveSheetMissionId = if (nowSaved) missionId else state.saveSheetMissionId,
             )
         }
+    }
+
+    // 저장 시트 닫기 (아래로 쓸어내리거나 바깥 탭)
+    fun dismissSaveSheet() {
+        _uiState.update { it.copy(saveSheetMissionId = null) }
     }
 }

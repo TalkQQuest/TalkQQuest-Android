@@ -14,6 +14,7 @@ import com.talkqquest.app.feature.mission.ui.MissionListScreen
 fun NavGraph(
     navController: NavHostController,
     modifier: Modifier = Modifier,
+    onOverlayVisibleChange: (Boolean) -> Unit = {}, // 화면 오버레이(바텀시트 등)가 하단 네비를 덮을 때 알림
 ) {
     NavHost(
         navController = navController,
@@ -29,6 +30,7 @@ fun NavGraph(
             MissionListScreen(
                 onBack = { navController.popBackStack() },
                 onMissionClick = { missionId -> navController.navigate("mission_detail/$missionId") },
+                onSheetVisibleChange = onOverlayVisibleChange, // 저장 시트가 하단 네비를 덮는 동안 네비 숨김
             )
         }
         // B담당: 미션 상세 — 화면 아직 없음. 목록 클릭 흐름 확인용 임시(실제 화면으로 교체 예정).

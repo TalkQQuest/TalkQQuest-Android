@@ -1,0 +1,334 @@
+package com.talkqquest.app.feature.mission.ui
+
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.Icon
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.dp
+import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.talkqquest.app.core.designsystem.Error
+import com.talkqquest.app.core.designsystem.Gray1000
+import com.talkqquest.app.core.designsystem.Gray50
+import com.talkqquest.app.core.designsystem.Gray500
+import com.talkqquest.app.core.designsystem.Gray700
+import com.talkqquest.app.core.designsystem.Gray900
+import com.talkqquest.app.core.designsystem.Primary50
+import com.talkqquest.app.core.designsystem.Primary600
+import com.talkqquest.app.core.designsystem.TalkQQuestTheme
+import com.talkqquest.app.core.designsystem.TqType
+import com.talkqquest.app.core.designsystem.White
+import com.talkqquest.app.core.designsystem.component.TqButton
+import com.talkqquest.app.core.designsystem.component.TqButtonSize
+import com.talkqquest.app.feature.mission.data.model.MissionListItem
+import com.talkqquest.app.feature.mission.viewmodel.MissionListUiState
+import com.talkqquest.app.feature.mission.viewmodel.MissionListViewModel
+import com.talkqquest.app.feature.mission.viewmodel.missionFilters
+
+// ── 미션 목록 (UI 1차 v2.css 전사) ──
+// 화면 = 2단 분리(state hoisting): (1) viewModel 연결용 / (2) 값만 받아 그리는 부분(Preview용). 홈 패턴 동일.
+// 미션 카드·난이도 알약·로컬 도구는 MissionCard.kt로 분리(저장 시트와 공용).
+
+@Composable
+fun MissionListScreen(
+    viewModel: MissionListViewModel = hiltViewModel(),
+    onBack: () -> Unit = {},
+    onMissionClick: (Long) -> Unit = {},
+    onSheetVisibleChange: (Boolean) -> Unit = {}, // 저장 시트가 하단 네비를 덮는 동안 네비 숨김(MainScreen 연결)
+) {
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    MissionListScreen(
+        uiState = uiState,
+        onBack = onBack,
+        onRetry = viewModel::loadMissions,
+        onFilterSelect = viewModel::selectFilter,
+        onToggleSave = viewModel::toggleSave,
+        onDismissSaveSheet = viewModel::dismissSaveSheet,
+        onMissionClick = onMissionClick,
+        onSheetVisibleChange = onSheetVisibleChange,
+    )
+}
+
+@Composable
+private fun MissionListScreen(
+    uiState: MissionListUiState,
+    onBack: () -> Unit,
+    onRetry: () -> Unit,
+    onFilterSelect: (String) -> Unit,
+    onToggleSave: (Long) -> Unit,
+    onDismissSaveSheet: () -> Unit = {},
+    onMissionClick: (Long) -> Unit = {},
+    onSheetVisibleChange: (Boolean) -> Unit = {},
+) {
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Gray50), // 페이지 배경 Gray/50 (CSS)
+        contentAlignment = Alignment.Center,
+    ) {
+        when {
+            uiState.isLoading -> CircularProgressIndicator(color = Primary600)
+
+            uiState.errorMessage != null -> {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text(text = uiState.errorMessage, style = TqType.BodyM.figma(), color = Error)
+                    Spacer(Modifier.height(16.dp))
+                    TqButton(text = "다시 시도", onClick = onRetry, size = TqButtonSize.Medium)
+                }
+            }
+
+            else -> {
+                // 북마크로 저장하면 목록 위로 "저장됨" 시트가 올라옴 (CSS "미션 목록에서 북마크").
+                // 표준 시트라 배경 안 어두워지고 뒤 목록도 계속 스크롤 가능.
+                MissionSaveSheetScaffold(
+                    savedMission = uiState.saveSheetMission,
+                    recentSavedMissions = uiState.otherSavedMissions,
+                    onDismiss = onDismissSaveSheet,
+                    // 시트에서 카드를 누르면 시트 닫고 미션 상세로
+                    onMissionClick = { id ->
+                        onDismissSaveSheet()
+                        onMissionClick(id)
+                    },
+                    onToggleSave = onToggleSave,
+                    onSheetVisibleChange = onSheetVisibleChange,
+                ) {
+                    Box(modifier = Modifier.fillMaxSize()) {
+                        MissionListContent(
+                            uiState = uiState,
+                            onBack = onBack,
+                            onFilterSelect = onFilterSelect,
+                            onToggleSave = onToggleSave,
+                            onMissionClick = onMissionClick,
+                        )
+                        // 스크롤 유도 마스크 (CSS): 목록 하단이 배경색으로 서서히 사라짐 (높이 68, 투명→Gray50)
+                        Box(
+                            modifier = Modifier
+                                .align(Alignment.BottomCenter)
+                                .fillMaxWidth()
+                                .height(68.dp)
+                                .background(Brush.verticalGradient(listOf(Gray50.copy(alpha = 0f), Gray50))),
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun MissionListContent(
+    uiState: MissionListUiState,
+    onBack: () -> Unit,
+    onFilterSelect: (String) -> Unit,
+    onToggleSave: (Long) -> Unit,
+    onMissionClick: (Long) -> Unit,
+) {
+    LazyColumn(
+        modifier = Modifier
+            .fillMaxSize()
+            .statusBarsPadding(),
+        verticalArrangement = Arrangement.spacedBy(14.dp), // 카드 간격 14 (CSS Frame 360 gap)
+    ) {
+        item {
+            Column(modifier = Modifier.padding(horizontal = 16.dp)) { // 콘텐츠 좌우 16 (CSS Frame 431 left)
+                Spacer(Modifier.height(8.dp)) // 상태바(40) → 뒤로가기(top 48) (CSS chevoren_left)
+                // 뒤로가기 (CSS chevoren_left): 44 터치영역이 화면 왼끝(left 0), 아이콘 Gray500.
+                Box(
+                    modifier = Modifier
+                        .offset(x = (-16).dp) // 콘텐츠 좌우 16 패딩 상쇄 → 터치영역 left 0
+                        .size(44.dp)
+                        .clickable(onClick = onBack),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Filled.KeyboardArrowLeft,
+                        contentDescription = "뒤로가기",
+                        tint = Gray500,
+                    )
+                }
+                Spacer(Modifier.height(4.dp)) // 뒤로가기(48+44) → 제목(top 96) = 4 (CSS)
+                Text(text = "미션 목록", style = TqType.TitleL.figma(), color = Gray700)
+                Spacer(Modifier.height(12.dp)) // 제목 → 칩 (CSS Frame 355 gap 12)
+                MissionFilterChips(
+                    selectedFilter = uiState.selectedFilter,
+                    onFilterSelect = onFilterSelect,
+                )
+                Spacer(Modifier.height(10.dp)) // 칩 → 목록 24 (CSS Frame 431 gap) = 10 + 카드간격 14
+            }
+        }
+
+        if (uiState.filteredMissions.isEmpty()) {
+            item {
+                // 빈 목록 화면이 피그마에 없음 → 임시 문구. TODO(디자인): 빈 상태 디자인 확정 시 교체.
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 80.dp),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Text(text = "해당하는 미션이 없어요", style = TqType.BodyM.figma(), color = Gray500)
+                }
+            }
+        } else {
+            items(uiState.filteredMissions, key = { it.id }) { mission ->
+                MissionCard(
+                    mission = mission,
+                    onClick = { onMissionClick(mission.id) },
+                    onToggleSave = { onToggleSave(mission.id) },
+                    modifier = Modifier.padding(horizontal = 16.dp),
+                )
+            }
+        }
+
+        item { Spacer(Modifier.height(100.dp)) } // 목록 끝 여백 — 떠 있는 하단 네비에 안 가리게 (홈과 동일)
+    }
+}
+
+// 필터 칩 2줄 (CSS Frame 341: 줄 간격 10, 칩 간격 8). 폭 넘치면 자동 줄바꿈(FlowRow) — 디자인과 동일 배치.
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun MissionFilterChips(
+    selectedFilter: String,
+    onFilterSelect: (String) -> Unit,
+) {
+    FlowRow(
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        verticalArrangement = Arrangement.spacedBy(10.dp),
+    ) {
+        missionFilters.forEach { filter ->
+            MissionFilterChip(
+                label = filter,
+                selected = filter == selectedFilter,
+                onClick = { onFilterSelect(filter) },
+            )
+        }
+    }
+}
+
+// 칩 (CSS select chip): 높이 34, radius 20, 좌우 18.
+// 선택 = Purple600 배경 + Primary50 글자 / 미선택 = 흰 배경 + 카드 그림자 + Gray900 글자.
+@Composable
+private fun MissionFilterChip(
+    label: String,
+    selected: Boolean,
+    onClick: () -> Unit,
+) {
+    val shape = RoundedCornerShape(20.dp)
+    val base = if (selected) {
+        Modifier.clip(shape).background(Primary600)
+    } else {
+        Modifier
+            .softShadow(color = Gray1000.copy(alpha = 0.04f), offsetY = 8.dp, blur = 24.dp, cornerRadius = 20.dp)
+            .clip(shape)
+            .background(White)
+    }
+    Box(
+        modifier = base
+            .clickable(onClick = onClick)
+            .height(34.dp)
+            .padding(horizontal = 18.dp),
+        contentAlignment = Alignment.Center,
+    ) {
+        Text(
+            text = label,
+            // CSS: 선택 = 14/22 굵기 500, 미선택 = 14/22 굵기 400 (Body/M)
+            style = if (selected) TqType.BodyM.copy(fontWeight = FontWeight.Medium).figma() else TqType.BodyM.figma(),
+            color = if (selected) Primary50 else Gray900,
+        )
+    }
+}
+
+// ── Preview ──
+private val previewMissions = listOf(
+    MissionListItem(1, "처음 보는 사람에게 짧게 인사하기", "짧은 대화", "쉬움", 2, 20),
+    MissionListItem(2, "최근 본 영화 이야기하기", "짧은 대화", "쉬움", 5, 20, isSaved = true),
+    MissionListItem(3, "학교 생활 꿀팁 나누기", "일상 대화", "보통", 8, 30, isSaved = true),
+    MissionListItem(4, "나의 취미를 소개해보기", "친구 만들기", "어려움", 10, 40),
+    MissionListItem(5, "주말 계획 이야기하기", "짧은 대화", "쉬움", 5, 20),
+    MissionListItem(6, "동아리에서 관심사가 비슷한 사람에게 먼저 말 걸어보기", "친구 만들기", "어려움", 15, 60),
+)
+
+@Preview(name = "미션 목록 (393dp 실기기)", showSystemUi = true, device = "spec:width=393dp,height=852dp")
+@Composable
+private fun MissionListScreenPreview() {
+    TalkQQuestTheme {
+        MissionListScreen(
+            uiState = MissionListUiState(missions = previewMissions),
+            onBack = {}, onRetry = {}, onFilterSelect = {}, onToggleSave = {},
+        )
+    }
+}
+
+// 좁은 화면(320dp): 칩 줄바꿈·카드 메타줄이 안 넘치는지 확인용.
+@Preview(name = "미션 목록 (320dp 좁은 화면)", showSystemUi = true, device = "spec:width=320dp,height=640dp")
+@Composable
+private fun MissionListScreenNarrowPreview() {
+    TalkQQuestTheme {
+        MissionListScreen(
+            uiState = MissionListUiState(missions = previewMissions),
+            onBack = {}, onRetry = {}, onFilterSelect = {}, onToggleSave = {},
+        )
+    }
+}
+
+// 필터 결과 0개(빈 목록) 상태.
+@Preview(name = "미션 목록 - 빈 목록", showBackground = true, backgroundColor = 0xFFF8FAFC)
+@Composable
+private fun MissionListScreenEmptyPreview() {
+    TalkQQuestTheme {
+        MissionListScreen(
+            uiState = MissionListUiState(missions = emptyList()),
+            onBack = {}, onRetry = {}, onFilterSelect = {}, onToggleSave = {},
+        )
+    }
+}
+
+@Preview(name = "미션 목록 - 로딩", showBackground = true, backgroundColor = 0xFFF8FAFC)
+@Composable
+private fun MissionListScreenLoadingPreview() {
+    TalkQQuestTheme {
+        MissionListScreen(
+            uiState = MissionListUiState(isLoading = true),
+            onBack = {}, onRetry = {}, onFilterSelect = {}, onToggleSave = {},
+        )
+    }
+}
+
+@Preview(name = "미션 목록 - 에러", showBackground = true, backgroundColor = 0xFFF8FAFC)
+@Composable
+private fun MissionListScreenErrorPreview() {
+    TalkQQuestTheme {
+        MissionListScreen(
+            uiState = MissionListUiState(errorMessage = "네트워크 연결을 확인해주세요."),
+            onBack = {}, onRetry = {}, onFilterSelect = {}, onToggleSave = {},
+        )
+    }
+}

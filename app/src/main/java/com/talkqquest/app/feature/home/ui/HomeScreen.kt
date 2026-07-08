@@ -30,6 +30,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -38,8 +39,12 @@ import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Paint
 import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.rememberTextMeasurer
+import androidx.compose.ui.text.style.LineBreak
 import androidx.compose.ui.text.style.LineHeightStyle
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
@@ -202,6 +207,55 @@ private val FullLeading = LineHeightStyle(
 // 홈 텍스트는 이걸로 감싸 피그마 line-height 여백을 살림(공통 TqType 안 건드리고 홈 로컬).
 private fun TextStyle.figma(): TextStyle = copy(lineHeightStyle = FullLeading)
 
+// 어절 안 글자 사이에 WORD JOINER(U+2060, 폭 0·비표시)를 끼워 어절 중간 줄바꿈("사/람에게")을 막음.
+// API 33+의 LineBreak.WordBreak.Phrase와 같은 효과를 전 버전(minSdk 26)에서 보장. 공백·\n은 그대로 둠.
+private fun String.keepWordsIntact(): String =
+    replace(Regex("(?<=\\S)(?=\\S)"), "⁠")
+
+// "한 번"의 "한"처럼 한 글자 어절이 줄 끝에 홀로 남지 않게, 한 글자 어절 뒤 공백을
+// 줄바꿈 금지 공백(NBSP, U+00A0)으로 바꿔 다음 어절과 한 덩어리로 묶음. ("한 번" → 항상 같은 줄)
+private fun String.glueShortWords(): String =
+    replace(Regex("(?<=(^|\\s)\\S) "), " ")
+
+// 한 줄에 담기더라도 제목이 영역 폭의 절반을 넘으면 2줄로 나눠 보여줌(디자인 목업의 2줄 형태).
+// 시스템 줄바꿈(Balanced)은 줄 수를 늘리지 않아서 이 규칙은 직접 처리:
+// 그리기 전에 폭을 재보고 → 절반 초과·한 줄이면 → 중간을 넘는 어절까지 첫 줄에 두고 그 다음 어절부터 둘째 줄로.
+private const val TITLE_MAX_WIDTH_DP = 256 // 디자인 Frame313 제목 영역 폭
+private const val TITLE_SPLIT_RATIO = 0.5f // 이 비율(폭의 절반)을 넘으면 2줄로
+
+@Composable
+private fun MissionTitleText(title: String, modifier: Modifier = Modifier) {
+    val style = TqType.TitleL.figma().copy(lineBreak = LineBreak.Heading)
+    val measurer = rememberTextMeasurer()
+    val density = LocalDensity.current
+    val displayTitle = remember(title) {
+        val glued = title.glueShortWords()
+        val maxWidthPx = with(density) { TITLE_MAX_WIDTH_DP.dp.toPx() }
+        val oneLineWidth = measurer.measure(AnnotatedString(glued.keepWordsIntact()), style = style).size.width
+        val needsSplit = oneLineWidth <= maxWidthPx && oneLineWidth > maxWidthPx * TITLE_SPLIT_RATIO
+        if (needsSplit) {
+            // 중간 지점 이후에 나오는 첫 일반 공백(NBSP 제외)에서 끊음
+            // → 중간에 걸친 어절은 첫 줄에 남고, 그 다음 어절부터 둘째 줄 시작.
+            val middle = glued.length / 2
+            val spaces = glued.indices.filter { glued[it] == ' ' }
+            val breakAt = spaces.firstOrNull { it >= middle } ?: spaces.lastOrNull()
+            if (breakAt != null) {
+                glued.replaceRange(breakAt, breakAt + 1, "\n").keepWordsIntact()
+            } else {
+                glued.keepWordsIntact()
+            }
+        } else {
+            glued.keepWordsIntact()
+        }
+    }
+    Text(
+        text = displayTitle,
+        style = style,
+        color = Gray900,
+        modifier = modifier.widthIn(max = TITLE_MAX_WIDTH_DP.dp),
+    )
+}
+
 // 인사 영역 + 알림 벨.
 @Composable
 private fun HomeHeader(nickname: String) {
@@ -327,13 +381,9 @@ private fun HomeMissionCard(mission: TodayMission) {
                 modifier = Modifier.weight(1f),
                 verticalArrangement = Arrangement.spacedBy(4.dp),
             ) {
-                // 제목·설명 영역 256(디자인 Frame313) 상한 → 이 제목은 2줄. 좁은 화면에선 그 이하로 줆(반응형).
-                Text(
-                    text = mission.title,
-                    style = TqType.TitleL.figma(),
-                    color = Gray900,
-                    modifier = Modifier.widthIn(max = 256.dp),
-                )
+                // 제목·설명 영역 256(디자인 Frame313) 상한. 줄바꿈 규칙은 MissionTitleText 참고:
+                // 어절 중간 끊김 방지 + 줄 길이 균형 + 한 글자 어절 고아 방지 + 반 넘는 한 줄은 2줄로.
+                MissionTitleText(title = mission.title)
                 mission.description?.let {
                     Text(
                         text = it,
@@ -442,7 +492,7 @@ private val previewSummary = HomeSummary(
     nextLevelXp = 100,
     todayMission = TodayMission(
         id = 1,
-        title = "처음 보는 사람에게\n짧게 인사하기", // 디자인 목업의 수동 줄바꿈 반영(실제 서버값은 폭따라 자동 줄바꿈)
+        title = "처음 보는 사람에게 짧게 인사하기", // 실제 서버값 그대로(\n 없음) — 줄바꿈은 알고리즘이 처리한 결과를 확인
         description = "가벼운 인사로 좋은 대화의 시작을 열어보세요!",
         difficulty = "쉬움",
         estimatedMinutes = 5,
@@ -459,6 +509,62 @@ private val previewSummary = HomeSummary(
 private fun HomeScreenSuccessPreview() {
     TalkQQuestTheme {
         HomeScreen(uiState = HomeUiState(summary = previewSummary), onRetry = {})
+    }
+}
+
+// 긴 제목(\n 없는 실제 서버값 시뮬레이션) 자동 줄바꿈 검증용:
+// 어절 중간 안 끊기는지("사/람에게" 금지) + 줄 길이 균형 잡히는지 확인.
+@Preview(name = "홈 - 긴 미션 제목", showSystemUi = true, device = "spec:width=393dp,height=852dp")
+@Composable
+private fun HomeScreenLongTitlePreview() {
+    TalkQQuestTheme {
+        HomeScreen(
+            uiState = HomeUiState(
+                summary = previewSummary.copy(
+                    todayMission = previewSummary.todayMission?.copy(
+                        title = "아까 전에 같이 이야기했던 사람에게 다가가서 날씨에 관해 화제 던지기",
+                    ),
+                ),
+            ),
+            onRetry = {},
+        )
+    }
+}
+
+// 3줄 이상 제목 검증용: 카드가 줄 수만큼 자연히 늘어나고 레이아웃이 안 깨지는지 확인.
+// (maxLines 미제한 = 의도. 미션 제목은 지시문이라 말줄임으로 자르지 않음 — 정책 확정은 디자이너 확인 후)
+@Preview(name = "홈 - 미션 제목 3줄(자동)", showSystemUi = true, device = "spec:width=393dp,height=852dp")
+@Composable
+private fun HomeScreenVeryLongTitlePreview() {
+    TalkQQuestTheme {
+        HomeScreen(
+            uiState = HomeUiState(
+                summary = previewSummary.copy(
+                    todayMission = previewSummary.todayMission?.copy(
+                        title = "오늘 처음 마주친 카페 직원에게 눈을 마주치고 웃으면서 오늘 날씨에 대한 가벼운 한 마디 건네보기",
+                    ),
+                ),
+            ),
+            onRetry = {},
+        )
+    }
+}
+
+// 중간 길이 제목(2줄 예상) 자동 줄바꿈 검증용.
+@Preview(name = "홈 - 미션 제목 2줄(자동)", showSystemUi = true, device = "spec:width=393dp,height=852dp")
+@Composable
+private fun HomeScreenMediumTitlePreview() {
+    TalkQQuestTheme {
+        HomeScreen(
+            uiState = HomeUiState(
+                summary = previewSummary.copy(
+                    todayMission = previewSummary.todayMission?.copy(
+                        title = "처음보는 친구에게 한 번 고개 숙여 인사하기",
+                    ),
+                ),
+            ),
+            onRetry = {},
+        )
     }
 }
 

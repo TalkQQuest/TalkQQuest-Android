@@ -48,6 +48,5 @@ object Screen {
     const val COMMUNITY_ADDRESS_SEARCH = "community_address_search" // CommunityAddressSearchScreen
     const val COMMUNITY_PREVIEW = "community_preview"            // CommunityPreviewScreen
     const val MY_GROUPS = "my_groups"                            // MyGroupsScreen
-    const val REPORT_MONTHLY = "report_monthly"                  // ReportMonthlyScreen
-    const val REPORT_WEEKLY_COMPARE = "report_weekly_compare"    // ReportWeeklyCompareScreen
+    const val REPORT = "report"                                  // ReportScreen (성장 리포트/주간 비교 탭 통합)
 }

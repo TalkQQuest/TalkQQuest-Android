@@ -2,7 +2,7 @@
 
 스크린 ID 네이밍 규칙은 [`CONVENTIONS.md`](CONVENTIONS.md)의 "6. 화면 네이밍 규칙" 참고.
 
-> **집계 기준**: 피그마 와이어프레임에는 **화면 크기 프레임 54개 + 팝업 4개**가 있습니다. 이 중 같은 화면의 상태 변형(예: `홈 화면(미션 상세)`가 2개, `대화 진행(기본)`이 2개)은 하나의 Screen으로 구현하므로, **실제 구현 대상은 논리 화면 35개 + 팝업 4개**입니다. 아래 표의 "와이어프레임 대응" 칸에 각 Screen이 어떤 프레임에서 왔는지 적어두었습니다.
+> **집계 기준**: 피그마 와이어프레임에는 **화면 크기 프레임 54개 + 팝업 4개**가 있습니다. 이 중 같은 화면의 상태 변형(예: `홈 화면(미션 상세)`가 2개, `대화 진행(기본)`이 2개)은 하나의 Screen으로 구현하므로, **실제 구현 대상은 논리 화면 34개 + 팝업 4개**입니다. 아래 표의 "와이어프레임 대응" 칸에 각 Screen이 어떤 프레임에서 왔는지 적어두었습니다.
 
 ---
 
@@ -50,7 +50,7 @@
 
 > `대화 완료`(대화 요약)와 `미션 완료 & XP 획득`(XP 지급 애니메이션)은 와이어프레임상 별개 프레임이라 두 화면으로 나눴습니다. 팀 상황에 따라 한 화면의 연속 스텝으로 합쳐도 됩니다.
 
-### C담당 (훈/김재훈) — 커뮤니티 · 성장 리포트 (9개)
+### C담당 (훈/김재훈) — 커뮤니티 · 성장 리포트 (8개)
 
 | 화면 이름 | 스크린 ID | 진입 경로 | 와이어프레임 대응 |
 | --- | --- | --- | --- |
@@ -61,8 +61,9 @@
 | **주소 검색** | **CommunityAddressSearchScreen** | 모임 만들기 → 지역/장소 입력 | 모임(주소 검색 및 선택) |
 | 모임 미리보기/게시 | CommunityPreviewScreen | 모임 만들기 → 다음 | 모임(만들기-미리보기) |
 | 내 모임 | MyGroupsScreen | 커뮤니티 목록 → 내 모임 | 내 모임(참여중)×2, 내 모임(내가 만든), 내 모임(북마크)〔3탭〕 |
-| 성장 리포트 (월간) | ReportMonthlyScreen | 아카이브 → 리포트 탭 → 리포트 항목 클릭 | 성장 리포트 |
-| 성장 리포트 (주간 비교) | ReportWeeklyCompareScreen | 월간 리포트 → 주간 비교 탭 | 주간 비교 리포트 |
+| 성장 리포트 | ReportScreen | 아카이브 → 리포트 탭 → 리포트 항목 클릭 | 성장 리포트, 주간 비교 리포트〔같은 탭바 공유 → 1화면 2탭〕 |
+
+> 성장 리포트와 주간 비교 리포트는 피그마에서 **같은 탭바(`성장 리포트 | 주간 비교 리포트`)를 공유**하는 탭 전환 관계라, 아카이브 4탭(`ArchiveListScreen`)과 동일하게 **하나의 Screen + 탭 상태**로 구현합니다. (route: `Screen.REPORT`)
 
 ---
 
@@ -121,7 +122,7 @@ flowchart TD
     Archive --> ArchiveList[ArchiveListScreen]
     ArchiveList -->|대화 탭 → 항목 클릭| ArchiveConvDetail[ArchiveConversationDetailScreen]
     ArchiveList -->|문장 탭 → 항목 클릭| ArchiveSavedPhrase[ArchiveSavedPhraseScreen]
-    ArchiveList -->|리포트 탭 → 항목 클릭| ReportMonthly[ReportMonthlyScreen]
+    ArchiveList -->|리포트 탭 → 항목 클릭| Report[ReportScreen]
 
     Community --> CommunityDetail[CommunityDetailScreen]
     CommunityDetail --> CommunityChatPreview[CommunityChatPreviewScreen]
@@ -129,6 +130,4 @@ flowchart TD
     CommunityCreate --> CommunityAddressSearch[CommunityAddressSearchScreen]
     CommunityCreate --> CommunityPreview[CommunityPreviewScreen]
     Community -->|내 모임| MyGroups[MyGroupsScreen]
-
-    ReportMonthly --> ReportWeekly[ReportWeeklyCompareScreen]
 ```

@@ -23,9 +23,10 @@ fun MainScreen() {
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route
 
-    // 하단바는 탭 4개 route에서만 표시(그 외 자동 숨김).
-    val bottomBarRoutes = BottomNavItem.entries.map { it.route }
-    val showBottomBar = currentRoute in bottomBarRoutes
+    // 하단바 표시 route: 탭 4개 + 디자인상 하단바가 있는 화면(미션 목록). 그 외 자동 숨김.
+    // currentRoute == null = 첫 프레임(시작 화면 세팅 전) → 숨겼다 늦게 뜨지 않게 바로 표시.
+    val bottomBarRoutes = BottomNavItem.entries.map { it.route } + Screen.MISSION_LIST
+    val showBottomBar = currentRoute == null || currentRoute in bottomBarRoutes
 
     val hazeState = remember { HazeState() }
 

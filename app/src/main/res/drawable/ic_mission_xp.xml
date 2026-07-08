@@ -1,0 +1,12 @@
+<!-- 플러스 아이콘 (plus.svg 전사). 7x7, Gray500(#64748B). 카드 보상 XP 앞. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="7dp"
+    android:height="7dp"
+    android:viewportWidth="7"
+    android:viewportHeight="7">
+    <path
+        android:pathData="M3.25,0.5L3.25,6M6,3.25L0.5,3.25"
+        android:strokeColor="#64748B"
+        android:strokeWidth="1"
+        android:strokeLineCap="round" />
+</vector>

@@ -77,6 +77,12 @@ private fun Modifier.softShadow(
 // 선택 칩: 92x44 / radius 22 / 흰 0.28 + 블러 10 / 테두리 흰 0.4 / 글로우 0 6 24 보라(114,100,248) 14%
 // 블러: Haze(안드12+ 진짜 블러 / 그 미만 틴트 fallback).
 
+// route가 속한 탭. 탭의 하위 화면(예: 미션 목록 = 홈 플로우)에서도 소속 탭이 계속 하이라이트되게 함.
+private fun tabRouteOf(route: String?): String? = when (route) {
+    Screen.MISSION_LIST -> Screen.HOME
+    else -> route
+}
+
 @Composable
 fun TqBottomBar(
     navController: NavHostController,
@@ -157,7 +163,7 @@ private fun TqBottomBarContent(
                 horizontalArrangement = Arrangement.SpaceBetween,
             ) {
                 BottomNavItem.entries.forEach { item ->
-                    val selected = currentRoute == item.route
+                    val selected = tabRouteOf(currentRoute) == item.route
                     Box(
                         modifier = Modifier
                             .size(44.dp)
@@ -165,7 +171,9 @@ private fun TqBottomBarContent(
                                 interactionSource = remember { MutableInteractionSource() },
                                 indication = null,
                             ) {
-                                if (!selected) onTabClick(item.route)
+                                // 하이라이트 여부가 아니라 "실제 현재 화면"으로 판단:
+                                // 같은 화면이면 무시, 탭의 하위 화면(예: 미션 목록)이면 탭 루트로 복귀.
+                                if (currentRoute != item.route) onTabClick(item.route)
                             },
                         contentAlignment = Alignment.Center,
                     ) {

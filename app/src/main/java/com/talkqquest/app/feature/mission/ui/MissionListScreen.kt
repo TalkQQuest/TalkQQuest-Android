@@ -63,7 +63,7 @@ fun MissionListScreen(
     viewModel: MissionListViewModel = hiltViewModel(),
     onBack: () -> Unit = {},
     onMissionClick: (Long) -> Unit = {},
-    onSheetVisibleChange: (Boolean) -> Unit = {}, // 저장 시트가 하단 네비를 덮는 동안 네비 숨김(MainScreen 연결)
+    onSheetTopChange: (Float?) -> Unit = {}, // 저장 시트 위 끝 y(px), null=없음 — 하단 네비 가림 처리(MainScreen 연결)
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     MissionListScreen(
@@ -74,7 +74,7 @@ fun MissionListScreen(
         onToggleSave = viewModel::toggleSave,
         onDismissSaveSheet = viewModel::dismissSaveSheet,
         onMissionClick = onMissionClick,
-        onSheetVisibleChange = onSheetVisibleChange,
+        onSheetTopChange = onSheetTopChange,
     )
 }
 
@@ -87,7 +87,7 @@ private fun MissionListScreen(
     onToggleSave: (Long) -> Unit,
     onDismissSaveSheet: () -> Unit = {},
     onMissionClick: (Long) -> Unit = {},
-    onSheetVisibleChange: (Boolean) -> Unit = {},
+    onSheetTopChange: (Float?) -> Unit = {},
 ) {
     Box(
         modifier = Modifier
@@ -119,7 +119,7 @@ private fun MissionListScreen(
                         onMissionClick(id)
                     },
                     onToggleSave = onToggleSave,
-                    onSheetVisibleChange = onSheetVisibleChange,
+                    onSheetTopChange = onSheetTopChange,
                 ) {
                     Box(modifier = Modifier.fillMaxSize()) {
                         MissionListContent(

@@ -316,15 +316,12 @@ private fun OpenerCard(text: String) {
                 .weight(1f)
                 .padding(start = 12.dp),
         )
-        // 복사: 리플 없이 아이콘만. 클립보드 복사 + 토스트.
+        // 복사: 누르면 원형 리플(가운데서 퍼지는 반투명 효과) + 클립보드 복사 + 토스트.
         Box(
             modifier = Modifier
                 .size(44.dp)
-                .clip(CircleShape)
-                .clickable(
-                    interactionSource = remember { MutableInteractionSource() },
-                    indication = null,
-                ) {
+                .clip(CircleShape) // 리플이 동그랗게 퍼지도록
+                .clickable {
                     clipboard.setText(AnnotatedString(text))
                     Toast.makeText(context, "복사했어요", Toast.LENGTH_SHORT).show()
                 },

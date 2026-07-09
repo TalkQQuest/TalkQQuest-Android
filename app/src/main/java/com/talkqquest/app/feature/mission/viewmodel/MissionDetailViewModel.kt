@@ -93,6 +93,18 @@ class MissionDetailViewModel @Inject constructor(
         }
     }
 
+    // 시트 "저장 목록"의 다른 미션 북마크 토글. 해제하면 저장 목록에서 바로 사라짐(저장된 것만 보여주므로).
+    // TODO(서버 연동): POST/DELETE /api/v1/missions/{id}/save 호출로 교체. (지금은 로컬 상태만 갱신)
+    fun toggleSaveInList(missionId: Long) {
+        _uiState.update { state ->
+            state.copy(
+                otherSavedMissions = state.otherSavedMissions
+                    .map { if (it.id == missionId) it.copy(isSaved = !it.isSaved) else it }
+                    .filter { it.isSaved },
+            )
+        }
+    }
+
     // 저장 시트 닫기 (쓸어내림·자동 닫힘)
     fun dismissSaveSheet() {
         _uiState.update { it.copy(saveSheetVisible = false) }

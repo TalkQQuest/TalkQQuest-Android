@@ -49,6 +49,8 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.talkqquest.app.R
 import com.talkqquest.app.core.designsystem.Error
@@ -99,8 +101,11 @@ fun MissionDetailScreen(
     onNextClick: (Long) -> Unit = {},
     onMissionClick: (Long) -> Unit = {}, // 시트 안 카드 클릭 → 그 미션 상세
     onSheetTopChange: (Float?) -> Unit = {},
+    onSavedListClick: () -> Unit = {}, // 시트 "저장 목록 >" → 저장 목록 화면
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    // 다른 화면(저장 목록 등)에서 바꾼 북마크가 돌아왔을 때 반영되도록, 복귀마다 조용히 재조회
+    LifecycleEventEffect(Lifecycle.Event.ON_RESUME) { viewModel.loadDetail(showLoading = false) }
     MissionDetailScreen(
         uiState = uiState,
         onBack = onBack,
@@ -111,6 +116,7 @@ fun MissionDetailScreen(
         onNextClick = onNextClick,
         onMissionClick = onMissionClick,
         onSheetTopChange = onSheetTopChange,
+        onSavedListClick = onSavedListClick,
     )
 }
 
@@ -125,6 +131,7 @@ private fun MissionDetailScreen(
     onNextClick: (Long) -> Unit = {},
     onMissionClick: (Long) -> Unit = {},
     onSheetTopChange: (Float?) -> Unit = {},
+    onSavedListClick: () -> Unit = {},
 ) = FitDesign { // 작은 화면에선 디자인(393x852) 통째 축소 — 스크롤 없이 한 화면에
     Box(
         modifier = Modifier
@@ -158,6 +165,11 @@ private fun MissionDetailScreen(
                         if (id == uiState.detail.id) onToggleSave() else onToggleSaveInList(id)
                     },
                     onSheetTopChange = onSheetTopChange,
+                    // 시트에서 "저장 목록 >" → 시트 닫고 저장 목록 화면으로
+                    onSavedListClick = {
+                        onDismissSaveSheet()
+                        onSavedListClick()
+                    },
                 ) {
                     MissionDetailContent(
                         detail = uiState.detail,

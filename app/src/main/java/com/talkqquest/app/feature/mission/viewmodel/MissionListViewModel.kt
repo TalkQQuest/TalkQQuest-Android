@@ -57,9 +57,10 @@ class MissionListViewModel @Inject constructor(
         loadMissions()
     }
 
-    fun loadMissions() {
+    // showLoading=false: 화면 복귀 시 조용한 재조회(스피너 없이 북마크 등 최신 상태만 반영)
+    fun loadMissions(showLoading: Boolean = true) {
         viewModelScope.launch {
-            _uiState.update { it.copy(isLoading = true, errorMessage = null) }
+            _uiState.update { it.copy(isLoading = showLoading, errorMessage = null) }
 
             when (val result = missionRepository.getMissions()) {
                 is ApiResult.Success -> _uiState.update {
@@ -83,6 +84,7 @@ class MissionListViewModel @Inject constructor(
     // 북마크 토글. TODO(서버 연동): POST/DELETE /api/v1/missions/{id}/save 호출로 교체.
     // 저장하는 순간에만 "저장됨" 시트를 띄움. 해제는 시트 없이 아이콘만 되돌림(피그마에 해제 장면 없음 — 합의된 동작).
     fun toggleSave(missionId: Long) {
+        missionRepository.toggleSave(missionId) // 공유 상태에 반영 (다른 화면·저장 목록에서도 보이게)
         _uiState.update { state ->
             val toggled = state.missions.map {
                 if (it.id == missionId) it.copy(isSaved = !it.isSaved) else it

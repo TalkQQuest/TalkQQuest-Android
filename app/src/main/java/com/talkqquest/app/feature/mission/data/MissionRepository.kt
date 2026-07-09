@@ -2,6 +2,7 @@ package com.talkqquest.app.feature.mission.data
 
 import com.talkqquest.app.core.network.ApiResult
 import com.talkqquest.app.core.network.safeApiCall
+import com.talkqquest.app.feature.mission.data.model.MissionDetail
 import com.talkqquest.app.feature.mission.data.model.MissionListItem
 import javax.inject.Inject
 
@@ -13,6 +14,24 @@ class MissionRepository @Inject constructor(
     //     suspend fun getMissions() = safeApiCall { missionApi.getMissions() }
     suspend fun getMissions(): ApiResult<List<MissionListItem>> =
         ApiResult.Success(stubMissions)
+
+    // TODO(서버 연동 전 임시): 붙으면 return safeApiCall { missionApi.getMissionDetail(missionId) } 로 복구.
+    suspend fun getMissionDetail(missionId: Long): ApiResult<MissionDetail> {
+        val item = stubMissions.firstOrNull { it.id == missionId }
+            ?: return ApiResult.Error(code = 404, message = "미션을 찾을 수 없어요.")
+        return ApiResult.Success(
+            MissionDetail(
+                id = item.id,
+                title = item.title,
+                category = item.category,
+                difficulty = item.difficulty,
+                estimatedMinutes = item.estimatedMinutes,
+                rewardXp = item.rewardXp,
+                isSaved = item.isSaved,
+                benefits = stubBenefits[item.id] ?: defaultBenefits,
+            ),
+        )
+    }
 }
 
 // 서버 없이 에뮬/프리뷰에서 목록 확인용 임시 데이터. 서버 연동 시 통째로 삭제.
@@ -76,4 +95,22 @@ private val stubMissions = listOf(
         estimatedMinutes = 15,
         rewardXp = 60,
     ),
+)
+
+// 미션 상세 효과 문구 stub. 1번 = 피그마 목업 문구 그대로. 3번 = 3개(개수 가변 검증용).
+private val stubBenefits = mapOf(
+    1L to listOf(
+        "낯선 사람과의 첫 대화에 자신감이 생겨요",
+        "자연스럽게 대화를 이어갈 수 있어요",
+    ),
+    3L to listOf(
+        "일상 속 이야깃거리를 찾는 눈이 생겨요",
+        "상대방과 공감대를 만들 수 있어요",
+        "대화를 오래 이어가는 힘이 생겨요",
+    ),
+)
+
+private val defaultBenefits = listOf(
+    "대화에 자신감이 생겨요",
+    "자연스럽게 대화를 이어갈 수 있어요",
 )

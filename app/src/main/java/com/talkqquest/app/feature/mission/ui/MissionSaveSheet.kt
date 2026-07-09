@@ -31,6 +31,7 @@ import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -100,7 +101,7 @@ internal fun MissionSaveSheetScaffold(
     onDismiss: () -> Unit,
     onMissionClick: (Long) -> Unit,
     onToggleSave: (Long) -> Unit,
-    onSheetVisibleChange: (Boolean) -> Unit = {}, // 하단 네비 숨김용 (시트가 하단바를 덮는 디자인)
+    onSheetTopChange: (Float?) -> Unit = {}, // 시트 위 끝 y(px), null=시트 없음. 하단 네비가 이 선 아래를 안 그려 시트 뒤에 있던 것처럼 드러남
     onSavedListClick: () -> Unit = {}, // TODO: 저장 목록 화면(피그마 "북마크→저장목록") 생기면 연결
     content: @Composable () -> Unit,
 ) {
@@ -196,20 +197,25 @@ internal fun MissionSaveSheetScaffold(
             }
         }
 
-        // 시트가 보이는 동안 하단 네비 숨김 (화면을 떠날 땐 원상복구)
-        val sheetVisible = savedMission != null || offsetY < hiddenOffset - 0.5f
-        LaunchedEffect(sheetVisible) { onSheetVisibleChange(sheetVisible) }
+        // 시트를 화면에 그릴지 여부 (내려가는 애니 동안에도 그려야 하니 offsetY로 판단).
+        val sheetTopForNav = if (savedMission != null || offsetY < hiddenOffset - 0.5f) offsetY else null
+        val sheetVisible = sheetTopForNav != null
+        // 하단 네비에 시트 위 끝 위치를 매 프레임 알림 → 네비는 시트에 안 덮인 부분만 그림.
+        SideEffect { onSheetTopChange(sheetTopForNav) }
         DisposableEffect(Unit) {
-            onDispose { onSheetVisibleChange(false) }
+            onDispose { onSheetTopChange(null) }
         }
 
         // 시트 안 카드 스크롤과 시트 끌기 연결: 위로 밀면 시트가 먼저 펼쳐지고, 아래로 당기면 시트가 내려감.
+        // source == UserInput 조건: 손가락 스크롤만 시트 드래그로 연결한다. 저장 목록에서 카드가 빠져
+        // 내용 높이가 줄면 Compose가 스크롤 위치를 자동 보정(SideEffect)하는데, 이걸 사용자 입력으로
+        // 오해하면 시트가 순간 위로 튀었다 내려간다 → UserInput일 때만 반응하게 걸러냄.
         val nestedScrollConnection = object : NestedScrollConnection {
             override fun onPreScroll(available: Offset, source: NestedScrollSource): Offset =
-                if (available.y < 0) Offset(0f, dragBy(available.y)) else Offset.Zero
+                if (source == NestedScrollSource.UserInput && available.y < 0) Offset(0f, dragBy(available.y)) else Offset.Zero
 
             override fun onPostScroll(consumed: Offset, available: Offset, source: NestedScrollSource): Offset =
-                if (available.y > 0) Offset(0f, dragBy(available.y)) else Offset.Zero
+                if (source == NestedScrollSource.UserInput && available.y > 0) Offset(0f, dragBy(available.y)) else Offset.Zero
 
             override suspend fun onPreFling(available: Velocity): Velocity {
                 val atAnchor = offsetY == expandedOffset || offsetY == peekOffset || offsetY == hiddenOffset

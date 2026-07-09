@@ -1,7 +1,13 @@
 package com.talkqquest.app.navigation
 
+import androidx.compose.animation.AnimatedContentTransitionScope
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.IntOffset
+import androidx.navigation.NavBackStackEntry
 import androidx.navigation.NavHostController
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
@@ -18,12 +24,35 @@ import com.talkqquest.app.feature.mission.ui.MissionListScreen
 fun NavGraph(
     navController: NavHostController,
     modifier: Modifier = Modifier,
-    onOverlayVisibleChange: (Boolean) -> Unit = {}, // 화면 오버레이(바텀시트 등)가 하단 네비를 덮을 때 알림
+    onOverlaySheetTop: (Float?) -> Unit = {}, // 화면 오버레이(바텀시트) 위 끝 y(px), null=없음 — 네비 가림 처리
 ) {
+    // 화면 전환 모션: 안쪽으로 들어갈 땐 새 화면이 오른쪽에서 밀려 들어오고,
+    // 뒤로 갈 땐 현재 화면이 오른쪽으로 밀려 나감 (순간이동처럼 뚝 바뀌지 않게).
+    // 단, 하단 탭끼리 오가는 건 안/밖 위계가 아니라 병렬 이동이라 페이드로 교체.
+    val tabRoutes = BottomNavItem.entries.map { it.route }.toSet()
+    fun AnimatedContentTransitionScope<NavBackStackEntry>.isTabSwitch() =
+        initialState.destination.route in tabRoutes && targetState.destination.route in tabRoutes
+    val slideSpec = tween<IntOffset>(300)
     NavHost(
         navController = navController,
         startDestination = Screen.HOME,
         modifier = modifier,
+        enterTransition = {
+            if (isTabSwitch()) fadeIn(tween(300))
+            else slideIntoContainer(AnimatedContentTransitionScope.SlideDirection.Left, slideSpec)
+        },
+        exitTransition = {
+            if (isTabSwitch()) fadeOut(tween(300))
+            else slideOutOfContainer(AnimatedContentTransitionScope.SlideDirection.Left, slideSpec)
+        },
+        popEnterTransition = {
+            if (isTabSwitch()) fadeIn(tween(300))
+            else slideIntoContainer(AnimatedContentTransitionScope.SlideDirection.Right, slideSpec)
+        },
+        popExitTransition = {
+            if (isTabSwitch()) fadeOut(tween(300))
+            else slideOutOfContainer(AnimatedContentTransitionScope.SlideDirection.Right, slideSpec)
+        },
     ) {
         // 하단 네비 4탭 (임시 — 실제 화면으로 교체)
         // 홈은 화면↔데이터 연결 예시로 실제 구현됨(feature/home 참고). 나머지는 각 담당이 교체.
@@ -39,7 +68,7 @@ fun NavGraph(
             MissionListScreen(
                 onBack = { navController.popBackStack() },
                 onMissionClick = { missionId -> navController.navigate("mission_detail/$missionId") },
-                onSheetVisibleChange = onOverlayVisibleChange, // 저장 시트가 하단 네비를 덮는 동안 네비 숨김
+                onSheetTopChange = onOverlaySheetTop, // 저장 시트가 하단 네비를 덮는 동안 네비 가림
             )
         }
         // B담당: 미션 상세. "다음" → 대화 준비(아직 없어서 임시 화면, 다음 작업에서 교체).
@@ -51,7 +80,7 @@ fun NavGraph(
                 onBack = { navController.popBackStack() },
                 onNextClick = { missionId -> navController.navigate("conversation_prep/$missionId") },
                 onMissionClick = { missionId -> navController.navigate("mission_detail/$missionId") },
-                onSheetVisibleChange = onOverlayVisibleChange,
+                onSheetTopChange = onOverlaySheetTop,
             )
         }
         // B담당: 대화 준비(미션 진입). "미션 시작하기" → 대화 화면(아직 없어서 임시, 다음 작업에서 교체).

@@ -97,10 +97,12 @@ fun TqBottomBar(
     TqBottomBarContent(
         currentRoute = currentRoute,
         onTabClick = { route ->
+            // 탭을 누르면, 그 탭 플로우 안쪽 화면(예: 홈→미션 상세→대화 준비)에 있더라도
+            // 그 탭의 시작 화면으로 되돌아오게 함. (restoreState=true를 쓰면 들어갔던 하위 화면을
+            // 되살려서 "홈 눌러도 메인으로 안 오는" 문제가 생겨 뺌 — 탭 = 항상 그 탭 루트로.)
             navController.navigate(route) {
-                popUpTo(navController.graph.findStartDestination().id) { saveState = true }
+                popUpTo(navController.graph.findStartDestination().id) { inclusive = false }
                 launchSingleTop = true
-                restoreState = true
             }
         },
         hazeState = hazeState,

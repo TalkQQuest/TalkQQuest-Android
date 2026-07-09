@@ -98,7 +98,7 @@ fun MissionDetailScreen(
     onBack: () -> Unit = {},
     onNextClick: (Long) -> Unit = {},
     onMissionClick: (Long) -> Unit = {}, // 시트 안 카드 클릭 → 그 미션 상세
-    onSheetVisibleChange: (Boolean) -> Unit = {},
+    onSheetTopChange: (Float?) -> Unit = {},
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     MissionDetailScreen(
@@ -106,10 +106,11 @@ fun MissionDetailScreen(
         onBack = onBack,
         onRetry = viewModel::loadDetail,
         onToggleSave = viewModel::toggleSave,
+        onToggleSaveInList = viewModel::toggleSaveInList,
         onDismissSaveSheet = viewModel::dismissSaveSheet,
         onNextClick = onNextClick,
         onMissionClick = onMissionClick,
-        onSheetVisibleChange = onSheetVisibleChange,
+        onSheetTopChange = onSheetTopChange,
     )
 }
 
@@ -119,10 +120,11 @@ private fun MissionDetailScreen(
     onBack: () -> Unit,
     onRetry: () -> Unit,
     onToggleSave: () -> Unit,
+    onToggleSaveInList: (Long) -> Unit = {},
     onDismissSaveSheet: () -> Unit = {},
     onNextClick: (Long) -> Unit = {},
     onMissionClick: (Long) -> Unit = {},
-    onSheetVisibleChange: (Boolean) -> Unit = {},
+    onSheetTopChange: (Float?) -> Unit = {},
 ) = FitDesign { // 작은 화면에선 디자인(393x852) 통째 축소 — 스크롤 없이 한 화면에
     Box(
         modifier = Modifier
@@ -151,9 +153,11 @@ private fun MissionDetailScreen(
                         onDismissSaveSheet()
                         onMissionClick(id)
                     },
-                    // 시트 안 "저장 목록" 카드의 북마크는 다른 미션 소관이라 여기선 못 바꿈 (TODO 서버 연동 시 처리)
-                    onToggleSave = { id -> if (id == uiState.detail.id) onToggleSave() },
-                    onSheetVisibleChange = onSheetVisibleChange,
+                    // 방금 저장한(현재) 미션은 상세 상태를, 저장 목록의 다른 미션은 목록 상태를 토글.
+                    onToggleSave = { id ->
+                        if (id == uiState.detail.id) onToggleSave() else onToggleSaveInList(id)
+                    },
+                    onSheetTopChange = onSheetTopChange,
                 ) {
                     MissionDetailContent(
                         detail = uiState.detail,

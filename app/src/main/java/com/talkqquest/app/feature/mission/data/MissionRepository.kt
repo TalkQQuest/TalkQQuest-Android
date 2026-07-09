@@ -2,6 +2,7 @@ package com.talkqquest.app.feature.mission.data
 
 import com.talkqquest.app.core.network.ApiResult
 import com.talkqquest.app.core.network.safeApiCall
+import com.talkqquest.app.feature.mission.data.model.ConversationPrep
 import com.talkqquest.app.feature.mission.data.model.MissionDetail
 import com.talkqquest.app.feature.mission.data.model.MissionListItem
 import javax.inject.Inject
@@ -32,7 +33,23 @@ class MissionRepository @Inject constructor(
             ),
         )
     }
+
+    // TODO(서버 연동 전 임시): 붙으면 return safeApiCall { missionApi.getConversationPrep(missionId) } 로 복구.
+    // 새로고침(refresh=true) 시 서버는 새 문장을 주지만, stub은 문장 묶음을 번갈아 돌려 "바뀌는" 느낌만 재현.
+    suspend fun getConversationPrep(missionId: Long, refreshIndex: Int = 0): ApiResult<ConversationPrep> {
+        val opener = stubOpenerSets[refreshIndex % stubOpenerSets.size]
+        return ApiResult.Success(ConversationPrep(topics = stubTopics, openers = opener))
+    }
 }
+
+// 대화 준비 stub. 주제(표시용) — 디자인 목업 6개 그대로.
+private val stubTopics = listOf("오늘 날씨", "주말 계획", "좋아하는 음식", "최근 본 영화", "학교 생활", "취미 활동")
+
+// 첫 마디 묶음 여러 벌 — 새로고침 때 번갈아 나와 "새 문장" 느낌. 첫 벌 = 목업 그대로.
+private val stubOpenerSets = listOf(
+    listOf("안녕하세요! 처음 뵙겠습니다.", "오늘 하루 잘 보내고 계신가요?", "여기 분위기 좋네요!"),
+    listOf("실례지만 잠깐 얘기 나눠도 될까요?", "날씨가 참 좋네요, 그렇죠?", "여기 자주 오시나요?"),
+)
 
 // 서버 없이 에뮬/프리뷰에서 목록 확인용 임시 데이터. 서버 연동 시 통째로 삭제.
 // 1~5번 = 피그마 목업 카드 그대로. 6번 = 목업에 잘려 보이는 카드(일상 대화) 추정. 7번 = 긴 제목(2줄 확장 검증용).

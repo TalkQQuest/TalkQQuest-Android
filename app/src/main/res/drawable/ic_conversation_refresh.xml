@@ -1,0 +1,13 @@
+<!-- 새로고침.svg 전사 (17x16, stroke #94A3B8=Gray400, w2, round) -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="17dp"
+    android:height="16dp"
+    android:viewportWidth="17"
+    android:viewportHeight="16">
+    <path
+        android:pathData="M13.8521 4.34491C12.6938 2.34532 10.5289 1 8.04931 1C5.23793 1 2.83104 2.72946 1.83727 5.18113M11.8175 5.18113H15.167V1.83623M2.31522 11.0347C3.47351 13.0343 5.63843 14.3796 8.118 14.3796C10.9294 14.3796 13.3363 12.6502 14.33 10.1985M4.34982 10.1985H1.00032V13.5434"
+        android:strokeColor="#94A3B8"
+        android:strokeWidth="2"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round" />
+</vector>

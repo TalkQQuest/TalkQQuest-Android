@@ -21,6 +21,7 @@ data class HomeSummary(
 data class TodayMission(
     val id: Long,
     val title: String,
+    val description: String? = null,  // 미션 한 줄 설명 (홈 카드 부제). 백엔드 필드명 확정 시 조정.
     val difficulty: String,       // 예: 쉬움/보통/어려움 (실제 값은 백엔드 확인)
     val estimatedMinutes: Int,
     val rewardXp: Int,

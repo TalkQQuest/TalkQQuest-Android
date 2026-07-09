@@ -3,6 +3,7 @@ package com.talkqquest.app.feature.home.data
 import com.talkqquest.app.core.network.ApiResult
 import com.talkqquest.app.core.network.safeApiCall
 import com.talkqquest.app.feature.home.data.model.HomeSummary
+import com.talkqquest.app.feature.home.data.model.TodayMission
 import javax.inject.Inject
 
 // 홈 Repository (예시). ViewModel과 API 사이를 잇는 계층.
@@ -12,6 +13,27 @@ import javax.inject.Inject
 class HomeRepository @Inject constructor(
     private val homeApi: HomeApi,
 ) {
+    // TODO(서버 연동 전 임시): 백엔드 홈 API 붙으면 아래 stub 리턴 지우고 return 한 줄로 복구.
+    //     suspend fun getHomeSummary() = safeApiCall { homeApi.getHomeSummary() }
     suspend fun getHomeSummary(): ApiResult<HomeSummary> =
-        safeApiCall { homeApi.getHomeSummary() }
+        ApiResult.Success(stubHomeSummary)
 }
+
+// 서버 없이 에뮬에서 홈 화면 확인용 임시 데이터. 서버 연동 시 이 값째로 삭제.
+private val stubHomeSummary = HomeSummary(
+    nickname = "다민",
+    level = 2,
+    currentXp = 30,
+    nextLevelXp = 100,
+    todayMission = TodayMission(
+        id = 1,
+        title = "처음 보는 사람에게\n짧게 인사하기",
+        description = "가벼운 인사로 좋은 대화의 시작을 열어보세요!",
+        difficulty = "쉬움",
+        estimatedMinutes = 5,
+        rewardXp = 20,
+    ),
+    archiveCount = 12,
+    communityCount = 4,
+    questionOfDay = "요즘 가장 설렜던 순간은?",
+)

@@ -84,11 +84,15 @@ import com.talkqquest.app.feature.home.viewmodel.HomeViewModel
 @Composable
 fun HomeScreen(
     viewModel: HomeViewModel = hiltViewModel(),
+    onStartMissionClick: (Long) -> Unit = {}, // 오늘의 미션 "미션 시작하기" → 미션 상세
+    onOtherMissionsClick: () -> Unit = {},    // "다른 미션 보기" → 미션 목록
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     HomeScreen(
         uiState = uiState,
         onRetry = viewModel::loadHome,
+        onStartMissionClick = onStartMissionClick,
+        onOtherMissionsClick = onOtherMissionsClick,
     )
 }
 
@@ -96,6 +100,8 @@ fun HomeScreen(
 private fun HomeScreen(
     uiState: HomeUiState,
     onRetry: () -> Unit,
+    onStartMissionClick: (Long) -> Unit = {},
+    onOtherMissionsClick: () -> Unit = {},
 ) {
     Box(
         modifier = Modifier
@@ -117,7 +123,11 @@ private fun HomeScreen(
             }
 
             uiState.summary != null -> {
-                HomeContent(summary = uiState.summary)
+                HomeContent(
+                    summary = uiState.summary,
+                    onStartMissionClick = onStartMissionClick,
+                    onOtherMissionsClick = onOtherMissionsClick,
+                )
             }
         }
     }
@@ -175,7 +185,11 @@ private fun HomeCard(
 
 // 홈 메인 콘텐츠 (위→아래로 전사). 좌우 여백 16(디자인 left 16).
 @Composable
-private fun HomeContent(summary: HomeSummary) {
+private fun HomeContent(
+    summary: HomeSummary,
+    onStartMissionClick: (Long) -> Unit = {},
+    onOtherMissionsClick: () -> Unit = {},
+) {
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -191,9 +205,11 @@ private fun HomeContent(summary: HomeSummary) {
             nextLevelXp = summary.nextLevelXp,
         )
         Spacer(Modifier.height(16.dp))
-        summary.todayMission?.let { HomeMissionCard(mission = it) }
+        summary.todayMission?.let { mission ->
+            HomeMissionCard(mission = mission, onStartClick = { onStartMissionClick(mission.id) })
+        }
         Spacer(Modifier.height(16.dp))
-        OtherMissionsCard(onClick = { /* TODO: 미션 목록으로 이동 (NavGraph 배선) */ })
+        OtherMissionsCard(onClick = onOtherMissionsClick)
         Spacer(Modifier.height(100.dp)) // 떠 있는 하단 네비 가림 방지 여백
     }
 }
@@ -343,7 +359,7 @@ private fun HomeLevelCard(level: Int, currentXp: Int, nextLevelXp: Int) {
 
 // 오늘의 미션 카드.
 @Composable
-private fun HomeMissionCard(mission: TodayMission) {
+private fun HomeMissionCard(mission: TodayMission, onStartClick: () -> Unit = {}) {
     HomeCard(
         modifier = Modifier.fillMaxWidth(),
         contentPadding = PaddingValues(horizontal = 16.dp, vertical = 20.dp),
@@ -414,7 +430,7 @@ private fun HomeMissionCard(mission: TodayMission) {
         // 미션 시작하기 (버튼M = 높이 44 / radius 12 / Primary600)
         TqButton(
             text = "미션 시작하기",
-            onClick = { /* TODO: 미션 상세로 이동 (NavGraph 배선) */ },
+            onClick = onStartClick,
             size = TqButtonSize.Medium,
             modifier = Modifier.fillMaxWidth(),
         )

@@ -54,6 +54,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.talkqquest.app.R
 import com.talkqquest.app.core.designsystem.Error
+import com.talkqquest.app.core.designsystem.FitDesign
 import com.talkqquest.app.core.designsystem.Gray1000
 import com.talkqquest.app.core.designsystem.Gray300
 import com.talkqquest.app.core.designsystem.Gray400
@@ -63,6 +64,7 @@ import com.talkqquest.app.core.designsystem.Gray600
 import com.talkqquest.app.core.designsystem.Gray700
 import com.talkqquest.app.core.designsystem.Gray800
 import com.talkqquest.app.core.designsystem.Gray900
+import com.talkqquest.app.core.designsystem.LocalDesignScale
 import com.talkqquest.app.core.designsystem.Primary100
 import com.talkqquest.app.core.designsystem.Primary600
 import com.talkqquest.app.core.designsystem.Success
@@ -102,7 +104,7 @@ private fun HomeScreen(
     onRetry: () -> Unit,
     onStartMissionClick: (Long) -> Unit = {},
     onOtherMissionsClick: () -> Unit = {},
-) {
+) = FitDesign { // 작은 화면에선 디자인(393x852) 통째 축소 — 미션 화면들과 동일하게 스크롤 없이 한 화면에
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -210,7 +212,9 @@ private fun HomeContent(
         }
         Spacer(Modifier.height(16.dp))
         OtherMissionsCard(onClick = onOtherMissionsClick)
-        Spacer(Modifier.height(100.dp)) // 떠 있는 하단 네비 가림 방지 여백
+        // 떠 있는 하단 네비 가림 방지 여백. 네비 알약은 축소 대상 밖(MainScreen)이라
+        // 화면이 축소돼도 알약 크기는 그대로 → 여백은 축소분만큼 되돌려(/scale) 원래 픽셀을 확보.
+        Spacer(Modifier.height(100.dp / LocalDesignScale.current))
     }
 }
 

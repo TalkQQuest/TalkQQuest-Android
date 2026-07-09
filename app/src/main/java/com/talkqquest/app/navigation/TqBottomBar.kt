@@ -80,6 +80,7 @@ private fun Modifier.softShadow(
 // route가 속한 탭. 탭의 하위 화면(예: 미션 목록 = 홈 플로우)에서도 소속 탭이 계속 하이라이트되게 함.
 private fun tabRouteOf(route: String?): String? = when (route) {
     Screen.MISSION_LIST -> Screen.HOME
+    Screen.MISSION_DETAIL -> Screen.HOME
     else -> route
 }
 

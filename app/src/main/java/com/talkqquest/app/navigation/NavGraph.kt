@@ -3,9 +3,12 @@ package com.talkqquest.app.navigation
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.navigation.NavHostController
+import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
+import androidx.navigation.navArgument
 import com.talkqquest.app.feature.home.ui.HomeScreen
+import com.talkqquest.app.feature.mission.ui.MissionDetailScreen
 import com.talkqquest.app.feature.mission.ui.MissionListScreen
 
 // 네비게이션 그래프.
@@ -33,8 +36,19 @@ fun NavGraph(
                 onSheetVisibleChange = onOverlayVisibleChange, // 저장 시트가 하단 네비를 덮는 동안 네비 숨김
             )
         }
-        // B담당: 미션 상세 — 화면 아직 없음. 목록 클릭 흐름 확인용 임시(실제 화면으로 교체 예정).
-        composable(Screen.MISSION_DETAIL) { PlaceholderScreen("미션 상세") }
+        // B담당: 미션 상세. "다음" → 대화 준비(아직 없어서 임시 화면, 다음 작업에서 교체).
+        composable(
+            route = Screen.MISSION_DETAIL,
+            arguments = listOf(navArgument("missionId") { type = NavType.LongType }),
+        ) {
+            MissionDetailScreen(
+                onBack = { navController.popBackStack() },
+                onNextClick = { missionId -> navController.navigate("conversation_prep/$missionId") },
+                onMissionClick = { missionId -> navController.navigate("mission_detail/$missionId") },
+                onSheetVisibleChange = onOverlayVisibleChange,
+            )
+        }
+        composable(Screen.CONVERSATION_PREP) { PlaceholderScreen("대화 준비") }
         composable(Screen.COMMUNITY_LIST) { PlaceholderScreen("모임") }
         composable(Screen.PROFILE) { PlaceholderScreen("프로필") }
 

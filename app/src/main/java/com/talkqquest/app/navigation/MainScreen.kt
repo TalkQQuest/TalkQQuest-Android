@@ -27,7 +27,7 @@ fun MainScreen() {
 
     // 하단바 표시 route: 탭 4개 + 디자인상 하단바가 있는 화면(미션 목록). 그 외 자동 숨김.
     // currentRoute == null = 첫 프레임(시작 화면 세팅 전) → 숨겼다 늦게 뜨지 않게 바로 표시.
-    val bottomBarRoutes = BottomNavItem.entries.map { it.route } + Screen.MISSION_LIST
+    val bottomBarRoutes = BottomNavItem.entries.map { it.route } + Screen.MISSION_LIST + Screen.MISSION_DETAIL
     // 화면 오버레이(예: 저장 바텀시트)가 하단 네비 자리를 덮는 동안 네비 숨김 (디자인: 시트가 네비 위)
     var overlayVisible by remember { mutableStateOf(false) }
     val showBottomBar = (currentRoute == null || currentRoute in bottomBarRoutes) && !overlayVisible

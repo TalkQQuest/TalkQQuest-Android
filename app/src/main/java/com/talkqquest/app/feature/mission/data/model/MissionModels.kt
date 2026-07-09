@@ -15,3 +15,20 @@ data class MissionListItem(
     val rewardXp: Int,
     val isSaved: Boolean = false, // 북마크 여부
 )
+
+// 미션 상세 DTO. 기능명세서 C103 기준 — GET /api/v1/missions/{missionId}
+// 명세서에 응답 필드가 안 적혀 있어 목록 필드 + 효과 문구(benefits)로 시작. 백엔드 확정 시 조정.
+@Serializable
+data class MissionDetail(
+    val id: Long,
+    val title: String,
+    val category: String,
+    val difficulty: String,
+    val estimatedMinutes: Int,
+    val rewardXp: Int,
+    val isSaved: Boolean = false,
+    val benefits: List<String> = emptyList(), // 체크(✓) 효과 문구 — 개수 가변(디자인은 2개 예시)
+) {
+    // 저장 시트(MissionSaveSheet)가 목록 카드 형태를 쓰기 때문에 변환용.
+    fun toListItem() = MissionListItem(id, title, category, difficulty, estimatedMinutes, rewardXp, isSaved)
+}

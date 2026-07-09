@@ -1,0 +1,12 @@
+<!-- 네모두개.svg 전사 (15x17, stroke #7264F8=Primary500, w2, round cap) -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="15dp"
+    android:height="17dp"
+    android:viewportWidth="15"
+    android:viewportHeight="17">
+    <path
+        android:pathData="M1 7.56241L1 13C1 14.6568 2.34317 16 4.00003 16L9.4375 15.9999M6 0.999904L11.625 0.999903C12.6605 0.999903 13.5 1.83937 13.5 2.8749L13.5 10.9999C13.5 12.0354 12.6605 12.8749 11.625 12.8749L6 12.8749C4.96447 12.8749 4.125 12.0354 4.125 10.9999L4.125 2.8749C4.125 1.83937 4.96447 0.999905 6 0.999904Z"
+        android:strokeColor="#7264F8"
+        android:strokeWidth="2"
+        android:strokeLineCap="round" />
+</vector>

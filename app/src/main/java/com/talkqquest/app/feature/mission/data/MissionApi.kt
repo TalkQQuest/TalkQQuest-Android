@@ -1,6 +1,7 @@
 package com.talkqquest.app.feature.mission.data
 
 import com.talkqquest.app.core.network.ApiResponse
+import com.talkqquest.app.feature.mission.data.model.ConversationPrep
 import com.talkqquest.app.feature.mission.data.model.MissionDetail
 import com.talkqquest.app.feature.mission.data.model.MissionListItem
 import retrofit2.http.GET
@@ -23,4 +24,10 @@ interface MissionApi {
     suspend fun getMissionDetail(
         @Path("missionId") missionId: Long,
     ): ApiResponse<MissionDetail>
+
+    // 대화 시작 준비 문장 조회 (명세서 C103) — 새로고침 시 재호출로 새 문장
+    @GET("api/v1/missions/{missionId}/prep")
+    suspend fun getConversationPrep(
+        @Path("missionId") missionId: Long,
+    ): ApiResponse<ConversationPrep>
 }

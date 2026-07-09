@@ -8,6 +8,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
 import com.talkqquest.app.feature.home.ui.HomeScreen
+import com.talkqquest.app.feature.mission.ui.ConversationPrepScreen
 import com.talkqquest.app.feature.mission.ui.MissionDetailScreen
 import com.talkqquest.app.feature.mission.ui.MissionListScreen
 
@@ -48,7 +49,18 @@ fun NavGraph(
                 onSheetVisibleChange = onOverlayVisibleChange,
             )
         }
-        composable(Screen.CONVERSATION_PREP) { PlaceholderScreen("대화 준비") }
+        // B담당: 대화 준비(미션 진입). "미션 시작하기" → 대화 화면(아직 없어서 임시, 다음 작업에서 교체).
+        composable(
+            route = Screen.CONVERSATION_PREP,
+            arguments = listOf(navArgument("missionId") { type = NavType.LongType }),
+        ) { backStackEntry ->
+            val missionId = backStackEntry.arguments?.getLong("missionId") ?: 0L
+            ConversationPrepScreen(
+                onBack = { navController.popBackStack() },
+                onStartClick = { navController.navigate("conversation/$missionId") },
+            )
+        }
+        composable(Screen.CONVERSATION) { PlaceholderScreen("대화 진행") }
         composable(Screen.COMMUNITY_LIST) { PlaceholderScreen("모임") }
         composable(Screen.PROFILE) { PlaceholderScreen("프로필") }
 

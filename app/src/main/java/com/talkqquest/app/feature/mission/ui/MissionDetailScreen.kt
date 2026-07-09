@@ -122,7 +122,7 @@ private fun MissionDetailScreen(
     onNextClick: (Long) -> Unit = {},
     onMissionClick: (Long) -> Unit = {},
     onSheetVisibleChange: (Boolean) -> Unit = {},
-) {
+) = FitDesign { // 작은 화면에선 디자인(393x852) 통째 축소 — 스크롤 없이 한 화면에
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -174,9 +174,11 @@ private fun MissionDetailContent(
     onNextClick: (Long) -> Unit,
 ) {
     BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
-        // 세로 배치: 내용이 다 들어가는 화면에선 여백을 늘려 피그마 비례를 유지하고,
-        // 작은 화면에선 CSS 고정 여백 + 스크롤.
+        // 세로 배치: 내용이 다 들어가는 화면에선 여백을 늘려 피그마 비례를 유지.
+        // 작은 화면에선 여백·일러스트를 부족한 비율만큼 점차 축소(최소 0.5배, 사용자 결정),
+        // 그래도 넘치는 극소형만 스크롤. 글자·카드·버튼은 가독성 위해 고정.
         val compact = maxHeight < 760.dp
+        val shrink = if (compact) (maxHeight / 760.dp).coerceIn(0.5f, 1f) else 1f
 
         // 상단 보라 그라데이션 배경 (CSS Frame 436: 높이 462).
         // CSS에서 그라데이션 끝(462)은 효과 카드 시작(437)보다 25 아래 — "카드 머리를 살짝 덮는" 관계.
@@ -188,7 +190,7 @@ private fun MissionDetailContent(
                 .fillMaxWidth()
                 .height(
                     when {
-                        compact -> 462.dp // 작은 화면(스크롤 모드)은 CSS 좌표 그대로
+                        compact -> 462.dp * shrink // 작은 화면은 CSS 값을 축소 비율만큼
                         cardsTop != null -> cardsTop!! + 25.dp // 실측 카드 머리 + 25 (CSS 462-437)
                         else -> maxHeight - 390.dp // 측정 전 첫 프레임 임시값
                     },
@@ -223,7 +225,7 @@ private fun MissionDetailContent(
             }
 
             // 헤더(92) → 중앙 블록(top 139) (CSS 47). 큰 화면의 여분 공간은 히어로 위아래로만 나눔.
-            if (compact) Spacer(Modifier.height(47.dp)) else Spacer(Modifier.weight(1f))
+            if (compact) Spacer(Modifier.height(47.dp * shrink)) else Spacer(Modifier.weight(1f))
 
             // 중앙 블록 (CSS Frame 435): 다트 과녁 → 제목 → 칩 3개, 모두 가운데 정렬
             Column(
@@ -236,12 +238,12 @@ private fun MissionDetailContent(
                 Image(
                     painter = painterResource(R.drawable.img_mission_target),
                     contentDescription = null,
-                    // 원래 크기 고정 (확대 버전과 비교 후 확정 — 화면이 길면 여백이 이미지 위아래로 감)
-                    modifier = Modifier.size(width = 131.dp, height = 137.dp),
+                    // 원래 크기 확정(확대 안 함 — 사용자 결정). 작은 화면에선 비율 축소만.
+                    modifier = Modifier.size(width = 131.dp * shrink, height = 137.dp * shrink),
                 )
                 // 이미지 → 제목: CSS 수치는 2지만 그건 이미지 틀 안 투명 여백 포함 기준(우리 PNG는 잘라냄).
-                // 이 간격은 CSS에 숫자로 안 드러나 목업과 눈 대조로 맞춘 값. 화면 크기와 무관하게 고정(합의).
-                Spacer(Modifier.height(16.dp))
+                // 이 간격은 CSS에 숫자로 안 드러나 목업과 눈 대조로 맞춘 값(16). 작은 화면에선 비율 축소.
+                Spacer(Modifier.height(16.dp * shrink))
                 Text(
                     // 서버 가변 제목: 어절 보호 + 한 글자 어절 고아 방지 + 줄 균형 (홈과 동일 규칙)
                     text = detail.title.glueShortWords().keepWordsIntact(),
@@ -260,7 +262,7 @@ private fun MissionDetailContent(
             }
 
             // 중앙 블록(392) → 카드(top 437) (CSS 45)
-            if (compact) Spacer(Modifier.height(45.dp)) else Spacer(Modifier.weight(1f))
+            if (compact) Spacer(Modifier.height(45.dp * shrink)) else Spacer(Modifier.weight(1f))
 
             // 효과·보상 카드 (CSS Frame 441: 좌우 17, 카드 간격 12)
             Column(
@@ -276,13 +278,13 @@ private fun MissionDetailContent(
                 RewardCard(rewardXp = detail.rewardXp)
             }
 
-            Spacer(Modifier.height(54.dp)) // 카드(606) → 하단 액션(top 660) (CSS 54, 화면 커져도 고정)
+            Spacer(Modifier.height(54.dp * shrink)) // 카드(606) → 하단 액션(top 660) (CSS 54, 화면 커져도 고정·작으면 축소)
 
             // 하단 액션 (CSS Frame 366): 북마크 + "다음" 버튼
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 24.dp), // 좌우 24 (CSS)
+                    .padding(horizontal = 24.dp), // 좌우 24 (CSS) — 하단 여백은 아래 알약 스페이서가 처리
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(12.dp), // 북마크 ↔ 버튼 (CSS gap)
             ) {
@@ -312,7 +314,9 @@ private fun MissionDetailContent(
                 )
             }
 
-            Spacer(Modifier.height(92.dp)) // 버튼 → 알약 간격 16 + 알약 64 + 알약 아래 12 (CSS)
+            // 버튼 → 알약 간격 16 + 알약 64 + 알약 아래 12 (CSS). 알약은 축소 대상이 아니라
+            // 화면이 축소된 만큼 나눠서 실제(물리) 크기를 유지.
+            Spacer(Modifier.height(92.dp / LocalDesignScale.current))
         }
     }
 }

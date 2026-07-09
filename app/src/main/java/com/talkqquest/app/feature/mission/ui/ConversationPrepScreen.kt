@@ -7,6 +7,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
@@ -90,7 +91,7 @@ private fun ConversationPrepScreen(
     onRetry: () -> Unit,
     onRefreshOpeners: () -> Unit = {},
     onStartClick: () -> Unit = {},
-) {
+) = FitDesign { // 작은 화면에선 디자인(393x852) 통째 축소 — 스크롤 없이 한 화면에
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -127,19 +128,27 @@ private fun ConversationPrepContent(
     onRefreshOpeners: () -> Unit,
     onStartClick: () -> Unit,
 ) {
-    Box(modifier = Modifier.fillMaxSize()) {
+    BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
+        // 긴 화면: 남는 세로 공간을 전부 헤더↔말풍선 사이에 넣어, 말풍선부터 아래
+        // (제목·칩·카드·버튼) 배열은 피그마 위치 그대로 유지 (사용자 결정).
+        // 작은 화면: 여백·일러스트를 부족한 비율만큼 점차 축소(최소 0.5배, 사용자 결정),
+        // 그래도 넘치는 극소형만 스크롤. 글자·카드·버튼은 가독성 위해 고정.
+        val compact = maxHeight < 880.dp
+        val shrink = if (compact) (maxHeight / 880.dp).coerceIn(0.5f, 1f) else 1f
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .verticalScroll(rememberScrollState()),
+                .then(if (compact) Modifier.verticalScroll(rememberScrollState()) else Modifier)
+                .navigationBarsPadding(), // 끝이 시스템 네비에 안 가리게
         ) {
             // ── 상단 흰 영역 (CSS Frame 427321003): 헤더 + 일러스트 + 주제 ──
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
+                    .then(if (compact) Modifier else Modifier.weight(1f)) // 남는 공간은 흰 영역이 흡수
                     .background(White)
                     .statusBarsPadding()
-                    .padding(bottom = 29.dp), // 흰 영역 끝(437) → 첫 마디 섹션(454) 사이 여백
+                    .padding(bottom = 29.dp * shrink), // 흰 영역 끝(437) → 첫 마디 섹션(454) 사이 여백
             ) {
                 Spacer(Modifier.height(8.dp)) // 상태바 → 헤더 (CSS Frame 361 top 48)
                 // 헤더 (CSS Frame 361): 뒤로가기 + "대화 준비"
@@ -161,18 +170,20 @@ private fun ConversationPrepContent(
                     Text(text = "대화 준비", style = TqType.BodyL.figma(), color = Gray600)
                 }
 
-                Spacer(Modifier.height(5.dp)) // 헤더(92) → 일러스트(top 137) = 45 - 상단 여백 보정
+                Spacer(Modifier.height(45.dp * shrink)) // 헤더 끝(92) → 일러스트 틀(top 137) = 45 (CSS)
+                if (!compact) Spacer(Modifier.weight(1f)) // 화면이 길어진 만큼은 전부 이 사이로
 
-                // 말풍선 일러스트 (CSS 프레임 141 기준, 실제 이미지 비율 341:250 → 141x103)
+                // 말풍선 일러스트: PNG(423x423)가 피그마 141x141 틀의 3배수 export라
+                // 안쪽 여백까지 그대로 담겨 있음 → 141x141로 그리면 피그마 배치와 동일.
                 Image(
                     painter = painterResource(R.drawable.img_conversation_bubble),
                     contentDescription = null,
                     modifier = Modifier
                         .align(Alignment.CenterHorizontally)
-                        .size(width = 141.dp, height = 103.dp),
+                        .size(141.dp * shrink),
                 )
 
-                Spacer(Modifier.height(24.dp)) // 일러스트 → 제목 (CSS Frame 427321008 관계)
+                // 일러스트 틀 끝(278) → 제목(top 272): CSS상 6 겹침 — 겹치게는 못 그려서 0 (6px 차이 고지)
 
                 Text(
                     text = "가볍게 시작하기 좋은 주제예요",
@@ -184,7 +195,7 @@ private fun ConversationPrepContent(
                         .padding(horizontal = 24.dp),
                 )
 
-                Spacer(Modifier.height(24.dp)) // 제목 → 주제 칩 (CSS Frame 427321008 gap 24)
+                Spacer(Modifier.height(24.dp * shrink)) // 제목 → 주제 칩 (CSS Frame 427321008 gap 24)
 
                 // 추천 주제 칩 (서버 개수 가변, 표시 전용): 폭 맞춰 가운데 정렬 줄바꿈
                 TopicChips(
@@ -245,17 +256,21 @@ private fun ConversationPrepContent(
                 }
             }
 
-            Spacer(Modifier.height(180.dp)) // 하단 고정 버튼 + 네비에 안 가리게
+            // 카드 끝이 하단 고정 버튼(52)+간격(12)+알약 영역(92)에 안 가리게.
+            // 알약 몫 92는 축소 대상이 아니라 비율로 나눠 실제 크기 유지.
+            Spacer(Modifier.height(64.dp + 92.dp / LocalDesignScale.current))
         }
 
-        // 미션 시작하기 버튼 (CSS Frame 272): 네비 알약 위에 고정
+        // 미션 시작하기 버튼 (CSS Frame 272: left 16, 폭 361 = 좌우 16): 알약 위 16에 고정.
+        // 피그마(852) 기준에선 내용 바로 뒤 = 바닥 고정이 같은 위치 — 바닥 고정이 의도로 판단(사용자 결정).
+        // 하단 92(알약 아래 12 + 알약 64 + 간격 16, CSS)는 알약이 축소 대상이 아니라 비율로 나눠 실제 크기 유지.
         TqButton(
             text = "미션 시작하기",
             onClick = onStartClick,
             modifier = Modifier
                 .align(Alignment.BottomCenter)
                 .navigationBarsPadding()
-                .padding(start = 16.dp, end = 16.dp, bottom = 92.dp) // 92 = 알약 밑 12 + 알약 64 + 간격 16
+                .padding(start = 16.dp, end = 16.dp, bottom = 92.dp / LocalDesignScale.current)
                 .fillMaxWidth(),
         )
     }

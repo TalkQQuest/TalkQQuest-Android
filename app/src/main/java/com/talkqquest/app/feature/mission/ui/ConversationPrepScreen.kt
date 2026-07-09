@@ -20,7 +20,6 @@ import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -51,7 +50,6 @@ import com.talkqquest.app.core.designsystem.Error
 import com.talkqquest.app.core.designsystem.Gray1000
 import com.talkqquest.app.core.designsystem.Gray50
 import com.talkqquest.app.core.designsystem.Gray500
-import com.talkqquest.app.core.designsystem.Gray600
 import com.talkqquest.app.core.designsystem.Gray700
 import com.talkqquest.app.core.designsystem.Gray800
 import com.talkqquest.app.core.designsystem.Gray900
@@ -151,23 +149,19 @@ private fun ConversationPrepContent(
                     .padding(bottom = 29.dp * shrink), // 흰 영역 끝(437) → 첫 마디 섹션(454) 사이 여백
             ) {
                 Spacer(Modifier.height(8.dp)) // 상태바 → 헤더 (CSS Frame 361 top 48)
-                // 헤더 (CSS Frame 361): 뒤로가기 + "대화 준비"
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Box(
-                        modifier = Modifier
-                            .size(44.dp)
-                            .clip(CircleShape) // 눌림 효과 원형 (아이콘 버튼 관례)
-                            .clickable(onClick = onBack),
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.KeyboardArrowLeft,
-                            contentDescription = "뒤로가기",
-                            tint = Gray500,
-                        )
-                    }
-                    Spacer(Modifier.width(3.dp))
-                    Text(text = "대화 준비", style = TqType.BodyL.figma(), color = Gray600)
+                // 헤더: 뒤로가기만 (제목은 디자인 개정으로 삭제됨)
+                Box(
+                    modifier = Modifier
+                        .size(44.dp)
+                        .clip(CircleShape) // 눌림 효과 원형 (아이콘 버튼 관례)
+                        .clickable(onClick = onBack),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Filled.KeyboardArrowLeft,
+                        contentDescription = "뒤로가기",
+                        tint = Gray500,
+                    )
                 }
 
                 Spacer(Modifier.height(45.dp * shrink)) // 헤더 끝(92) → 일러스트 틀(top 137) = 45 (CSS)

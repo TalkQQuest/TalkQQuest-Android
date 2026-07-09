@@ -17,7 +17,6 @@ import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
@@ -205,8 +204,9 @@ private fun MissionDetailContent(
                 .navigationBarsPadding(),
         ) {
             Spacer(Modifier.height(8.dp)) // 상태바 → 헤더 (CSS Frame 361 top 48 = 상태바 40 + 8)
-            // 헤더 (CSS Frame 361): 뒤로가기 44 + "미션 상세" (간격 3)
-            Row(verticalAlignment = Alignment.CenterVertically) {
+            // 헤더 (CSS Frame 427321190): 뒤로가기 44 왼끝, 제목은 화면 가로 정중앙.
+            // (제목 x166~226 → 중심 196 = 화면 중심 393/2. 개정 전 "화살표 옆" 배치에서 변경됨)
+            Box(modifier = Modifier.fillMaxWidth().height(44.dp)) {
                 Box(
                     modifier = Modifier
                         .size(44.dp)
@@ -220,8 +220,12 @@ private fun MissionDetailContent(
                         tint = Gray500, // 기본 프레임 기준 (변형 프레임은 Gray800 — 목록과 통일해 Gray500, 합의됨)
                     )
                 }
-                Spacer(Modifier.width(3.dp))
-                Text(text = "미션 상세", style = TqType.BodyL.figma(), color = Gray800)
+                Text(
+                    text = "미션 상세",
+                    style = TqType.BodyL.figma(),
+                    color = Gray800,
+                    modifier = Modifier.align(Alignment.Center),
+                )
             }
 
             // 헤더(92) → 중앙 블록(top 139) (CSS 47). 큰 화면의 여분 공간은 히어로 위아래로만 나눔.

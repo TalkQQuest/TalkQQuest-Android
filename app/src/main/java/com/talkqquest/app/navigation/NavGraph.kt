@@ -27,7 +27,12 @@ fun NavGraph(
     ) {
         // 하단 네비 4탭 (임시 — 실제 화면으로 교체)
         // 홈은 화면↔데이터 연결 예시로 실제 구현됨(feature/home 참고). 나머지는 각 담당이 교체.
-        composable(Screen.HOME) { HomeScreen() }
+        composable(Screen.HOME) {
+            HomeScreen(
+                onStartMissionClick = { missionId -> navController.navigate("mission_detail/$missionId") },
+                onOtherMissionsClick = { navController.navigate(Screen.MISSION_LIST) },
+            )
+        }
         composable(Screen.ARCHIVE_HOME) { PlaceholderScreen("아카이브") }
         // B담당: 미션 목록 (홈 → 다른 미션 보기). 카드 클릭 → 미션 상세({missionId}는 실제 값으로 치환).
         composable(Screen.MISSION_LIST) {

@@ -14,6 +14,7 @@ data class MissionListItem(
     val estimatedMinutes: Int,
     val rewardXp: Int,
     val isSaved: Boolean = false, // 북마크 여부
+    val status: String = "미완료", // 진행 상태: 완료/진행중/미완료 (저장 목록 필터용. TODO 서버 필드·값 확정 시 조정)
 )
 
 // 미션 상세 DTO. 기능명세서 C103 기준 — GET /api/v1/missions/{missionId}

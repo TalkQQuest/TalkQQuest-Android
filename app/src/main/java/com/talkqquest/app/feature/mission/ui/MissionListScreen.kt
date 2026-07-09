@@ -35,6 +35,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.talkqquest.app.core.designsystem.Error
 import com.talkqquest.app.core.designsystem.Gray1000
@@ -64,8 +66,11 @@ fun MissionListScreen(
     onBack: () -> Unit = {},
     onMissionClick: (Long) -> Unit = {},
     onSheetTopChange: (Float?) -> Unit = {}, // 저장 시트 위 끝 y(px), null=없음 — 하단 네비 가림 처리(MainScreen 연결)
+    onSavedListClick: () -> Unit = {}, // 시트 "저장 목록 >" → 저장 목록 화면
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    // 다른 화면(상세·저장 목록)에서 바꾼 북마크가 돌아왔을 때 반영되도록, 복귀마다 조용히 재조회
+    LifecycleEventEffect(Lifecycle.Event.ON_RESUME) { viewModel.loadMissions(showLoading = false) }
     MissionListScreen(
         uiState = uiState,
         onBack = onBack,
@@ -75,6 +80,7 @@ fun MissionListScreen(
         onDismissSaveSheet = viewModel::dismissSaveSheet,
         onMissionClick = onMissionClick,
         onSheetTopChange = onSheetTopChange,
+        onSavedListClick = onSavedListClick,
     )
 }
 
@@ -88,6 +94,7 @@ private fun MissionListScreen(
     onDismissSaveSheet: () -> Unit = {},
     onMissionClick: (Long) -> Unit = {},
     onSheetTopChange: (Float?) -> Unit = {},
+    onSavedListClick: () -> Unit = {},
 ) {
     Box(
         modifier = Modifier
@@ -120,6 +127,11 @@ private fun MissionListScreen(
                     },
                     onToggleSave = onToggleSave,
                     onSheetTopChange = onSheetTopChange,
+                    // 시트에서 "저장 목록 >" → 시트 닫고 저장 목록 화면으로
+                    onSavedListClick = {
+                        onDismissSaveSheet()
+                        onSavedListClick()
+                    },
                 ) {
                     Box(modifier = Modifier.fillMaxSize()) {
                         MissionListContent(
@@ -238,7 +250,7 @@ private fun MissionFilterChips(
 // 칩 (CSS select chip): 높이 34, radius 20, 좌우 18.
 // 선택 = Purple600 배경 + Primary50 글자 / 미선택 = 흰 배경 + 카드 그림자 + Gray900 글자.
 @Composable
-private fun MissionFilterChip(
+internal fun MissionFilterChip( // 저장 목록 화면에서도 재사용 (완료/진행중/미완료 필터)
     label: String,
     selected: Boolean,
     onClick: () -> Unit,

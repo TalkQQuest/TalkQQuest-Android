@@ -17,6 +17,7 @@ import com.talkqquest.app.feature.home.ui.HomeScreen
 import com.talkqquest.app.feature.mission.ui.ConversationPrepScreen
 import com.talkqquest.app.feature.mission.ui.MissionDetailScreen
 import com.talkqquest.app.feature.mission.ui.MissionListScreen
+import com.talkqquest.app.feature.mission.ui.SavedMissionsScreen
 
 // 네비게이션 그래프.
 // TODO(각 담당): composable(Screen.XXX) { XxxScreen(navController) } 로 자기 화면 등록. route는 Screen.kt 참고.
@@ -69,6 +70,7 @@ fun NavGraph(
                 onBack = { navController.popBackStack() },
                 onMissionClick = { missionId -> navController.navigate("mission_detail/$missionId") },
                 onSheetTopChange = onOverlaySheetTop, // 저장 시트가 하단 네비를 덮는 동안 네비 가림
+                onSavedListClick = { navController.navigate(Screen.SAVED_MISSIONS) },
             )
         }
         // B담당: 미션 상세. "다음" → 대화 준비(아직 없어서 임시 화면, 다음 작업에서 교체).
@@ -81,6 +83,14 @@ fun NavGraph(
                 onNextClick = { missionId -> navController.navigate("conversation_prep/$missionId") },
                 onMissionClick = { missionId -> navController.navigate("mission_detail/$missionId") },
                 onSheetTopChange = onOverlaySheetTop,
+                onSavedListClick = { navController.navigate(Screen.SAVED_MISSIONS) },
+            )
+        }
+        // B담당: 저장 목록 (저장 시트 "저장 목록 >"에서 진입). 카드 클릭 → 미션 상세.
+        composable(Screen.SAVED_MISSIONS) {
+            SavedMissionsScreen(
+                onBack = { navController.popBackStack() },
+                onMissionClick = { missionId -> navController.navigate("mission_detail/$missionId") },
             )
         }
         // B담당: 대화 준비(미션 진입). "미션 시작하기" → 대화 화면(아직 없어서 임시, 다음 작업에서 교체).

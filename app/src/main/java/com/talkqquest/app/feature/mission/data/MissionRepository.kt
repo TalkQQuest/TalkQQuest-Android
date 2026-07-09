@@ -6,15 +6,35 @@ import com.talkqquest.app.feature.mission.data.model.ConversationPrep
 import com.talkqquest.app.feature.mission.data.model.MissionDetail
 import com.talkqquest.app.feature.mission.data.model.MissionListItem
 import javax.inject.Inject
+import javax.inject.Singleton
 
 // 미션 Repository. ViewModel과 API 사이 계층 (홈 패턴과 동일).
+// @Singleton: 앱에 1개만 만들어 모든 화면이 같은 인스턴스를 씀 — 북마크 상태 공유의 전제.
+@Singleton
 class MissionRepository @Inject constructor(
     private val missionApi: MissionApi,
 ) {
+    // ── 서버 연동 전 임시: 북마크 상태 공유 ──
+    // 화면(ViewModel)마다 stub을 복사해 들면 토글이 서로 안 보임(목록에서 저장해도 저장 목록에 안 뜸)
+    // → 토글 결과를 여기 한 곳에 모아 모든 화면이 같은 상태를 봄.
+    // TODO(서버 연동): 이 map 지우고 toggleSave를 POST/DELETE /api/v1/missions/{id}/save 호출로 교체.
+    private val savedOverrides = mutableMapOf<Long, Boolean>()
+
+    fun toggleSave(missionId: Long): Boolean {
+        val base = stubMissions.firstOrNull { it.id == missionId }?.isSaved ?: false
+        val now = !(savedOverrides[missionId] ?: base)
+        savedOverrides[missionId] = now
+        return now
+    }
+
+    // stub 원본 위에 토글된 북마크 값을 덮어씀
+    private fun MissionListItem.applySaved(): MissionListItem =
+        savedOverrides[id]?.let { copy(isSaved = it) } ?: this
+
     // TODO(서버 연동 전 임시): 백엔드 미션 API 붙으면 아래 stub 리턴 지우고 return 한 줄로 복구.
     //     suspend fun getMissions() = safeApiCall { missionApi.getMissions() }
     suspend fun getMissions(): ApiResult<List<MissionListItem>> =
-        ApiResult.Success(stubMissions)
+        ApiResult.Success(stubMissions.map { it.applySaved() })
 
     // TODO(서버 연동 전 임시): 붙으면 return safeApiCall { missionApi.getMissionDetail(missionId) } 로 복구.
     suspend fun getMissionDetail(missionId: Long): ApiResult<MissionDetail> {
@@ -28,7 +48,7 @@ class MissionRepository @Inject constructor(
                 difficulty = item.difficulty,
                 estimatedMinutes = item.estimatedMinutes,
                 rewardXp = item.rewardXp,
-                isSaved = item.isSaved,
+                isSaved = item.applySaved().isSaved,
                 benefits = stubBenefits[item.id] ?: defaultBenefits,
             ),
         )
@@ -70,6 +90,7 @@ private val stubMissions = listOf(
         estimatedMinutes = 5,
         rewardXp = 20,
         isSaved = true,
+        status = "완료",
     ),
     MissionListItem(
         id = 3,
@@ -79,6 +100,7 @@ private val stubMissions = listOf(
         estimatedMinutes = 8,
         rewardXp = 30,
         isSaved = true,
+        status = "진행중",
     ),
     MissionListItem(
         id = 4,

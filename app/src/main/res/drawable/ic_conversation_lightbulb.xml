@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 전구 아이콘 — 피그마 lightbulb-02 (19x19, stroke Purple/400 #AA9CFF 2, 끝 둥글게).
+     원본 SVG export가 없어 lightbulb-02 표준형으로 전사(근사 — 모양 다르면 SVG 받아서 교체) -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="19dp"
+    android:height="19dp"
+    android:viewportWidth="19"
+    android:viewportHeight="19">
+    <path
+        android:pathData="M7,14.5 L12,14.5 M8,17.5 L11,17.5 M9.5,1.5 C6.46,1.5 4,3.96 4,7 C4,8.9 4.96,10.57 6.42,11.56 C6.9,11.89 7.2,12.42 7.2,13 L11.8,13 C11.8,12.42 12.1,11.89 12.58,11.56 C14.04,10.57 15,8.9 15,7 C15,3.96 12.54,1.5 9.5,1.5 Z"
+        android:strokeColor="#AA9CFF"
+        android:strokeWidth="2"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round" />
+</vector>

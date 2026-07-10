@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 보내기(위 화살표) 아이콘 — 피그마 Vector 16 (12x12, stroke 흰색 2, 끝 둥글게).
+     원본 SVG export가 없어 단순 위 화살표로 전사(눈대중 근사 — 모양 다르면 SVG 받아서 교체) -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="12dp"
+    android:height="12dp"
+    android:viewportWidth="12"
+    android:viewportHeight="12">
+    <path
+        android:pathData="M6,11 L6,1 M1,6 L6,1 L11,6"
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="2"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round" />
+</vector>

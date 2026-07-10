@@ -60,6 +60,7 @@ import com.talkqquest.app.core.designsystem.TalkQQuestTheme
 import com.talkqquest.app.core.designsystem.TqType
 import com.talkqquest.app.core.designsystem.White
 import com.talkqquest.app.core.designsystem.component.TqButton
+import com.talkqquest.app.core.designsystem.softShadow
 import com.talkqquest.app.feature.mission.data.model.ConversationPrep
 import com.talkqquest.app.feature.mission.viewmodel.ConversationPrepUiState
 import com.talkqquest.app.feature.mission.viewmodel.ConversationPrepViewModel

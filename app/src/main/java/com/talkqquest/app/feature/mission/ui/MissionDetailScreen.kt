@@ -69,6 +69,7 @@ import com.talkqquest.app.core.designsystem.TqType
 import com.talkqquest.app.core.designsystem.White
 import com.talkqquest.app.core.designsystem.component.TqButton
 import com.talkqquest.app.core.designsystem.component.TqButtonSize
+import com.talkqquest.app.core.designsystem.softShadow
 import com.talkqquest.app.feature.mission.data.model.MissionDetail
 import com.talkqquest.app.feature.mission.data.model.MissionListItem
 import com.talkqquest.app.feature.mission.viewmodel.MissionDetailUiState

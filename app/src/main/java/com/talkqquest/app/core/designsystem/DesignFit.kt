@@ -1,9 +1,15 @@
 package com.talkqquest.app.core.designsystem
 
 import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.ime
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalDensity
@@ -23,7 +29,13 @@ val LocalDesignScale = staticCompositionLocalOf { 1f }
 fun FitDesign(content: @Composable () -> Unit) {
     BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
         // 세로 기준 900 = 디자인 852 + 실기기 상태바·시스템네비가 축소 후 더 차지하는 몫의 여유(근사).
-        val scale = minOf(maxWidth / 393.dp, maxHeight / 900.dp, 1f)
+        val raw = minOf(maxWidth / 393.dp, maxHeight / 900.dp, 1f)
+        // 키보드가 창을 리사이즈하는 기기에선 키보드가 뜰 때 maxHeight가 줄어 축소율이 폭락
+        // (채팅 화면이 콩알만 해짐) → 키보드 없는 상태의 축소율을 잠가두고 IME 중엔 그 값 유지.
+        val imeOpen = WindowInsets.ime.getBottom(LocalDensity.current) > 0
+        var lockedScale by remember { mutableFloatStateOf(raw) }
+        if (!imeOpen && lockedScale != raw) lockedScale = raw // 회전 등 실제 크기 변화만 반영
+        val scale = if (imeOpen) lockedScale else raw
         if (scale < 1f) {
             val base = LocalDensity.current
             CompositionLocalProvider(

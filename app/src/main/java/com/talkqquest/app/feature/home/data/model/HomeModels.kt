@@ -14,6 +14,7 @@ data class HomeSummary(
     val archiveCount: Int,
     val communityCount: Int,
     val questionOfDay: String? = null,
+    val hasNewNotification: Boolean = false, // 알림 있음 — 벨에 점 표시 (서버 몫, 백엔드 필드명 확정 시 조정)
 )
 
 // 오늘의 미션 요약 (홈 카드용). 중첩 객체 예시.

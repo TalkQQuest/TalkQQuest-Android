@@ -41,11 +41,12 @@ import com.talkqquest.app.core.designsystem.TqType
 import com.talkqquest.app.core.designsystem.component.TqButton
 import com.talkqquest.app.core.designsystem.component.TqButtonSize
 import com.talkqquest.app.feature.mission.data.model.MissionListItem
+import com.talkqquest.app.core.designsystem.FitDesign
 import com.talkqquest.app.feature.mission.viewmodel.SavedMissionsUiState
 import com.talkqquest.app.feature.mission.viewmodel.SavedMissionsViewModel
 
 // ── 저장 목록 (피그마 "북마크→저장목록" 개정판 전사 — 헤더 제목 화면 정중앙) ──
-// 저장 시트의 "저장 목록 >"에서 들어옴. 목록류(LazyColumn)라 FitDesign 대신 스크롤로 대응.
+// 저장 시트의 "저장 목록 >"에서 들어옴. 작은 화면은 FitDesign 통째 축소(사용자 결정) + 스크롤.
 // 카드 좌우는 CSS가 15인데 미션 목록(16)과 1px 비일관이라 16으로 통일(디자이너 확인거리).
 // 하단 네비 없음(CSS에 알약 없음) — bottomBarRoutes 미등록.
 
@@ -76,7 +77,7 @@ private fun SavedMissionsScreen(
     onStatusSelect: (String) -> Unit = {},
     onToggleSave: (Long) -> Unit = {},
     onMissionClick: (Long) -> Unit = {},
-) {
+) = FitDesign { // 작은 화면에선 디자인(393x852) 통째 축소 — 다른 화면들과 동일
     Box(
         modifier = Modifier
             .fillMaxSize()

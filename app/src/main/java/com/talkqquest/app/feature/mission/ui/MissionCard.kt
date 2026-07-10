@@ -1,6 +1,5 @@
 package com.talkqquest.app.feature.mission.ui
 
-import android.graphics.BlurMaskFilter
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -22,16 +21,12 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.Paint
-import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.LineBreak
 import androidx.compose.ui.text.style.LineHeightStyle
-import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.talkqquest.app.R
 import com.talkqquest.app.core.designsystem.Error
@@ -44,6 +39,7 @@ import com.talkqquest.app.core.designsystem.Gray900
 import com.talkqquest.app.core.designsystem.Success
 import com.talkqquest.app.core.designsystem.TqType
 import com.talkqquest.app.core.designsystem.White
+import com.talkqquest.app.core.designsystem.softShadow
 import com.talkqquest.app.feature.mission.data.model.MissionListItem
 import androidx.compose.material3.Text
 
@@ -189,32 +185,7 @@ private fun TimeXpRow(minutes: Int, xp: Int) {
     }
 }
 
-// ── 홈과 동일한 로컬 도구 복사본 (공통 승격 시 한꺼번에 정리) ──
-
-// CSS box-shadow 그대로 그리는 소프트 그림자 (Modifier.shadow는 오프셋·색·투명도 못 담음).
-internal fun Modifier.softShadow(
-    color: Color,
-    offsetY: Dp,
-    blur: Dp,
-    cornerRadius: Dp,
-): Modifier = this.drawBehind {
-    val paint = Paint().apply { this.color = color }
-    val blurPx = blur.toPx()
-    if (blurPx > 0f) {
-        paint.asFrameworkPaint().maskFilter = BlurMaskFilter(blurPx, BlurMaskFilter.Blur.NORMAL)
-    }
-    drawIntoCanvas { canvas ->
-        canvas.drawRoundRect(
-            left = 0f,
-            top = offsetY.toPx(),
-            right = size.width,
-            bottom = size.height + offsetY.toPx(),
-            radiusX = cornerRadius.toPx(),
-            radiusY = cornerRadius.toPx(),
-            paint = paint,
-        )
-    }
-}
+// 소프트 그림자는 core/designsystem의 공통 softShadow 사용 (로컬 복사본 정리됨).
 
 // Compose가 깎는 line-height 위아래 여백을 피그마처럼 살림.
 private val FullLeading = LineHeightStyle(

@@ -4,6 +4,7 @@ import com.talkqquest.app.core.datastore.UserXpStore
 import com.talkqquest.app.core.network.ApiResult
 import com.talkqquest.app.core.network.safeApiCall
 import com.talkqquest.app.feature.mission.data.model.ConversationPrep
+import com.talkqquest.app.feature.mission.data.model.FeedbackResult
 import com.talkqquest.app.feature.mission.data.model.MissionCompleteResult
 import com.talkqquest.app.feature.mission.data.model.MissionDetail
 import com.talkqquest.app.feature.mission.data.model.MissionListItem
@@ -105,6 +106,19 @@ class MissionRepository @Inject constructor(
             ),
         )
     }
+
+    // AI 피드백 조회 (E101). 점수 4종 = 목업 값 그대로(92/88/85/78).
+    // TODO(서버 연동 전 임시): 붙으면 POST /api/v1/feedback 생성 → GET /api/v1/feedback/{feedbackId}
+    //     조회로 교체 — 점수 계산은 서버 몫. stub은 missionId를 feedbackId로 그대로 받음.
+    suspend fun getFeedback(feedbackId: Long): ApiResult<FeedbackResult> =
+        ApiResult.Success(
+            FeedbackResult(
+                kindnessScore = 92,
+                initiativeScore = 88,
+                empathyScore = 85,
+                questionLinkScore = 78,
+            ),
+        )
 }
 
 // 미션 완료 체크리스트 stub — 목업 4개 그대로. 서버 연동 시 통째 삭제.

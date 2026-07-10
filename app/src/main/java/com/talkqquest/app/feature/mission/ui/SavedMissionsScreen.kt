@@ -1,5 +1,12 @@
 package com.talkqquest.app.feature.mission.ui
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
+import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -169,20 +176,34 @@ private fun SavedMissionsContent(
                 Text(text = "저장한 미션이 없어요", style = TqType.BodyM.figma(), color = Gray500)
             }
         } else {
+            // 카드 간격 12(CSS Frame 458 gap)는 spacedBy가 아니라 각 항목 안의 Spacer로 —
+            // 해제 퇴장 때 카드가 간격까지 데리고 접혀야 남은 카드들이 자연스럽게 붙음.
             LazyColumn(
                 modifier = Modifier
                     .fillMaxSize()
                     .navigationBarsPadding(),
-                contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = 16.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp), // 카드 간격 (CSS Frame 458 gap)
+                contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = 4.dp), // 4 + 항목 안 12 = 16
             ) {
                 items(count = uiState.filteredMissions.size, key = { uiState.filteredMissions[it].id }) { index ->
                     val mission = uiState.filteredMissions[index]
-                    MissionCard(
-                        mission = mission,
-                        onClick = { onMissionClick(mission.id) },
-                        onToggleSave = { onToggleSave(mission.id) },
-                    )
+                    // 북마크 해제 퇴장: 보라 풀림을 250ms 보여준 뒤 카드가 아래로 가라앉으며 접혀 사라짐.
+                    // 실제 목록 제거는 ViewModel이 연출 끝난 뒤(700ms) 수행. 연출 중 재저장 → 다시 펴짐.
+                    AnimatedVisibility(
+                        visible = mission.isSaved,
+                        enter = fadeIn(tween(300)) + expandVertically(tween(300)),
+                        exit = shrinkVertically(tween(350, delayMillis = 250)) +
+                            slideOutVertically(tween(350, delayMillis = 250)) { it / 2 } +
+                            fadeOut(tween(350, delayMillis = 250)),
+                    ) {
+                        Column {
+                            MissionCard(
+                                mission = mission,
+                                onClick = { onMissionClick(mission.id) },
+                                onToggleSave = { onToggleSave(mission.id) },
+                            )
+                            Spacer(Modifier.height(12.dp))
+                        }
+                    }
                 }
             }
         }

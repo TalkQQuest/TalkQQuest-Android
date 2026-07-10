@@ -230,8 +230,11 @@ private fun ConversationContent(
     // 비행 연출을 끄고 기본 밀어올림(말풍선이 아래에서 자라나며 채팅을 밀어올리는 기존 애니)만
     // 쓰는 조건 (사용자 결정):
     // ①작은 화면(FitDesign 축소 중) — 키보드까지 뜨면 비행 거리가 너무 짧아 연출이 제대로 안 나옴
+    //   축소율 = min(가로/393, 세로/900, 1) (DesignFit — 세로 900은 상태바·네비 여유 포함).
+    //   경계 0.85: S25급은 비행 유지(450dpi=384x832→0.924, 480dpi=360x780→0.867),
+    //   진짜 작은 화면만 밀어올림(S8급 360x740→0.822, 320x640→0.711).
     // ②API 31 미만 — 뭉개짐 블러(BlurEffect)가 안 돼서 비행 중 파란 박스가 또렷하게 보임
-    val useFlight = LocalDesignScale.current >= 1f && android.os.Build.VERSION.SDK_INT >= 31
+    val useFlight = LocalDesignScale.current >= 0.85f && android.os.Build.VERSION.SDK_INT >= 31
     LaunchedEffect(lastMessage?.id) {
         val m = lastMessage ?: return@LaunchedEffect
         if (useFlight && m.isFromUser && flownIds.add(m.id)) {
@@ -414,10 +417,11 @@ private fun ConversationContent(
                 .padding(horizontal = 16.dp)
                 .navigationBarsPadding()
                 // 하단 네비 알약 몫 88은 축소 대상 밖(MainScreen)이라 비율로 되돌려 실제 크기 유지.
-                // 단, 키보드가 떠 있는 동안엔 알약이 키보드에 덮여 안 보이므로 예약 공간 제거 —
-                // 안 그러면 입력창과 키보드 사이에 88dp(축소 화면은 그 이상)짜리 빈 띠가 생김.
+                // 단, 키보드가 떠 있는 동안엔 알약이 키보드에 덮여 안 보이므로 예약 공간을 걷어내고
+                // 입력창~키보드 사이 8만 남김(딱 붙지 않게 — 톡앱 관례) —
+                // 88을 그대로 두면 입력창과 키보드 사이에 88dp(축소 화면은 그 이상)짜리 빈 띠가 생김.
                 .padding(
-                    bottom = if (WindowInsets.ime.getBottom(LocalDensity.current) > 0) 0.dp
+                    bottom = if (WindowInsets.ime.getBottom(LocalDensity.current) > 0) 8.dp
                     else 88.dp / LocalDesignScale.current,
                 ),
         ) {

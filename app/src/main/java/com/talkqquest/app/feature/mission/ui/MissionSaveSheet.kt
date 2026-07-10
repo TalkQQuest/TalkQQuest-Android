@@ -1,9 +1,15 @@
 package com.talkqquest.app.feature.mission.ui
 
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.AnimationSpec
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.animate
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
+import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.Orientation
@@ -14,6 +20,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -35,6 +42,7 @@ import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -298,12 +306,28 @@ private fun MissionSaveSheetContent(
     onToggleSave: (Long) -> Unit,
     onSavedListClick: () -> Unit,
 ) {
+    // "저장 목록" 카드의 해제 퇴장 연출용 표시 목록.
+    // 부모 상태(recentSavedMissions)는 저장된 것만 내려와 해제 즉시 항목이 빠짐 → 그대로 그리면
+    // 카드가 뚝 사라짐. 빠진 항목을 isSaved=false로 잠깐 붙들어 보라 풀림(250ms) → 아래로
+    // 가라앉으며 접힘(350ms)을 보여준 뒤 실제로 비움. 연출 중 재저장하면 카드 복귀(실수 복구).
+    var shownRecent by remember { mutableStateOf(recentSavedMissions) }
+    LaunchedEffect(recentSavedMissions) {
+        val incoming = recentSavedMissions.associateBy { it.id }
+        shownRecent = shownRecent.map { old -> incoming[old.id] ?: old.copy(isSaved = false) } +
+            recentSavedMissions.filter { new -> shownRecent.none { it.id == new.id } }
+        if (shownRecent.any { !it.isSaved }) {
+            delay(700) // 퇴장 연출(250+350)이 끝난 뒤 목록에서 실제 제거
+            shownRecent = shownRecent.filter { it.isSaved }
+        }
+    }
+
     Column(
         modifier = Modifier
             .fillMaxWidth()
             .verticalScroll(rememberScrollState()) // 내용이 시트보다 길어지면(저장 많음) 스크롤
-            .padding(start = 16.dp, end = 16.dp, bottom = 20.dp), // 시트 안쪽 여백 (CSS padding 20 16)
-        verticalArrangement = Arrangement.spacedBy(12.dp), // 묶음 간격 (CSS Frame 457 gap)
+            // 시트 안쪽 여백 (CSS padding 20 16). 저장 목록 카드가 있을 땐 마지막 카드 뒤
+            // Spacer 12(카드 간격 몫)가 있어 8로 채움(12+8=20) — 퇴장 연출 셈과 맞추기 위함.
+            .padding(start = 16.dp, end = 16.dp, bottom = if (shownRecent.isEmpty()) 20.dp else 8.dp),
     ) {
         // "저장됨" + 방금 저장한 카드 (CSS Frame 456, gap 8)
         Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -314,9 +338,14 @@ private fun MissionSaveSheetContent(
                 onToggleSave = { onToggleSave(savedMission.id) },
             )
         }
-        // "저장 목록 >" + 최근 저장 카드 (CSS Frame 451, gap 8) — 다른 저장 미션이 없으면 통째로 숨김
-        if (recentSavedMissions.isNotEmpty()) {
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        // "저장 목록 >" + 최근 저장 카드 (CSS Frame 451) — 카드가 다 빠지면 제목까지 접혀 사라짐
+        AnimatedVisibility(
+            visible = shownRecent.any { it.isSaved },
+            enter = fadeIn(tween(300)) + expandVertically(tween(300)),
+            exit = fadeOut(tween(350, delayMillis = 250)) + shrinkVertically(tween(350, delayMillis = 250)),
+        ) {
+            Column {
+                Spacer(Modifier.height(12.dp)) // 묶음 간격 (CSS Frame 457 gap — 섹션과 함께 접히게 안쪽에)
                 Row(
                     modifier = Modifier
                         .clip(RoundedCornerShape(12.dp))
@@ -333,13 +362,27 @@ private fun MissionSaveSheetContent(
                         )
                     }
                 }
-                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) { // 카드 간격 (CSS Frame 450 gap)
-                    recentSavedMissions.forEach { mission ->
-                        MissionCard(
-                            mission = mission,
-                            onClick = { onMissionClick(mission.id) },
-                            onToggleSave = { onToggleSave(mission.id) },
-                        )
+                Spacer(Modifier.height(8.dp)) // 제목 ↔ 카드 (CSS gap 8)
+                shownRecent.forEach { mission ->
+                    key(mission.id) {
+                        // 해제: 보라 풀림을 250ms 보여준 뒤 카드가 아래로 가라앉으며 접혀 사라짐
+                        // (저장 목록 화면과 동일 연출). 카드 간격 12도 같이 접힘.
+                        AnimatedVisibility(
+                            visible = mission.isSaved,
+                            enter = fadeIn(tween(300)) + expandVertically(tween(300)),
+                            exit = shrinkVertically(tween(350, delayMillis = 250)) +
+                                slideOutVertically(tween(350, delayMillis = 250)) { it / 2 } +
+                                fadeOut(tween(350, delayMillis = 250)),
+                        ) {
+                            Column {
+                                MissionCard(
+                                    mission = mission,
+                                    onClick = { onMissionClick(mission.id) },
+                                    onToggleSave = { onToggleSave(mission.id) },
+                                )
+                                Spacer(Modifier.height(12.dp)) // 카드 간격 (CSS Frame 450 gap)
+                            }
+                        }
                     }
                 }
             }

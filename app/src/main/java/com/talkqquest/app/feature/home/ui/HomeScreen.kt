@@ -79,6 +79,7 @@ import com.talkqquest.app.core.designsystem.TalkQQuestTheme
 import com.talkqquest.app.core.designsystem.TqType
 import com.talkqquest.app.core.designsystem.White
 import com.talkqquest.app.core.designsystem.softShadow
+import com.talkqquest.app.core.designsystem.component.LevelUpBurst
 import com.talkqquest.app.core.designsystem.component.TqButton
 import com.talkqquest.app.core.designsystem.component.TqButtonSize
 import com.talkqquest.app.feature.home.data.model.HomeSummary
@@ -86,6 +87,7 @@ import com.talkqquest.app.feature.home.data.model.TodayMission
 import com.talkqquest.app.feature.home.viewmodel.HomeUiState
 import com.talkqquest.app.feature.home.viewmodel.HomeViewModel
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
 // ── 화면 = 2단으로 분리 (state hoisting) ──
 // (1) HomeScreen(viewModel): ViewModel과 연결하는 바깥 껍데기. 실제 앱에서 이걸 씀.
@@ -326,10 +328,12 @@ private fun HomeLevelCard(level: Int, currentXp: Int, nextLevelXp: Int) {
     val xpShown = remember { Animatable(currentXp.toFloat()) }
     var displayLevel by remember { mutableIntStateOf(level) }
     val levelScale = remember { Animatable(1f) } // 레벨업 순간 Lv 글자가 튀는 배율
+    val levelBurst = remember { Animatable(0f) } // 레벨업 순간 Lv 글자 주변 작은 폭죽 (완료 화면과 동일)
     LaunchedEffect(level, currentXp) {
         if (level > displayLevel) {
             xpShown.animateTo(nextLevelXp.toFloat(), tween(700))
             displayLevel = level
+            launch { levelBurst.snapTo(0f); levelBurst.animateTo(1f, tween(600)) } // 글자 튐과 동시 재생
             levelScale.animateTo(1.4f, tween(150))
             levelScale.animateTo(1f, spring(dampingRatio = Spring.DampingRatioMediumBouncy))
             delay(150)
@@ -350,16 +354,19 @@ private fun HomeLevelCard(level: Int, currentXp: Int, nextLevelXp: Int) {
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
         ) {
-            Text(
-                text = "Lv.$displayLevel",
-                style = TqType.LabelM.figma(),
-                color = Primary600,
-                modifier = Modifier.graphicsLayer {
-                    scaleX = levelScale.value
-                    scaleY = levelScale.value
-                    transformOrigin = TransformOrigin(0f, 0.5f) // 왼쪽 기준으로 튀게(자리 유지)
-                },
-            )
+            Box {
+                LevelUpBurst(progress = levelBurst.value, modifier = Modifier.matchParentSize()) // 글자 뒤 폭죽
+                Text(
+                    text = "Lv.$displayLevel",
+                    style = TqType.LabelM.figma(),
+                    color = Primary600,
+                    modifier = Modifier.graphicsLayer {
+                        scaleX = levelScale.value
+                        scaleY = levelScale.value
+                        transformOrigin = TransformOrigin(0f, 0.5f) // 왼쪽 기준으로 튀게(자리 유지)
+                    },
+                )
+            }
             Text(text = "${xpShown.value.toInt()} / ${nextLevelXp}XP", style = TqType.LabelM.figma(), color = Gray400)
         }
         Spacer(Modifier.height(4.dp))

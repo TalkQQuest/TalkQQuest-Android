@@ -1,6 +1,5 @@
 package com.talkqquest.app.navigation
 
-import android.graphics.BlurMaskFilter
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -25,52 +24,23 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.Paint
-import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.tooling.preview.Preview
-import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.currentBackStackEntryAsState
+import com.talkqquest.app.core.designsystem.Gray100
 import com.talkqquest.app.core.designsystem.Gray300
 import com.talkqquest.app.core.designsystem.Primary500
 import com.talkqquest.app.core.designsystem.Primary600
 import com.talkqquest.app.core.designsystem.TalkQQuestTheme
 import com.talkqquest.app.core.designsystem.White
+import com.talkqquest.app.core.designsystem.softShadow
 import dev.chrisbanes.haze.HazeState
 import dev.chrisbanes.haze.HazeTint
 import dev.chrisbanes.haze.hazeEffect
-
-// CSS box-shadow 그대로 그리는 커스텀 소프트 그림자(오프셋·흐림·색·투명도 정확히).
-// Modifier.shadow(elevation)는 무조건 아래로+높이기반이라 이런 값을 못 맞춰서 직접 그림.
-private fun Modifier.softShadow(
-    color: Color,
-    offsetX: Dp,
-    offsetY: Dp,
-    blur: Dp,
-    cornerRadius: Dp,
-): Modifier = this.drawBehind {
-    val paint = Paint().apply { this.color = color }
-    val blurPx = blur.toPx()
-    if (blurPx > 0f) {
-        paint.asFrameworkPaint().maskFilter = BlurMaskFilter(blurPx, BlurMaskFilter.Blur.NORMAL)
-    }
-    drawIntoCanvas { canvas ->
-        canvas.drawRoundRect(
-            left = offsetX.toPx(),
-            top = offsetY.toPx(),
-            right = size.width + offsetX.toPx(),
-            bottom = size.height + offsetY.toPx(),
-            radiusX = cornerRadius.toPx(),
-            radiusY = cornerRadius.toPx(),
-            paint = paint,
-        )
-    }
-}
 
 // 하단 네비 — 떠 있는 유리 알약(디자인 CSS 값 그대로).
 // 알약: 높이 64 / radius 32 / 흰색 0.8 + 블러 10 / 테두리 흰 0.3 / 그림자 0 -2 12 검정6%
@@ -184,7 +154,10 @@ private fun TqBottomBarContent(
                     ) {
                         // 선택 칩(아이콘보다 넓은 둥근 직사각형, 44 박스를 넘어 그려짐).
                         // 칩 유리(haze)가 알약(0.8)보다 덜 하얘 어둡게 보여, 밝은 흰색(0.9) 오버레이로 처리.
+                        // API 28 미만: 글로우(softShadow)가 안 그려지고 알약도 불투명 흰 틴트라
+                        // 흰 칩이 안 보임 → 연회색(Gray100) 채움으로 선택 표시를 대신함.
                         if (selected) {
+                            val legacyChip = android.os.Build.VERSION.SDK_INT < 28
                             Box(
                                 modifier = Modifier
                                     .requiredSize(width = chipWidth, height = 44.dp)
@@ -196,7 +169,10 @@ private fun TqBottomBarContent(
                                         blur = 24.dp,
                                         cornerRadius = 22.dp,
                                     )
-                                    .background(White.copy(alpha = 0.9f), RoundedCornerShape(22.dp))
+                                    .background(
+                                        if (legacyChip) Gray100 else White.copy(alpha = 0.9f),
+                                        RoundedCornerShape(22.dp),
+                                    )
                                     .border(1.dp, White.copy(alpha = 0.4f), RoundedCornerShape(22.dp)),
                             )
                         }

@@ -1,6 +1,7 @@
 package com.talkqquest.app.feature.mission.ui
 
-import androidx.compose.animation.animateContentSize
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.SizeTransform
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.CubicBezierEasing
 import androidx.compose.animation.core.FastOutSlowInEasing
@@ -11,7 +12,10 @@ import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import androidx.compose.animation.scaleIn
+import androidx.compose.animation.shrinkVertically
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -25,6 +29,8 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.ime
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.offset
@@ -59,6 +65,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.layout.positionInRoot
@@ -220,9 +227,14 @@ private fun ConversationContent(
     var inputLeftGlobalX by remember { androidx.compose.runtime.mutableStateOf(0f) }
     var inputBottomGlobalY by remember { androidx.compose.runtime.mutableStateOf(0f) }
     val lastMessage = uiState.messages.lastOrNull()
+    // 비행 연출을 끄고 기본 밀어올림(말풍선이 아래에서 자라나며 채팅을 밀어올리는 기존 애니)만
+    // 쓰는 조건 (사용자 결정):
+    // ①작은 화면(FitDesign 축소 중) — 키보드까지 뜨면 비행 거리가 너무 짧아 연출이 제대로 안 나옴
+    // ②API 31 미만 — 뭉개짐 블러(BlurEffect)가 안 돼서 비행 중 파란 박스가 또렷하게 보임
+    val useFlight = LocalDesignScale.current >= 1f && android.os.Build.VERSION.SDK_INT >= 31
     LaunchedEffect(lastMessage?.id) {
         val m = lastMessage ?: return@LaunchedEffect
-        if (m.isFromUser && flownIds.add(m.id)) {
+        if (useFlight && m.isFromUser && flownIds.add(m.id)) {
             flightMessage = m
             flightProgress.snapTo(0f)
             flightProgress.animateTo(1f, tween(500, easing = LinearEasing))
@@ -401,15 +413,42 @@ private fun ConversationContent(
                 .fillMaxWidth()
                 .padding(horizontal = 16.dp)
                 .navigationBarsPadding()
-                // 하단 네비 알약 몫 88은 축소 대상 밖(MainScreen)이라 비율로 되돌려 실제 크기 유지
-                .padding(bottom = 88.dp / LocalDesignScale.current),
+                // 하단 네비 알약 몫 88은 축소 대상 밖(MainScreen)이라 비율로 되돌려 실제 크기 유지.
+                // 단, 키보드가 떠 있는 동안엔 알약이 키보드에 덮여 안 보이므로 예약 공간 제거 —
+                // 안 그러면 입력창과 키보드 사이에 88dp(축소 화면은 그 이상)짜리 빈 띠가 생김.
+                .padding(
+                    bottom = if (WindowInsets.ime.getBottom(LocalDensity.current) > 0) 0.dp
+                    else 88.dp / LocalDesignScale.current,
+                ),
         ) {
             // 입력창은 두 상태 모두 맨 아래 같은 자리 → 아래 고정층으로 분리해 전환 때 움직이지 않게.
-            // 위의 추천 영역(카드↔바)만 높이가 부드럽게 변함(animateContentSize).
+            // 카드↔바 전환: 목록이 두루마리 말리듯 클립되며 사라지고/펼쳐지고, 높이가 이어져
+            // 바가 함께 내려오고 올라감 (한 번에 딱 바뀌지 않게 — 사용자 요청, 타이밍은 자작 근사).
             Box(modifier = Modifier.fillMaxWidth()) {
                 if (uiState.recommendations.isNotEmpty()) {
-                    Column(modifier = Modifier.fillMaxWidth().animateContentSize()) {
-                        if (uiState.recommendationsExpanded) {
+                    AnimatedContent(
+                        targetState = uiState.recommendationsExpanded,
+                        // 희미해지며 사라지는 게 아니라 "말리는" 느낌(사용자 요청): 페이드를 거의 빼고
+                        // 클립으로만 잘려 나가게. 페이드는 마지막 순간(200ms 이후 120ms)에만 —
+                        // 전환 끝에 남은 조각이 뚝 사라지는 팝 방지용.
+                        transitionSpec = {
+                            (fadeIn(tween(150)) +
+                                expandVertically(tween(320), expandFrom = Alignment.Top))
+                                .togetherWith(
+                                    fadeOut(tween(120, delayMillis = 200)) +
+                                        shrinkVertically(tween(320), shrinkTowards = Alignment.Top),
+                                )
+                                // 높이도 내용 클립과 같은 곡선(tween 320)으로 — 스펙을 안 주면
+                                // 높이만 기본 스프링으로 따로 움직여 경계선이 어긋나며 끊겨 보임
+                                .using(SizeTransform(clip = true) { _, _ -> tween(320) })
+                        },
+                        // 위 정렬: 접힐 때 내려오는 위 경계선에 바가 붙어 함께 내려오고,
+                        // 목록은 그 선 아래로 말려 들어감
+                        contentAlignment = Alignment.TopCenter,
+                        label = "recommendations",
+                        modifier = Modifier.fillMaxWidth(),
+                    ) { expanded ->
+                        if (expanded) {
                             // 카드(357)와 입력창(361)은 별개 층: 입력창이 카드 아래 모서리에 겹침
                             // (CSS: 카드 502~699, 입력창 672~716 — 27 겹침 + 17 삐져나옴)
                             RecommendationCard(
@@ -418,8 +457,10 @@ private fun ConversationContent(
                                 onSelect = onSelectRecommendation,
                             )
                         } else {
-                            CollapsedRecommendationBar(onToggle = onToggleRecommendations)
-                            Spacer(Modifier.height(12.dp + 44.dp)) // 바→입력창 간격 12 + 아래 고정층(입력창 44) 자리
+                            Column {
+                                CollapsedRecommendationBar(onToggle = onToggleRecommendations)
+                                Spacer(Modifier.height(12.dp + 44.dp)) // 바→입력창 간격 12 + 아래 고정층(입력창 44) 자리
+                            }
                         }
                     }
                 }
@@ -472,7 +513,7 @@ private fun FlyingBubble(
 ) {
     var bubbleSize by remember { androidx.compose.runtime.mutableStateOf(IntSize.Zero) }
     // offset(레이아웃)에서 계산한 값을 graphicsLayer(그리기)에 넘기는 통로
-    val motion = remember { FloatArray(2) } // [0]=코너 통과율 0~1, [1]=순간 속도 배율(1=평균)
+    val motion = remember { FloatArray(3) } // [0]=코너 통과율 0~1, [1]=순간 속도 배율(1=평균), [2]=전체 상승 거리(px)
     // 상승률: 배경/글자 색을 매 프레임 다시 칠해야 해서 상태로 둠 (비행 500ms 동안만)
     var riseFraction by remember { androidx.compose.runtime.mutableFloatStateOf(0f) }
     // 색: 처음부터 카드색이 옅게 비치고(45%), 올라가면서 완전한 보라로 (상승 50%에 완성).
@@ -523,7 +564,8 @@ private fun FlyingBubble(
                         motion[0] = 1f
                     }
                 }
-                riseFraction = ((startBottom - bottom) / (startBottom - endBottom).coerceAtLeast(1f)).coerceIn(0f, 1f)
+                motion[2] = (startBottom - endBottom).coerceAtLeast(1f)
+                riseFraction = ((startBottom - bottom) / motion[2]).coerceIn(0f, 1f)
                 IntOffset(x.roundToInt(), (bottom - bubbleSize.height).roundToInt())
             }
             .graphicsLayer {
@@ -533,17 +575,31 @@ private fun FlyingBubble(
                 // 채팅바 안에선 말풍선을 글자만 한 "작은 알갱이"(35%)로 축소해 날림 —
                 // 카드 형태·글자는 안 보이고 카드색+글자색이 섞인 작은 것만 휙 지나감.
                 // 바를 벗어나 올라가면서 원래 크기로 자라나 또렷한 말풍선으로 복원.
-                // 성장은 바를 확실히 벗어난 뒤(상승 35%~)에만 시작 — 바 높이(코너 구간)에선
-                // 계속 형태 없는 뭉개짐 상태 유지 (기울어진 파란 박스가 바 안에서 인식되지 않게)
-                val grow = ((riseFraction - 0.35f) / 0.5f).coerceIn(0f, 1f)
+                // 성장 구간 = 원래 튜닝(상승 35% ~ 85%) 유지. 단 시작점이 입력창 높이+여유(52dp)
+                // 안쪽으로는 못 내려오게 바닥만 깖 — 상승 거리가 짧은 화면에서 35% 지점이
+                // 아직 바 안일 때 기울어진 파란 박스가 입력칸에서 보이는 것 방지.
+                // (절대 거리로만 바꿨더니 큰 화면의 모션 느낌까지 변해서 원복 — 2026-07-10)
+                val totalRise = motion[2]
+                val risePx = riseFraction * totalRise
+                val growStart = maxOf(52.dp.toPx(), 0.35f * totalRise)
+                val growEnd = (growStart + 0.5f * totalRise).coerceAtMost(totalRise)
+                val grow = ((risePx - growStart) / (growEnd - growStart).coerceAtLeast(1f)).coerceIn(0f, 1f)
                 val scale = 0.3f + 0.7f * grow
                 scaleX = scale
                 scaleY = scale
                 // 작은 상태에선 블러를 강하게 얹어 "형태 없는 색 뭉개짐"으로만 보이게
                 // (말풍선 윤곽·글자가 인식되면 안 됨). 자라나면서 블러가 풀려 또렷해짐. (안드12+)
+                // - 강도는 scale로 나눔: 블러가 레이어 축소 전에 적용돼 화면에선 scale배로
+                //   약해지기 때문 (0.3배 상태에서 22가 실제 6.6px이 돼 네모 윤곽이 비쳤음)
+                // - TileMode.Decal: 기본(Clamp)은 경계 픽셀을 밖으로 늘려 직사각형 실루엣이
+                //   남음("깨진 블록" 느낌) → 경계 밖을 투명으로 녹여 형태 자체를 없앰
                 renderEffect = if (android.os.Build.VERSION.SDK_INT >= 31 && grow < 1f) {
-                    val blur = 22f * (1f - grow) + 0.5f
-                    androidx.compose.ui.graphics.BlurEffect(blur, blur * 0.6f)
+                    val blur = (22f * (1f - grow) + 0.5f) / scale
+                    androidx.compose.ui.graphics.BlurEffect(
+                        blur,
+                        blur * 0.6f,
+                        androidx.compose.ui.graphics.TileMode.Decal,
+                    )
                 } else {
                     null
                 }

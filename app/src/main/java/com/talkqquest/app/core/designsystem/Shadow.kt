@@ -34,7 +34,11 @@ fun Modifier.softShadow(
     blur: Dp,
     cornerRadius: Dp,
     offsetX: Dp = 0.dp,
-): Modifier = this.drawBehind {
+): Modifier = if (android.os.Build.VERSION.SDK_INT < 28) {
+    // BlurMaskFilter가 API 28(P) 미만 하드웨어 캔버스에서 무시됨 → 흐림 없는 진한 사각 판이
+    // 그대로 그려져 모든 카드에 티가 남 → 구형에선 그림자 생략(플랫). (사용자 결정)
+    this
+} else this.drawBehind {
     val paint = Paint().apply { this.color = color }
     val blurPx = blur.toPx()
     if (blurPx > 0f) {

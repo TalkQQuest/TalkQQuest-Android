@@ -39,6 +39,7 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.talkqquest.app.core.designsystem.Error
+import com.talkqquest.app.core.designsystem.FitDesign
 import com.talkqquest.app.core.designsystem.Gray1000
 import com.talkqquest.app.core.designsystem.Gray50
 import com.talkqquest.app.core.designsystem.Gray500
@@ -49,6 +50,7 @@ import com.talkqquest.app.core.designsystem.Primary600
 import com.talkqquest.app.core.designsystem.TalkQQuestTheme
 import com.talkqquest.app.core.designsystem.TqType
 import com.talkqquest.app.core.designsystem.White
+import com.talkqquest.app.core.designsystem.softShadow
 import com.talkqquest.app.core.designsystem.component.TqButton
 import com.talkqquest.app.core.designsystem.component.TqButtonSize
 import com.talkqquest.app.feature.mission.data.model.MissionListItem
@@ -95,7 +97,7 @@ private fun MissionListScreen(
     onMissionClick: (Long) -> Unit = {},
     onSheetTopChange: (Float?) -> Unit = {},
     onSavedListClick: () -> Unit = {},
-) {
+) = FitDesign { // 작은 화면에선 디자인(393x852) 통째 축소 — 저장 시트 포함 (사용자 결정)
     Box(
         modifier = Modifier
             .fillMaxSize()

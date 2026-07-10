@@ -132,7 +132,7 @@ private fun scrollMaskBrush(topDown: Boolean): Brush {
 @Composable
 fun ConversationScreen(
     viewModel: ConversationViewModel = hiltViewModel(),
-    onExitConfirm: () -> Unit = {}, // 종료하기 → 대화 종료 (TODO: 미션 완료&XP 화면 생기면 그리로)
+    onExitConfirm: (durationSec: Long) -> Unit = {}, // 종료하기 → 미션 완료&XP (대화 시간 전달)
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     ConversationScreen(
@@ -144,7 +144,7 @@ fun ConversationScreen(
         onSelectRecommendation = viewModel::selectRecommendation,
         onExitClick = { viewModel.setExitDialogVisible(true) },
         onExitDismiss = { viewModel.setExitDialogVisible(false) },
-        onExitConfirm = onExitConfirm,
+        onExitConfirm = { onExitConfirm(viewModel.elapsedSeconds()) },
     )
 }
 

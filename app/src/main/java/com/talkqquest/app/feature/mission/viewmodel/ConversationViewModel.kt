@@ -46,6 +46,12 @@ class ConversationViewModel @Inject constructor(
     val uiState: StateFlow<ConversationUiState> = _uiState.asStateFlow()
 
     private val timeFormat = SimpleDateFormat("H:mm", Locale.KOREA)
+
+    // 대화 시작 시각 — 종료 시 미션 완료 화면의 "대화 시간"에 전달.
+    // TODO(서버 연동): 서버가 대화 시간을 기록하면 그 값으로 대체 가능.
+    private val startedAtMs = System.currentTimeMillis()
+
+    fun elapsedSeconds(): Long = (System.currentTimeMillis() - startedAtMs) / 1000
     private var nextMessageId = 1L
     private var turnIndex = 0 // 몇 번째 주고받기인지 (stub 대사·추천 묶음 순환용)
 

@@ -60,7 +60,33 @@ class MissionRepository @Inject constructor(
         val opener = stubOpenerSets[refreshIndex % stubOpenerSets.size]
         return ApiResult.Success(ConversationPrep(topics = stubTopics, openers = opener))
     }
+
+    // ── 대화 진행 stub (목업 대사 그대로 시나리오) ──
+    // TODO(서버 연동): AI 대화 API로 교체 — 시작/응답/추천 답변 각각 서버가 줌.
+    suspend fun getConversationIntro(missionId: Long): ApiResult<List<String>> =
+        ApiResult.Success(listOf("안녕하세요! 처음 뵙네요 🙂", "오늘 여기 처음 오셨어요?"))
+
+    suspend fun getAiReply(turnIndex: Int): ApiResult<String> =
+        ApiResult.Success(stubAiReplies[turnIndex % stubAiReplies.size])
+
+    suspend fun getRecommendedReplies(turnIndex: Int): ApiResult<List<String>> =
+        ApiResult.Success(stubRecommendationSets[turnIndex % stubRecommendationSets.size])
 }
+
+// 대화 진행 stub 대사 — 목업 대화 흐름 그대로 순서대로 응답. 서버 연동 시 통째 삭제.
+private val stubAiReplies = listOf(
+    "오, 그러셨구나. 저는 여기 몇 번 와봤는데 생각보다 괜찮더라고요",
+    "자주는 아니고 가끔 생각날 때 오는 편이에요. 분위기가 편해서 좋더라고요",
+    "맞아요ㅎㅎ 처음 와도 부담이 없어서 좋은 것 같아요.",
+    "저도 그렇게 생각해요! 이야기 나눠서 즐거웠어요 🙂",
+)
+
+// 추천 답변 묶음 — 첫 벌 = 목업 그대로, 이후 벌은 흐름에 맞는 변형.
+private val stubRecommendationSets = listOf(
+    listOf("그렇군요! 저도 생각보다 편해서 놀랐어요.", "맞아요. 분위기가 좋네요.", "다음에도 와보고 싶어요."),
+    listOf("혹시 이런 곳 자주 다니세요?", "분위기가 정말 편하네요.", "오늘 와보길 잘했어요."),
+    listOf("맞아요, 저도 그렇게 느꼈어요.", "다음에 또 얘기 나눠요!", "덕분에 즐거웠어요."),
+)
 
 // 대화 준비 stub. 주제(표시용) — 디자인 목업 6개 그대로.
 private val stubTopics = listOf("오늘 날씨", "주말 계획", "좋아하는 음식", "최근 본 영화", "학교 생활", "취미 활동")

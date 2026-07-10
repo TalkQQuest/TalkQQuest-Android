@@ -15,6 +15,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
 import com.talkqquest.app.feature.home.ui.HomeScreen
 import com.talkqquest.app.feature.mission.ui.ConversationPrepScreen
+import com.talkqquest.app.feature.mission.ui.ConversationScreen
 import com.talkqquest.app.feature.mission.ui.MissionDetailScreen
 import com.talkqquest.app.feature.mission.ui.MissionListScreen
 import com.talkqquest.app.feature.mission.ui.SavedMissionsScreen
@@ -104,7 +105,15 @@ fun NavGraph(
                 onStartClick = { navController.navigate("conversation/$missionId") },
             )
         }
-        composable(Screen.CONVERSATION) { PlaceholderScreen("대화 진행") }
+        // B담당: 대화 진행. 종료하기 → 미션 완료&XP 화면(아직 없어서 일단 뒤로, 다음 작업에서 교체).
+        composable(
+            route = Screen.CONVERSATION,
+            arguments = listOf(navArgument("conversationId") { type = NavType.LongType }),
+        ) {
+            ConversationScreen(
+                onExitConfirm = { navController.popBackStack() },
+            )
+        }
         composable(Screen.COMMUNITY_LIST) { PlaceholderScreen("모임") }
         composable(Screen.PROFILE) { PlaceholderScreen("프로필") }
 

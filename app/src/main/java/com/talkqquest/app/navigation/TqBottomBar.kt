@@ -82,6 +82,7 @@ private fun tabRouteOf(route: String?): String? = when (route) {
     Screen.MISSION_LIST -> Screen.HOME
     Screen.MISSION_DETAIL -> Screen.HOME
     Screen.CONVERSATION_PREP -> Screen.HOME
+    Screen.CONVERSATION -> Screen.HOME
     else -> route
 }
 

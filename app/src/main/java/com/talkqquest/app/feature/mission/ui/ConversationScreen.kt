@@ -72,6 +72,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.talkqquest.app.R
 import com.talkqquest.app.core.designsystem.Error
+import com.talkqquest.app.core.designsystem.FitDesign
 import com.talkqquest.app.core.designsystem.Gray100
 import com.talkqquest.app.core.designsystem.Gray1000
 import com.talkqquest.app.core.designsystem.Gray200
@@ -83,6 +84,7 @@ import com.talkqquest.app.core.designsystem.Gray600
 import com.talkqquest.app.core.designsystem.Gray700
 import com.talkqquest.app.core.designsystem.Gray800
 import com.talkqquest.app.core.designsystem.Gray900
+import com.talkqquest.app.core.designsystem.LocalDesignScale
 import com.talkqquest.app.core.designsystem.Primary500
 import com.talkqquest.app.core.designsystem.Primary600
 import com.talkqquest.app.core.designsystem.TalkQQuestTheme
@@ -157,7 +159,7 @@ private fun ConversationScreen(
     onExitClick: () -> Unit = {},
     onExitDismiss: () -> Unit = {},
     onExitConfirm: () -> Unit = {},
-) {
+) = FitDesign { // 작은 화면에선 디자인(393x852) 통째 축소 — 다른 화면들과 크기감 통일
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -187,8 +189,11 @@ private fun ConversationScreen(
 
         // 나가기 팝업 (CSS "미션 종료 팝업" — 배경을 어둡게 하는 층은 디자인에 없음.
         // 뒤 화면 오작동만 막게 투명 층으로 터치를 흡수하고, 카드만 화면 중앙에 띄움)
+        // FitDesign: 카드가 고정폭(332)이라 320dp 같은 작은 화면에선 통째 비율 축소
         if (uiState.showExitDialog) {
-            ExitDialog(onContinue = onExitDismiss, onExit = onExitConfirm)
+            FitDesign {
+                ExitDialog(onContinue = onExitDismiss, onExit = onExitConfirm)
+            }
         }
     }
 }
@@ -396,7 +401,8 @@ private fun ConversationContent(
                 .fillMaxWidth()
                 .padding(horizontal = 16.dp)
                 .navigationBarsPadding()
-                .padding(bottom = 88.dp),
+                // 하단 네비 알약 몫 88은 축소 대상 밖(MainScreen)이라 비율로 되돌려 실제 크기 유지
+                .padding(bottom = 88.dp / LocalDesignScale.current),
         ) {
             // 입력창은 두 상태 모두 맨 아래 같은 자리 → 아래 고정층으로 분리해 전환 때 움직이지 않게.
             // 위의 추천 영역(카드↔바)만 높이가 부드럽게 변함(animateContentSize).

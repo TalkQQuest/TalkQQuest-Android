@@ -44,5 +44,5 @@ private val stubHomeSummary = HomeSummary(
     archiveCount = 12,
     communityCount = 4,
     questionOfDay = "요즘 가장 설렜던 순간은?",
-    hasNewNotification = true, // stub: 점 붙은 벨이 데모에서 보이게
+    hasNewNotification = false, // stub: 기본은 알림 없음 벨 (점 붙은 벨 확인하려면 true로)
 )

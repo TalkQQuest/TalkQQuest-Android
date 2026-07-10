@@ -21,7 +21,7 @@ data class MissionDetailUiState(
     val detail: MissionDetail? = null,
     val errorMessage: String? = null,
     val saveSheetVisible: Boolean = false, // 방금 북마크로 저장해 시트를 띄울지
-    val otherSavedMissions: List<MissionListItem> = emptyList(), // 시트 "저장 목록"용 (이 미션 제외 최대 2개)
+    val otherSavedMissions: List<MissionListItem> = emptyList(), // 시트 "저장 목록"용 (이 미션 제외 전부)
 ) {
     // 시트에 넘길 "저장됨" 미션. 해제돼도 미션은 그대로 넘겨서(isSaved=false)
     // 시트가 회색으로 바뀐 아이콘을 보여준 뒤 내려갈 수 있게 함 (목록 화면과 동일 동작).
@@ -72,9 +72,9 @@ class MissionDetailViewModel @Inject constructor(
             if (result is ApiResult.Success) {
                 _uiState.update { state ->
                     state.copy(
+                        // 저장된 다른 미션 전부 — 개수 제한 없음 (목록 화면 시트와 동일 기준)
                         otherSavedMissions = result.data
-                            .filter { it.isSaved && it.id != missionId }
-                            .take(2),
+                            .filter { it.isSaved && it.id != missionId },
                     )
                 }
             }
@@ -95,15 +95,16 @@ class MissionDetailViewModel @Inject constructor(
         }
     }
 
-    // 시트 "저장 목록"의 다른 미션 북마크 토글. 해제하면 저장 목록에서 바로 사라짐(저장된 것만 보여주므로).
+    // 시트 "저장 목록"의 다른 미션 북마크 토글. 해제해도 즉시 빼지 않고 isSaved만 바꿈 —
+    // 시트가 보라 풀림 → 가라앉는 퇴장 연출을 그리고, 연출 중 재저장하면 카드가 복귀함(시트 담당).
+    // (즉시 filter하면 재저장 때 항목을 못 찾아 복귀가 안 됨. 목록 화면은 파생 계산이라 이미 동일 동작)
     // TODO(서버 연동): POST/DELETE /api/v1/missions/{id}/save 호출로 교체. (지금은 로컬 상태만 갱신)
     fun toggleSaveInList(missionId: Long) {
-        missionRepository.toggleSave(missionId) // 공유 상태 반영
+        val nowSaved = missionRepository.toggleSave(missionId) // 공유 상태 반영
         _uiState.update { state ->
             state.copy(
                 otherSavedMissions = state.otherSavedMissions
-                    .map { if (it.id == missionId) it.copy(isSaved = !it.isSaved) else it }
-                    .filter { it.isSaved },
+                    .map { if (it.id == missionId) it.copy(isSaved = nowSaved) else it },
             )
         }
     }

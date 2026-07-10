@@ -39,10 +39,11 @@ data class MissionListUiState(
     val saveSheetMission: MissionListItem?
         get() = missions.firstOrNull { it.id == saveSheetMissionId }
 
-    // 시트 하단 "저장 목록"에 보여줄 다른 저장 미션 (디자인 기준 최대 2개).
+    // 시트 하단 "저장 목록"에 보여줄 다른 저장 미션 — 전부 (목업의 2장은 샘플 개수일 뿐,
+    // 개수 제한을 두면 해제할 때 빈자리에 딴 카드가 끼어들어 목록이 널뛰어 보임. 시트는 스크롤됨).
     // TODO(서버 연동): 최근 저장순 정렬 필드가 생기면 그 순서로 교체.
     val otherSavedMissions: List<MissionListItem>
-        get() = missions.filter { it.isSaved && it.id != saveSheetMissionId }.take(2)
+        get() = missions.filter { it.isSaved && it.id != saveSheetMissionId }
 }
 
 @HiltViewModel

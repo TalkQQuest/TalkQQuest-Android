@@ -16,6 +16,7 @@ import androidx.navigation.navArgument
 import com.talkqquest.app.feature.home.ui.HomeScreen
 import com.talkqquest.app.feature.mission.ui.ConversationPrepScreen
 import com.talkqquest.app.feature.mission.ui.ConversationScreen
+import com.talkqquest.app.feature.mission.ui.FeedbackScreen
 import com.talkqquest.app.feature.mission.ui.MissionCompleteScreen
 import com.talkqquest.app.feature.mission.ui.MissionDetailScreen
 import com.talkqquest.app.feature.mission.ui.MissionListScreen
@@ -121,17 +122,29 @@ fun NavGraph(
                 },
             )
         }
-        // B담당: 미션 완료&XP. NAVIGATION.md: 미션 완료 → AI 피드백(FeedbackScreen).
-        // 피드백 화면이 아직 없어 임시로 홈 복귀 — TODO: FeedbackScreen 생기면 navigate(feedback)로 교체.
+        // B담당: 미션 완료&XP. 탭 → AI 피드백 (NAVIGATION.md: 미션 완료 → 다음 → 피드백 요약).
         composable(
             route = "${Screen.MISSION_COMPLETE}?durationSec={durationSec}",
             arguments = listOf(
                 navArgument("missionId") { type = NavType.LongType },
                 navArgument("durationSec") { type = NavType.LongType; defaultValue = 0L },
             ),
-        ) {
+        ) { backStackEntry ->
+            val missionId = backStackEntry.arguments?.getLong("missionId") ?: 0L
             MissionCompleteScreen(
-                onContinue = { navController.popBackStack() },
+                // stub은 missionId를 feedbackId로 그대로 씀 — 서버 연동 시 완료 응답의 feedbackId로 교체.
+                onContinue = { navController.navigate("feedback/$missionId") },
+            )
+        }
+        // B담당: AI 피드백 요약. 항목 행/"상세 리포트" → 피드백 상세는 아직 없어 미연결
+        // (TODO: FeedbackDetailScreen 생기면 navigate(feedback_detail)로 교체). "홈으로" → 홈 복귀.
+        composable(
+            route = Screen.FEEDBACK,
+            arguments = listOf(navArgument("feedbackId") { type = NavType.LongType }),
+        ) {
+            FeedbackScreen(
+                onBack = { navController.popBackStack() },
+                onHome = { navController.popBackStack(Screen.HOME, inclusive = false) },
             )
         }
         composable(Screen.COMMUNITY_LIST) { PlaceholderScreen("모임") }

@@ -67,6 +67,7 @@ import com.talkqquest.app.core.designsystem.White
 import com.talkqquest.app.core.designsystem.component.TqButton
 import com.talkqquest.app.core.designsystem.softShadow
 import com.talkqquest.app.feature.mission.data.model.FeedbackResult
+import com.talkqquest.app.feature.mission.data.model.scoreItems
 import com.talkqquest.app.feature.mission.viewmodel.FeedbackUiState
 import com.talkqquest.app.feature.mission.viewmodel.FeedbackViewModel
 import kotlinx.coroutines.delay
@@ -146,13 +147,8 @@ private fun FeedbackContent(
     onHome: () -> Unit,
     initialStage: Int = 0, // 프리뷰용: 1이면 연출 끝 상태로 그림
 ) {
-    // 항목 4종 = 명세(E101) 필드 고정 — 순서는 CSS 카드 순서 그대로
-    val items = listOf(
-        "친절한 태도" to result.kindnessScore,
-        "대화 주도" to result.initiativeScore,
-        "공감 능력" to result.empathyScore,
-        "질문 연결성" to result.questionLinkScore,
-    )
+    // 항목 4종 = 명세(E101) 필드 고정 — 순서는 CSS 카드 순서 그대로 (상세 배너와 공유)
+    val items = result.scoreItems()
 
     // 등장 단계: 0=로봇+문구 → 1=카드·버튼 등장 후 바/점수가 행별로 차오름
     var stage by remember { mutableIntStateOf(initialStage) }
@@ -161,12 +157,12 @@ private fun FeedbackContent(
     }
     LaunchedEffect(Unit) {
         if (initialStage < 1) {
-            delay(350); stage = 1 // 완료 화면과 같은 등장 템포 (느리다는 피드백으로 당김)
-            delay(250) // 카드가 자리잡은 뒤 바가 차오르기 시작
+            delay(120); stage = 1 // 문구 뒤 뜸들임 없이 카드 바로 등장 (느리다는 피드백 2회로 재단축)
+            delay(120) // 카드가 펴지는 동안 바로 바가 차오르기 시작
             shownScores.forEachIndexed { index, anim ->
                 launch {
-                    delay(index * 120L) // 행별 스태거 — 위에서부터 차례로
-                    anim.animateTo(items[index].second.toFloat(), tween(700))
+                    delay(index * 100L) // 행별 스태거 — 위에서부터 차례로
+                    anim.animateTo(items[index].second.toFloat(), tween(600))
                 }
             }
         }
@@ -411,10 +407,14 @@ private fun FeedbackScreenPreview() {
         Box(Modifier.background(Gray50)) {
             FeedbackContent(
                 result = FeedbackResult(
+                    nickname = "다민",
                     kindnessScore = 92,
                     initiativeScore = 88,
                     empathyScore = 85,
                     questionLinkScore = 78,
+                    strengths = emptyList(), // 요약 화면은 점수만 사용
+                    improvements = emptyList(),
+                    savedPhrase = "",
                 ),
                 onBack = {},
                 onItemClick = {},

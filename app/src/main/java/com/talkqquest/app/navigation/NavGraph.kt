@@ -16,6 +16,7 @@ import androidx.navigation.navArgument
 import com.talkqquest.app.feature.home.ui.HomeScreen
 import com.talkqquest.app.feature.mission.ui.ConversationPrepScreen
 import com.talkqquest.app.feature.mission.ui.ConversationScreen
+import com.talkqquest.app.feature.mission.ui.FeedbackDetailScreen
 import com.talkqquest.app.feature.mission.ui.FeedbackScreen
 import com.talkqquest.app.feature.mission.ui.MissionCompleteScreen
 import com.talkqquest.app.feature.mission.ui.MissionDetailScreen
@@ -136,15 +137,32 @@ fun NavGraph(
                 onContinue = { navController.navigate("feedback/$missionId") },
             )
         }
-        // B담당: AI 피드백 요약. 항목 행/"상세 리포트" → 피드백 상세는 아직 없어 미연결
-        // (TODO: FeedbackDetailScreen 생기면 navigate(feedback_detail)로 교체). "홈으로" → 홈 복귀.
+        // B담당: AI 피드백 요약. 항목 행 탭 → 그 항목 배너로 피드백 상세 (NAVIGATION.md).
+        // "상세 리포트" 버튼은 별도 화면(추후 제작) 몫이라 미연결 유지. "홈으로" → 홈 복귀.
         composable(
             route = Screen.FEEDBACK,
             arguments = listOf(navArgument("feedbackId") { type = NavType.LongType }),
-        ) {
+        ) { backStackEntry ->
+            val feedbackId = backStackEntry.arguments?.getLong("feedbackId") ?: 0L
             FeedbackScreen(
                 onBack = { navController.popBackStack() },
+                onItemClick = { index -> navController.navigate("feedback_detail/$feedbackId?item=$index") },
                 onHome = { navController.popBackStack(Screen.HOME, inclusive = false) },
+            )
+        }
+        // B담당: AI 피드백 상세. "다른 미션 보러가기" → 정산 흐름(완료·피드백)을 정리하고 미션 목록으로.
+        composable(
+            route = "${Screen.FEEDBACK_DETAIL}?item={item}",
+            arguments = listOf(
+                navArgument("feedbackId") { type = NavType.LongType },
+                navArgument("item") { type = NavType.IntType; defaultValue = 0 },
+            ),
+        ) {
+            FeedbackDetailScreen(
+                onBack = { navController.popBackStack() },
+                onOtherMissions = {
+                    navController.navigate(Screen.MISSION_LIST) { popUpTo(Screen.HOME) }
+                },
             )
         }
         composable(Screen.COMMUNITY_LIST) { PlaceholderScreen("모임") }

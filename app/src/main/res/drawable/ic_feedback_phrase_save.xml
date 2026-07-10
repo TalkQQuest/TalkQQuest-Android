@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 베스트 문장 저장(북마크) - 기본 상태 (피드백저장.svg 전사: 13x16 스트로크 Gray400 1.5).
+     CSS inset(좌 20.83%/상 12.5%)대로 20x20 프레임 안에 배치. tint로 색 바꿔 사용. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="20dp"
+    android:height="20dp"
+    android:viewportWidth="20"
+    android:viewportHeight="20"
+    android:tint="#94A3B8">
+    <group
+        android:translateX="3.42"
+        android:translateY="1.75">
+        <path
+            android:pathData="M0.75,2.75C0.75,1.645 1.645,0.75 2.75,0.75H9.583C10.688,0.75 11.583,1.645 11.583,2.75V14.633C11.583,15.065 11.072,15.294 10.75,15.006L6.167,10.911L1.583,15.006C1.261,15.294 0.75,15.065 0.75,14.633V2.75Z"
+            android:strokeColor="#FFFFFF"
+            android:strokeWidth="1.5"
+            android:strokeLineCap="round"
+            android:strokeLineJoin="round" />
+    </group>
+</vector>

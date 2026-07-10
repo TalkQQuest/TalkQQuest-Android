@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 베스트 문장 저장(북마크) - 저장된 상태. 저장됨 디자인이 따로 없어 같은 모양을
+     Purple600 채움으로 (미션 카드 북마크의 채움 관례를 따름 — 자작, 디자이너 확인거리). -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="20dp"
+    android:height="20dp"
+    android:viewportWidth="20"
+    android:viewportHeight="20">
+    <group
+        android:translateX="3.42"
+        android:translateY="1.75">
+        <path
+            android:pathData="M0.75,2.75C0.75,1.645 1.645,0.75 2.75,0.75H9.583C10.688,0.75 11.583,1.645 11.583,2.75V14.633C11.583,15.065 11.072,15.294 10.75,15.006L6.167,10.911L1.583,15.006C1.261,15.294 0.75,15.065 0.75,14.633V2.75Z"
+            android:fillColor="#6353F0"
+            android:strokeColor="#6353F0"
+            android:strokeWidth="1.5"
+            android:strokeLineCap="round"
+            android:strokeLineJoin="round" />
+    </group>
+</vector>

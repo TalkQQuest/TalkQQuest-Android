@@ -45,9 +45,10 @@ class HomeViewModel @Inject constructor(
     }
 
     // 에러 시 '다시 시도' 버튼에서도 호출 → public.
-    fun loadHome() {
+    // showLoading=false: 화면 복귀 시 조용한 재조회(스피너 없이 XP 등 최신 상태만 반영)
+    fun loadHome(showLoading: Boolean = true) {
         viewModelScope.launch {
-            _uiState.update { it.copy(isLoading = true, errorMessage = null) }
+            _uiState.update { it.copy(isLoading = showLoading, errorMessage = null) }
 
             when (val result = homeRepository.getHomeSummary()) {
                 is ApiResult.Success -> _uiState.update {

@@ -1,5 +1,6 @@
 package com.talkqquest.app.feature.home.data
 
+import com.talkqquest.app.core.datastore.UserXpStore
 import com.talkqquest.app.core.network.ApiResult
 import com.talkqquest.app.core.network.safeApiCall
 import com.talkqquest.app.feature.home.data.model.HomeSummary
@@ -12,11 +13,18 @@ import javax.inject.Inject
 // - @Inject constructor: Hilt가 HomeApi를 자동으로 넣어줌(HomeModule에서 제공).
 class HomeRepository @Inject constructor(
     private val homeApi: HomeApi,
+    private val userXpStore: UserXpStore, // 서버 전 임시: 미션 완료 XP가 홈에도 보이게 공유
 ) {
     // TODO(서버 연동 전 임시): 백엔드 홈 API 붙으면 아래 stub 리턴 지우고 return 한 줄로 복구.
     //     suspend fun getHomeSummary() = safeApiCall { homeApi.getHomeSummary() }
     suspend fun getHomeSummary(): ApiResult<HomeSummary> =
-        ApiResult.Success(stubHomeSummary)
+        ApiResult.Success(
+            stubHomeSummary.copy(
+                level = userXpStore.level,
+                currentXp = userXpStore.currentXp,
+                nextLevelXp = userXpStore.nextLevelXp,
+            ),
+        )
 }
 
 // 서버 없이 에뮬에서 홈 화면 확인용 임시 데이터. 서버 연동 시 이 값째로 삭제.

@@ -1,8 +1,10 @@
 package com.talkqquest.app.feature.mission.data
 
+import com.talkqquest.app.core.datastore.UserXpStore
 import com.talkqquest.app.core.network.ApiResult
 import com.talkqquest.app.core.network.safeApiCall
 import com.talkqquest.app.feature.mission.data.model.ConversationPrep
+import com.talkqquest.app.feature.mission.data.model.MissionCompleteResult
 import com.talkqquest.app.feature.mission.data.model.MissionDetail
 import com.talkqquest.app.feature.mission.data.model.MissionListItem
 import javax.inject.Inject
@@ -13,12 +15,17 @@ import javax.inject.Singleton
 @Singleton
 class MissionRepository @Inject constructor(
     private val missionApi: MissionApi,
+    private val userXpStore: UserXpStore, // 서버 전 임시: 완료 XP를 홈과 공유
 ) {
     // ── 서버 연동 전 임시: 북마크 상태 공유 ──
     // 화면(ViewModel)마다 stub을 복사해 들면 토글이 서로 안 보임(목록에서 저장해도 저장 목록에 안 뜸)
     // → 토글 결과를 여기 한 곳에 모아 모든 화면이 같은 상태를 봄.
     // TODO(서버 연동): 이 map 지우고 toggleSave를 POST/DELETE /api/v1/missions/{id}/save 호출로 교체.
     private val savedOverrides = mutableMapOf<Long, Boolean>()
+
+    // 완료 처리 공유 (북마크와 같은 이유) — 완료한 미션이 목록/저장 목록의 상태 필터에도 반영되게.
+    // TODO(서버 연동): 완료 API가 상태를 저장하면 이 map 삭제.
+    private val statusOverrides = mutableMapOf<Long, String>()
 
     fun toggleSave(missionId: Long): Boolean {
         val base = stubMissions.firstOrNull { it.id == missionId }?.isSaved ?: false
@@ -27,9 +34,12 @@ class MissionRepository @Inject constructor(
         return now
     }
 
-    // stub 원본 위에 토글된 북마크 값을 덮어씀
-    private fun MissionListItem.applySaved(): MissionListItem =
-        savedOverrides[id]?.let { copy(isSaved = it) } ?: this
+    // stub 원본 위에 토글된 북마크·완료 상태를 덮어씀
+    private fun MissionListItem.applySaved(): MissionListItem {
+        var item = savedOverrides[id]?.let { copy(isSaved = it) } ?: this
+        statusOverrides[id]?.let { item = item.copy(status = it) }
+        return item
+    }
 
     // TODO(서버 연동 전 임시): 백엔드 미션 API 붙으면 아래 stub 리턴 지우고 return 한 줄로 복구.
     //     suspend fun getMissions() = safeApiCall { missionApi.getMissions() }
@@ -71,7 +81,39 @@ class MissionRepository @Inject constructor(
 
     suspend fun getRecommendedReplies(turnIndex: Int): ApiResult<List<String>> =
         ApiResult.Success(stubRecommendationSets[turnIndex % stubRecommendationSets.size])
+
+    // 미션 완료 처리 + 결과(체크리스트·XP·레벨) 조회.
+    // TODO(서버 연동 전 임시): 붙으면 return safeApiCall { missionApi.completeMission(missionId) } 로 교체
+    //     — 체크리스트 문구·개수, XP·레벨 계산 전부 서버 몫.
+    suspend fun completeMission(missionId: Long): ApiResult<MissionCompleteResult> {
+        val gained = stubMissions.firstOrNull { it.id == missionId }?.rewardXp ?: 20
+        statusOverrides[missionId] = "완료" // 목록·저장 목록의 상태 필터에 바로 반영
+        val beforeXp = userXpStore.currentXp
+        val beforeLevel = userXpStore.level
+        // 재완료도 매번 지급 — 기능명세서 기준(대화 종료 = MissionRecord+XpHistory+XP 증가 트랜잭션,
+        // 재완료 제한 규칙 없음). 제한할지는 기획 확인거리.
+        userXpStore.addXp(gained)
+        return ApiResult.Success(
+            MissionCompleteResult(
+                checklist = stubCompleteChecklist,
+                gainedXp = gained,
+                levelBefore = beforeLevel,
+                levelAfter = userXpStore.level,
+                xpBefore = beforeXp,
+                xpAfter = userXpStore.currentXp,
+                nextLevelXp = userXpStore.nextLevelXp,
+            ),
+        )
+    }
 }
+
+// 미션 완료 체크리스트 stub — 목업 4개 그대로. 서버 연동 시 통째 삭제.
+private val stubCompleteChecklist = listOf(
+    "장소 경험을 공유했어요",
+    "상대의 이야기에 공감했어요",
+    "자연스럽게 질문을 주고받았어요",
+    "긍정적인 분위기로 대화를 마무리했어요",
+)
 
 // 대화 진행 stub 대사 — 목업 대화 흐름 그대로 순서대로 응답. 서버 연동 시 통째 삭제.
 private val stubAiReplies = listOf(

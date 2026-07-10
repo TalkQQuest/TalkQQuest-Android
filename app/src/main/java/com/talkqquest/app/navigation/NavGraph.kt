@@ -16,6 +16,7 @@ import androidx.navigation.navArgument
 import com.talkqquest.app.feature.home.ui.HomeScreen
 import com.talkqquest.app.feature.mission.ui.ConversationPrepScreen
 import com.talkqquest.app.feature.mission.ui.ConversationScreen
+import com.talkqquest.app.feature.mission.ui.MissionCompleteScreen
 import com.talkqquest.app.feature.mission.ui.MissionDetailScreen
 import com.talkqquest.app.feature.mission.ui.MissionListScreen
 import com.talkqquest.app.feature.mission.ui.SavedMissionsScreen
@@ -105,13 +106,32 @@ fun NavGraph(
                 onStartClick = { navController.navigate("conversation/$missionId") },
             )
         }
-        // B담당: 대화 진행. 종료하기 → 미션 완료&XP 화면(아직 없어서 일단 뒤로, 다음 작업에서 교체).
+        // B담당: 대화 진행. 종료하기 → 미션 완료&XP (대화 시간을 인자로 전달).
         composable(
             route = Screen.CONVERSATION,
             arguments = listOf(navArgument("conversationId") { type = NavType.LongType }),
-        ) {
+        ) { backStackEntry ->
+            val missionId = backStackEntry.arguments?.getLong("conversationId") ?: 0L
             ConversationScreen(
-                onExitConfirm = { navController.popBackStack() },
+                onExitConfirm = { durationSec ->
+                    // 끝난 대화(및 준비·상세)로 뒤로 못 돌아가게 홈 위를 정리하고 완료 화면으로.
+                    navController.navigate("mission_complete/$missionId?durationSec=$durationSec") {
+                        popUpTo(Screen.HOME)
+                    }
+                },
+            )
+        }
+        // B담당: 미션 완료&XP. NAVIGATION.md: 미션 완료 → AI 피드백(FeedbackScreen).
+        // 피드백 화면이 아직 없어 임시로 홈 복귀 — TODO: FeedbackScreen 생기면 navigate(feedback)로 교체.
+        composable(
+            route = "${Screen.MISSION_COMPLETE}?durationSec={durationSec}",
+            arguments = listOf(
+                navArgument("missionId") { type = NavType.LongType },
+                navArgument("durationSec") { type = NavType.LongType; defaultValue = 0L },
+            ),
+        ) {
+            MissionCompleteScreen(
+                onContinue = { navController.popBackStack() },
             )
         }
         composable(Screen.COMMUNITY_LIST) { PlaceholderScreen("모임") }

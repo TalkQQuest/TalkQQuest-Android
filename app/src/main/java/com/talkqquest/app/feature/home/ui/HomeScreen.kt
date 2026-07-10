@@ -51,6 +51,8 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.talkqquest.app.R
 import com.talkqquest.app.core.designsystem.Error
@@ -90,6 +92,8 @@ fun HomeScreen(
     onOtherMissionsClick: () -> Unit = {},    // "다른 미션 보기" → 미션 목록
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    // 화면 복귀 시(미션 완료 후 등) XP·레벨 최신값 조용히 재조회 — 미션 목록과 같은 패턴
+    LifecycleEventEffect(Lifecycle.Event.ON_RESUME) { viewModel.loadHome(showLoading = false) }
     HomeScreen(
         uiState = uiState,
         onRetry = viewModel::loadHome,

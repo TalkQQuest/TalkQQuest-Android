@@ -198,7 +198,8 @@ private fun ConversationScreen(
         // 뒤 화면 오작동만 막게 투명 층으로 터치를 흡수하고, 카드만 화면 중앙에 띄움)
         // FitDesign: 카드가 고정폭(332)이라 320dp 같은 작은 화면에선 통째 비율 축소
         if (uiState.showExitDialog) {
-            FitDesign {
+            // 바깥 FitDesign이 이미 상태바 보정을 했으니 중첩에선 끔 (팝업이 중앙에서 밀리지 않게)
+            FitDesign(compensateStatusBar = false) {
                 ExitDialog(onContinue = onExitDismiss, onExit = onExitConfirm)
             }
         }
@@ -230,11 +231,11 @@ private fun ConversationContent(
     // 비행 연출을 끄고 기본 밀어올림(말풍선이 아래에서 자라나며 채팅을 밀어올리는 기존 애니)만
     // 쓰는 조건 (사용자 결정):
     // ①작은 화면(FitDesign 축소 중) — 키보드까지 뜨면 비행 거리가 너무 짧아 연출이 제대로 안 나옴
-    //   축소율 = min(가로/393, 세로/900, 1) (DesignFit — 세로 900은 상태바·네비 여유 포함).
-    //   경계 0.85: S25급은 비행 유지(450dpi=384x832→0.924, 480dpi=360x780→0.867),
-    //   진짜 작은 화면만 밀어올림(S8급 360x740→0.822, 320x640→0.711).
+    //   축소율 공식이 (세로-140)/712 로 바뀌어(DesignFit 2026-07-11) 경계도 환산:
+    //   0.89 = S25급 비행 유지(360x780→0.899), 진짜 작은 화면만 밀어올림(S8급 360x740→0.843).
+    //   (구 공식 세로/900 때는 0.85가 같은 경계였음 — 의도 동일, 숫자만 환산)
     // ②API 31 미만 — 뭉개짐 블러(BlurEffect)가 안 돼서 비행 중 파란 박스가 또렷하게 보임
-    val useFlight = LocalDesignScale.current >= 0.85f && android.os.Build.VERSION.SDK_INT >= 31
+    val useFlight = LocalDesignScale.current >= 0.89f && android.os.Build.VERSION.SDK_INT >= 31
     LaunchedEffect(lastMessage?.id) {
         val m = lastMessage ?: return@LaunchedEffect
         if (useFlight && m.isFromUser && flownIds.add(m.id)) {

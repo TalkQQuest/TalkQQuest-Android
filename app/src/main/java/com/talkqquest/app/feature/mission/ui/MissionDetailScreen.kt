@@ -193,10 +193,12 @@ private fun MissionDetailContent(
 ) {
     BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
         // 세로 배치: 내용이 다 들어가는 화면에선 여백을 늘려 피그마 비례를 유지.
-        // 작은 화면에선 여백·일러스트를 부족한 비율만큼 점차 축소(최소 0.5배, 사용자 결정),
-        // 그래도 넘치는 극소형만 스크롤. 글자·카드·버튼은 가독성 위해 고정.
-        val compact = maxHeight < 760.dp
-        val shrink = if (compact) (maxHeight / 760.dp).coerceIn(0.5f, 1f) else 1f
+        // 일러스트·여백은 FitDesign이 이미 화면 비율만큼 균일 축소하므로 추가 축소 안 함(shrink=1).
+        //  (designScale을 shrink로 또 곱하면 이중 축소돼 다트가 과하게 작아짐 — 그 실수 되돌림)
+        // 극소형(더 줄일 여지 없음)만 스크롤 폴백. 판정은 maxHeight(FitDesign 안에서 뒤집히는 값)가
+        // 아니라 FitDesign 축소율로. (2026-07-11)
+        val shrink = 1f
+        val compact = LocalDesignScale.current <= 0.5f
 
         // 상단 보라 그라데이션 배경 (CSS Frame 436: 높이 462).
         // CSS에서 그라데이션 끝(462)은 효과 카드 시작(437)보다 25 아래 — "카드 머리를 살짝 덮는" 관계.

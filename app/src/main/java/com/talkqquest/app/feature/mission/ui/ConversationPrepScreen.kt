@@ -132,10 +132,11 @@ private fun ConversationPrepContent(
     BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
         // 긴 화면: 남는 세로 공간을 전부 헤더↔말풍선 사이에 넣어, 말풍선부터 아래
         // (제목·칩·카드·버튼) 배열은 피그마 위치 그대로 유지 (사용자 결정).
-        // 작은 화면: 여백·일러스트를 부족한 비율만큼 점차 축소(최소 0.5배, 사용자 결정),
-        // 그래도 넘치는 극소형만 스크롤. 글자·카드·버튼은 가독성 위해 고정.
-        val compact = maxHeight < 880.dp
-        val shrink = if (compact) (maxHeight / 880.dp).coerceIn(0.5f, 1f) else 1f
+        // 일러스트·여백은 FitDesign이 이미 화면 비율만큼 균일 축소하므로 추가 축소 안 함(shrink=1).
+        //  (designScale을 또 곱하면 이중 축소 — 그 실수 되돌림). 극소형만 스크롤 폴백.
+        // 판정은 maxHeight(FitDesign 안에서 뒤집힘)가 아니라 FitDesign 축소율로. (2026-07-11)
+        val shrink = 1f
+        val compact = LocalDesignScale.current <= 0.5f
         Column(
             modifier = Modifier
                 .fillMaxSize()

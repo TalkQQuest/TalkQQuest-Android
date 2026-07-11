@@ -53,6 +53,7 @@ private fun tabRouteOf(route: String?): String? = when (route) {
     Screen.MISSION_DETAIL -> Screen.HOME
     Screen.CONVERSATION_PREP -> Screen.HOME
     Screen.CONVERSATION -> Screen.HOME
+    Screen.REPORT -> Screen.HOME // 홈 플로우(피드백 → 상세 리포트)로 진입 — 홈 유지 (사용자 결정)
     else -> route
 }
 

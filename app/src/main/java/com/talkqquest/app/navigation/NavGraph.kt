@@ -22,6 +22,7 @@ import com.talkqquest.app.feature.mission.ui.MissionCompleteScreen
 import com.talkqquest.app.feature.mission.ui.MissionDetailScreen
 import com.talkqquest.app.feature.mission.ui.MissionListScreen
 import com.talkqquest.app.feature.mission.ui.SavedMissionsScreen
+import com.talkqquest.app.feature.report.ui.ReportScreen
 
 // 네비게이션 그래프.
 // TODO(각 담당): composable(Screen.XXX) { XxxScreen(navController) } 로 자기 화면 등록. route는 Screen.kt 참고.
@@ -138,7 +139,7 @@ fun NavGraph(
             )
         }
         // B담당: AI 피드백 요약. 항목 행 탭 → 그 항목 배너로 피드백 상세 (NAVIGATION.md).
-        // "상세 리포트" 버튼은 별도 화면(추후 제작) 몫이라 미연결 유지. "홈으로" → 홈 복귀.
+        // "상세 리포트" → 리포트 화면. "홈으로" → 홈 복귀.
         composable(
             route = Screen.FEEDBACK,
             arguments = listOf(navArgument("feedbackId") { type = NavType.LongType }),
@@ -147,8 +148,13 @@ fun NavGraph(
             FeedbackScreen(
                 onBack = { navController.popBackStack() },
                 onItemClick = { index -> navController.navigate("feedback_detail/$feedbackId?item=$index") },
+                onDetailReport = { navController.navigate(Screen.REPORT) },
                 onHome = { navController.popBackStack(Screen.HOME, inclusive = false) },
             )
+        }
+        // 리포트 (성장/주간 비교 탭 통합). 피드백 요약 "상세 리포트" 및 아카이브(A담당, 추후)에서 진입.
+        composable(Screen.REPORT) {
+            ReportScreen(onBack = { navController.popBackStack() })
         }
         // B담당: AI 피드백 상세. "다른 미션 보러가기" → 정산 흐름(완료·피드백)을 정리하고 미션 목록으로.
         composable(

@@ -126,6 +126,13 @@ private fun MissionCompleteScreen(
     }
 }
 
+// 연출이 다 끝난 뒤 자동 전환까지 머무는 시간 (완성 화면을 인지할 여유 — 자작 값, 취향껏 조정)
+private const val AUTO_ADVANCE_HOLD_MS = 1000L
+
+// 터치 스킵 후 전환까지 = 남은 항목 등장 모션 길이 그대로(300ms) —
+// 모션이 다 끝나는 순간 딜레이 없이 바로 이동 (사용자 결정: 연출은 다 보이되 끝나면 즉시)
+private const val SKIP_ADVANCE_HOLD_MS = 300L
+
 @Composable
 private fun MissionCompleteContent(
     result: MissionCompleteResult,
@@ -136,6 +143,14 @@ private fun MissionCompleteContent(
     // 등장 단계: 0=컨페티+문구 → 1=대화 시간 카드 → 2=체크리스트 → 3=XP 카드(바 카운트업)
     var stage by remember { mutableIntStateOf(initialStage) }
     var skipped by remember { mutableStateOf(false) }
+    // 자동/터치 전환이 겹쳐도 피드백으로 두 번 이동하지 않게 한 번만 통과
+    var advanced by remember { mutableStateOf(false) }
+    val advance = {
+        if (!advanced) {
+            advanced = true
+            onContinue()
+        }
+    }
     // 레벨 칩에 표시할 레벨 — 레벨업 연출에선 바가 가득 차는 순간 바뀜
     var displayLevel by remember { mutableIntStateOf(if (initialStage >= 3) result.levelAfter else result.levelBefore) }
     var celebrationDone by remember { mutableStateOf(initialStage >= 3) }
@@ -176,6 +191,17 @@ private fun MissionCompleteContent(
     }
     val finished = celebrationDone
 
+    // 다 뜨면 자동으로 피드백 화면으로 (피그마 프로토타입의 After delay 의도, 사용자 결정).
+    // 자동 완주 = 완성 화면을 잠깐(홀드) 보여주고 이동.
+    // 터치 스킵 = 안 뜬 것들이 한 번에 뜨는 등장 모션(300ms)까지 보여준 뒤 바로 이동(사용자 결정)
+    //  — 0초로 하면 등장 모션이 화면 전환에 잘려서 "다 띄우는" 게 안 보임. 시간 값은 자작(아래 상수).
+    LaunchedEffect(finished) {
+        if (finished && initialStage < 3) { // initialStage 3 = 프리뷰 정지 화면 — 자동 이동 없음
+            delay(if (skipped) SKIP_ADVANCE_HOLD_MS else AUTO_ADVANCE_HOLD_MS)
+            advance()
+        }
+    }
+
     // 컨페티 선명도: 프레임별 opacity 전사(0.7/0.8/0.9/1.0) — 단계 따라 부드럽게 상승
     val confettiAlpha by animateFloatAsState(
         targetValue = 0.7f + 0.1f * stage,
@@ -190,7 +216,7 @@ private fun MissionCompleteContent(
                 interactionSource = remember { MutableInteractionSource() },
                 indication = null,
             ) {
-                if (finished) onContinue() else skipped = true
+                if (finished) advance() else skipped = true
             }
             .statusBarsPadding()
             .padding(horizontal = 16.dp), // CSS 콘텐츠 열 left 16 / w361

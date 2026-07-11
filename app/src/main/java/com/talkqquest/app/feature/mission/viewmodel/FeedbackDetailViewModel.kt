@@ -44,8 +44,7 @@ class FeedbackDetailViewModel @Inject constructor(
     fun loadFeedback() {
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true, errorMessage = null) }
-            // itemIndex 전달은 stub 전용(항목별 길이 검증용 문구) — 서버 연동 시 인자 삭제
-            when (val result = missionRepository.getFeedback(feedbackId, itemIndex)) {
+            when (val result = missionRepository.getFeedback(feedbackId)) {
                 is ApiResult.Success -> _uiState.update {
                     it.copy(isLoading = false, result = result.data)
                 }

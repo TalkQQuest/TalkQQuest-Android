@@ -78,7 +78,8 @@ import com.talkqquest.app.feature.mission.viewmodel.FeedbackDetailViewModel
 // 배너(항목명+점수) → 본문 카드(잘한 점 GREEN / 개선할 점 ORANGE / 베스트 문장+저장) → 다른 미션 버튼.
 // 하단 네비 없음(사용자 결정 — 4프레임 중 질문 연결성에만 있어 실수로 판단, 디자이너 확인거리).
 // CSS와 다른 점(합의됨):
-//  - 다른 미션 버튼 색이 프레임마다 다름(#6353F0/#536BF0/#8D53F0/#5356F0) → Purple600 통일(사용자 결정)
+//  - 다른 미션 버튼 색이 CSS상 프레임마다 다름(#6353F0/#536BF0/#8D53F0/#5356F0)
+//    → 메인 컬러(Purple600) 통일이 최종 확정 (디자이너 결정 2026-07-11 — 한 번 4색 적용했다 재통일)
 //  - 저장된 상태 북마크는 디자인이 없어 같은 모양 Purple600 채움(자작, 디자이너 확인거리)
 
 // 칩 배경 2색은 디자인시스템 팔레트에 없는 CSS 전사 값 (글자색 GREEN=Success, ORANGE는 아래)
@@ -360,13 +361,15 @@ private fun BestPhraseSection(
                     )
                 }
             }
-            Spacer(Modifier.width(28.dp)) // 닫는 따옴표(10)+간격(18) 몫 — 한 줄 문장 정중앙 유지
+            // 닫는 따옴표(10)+간격(18) 몫 28에서 2 줄임 — 1.0 배율에서 목업 문장(274px)이
+            // 가용 폭(273px)에 1px 모자라 감기던 것 보정 (한 줄 중앙이 1dp 왼쪽으로 — 시각 무의미)
+            Spacer(Modifier.width(26.dp))
         }
     }
 }
 
 // "다민님을 위한 다른 미션 보러가기" 버튼 (CSS Frame 427321060): 362x56 r20.
-// 색은 프레임마다 달라 Purple600 통일(사용자 결정). 다트 이미지(66x70, 1.56도 기울임)가
+// 배경 = 메인 컬러 통일(디자이너 확정). 다트 이미지(66x70, 1.56도 기울임)가
 // 버튼 위로 삐져나오는 디자인이라 배경만 clip하고 내용은 안 자름.
 @Composable
 private fun OtherMissionsButton(nickname: String, onClick: () -> Unit) {

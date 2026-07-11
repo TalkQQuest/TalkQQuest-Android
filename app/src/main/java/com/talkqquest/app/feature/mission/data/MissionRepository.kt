@@ -107,13 +107,11 @@ class MissionRepository @Inject constructor(
         )
     }
 
-    // AI 피드백 조회 (E101). 실제 응답은 피드백당 1세트(항목별 아님)지만, stub은 상세 화면의
-    // 문구 길이 대응을 확인할 수 있게 itemIndex(요약에서 탭한 행)별로 짧음/중간/김/아주 김을 돌려줌.
-    // itemIndex 생략(요약 화면) = 목업 값 그대로.
+    // AI 피드백 조회 (E101). 응답은 피드백당 1세트(항목별 아님) — 문구는 UI CSS 목업 그대로
+    // (4개 상세 프레임 내용 동일, 사용자 결정 2026-07-11: 길이 검증용 자작 4종 → 원문 환원).
     // TODO(서버 연동 전 임시): 붙으면 POST /api/v1/feedback 생성 → GET /api/v1/feedback/{feedbackId}
-    //     조회로 교체(itemIndex 분기 삭제) — 값 계산 전부 서버 몫. stub은 missionId를 feedbackId로 받음.
-    suspend fun getFeedback(feedbackId: Long, itemIndex: Int = -1): ApiResult<FeedbackResult> {
-        val texts = stubFeedbackTexts.getOrElse(itemIndex) { stubFeedbackTexts[0] }
+    //     조회로 교체 — 값 계산 전부 서버 몫. stub은 missionId를 feedbackId로 받음.
+    suspend fun getFeedback(feedbackId: Long): ApiResult<FeedbackResult> {
         return ApiResult.Success(
             FeedbackResult(
                 nickname = "다민", // TODO(서버 연동): 유저 프로필 닉네임으로 교체
@@ -121,53 +119,20 @@ class MissionRepository @Inject constructor(
                 initiativeScore = 88,
                 empathyScore = 85,
                 questionLinkScore = 78,
-                strengths = texts.first,
-                improvements = texts.second,
-                savedPhrase = texts.third,
+                strengths = listOf(
+                    "상대를 존중하는 표현을 사용했어요",
+                    "대화를 따뜻하게 시작했어요",
+                    "긍정적인 말투를 유지했어요",
+                ),
+                improvements = listOf(
+                    "조금 더 구체적인 칭찬을 해보세요",
+                    "상대의 감정을 확인하는 표현을 사용해보세요",
+                ),
+                savedPhrase = "그렇군요! 저도 생각보다 편해서 놀랐어요",
             ),
         )
     }
 }
-
-// 피드백 상세 문구 stub — 항목(행)별로 길이를 다르게 해 레이아웃 검증용(자작 예시 문구).
-// [0]=목업 그대로(중간), [1]=아주 짧음, [2]=김(2줄 감김), [3]=아주 김(3줄+짧은 것 혼합).
-// 서버 연동 시 통째 삭제 (실제 응답은 피드백당 1세트).
-private val stubFeedbackTexts = listOf(
-    Triple(
-        listOf("상대를 존중하는 표현을 사용했어요", "대화를 따뜻하게 시작했어요", "긍정적인 말투를 유지했어요"),
-        listOf("조금 더 구체적인 칭찬을 해보세요", "상대의 감정을 확인하는 표현을 사용해보세요"),
-        "그렇군요! 저도 생각보다 편해서 놀랐어요",
-    ),
-    Triple(
-        listOf("먼저 인사를 건넸어요"),
-        listOf("답을 기다려보세요"),
-        "여기 자주 오세요?",
-    ),
-    Triple(
-        listOf(
-            "상대의 말에 \"정말 그러셨겠어요\"처럼 감정을 받아주는 표현을 자주 사용했어요",
-            "상대가 힘들었던 이야기를 할 때 화제를 돌리지 않고 끝까지 들어줬어요",
-            "비슷한 경험을 나누면서 상대와 감정을 공유했어요",
-        ),
-        listOf(
-            "공감한 뒤에 상대의 감정을 한 번 더 확인하는 질문을 덧붙이면 대화가 더 깊어져요",
-            "리액션이 반복되지 않게 표현을 조금씩 바꿔보세요",
-        ),
-        "정말 고생 많으셨겠어요. 저라도 그 상황에서는 많이 힘들었을 것 같아요",
-    ),
-    Triple(
-        listOf(
-            "앞선 대화 내용을 기억했다가 \"아까 말씀하신 영화\"처럼 이전 주제를 자연스럽게 다시 끌어와서 질문을 이어갔어요. 대화가 끊기지 않고 흘러가게 만드는 아주 좋은 습관이에요",
-            "상대의 대답에서 새로운 키워드를 찾아 다음 질문으로 연결했어요",
-            "네",
-        ),
-        listOf(
-            "질문이 연달아 이어지면 상대가 취조받는 느낌을 받을 수 있어요. 질문 두세 개마다 내 이야기를 한 번씩 섞어서 대화의 주고받는 리듬을 만들어보세요. 예를 들어 상대의 취미를 물어본 다음에는 내 취미도 짧게 소개하는 식이에요",
-            "닫힌 질문(네/아니오)보다 열린 질문을 써보세요",
-        ),
-        "아까 여행 좋아하신다고 하셨잖아요, 최근에 다녀온 곳 중에 제일 기억에 남는 데는 어디였어요?",
-    ),
-)
 
 // 미션 완료 체크리스트 stub — 목업 4개 그대로. 서버 연동 시 통째 삭제.
 private val stubCompleteChecklist = listOf(

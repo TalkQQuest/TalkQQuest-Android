@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 리포트 레벨 비교(저번 주 → 이번 주) 사이 화살표 (이중화살표.svg 42x36 통째 전사).
+     이중 셰브런 2쌍 — 각 쌍마다 보라 그라데이션(불투명도 0.2 → 0.8)이 따로 걸림. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:aapt="http://schemas.android.com/aapt"
+    android:width="42dp"
+    android:height="36dp"
+    android:viewportWidth="42"
+    android:viewportHeight="36">
+    <path
+        android:pathData="M13.4,11.8L19,17.4L13.4,23M5,11.8L10.6,17.4L5,23"
+        android:strokeWidth="2"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round">
+        <aapt:attr name="android:strokeColor">
+            <gradient
+                android:type="linear"
+                android:startX="5"
+                android:startY="17.4"
+                android:endX="19"
+                android:endY="17.4">
+                <item android:offset="0" android:color="#336353F0" />
+                <item android:offset="1" android:color="#CC6353F0" />
+            </gradient>
+        </aapt:attr>
+    </path>
+    <path
+        android:pathData="M31.4,11.8L37,17.4L31.4,23M23,11.8L28.6,17.4L23,23"
+        android:strokeWidth="2"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round">
+        <aapt:attr name="android:strokeColor">
+            <gradient
+                android:type="linear"
+                android:startX="23"
+                android:startY="17.4"
+                android:endX="37"
+                android:endY="17.4">
+                <item android:offset="0" android:color="#336353F0" />
+                <item android:offset="1" android:color="#CC6353F0" />
+            </gradient>
+        </aapt:attr>
+    </path>
+</vector>

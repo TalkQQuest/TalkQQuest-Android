@@ -266,3 +266,4 @@ private fun ArchiveHomeScreenPreview() {
             onActivityClick = {}
         )
     }
+}

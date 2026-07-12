@@ -120,3 +120,4 @@ internal fun RecentActivityCard(
             )
         }
     }
+}

@@ -80,11 +80,13 @@ class ArchiveHomeViewModel @Inject constructor(
                         )
                     }
                 }
+
                 is ApiResult.Error -> {
                     _uiState.update {
                         it.copy(isLoading = false, errorMessage = "데이터를 불러오는데 실패했습니다.")
                     }
                 }
+
                 is ApiResult.Exception -> {
                     _uiState.update {
                         it.copy(isLoading = false, errorMessage = "네트워크 오류가 발생했습니다.")
@@ -104,3 +106,4 @@ class ArchiveHomeViewModel @Inject constructor(
             else -> ActivityType.MISSION // 알 수 없는 값일 경우 기본값 폴백
         }
     }
+}

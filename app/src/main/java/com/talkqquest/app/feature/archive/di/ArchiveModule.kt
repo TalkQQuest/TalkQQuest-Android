@@ -17,3 +17,4 @@ object ArchiveModule {
     @Singleton
     fun provideArchiveApi(retrofit: Retrofit): ArchiveApi =
         retrofit.create(ArchiveApi::class.java)
+}

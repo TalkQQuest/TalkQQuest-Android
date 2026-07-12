@@ -63,6 +63,7 @@ import com.talkqquest.app.R
 import com.talkqquest.app.core.designsystem.Error
 import com.talkqquest.app.core.designsystem.FitDesign
 import com.talkqquest.app.core.designsystem.Gray1000
+import com.talkqquest.app.core.designsystem.Gray200
 import com.talkqquest.app.core.designsystem.Gray300
 import com.talkqquest.app.core.designsystem.Gray400
 import com.talkqquest.app.core.designsystem.Gray50
@@ -160,7 +161,7 @@ private fun HomeCard(
     Column(
         modifier = modifier
             .softShadow(
-                color = Gray1000.copy(alpha = 0.04f), // CSS rgba(15,23,42,0.04)
+                color = Gray1000.copy(alpha = 0.01f), // CSS rgba(15,23,42,0.01)
                 offsetY = 8.dp,
                 blur = 24.dp,
                 cornerRadius = cornerRadius,
@@ -487,8 +488,8 @@ private fun InfoDivider() {
     Box(
         modifier = Modifier
             .width(1.dp)
-            .height(26.dp)
-            .background(Gray300),
+            .height(30.dp) // 길이 26 → 30 (디자인 변경 2026-07)
+            .background(Gray200), // Gray300 → Gray200 (디자인 변경 2026-07)
     )
 }
 
@@ -500,7 +501,7 @@ private fun OtherMissionsCard(onClick: () -> Unit) {
             .fillMaxWidth()
             .height(50.dp)
             .softShadow(
-                color = Gray1000.copy(alpha = 0.04f),
+                color = Gray1000.copy(alpha = 0.01f),
                 offsetY = 8.dp,
                 blur = 24.dp,
                 cornerRadius = 12.dp,

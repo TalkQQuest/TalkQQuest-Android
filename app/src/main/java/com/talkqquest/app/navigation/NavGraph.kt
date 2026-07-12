@@ -1,11 +1,13 @@
 package com.talkqquest.app.navigation
 
+import android.widget.Toast
 import androidx.compose.animation.AnimatedContentTransitionScope
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.IntOffset
 import androidx.navigation.NavBackStackEntry
 import androidx.navigation.NavHostController
@@ -23,6 +25,8 @@ import com.talkqquest.app.feature.mission.ui.MissionDetailScreen
 import com.talkqquest.app.feature.mission.ui.MissionListScreen
 import com.talkqquest.app.feature.mission.ui.SavedMissionsScreen
 import com.talkqquest.app.feature.report.ui.ReportScreen
+import com.talkqquest.app.feature.archive.ui.ArchiveHomeScreen
+import com.talkqquest.app.navigation.Screen
 
 // 네비게이션 그래프.
 // TODO(각 담당): composable(Screen.XXX) { XxxScreen(navController) } 로 자기 화면 등록. route는 Screen.kt 참고.
@@ -68,7 +72,24 @@ fun NavGraph(
                 onOtherMissionsClick = { navController.navigate(Screen.MISSION_LIST) },
             )
         }
-        composable(Screen.ARCHIVE_HOME) { PlaceholderScreen("아카이브") }
+        composable(Screen.ARCHIVE_HOME) {
+            val context = LocalContext.current
+
+            ArchiveHomeScreen(
+                onNavigateToSearch = {
+                    Toast.makeText(context, "아카이브 검색: 준비 중인 기능입니다.", Toast.LENGTH_SHORT).show()
+                    // navController.navigate(Screen.ARCHIVE_SEARCH)
+                },
+                onNavigateToList = { tabIndex ->
+                    Toast.makeText(context, "아카이브 목록: 준비 중인 기능입니다.", Toast.LENGTH_SHORT).show()
+                    // navController.navigate(Screen.ARCHIVE_LIST)
+                },
+                onNavigateToDetail = { activityId ->
+                    Toast.makeText(context, "최근 활동 상세: 준비 중인 기능입니다.", Toast.LENGTH_SHORT).show()
+                    // navController.navigate("상세 경로 추가 필요")
+                }
+            )
+        }
         // B담당: 미션 목록 (홈 → 다른 미션 보기). 카드 클릭 → 미션 상세({missionId}는 실제 값으로 치환).
         composable(Screen.MISSION_LIST) {
             MissionListScreen(

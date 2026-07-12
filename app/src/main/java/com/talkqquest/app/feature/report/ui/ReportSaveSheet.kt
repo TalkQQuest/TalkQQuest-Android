@@ -10,6 +10,7 @@ import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -225,12 +226,16 @@ private fun SavedReportCard(
                 Text(text = report.savedDate, style = TqType.Caption.figma(), color = Gray500)
             }
         }
-        // 북마크 (CSS 기본 북마크 44x44 / favourite 24) — 아이콘은 미션 카드와 같은 리소스
+        // 북마크 (CSS 기본 북마크 44x44 / favourite 24) — 아이콘은 미션 카드와 같은 리소스.
+        // 리플(물결) 끔 — 아이콘 색 변화만으로 반응 표시 (미션 카드와 같은 규칙, 사용자 결정)
         Box(
             modifier = Modifier
                 .size(44.dp)
-                .clip(CircleShape) // 눌림 효과 원형 (아이콘 버튼 관례)
-                .clickable(onClick = { onToggleSave(report.id) }),
+                .clickable(
+                    interactionSource = remember { MutableInteractionSource() },
+                    indication = null,
+                    onClick = { onToggleSave(report.id) },
+                ),
             contentAlignment = Alignment.Center,
         ) {
             Image(

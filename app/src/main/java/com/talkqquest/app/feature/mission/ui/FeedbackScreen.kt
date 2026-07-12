@@ -282,7 +282,7 @@ private fun ScoreCard(
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .softShadow(color = Gray1000.copy(alpha = 0.04f), offsetY = 8.dp, blur = 24.dp, cornerRadius = 20.dp)
+            .softShadow(color = Gray1000.copy(alpha = 0.01f), offsetY = 8.dp, blur = 24.dp, cornerRadius = 20.dp)
             .clip(RoundedCornerShape(20.dp))
             .background(White),
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -390,28 +390,29 @@ private fun ScoreRow(
     }
 }
 
-// 타이틀 문구: E101 응답에 문구 필드가 없어 클라에서 평균 점수 구간별로 결정(자작 — 기획 확인거리).
-// 목업 점수 평균(85.75)이 최상 구간 → 목업 문구 "정말 잘했어요!" 그대로.
+// 타이틀 문구: E101 응답에 문구 필드가 없어, 4개 항목 점수의 평균 구간별로 클라에서 결정.
+// 구간·문구는 기획 합의(2026-07, AI 추천안 그대로). 성격 라벨(최상/우수/…)은 내부 구분용이라 화면엔 문구만 노출.
 private fun feedbackTitle(average: Int): String = when {
-    average >= 80 -> "정말 잘했어요!"
-    average >= 60 -> "잘했어요!"
-    else -> "차근차근 늘고 있어요!"
+    average >= 90 -> "대화가 물 흐르듯 자연스러워요!" // 최상 (90~100)
+    average >= 80 -> "정말 잘했어요!"                // 우수 (80~89)
+    average >= 70 -> "점점 대화가 편해지고 있어요!"   // 양호 (70~79)
+    average >= 60 -> "좋은 흐름을 잡아가고 있어요!"   // 성장 (60~69)
+    else -> "한 걸음씩 나아가고 있어요!"             // 격려 (~59)
 }
 
-// 프리뷰: 연출 끝 상태(카드+바 채워짐). 393=디자인 기준폭, 360=흔한 폰.
-@Preview(name = "AI 피드백 393dp", widthDp = 393, heightDp = 852, showBackground = true)
-@Preview(name = "AI 피드백 360dp", widthDp = 360, heightDp = 800, showBackground = true)
+// 프리뷰: 연출 끝 상태(카드+바 채워짐)에서 점수대별 타이틀 문구를 한눈에 확인.
+// 각 프리뷰의 4개 점수 평균이 해당 구간에 들도록 값을 잡음(평균은 주석 참고). 폭은 디자인 기준 393dp.
 @Composable
-private fun FeedbackScreenPreview() {
+private fun FeedbackBandPreview(k: Int, i: Int, e: Int, q: Int) {
     TalkQQuestTheme {
         Box(Modifier.background(Gray50)) {
             FeedbackContent(
                 result = FeedbackResult(
                     nickname = "다민",
-                    kindnessScore = 92,
-                    initiativeScore = 88,
-                    empathyScore = 85,
-                    questionLinkScore = 78,
+                    kindnessScore = k,
+                    initiativeScore = i,
+                    empathyScore = e,
+                    questionLinkScore = q,
                     strengths = emptyList(), // 요약 화면은 점수만 사용
                     improvements = emptyList(),
                     savedPhrase = "",
@@ -425,3 +426,23 @@ private fun FeedbackScreenPreview() {
         }
     }
 }
+
+@Preview(name = "1) 최상 90+ · 물 흐르듯", widthDp = 393, heightDp = 852, showBackground = true)
+@Composable
+private fun FeedbackPreviewTop() = FeedbackBandPreview(96, 94, 92, 90)      // 평균 93
+
+@Preview(name = "2) 우수 80~89 · 정말 잘했어요", widthDp = 393, heightDp = 852, showBackground = true)
+@Composable
+private fun FeedbackPreviewGreat() = FeedbackBandPreview(88, 86, 84, 82)    // 평균 85
+
+@Preview(name = "3) 양호 70~79 · 편해지고", widthDp = 393, heightDp = 852, showBackground = true)
+@Composable
+private fun FeedbackPreviewGood() = FeedbackBandPreview(78, 76, 74, 72)     // 평균 75
+
+@Preview(name = "4) 성장 60~69 · 좋은 흐름", widthDp = 393, heightDp = 852, showBackground = true)
+@Composable
+private fun FeedbackPreviewGrowing() = FeedbackBandPreview(68, 66, 64, 62)  // 평균 65
+
+@Preview(name = "5) 격려 59↓ · 한 걸음씩", widthDp = 393, heightDp = 852, showBackground = true)
+@Composable
+private fun FeedbackPreviewCheer() = FeedbackBandPreview(56, 52, 50, 46)    // 평균 51

@@ -104,4 +104,3 @@ class ArchiveHomeViewModel @Inject constructor(
             else -> ActivityType.MISSION // 알 수 없는 값일 경우 기본값 폴백
         }
     }
-}

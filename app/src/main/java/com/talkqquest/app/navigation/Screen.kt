@@ -50,5 +50,7 @@ object Screen {
     const val COMMUNITY_ADDRESS_SEARCH = "community_address_search" // CommunityAddressSearchScreen
     const val COMMUNITY_PREVIEW = "community_preview"            // CommunityPreviewScreen
     const val MY_GROUPS = "my_groups"                            // MyGroupsScreen
-    const val REPORT = "report"                                  // ReportScreen (성장 리포트/주간 비교 탭 통합)
+    // ReportScreen (성장 리포트/주간 비교 탭 통합).
+    // missionTitle = 이 리포트가 나온 미션 제목 (저장 시트 카드 제목에 쓰임). 없으면 빈 값.
+    const val REPORT = "report?missionTitle={missionTitle}"
 }

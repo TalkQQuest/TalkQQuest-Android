@@ -446,6 +446,7 @@ private fun OtherMissionsButton(nickname: String, onClick: () -> Unit) {
 
 // ── Preview ──
 private val previewResult = FeedbackResult(
+    missionTitle = "처음 보는 사람에게 짧게 인사하기",
     nickname = "다민",
     kindnessScore = 92,
     initiativeScore = 88,

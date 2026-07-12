@@ -1,5 +1,6 @@
 package com.talkqquest.app.feature.report.viewmodel
 
+import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.talkqquest.app.core.network.ApiResult
@@ -24,9 +25,8 @@ data class ReportUiState(
     val weekly: WeeklyCompareReport? = null,   // 주간 비교 리포트 탭
     val errorMessage: String? = null,
     // 이 리포트가 나온 미션의 제목 — 저장 카드의 제목으로 들어감(CSS 목업이 미션명).
-    // 리포트는 미션 대화의 AI 피드백에서 진입하므로 그 미션을 가리킨다.
-    // TODO(서버 연동): 피드백/미션에서 넘어온 미션명으로 교체 (route 인자 또는 리포트 응답 필드).
-    val missionTitle: String = "처음 보는 사람에게 짧게 인사하기",
+    // 리포트는 미션 대화의 AI 피드백에서 진입하므로, 피드백 화면이 route 인자로 넘겨준다.
+    val missionTitle: String = "",
     // 리포트 저장 시트: "리포트 저장하기"를 누르면 saveSheetReport가 생기며 시트가 올라옴
     val saveSheetReport: SavedReportItem? = null,
     // 보관함(저장된 리포트) — TODO(서버 연동): 리포트 아카이브 API(E102)로 교체. 지금은 CSS 샘플 목업
@@ -41,9 +41,13 @@ data class ReportUiState(
 @HiltViewModel
 class ReportViewModel @Inject constructor(
     private val reportRepository: ReportRepository,
+    savedStateHandle: SavedStateHandle,
 ) : ViewModel() {
 
-    private val _uiState = MutableStateFlow(ReportUiState())
+    // 피드백 요약 "상세 리포트"에서 넘겨준 미션 제목 (route 인자). 직접 진입 시엔 빈 값.
+    private val missionTitle: String = savedStateHandle["missionTitle"] ?: ""
+
+    private val _uiState = MutableStateFlow(ReportUiState(missionTitle = missionTitle))
     val uiState: StateFlow<ReportUiState> = _uiState.asStateFlow()
 
     // 목업 저장 id: 초기 샘플(1,2)과 안 겹치게 100부터 (서버 오면 서버 id 사용)
@@ -64,7 +68,8 @@ class ReportViewModel @Inject constructor(
             state.copy(
                 saveSheetReport = SavedReportItem(
                     id = nextSaveId++,
-                    title = state.missionTitle,
+                    // 미션명이 없는 경로(아카이브 등 직접 진입)로 들어온 경우만 화면 이름으로 대체
+                    title = state.missionTitle.ifBlank { "성장 리포트" },
                     savedDate = LocalDate.now().format(DateTimeFormatter.ofPattern("yyyy.MM.dd")),
                 ),
                 savedReports = (kept?.let { listOf(it) } ?: emptyList()) + state.savedReports,

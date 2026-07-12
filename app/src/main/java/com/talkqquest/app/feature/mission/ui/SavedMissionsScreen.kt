@@ -34,6 +34,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -52,10 +53,15 @@ import com.talkqquest.app.core.designsystem.FitDesign
 import com.talkqquest.app.feature.mission.viewmodel.SavedMissionsUiState
 import com.talkqquest.app.feature.mission.viewmodel.SavedMissionsViewModel
 
-// ── 저장 목록 (피그마 "북마크→저장목록" 개정판 전사 — 헤더 제목 화면 정중앙) ──
+// ── 저장 목록 (UI v4 "북마크-> 저장목록(변경))" 전사 — 헤더 제목 화면 정중앙) ──
 // 저장 시트의 "저장 목록 >"에서 들어옴. 작은 화면은 FitDesign 통째 축소(사용자 결정) + 스크롤.
 // 카드 좌우는 CSS가 15인데 미션 목록(16)과 1px 비일관이라 16으로 통일(디자이너 확인거리).
-// 하단 네비 없음(CSS에 알약 없음) — bottomBarRoutes 미등록.
+//
+// UI v4 변경 2가지:
+//  - 카드에 과녁 아이콘 추가 (MissionCard showTarget)
+//  - 하단 네비 추가 + 활성 탭 = 아카이브 (CSS에서 archive 아이콘만 Purple600, 나머지 Gray300).
+//    → MainScreen bottomBarRoutes / TqBottomBar tabRouteOf 에 등록됨.
+//    ※ v4에서 이 프레임은 아카이브의 "보관함(미션)" 화면과 완전히 동일(위치만 다름) — 통합 여부 팀 확인거리.
 
 private val StatusFilters = listOf("완료", "진행중", "미완료") // 디자인 고정 3종, 기본 = 완료
 
@@ -143,9 +149,10 @@ private fun SavedMissionsContent(
                     tint = Gray800,
                 )
             }
+            // 제목 "내가 저장한 미션" → "보관함" (디자인 변경 2026-07, CSS 폭 42 = 3글자 / Body/L Medium)
             Text(
-                text = "내가 저장한 미션",
-                style = TqType.BodyL.figma(),
+                text = "보관함",
+                style = TqType.BodyL.figma().copy(fontWeight = FontWeight.Medium),
                 color = Gray800,
                 modifier = Modifier.align(Alignment.Center),
             )
@@ -182,7 +189,9 @@ private fun SavedMissionsContent(
                 modifier = Modifier
                     .fillMaxSize()
                     .navigationBarsPadding(),
-                contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = 4.dp), // 4 + 항목 안 12 = 16
+                // 아래 4 + 항목 안 Spacer 12 = 16. 여기에 하단 네비 묶음(알약 64 + 위아래 12) 88을
+                // 더해, 카드가 떠 있는 네비 밑으로 숨지 않게 함 (UI v4에서 이 화면에 네비 생김).
+                contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = 92.dp),
             ) {
                 items(count = uiState.filteredMissions.size, key = { uiState.filteredMissions[it].id }) { index ->
                     val mission = uiState.filteredMissions[index]
@@ -200,6 +209,7 @@ private fun SavedMissionsContent(
                                 mission = mission,
                                 onClick = { onMissionClick(mission.id) },
                                 onToggleSave = { onToggleSave(mission.id) },
+                                showTarget = true, // 저장 목록 카드엔 과녁 (UI v4)
                             )
                             Spacer(Modifier.height(12.dp))
                         }

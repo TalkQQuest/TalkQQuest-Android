@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -53,26 +54,50 @@ internal val EasyBg = Color(0xFFE3F4E0)     // 쉬움 알약 배경
 internal val NormalBg = Color(0xFFFEF3E6)   // 보통 알약 배경
 internal val HardBg = Color(0xFFFDE5E5)     // 어려움 알약 배경
 
-// 미션 카드: 흰 배경, radius 20, 그림자 0 8 24 rgba(15,23,42,0.04), padding 14/20.
+// 미션 카드: 흰 배경, radius 20, 그림자 0 8 24 rgba(15,23,42,0.01), padding 14/20.
 // 높이 85 = 제목 1줄일 때. 제목이 길면 줄바꿈되고 카드가 늘어남(말줄임 없음 — 팀 결정).
 // 카드 전체 = 미션 상세로 가는 버튼. 북마크만 예외(자기 클릭 소비).
+//
+// showTarget: 카드 왼쪽 과녁 아이콘 (UI v4 신규). 붙는 곳이 정해져 있음 —
+//   O: 저장 목록 화면, 저장 시트의 "저장 목록" 섹션 카드
+//   X: 미션 목록 본 화면, 저장 시트의 "저장됨"(방금 저장한) 카드
+// 과녁이 있으면 카드 좌우 padding도 CSS가 다름(16/6 ↔ 20/9).
 @Composable
 internal fun MissionCard(
     mission: MissionListItem,
     onClick: () -> Unit,
     onToggleSave: () -> Unit,
     modifier: Modifier = Modifier,
+    showTarget: Boolean = false,
 ) {
     Row(
         modifier = modifier
             .fillMaxWidth()
-            .softShadow(color = Gray1000.copy(alpha = 0.04f), offsetY = 8.dp, blur = 24.dp, cornerRadius = 20.dp)
+            .softShadow(color = Gray1000.copy(alpha = 0.01f), offsetY = 8.dp, blur = 24.dp, cornerRadius = 20.dp)
             .clip(RoundedCornerShape(20.dp))
             .clickable(onClick = onClick)
             .background(White)
-            .padding(start = 20.dp, end = 9.dp, top = 14.dp, bottom = 14.dp),
+            // 과녁 카드 padding 0 6 0 16 / 기본 카드 padding 20·9 (CSS). 위아래 14 = (85-57)/2.
+            .padding(
+                start = if (showTarget) 16.dp else 20.dp,
+                end = if (showTarget) 6.dp else 9.dp,
+                top = 14.dp,
+                bottom = 14.dp,
+            ),
         verticalAlignment = Alignment.CenterVertically,
     ) {
+        if (showTarget) {
+            // 과녁: 48 컨테이너 안에 40 이미지 중앙 (CSS Frame 427321186 48x48 / 이미지 40x40 left4 top4)
+            Box(modifier = Modifier.size(48.dp), contentAlignment = Alignment.Center) {
+                Image(
+                    // small 별도 파일 — img_mission_target은 미션 상세의 다트판 일러스트(다른 이미지)
+                    painter = painterResource(R.drawable.img_mission_target_small),
+                    contentDescription = null, // 장식 — 카드 제목이 이미 미션을 설명함
+                    modifier = Modifier.size(40.dp),
+                )
+            }
+            Spacer(Modifier.width(8.dp)) // 과녁 ↔ 텍스트 (CSS Frame 427321225 gap 8)
+        }
         Column(
             modifier = Modifier.weight(1f),
             verticalArrangement = Arrangement.spacedBy(7.dp), // 제목 ↔ 메타줄 (CSS Frame 350 gap)

@@ -17,12 +17,18 @@ enum class ActivityType {
     MISSION, CONVERSATION, SENTENCE, REPORT
 }
 
+// 💡 미션용 부가 데이터 필드 추가
 data class RecentActivity(
     val id: String,
     val type: ActivityType,
     val title: String,
     val status: String,
-    val date: String
+    val date: String,
+    // 💡 미션 카드용 추가 필드 (기본값 null로 설정하여 기존 로직과 호환 유지)
+    val difficulty: String? = null,
+    val category: String? = null,
+    val estimatedMinutes: Int? = null,
+    val rewardXp: Int? = null
 )
 
 // 2. UI 상태 클래스 정의
@@ -65,7 +71,12 @@ class ArchiveHomeViewModel @Inject constructor(
                             type = mapToActivityType(dto.type),
                             title = dto.title,
                             status = dto.status,
-                            date = dto.date
+                            date = dto.date,
+                            // TODO: 서버에서 내려주는 미션 부가 데이터 매핑 필요
+                            difficulty = "쉬움",
+                            category = "짧은 대화",
+                            estimatedMinutes = 2,
+                            rewardXp = 20
                         )
                     }
 
@@ -104,3 +115,4 @@ class ArchiveHomeViewModel @Inject constructor(
             else -> ActivityType.MISSION // 알 수 없는 값일 경우 기본값 폴백
         }
     }
+}

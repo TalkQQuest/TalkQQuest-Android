@@ -1,0 +1,14 @@
+<!-- 바로가기 셰브런 (피그마 바로가기.svg 8x14 전사).
+     원본 stroke는 #475569(Gray600)이나, 미션 목록 아이콘과 색 통일 지시로 Gray500(#64748B) 사용. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="8dp"
+    android:height="14dp"
+    android:viewportWidth="8"
+    android:viewportHeight="14">
+    <path
+        android:pathData="M1,13L7,7L1,1"
+        android:strokeWidth="2"
+        android:strokeColor="#64748B"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round" />
+</vector>

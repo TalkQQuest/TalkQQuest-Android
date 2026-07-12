@@ -173,9 +173,17 @@ fun NavGraph(
                 onHome = { navController.popBackStack(Screen.HOME, inclusive = false) },
             )
         }
-        // 리포트 (성장/주간 비교 탭 통합). 피드백 요약 "상세 리포트" 및 아카이브(A담당, 추후)에서 진입.
+        // B담당: 리포트 (성장/주간 비교 탭 통합). 피드백 요약 "상세 리포트"에서 진입.
         composable(Screen.REPORT) {
-            ReportScreen(onBack = { navController.popBackStack() })
+            ReportScreen(
+                onBack = { navController.popBackStack() },
+                onSheetTopChange = onOverlaySheetTop, // 리포트 저장 시트가 하단 네비를 덮는 동안 네비 가림
+                // ↓ C담당(아카이브)이 채울 자리 — 아카이브 화면이 생기면 navigate만 넣으면 됨.
+                //   "보관함 >" → 보관함 리포트 탭 (예: navController.navigate(Screen.ARCHIVE_LIST))
+                onArchiveClick = { /* TODO(C): 아카이브 보관함(리포트 탭)으로 */ },
+                //   저장된 리포트 카드 클릭 → 보관함 리포트 상세
+                onReportClick = { reportId -> /* TODO(C): 보관함 리포트 상세로 (reportId) */ },
+            )
         }
         // B담당: AI 피드백 상세. "다른 미션 보러가기" → 정산 흐름(완료·피드백)을 정리하고 미션 목록으로.
         composable(
@@ -190,6 +198,11 @@ fun NavGraph(
                 onOtherMissions = {
                     navController.navigate(Screen.MISSION_LIST) { popUpTo(Screen.HOME) }
                 },
+                // ↓ C담당(아카이브)이 채울 자리 — 문장 저장 시트에서 아카이브로 나가는 두 경로.
+                //   "보관함 >" → 보관함 문장 탭 (예: navController.navigate(Screen.ARCHIVE_LIST))
+                onArchiveClick = { /* TODO(C): 아카이브 보관함(문장 탭)으로 */ },
+                //   저장된 문장 카드 클릭 → 보관함 문장 상세 (Screen.ARCHIVE_SAVED_PHRASE)
+                onPhraseClick = { phraseId -> /* TODO(C): 보관함 문장 상세로 (phraseId) */ },
             )
         }
         composable(Screen.COMMUNITY_LIST) { PlaceholderScreen("모임") }

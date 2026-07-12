@@ -111,12 +111,22 @@ import androidx.compose.ui.text.font.FontWeight
 fun ReportScreen(
     onBack: () -> Unit = {},
     viewModel: ReportViewModel = hiltViewModel(),
+    onSheetTopChange: (Float?) -> Unit = {}, // 저장 시트가 하단 네비를 덮는 동안 네비 가림
+    // ── C담당(아카이브) 연결 지점 — 저장 시트 안에서 아카이브로 나가는 두 경로 ──
+    onArchiveClick: () -> Unit = {}, // 시트 "보관함 >" → 아카이브 보관함(리포트 탭)
+    onReportClick: (Long) -> Unit = {}, // 시트의 저장된 리포트 카드 → 보관함 리포트 상세
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     ReportScreen(
         uiState = uiState,
         onBack = onBack,
         onRetry = viewModel::loadReports,
+        onSaveReport = viewModel::saveReport,
+        onToggleReportSave = viewModel::toggleReportSave,
+        onDismissSaveSheet = viewModel::dismissSaveSheet,
+        onSheetTopChange = onSheetTopChange,
+        onArchiveClick = onArchiveClick,
+        onReportClick = onReportClick,
     )
 }
 
@@ -125,6 +135,12 @@ private fun ReportScreen(
     uiState: ReportUiState,
     onBack: () -> Unit = {},
     onRetry: () -> Unit = {},
+    onSaveReport: () -> Unit = {},
+    onToggleReportSave: (Long) -> Unit = {},
+    onDismissSaveSheet: () -> Unit = {},
+    onSheetTopChange: (Float?) -> Unit = {},
+    onArchiveClick: () -> Unit = {},
+    onReportClick: (Long) -> Unit = {},
 ) = FitDesign { // 작은 화면에선 디자인(393x852) 통째 축소 — 다른 화면들과 동일
     Box(
         modifier = Modifier
@@ -143,11 +159,25 @@ private fun ReportScreen(
                 }
             }
 
-            uiState.growth != null && uiState.weekly != null -> ReportContent(
-                growth = uiState.growth,
-                weekly = uiState.weekly,
-                onBack = onBack,
-            )
+            uiState.growth != null && uiState.weekly != null ->
+                // "리포트 저장하기"를 누르면 화면 위로 "저장됨" 시트가 올라옴 (CSS "리포트 저장").
+                // 표준 시트라 배경 안 어두워지고 뒤 화면도 계속 스크롤 가능 — 미션 저장 시트와 동일.
+                ReportSaveSheetScaffold(
+                    savedReport = uiState.saveSheetReport,
+                    recentSavedReports = uiState.savedReports,
+                    onDismiss = onDismissSaveSheet,
+                    onToggleSave = onToggleReportSave,
+                    onSheetTopChange = onSheetTopChange,
+                    onArchiveClick = onArchiveClick,
+                    onReportClick = onReportClick,
+                ) {
+                    ReportContent(
+                        growth = uiState.growth,
+                        weekly = uiState.weekly,
+                        onBack = onBack,
+                        onSaveClick = onSaveReport,
+                    )
+                }
         }
     }
 }
@@ -157,6 +187,7 @@ private fun ReportContent(
     growth: GrowthReport,
     weekly: WeeklyCompareReport,
     onBack: () -> Unit,
+    onSaveClick: () -> Unit = {}, // 리포트 저장 → 시트 등장 (카드 제목은 이 리포트가 나온 미션명)
     initialTab: Int = 0, // 기본 = 성장 리포트 (CSS 프레임·탭바 순서)
 ) {
     var tab by rememberSaveable { mutableIntStateOf(initialTab) }
@@ -201,10 +232,11 @@ private fun ReportContent(
             }
             // 리포트 저장하기 (CSS Frame 272: 두 탭 공통, top 660 절대 위치 = 탭바 끝 102부터 558.
             //  화면 밑 고정이 아니라 콘텐츠 기준 고정 — 콘텐츠와의 간격(성장 36/주간 14)이 CSS 그대로)
-            // TODO(서버 연동): POST /api/v1/reports/{reportId}/archive (리포트 아카이브 저장, E102) 연결.
+            // 누르면 저장 시트가 올라옴 (CSS "리포트 저장" 프레임 — 라벨은 CSS "다음" 대신
+            // "리포트 저장하기" 유지, 사용자 결정). TODO(서버 연동): 저장 API(E102) 호출로 교체.
             TqButton(
                 text = "리포트 저장하기",
-                onClick = { /* 서버 연동 시 저장 API 호출 */ },
+                onClick = onSaveClick,
                 modifier = Modifier
                     .align(Alignment.TopCenter)
                     .padding(top = 558.dp)
@@ -343,7 +375,7 @@ private fun GrowthTrendCard(
     Column(
         modifier = modifier
             .fillMaxWidth()
-            .softShadow(color = Gray1000.copy(alpha = 0.04f), offsetY = 8.dp, blur = 24.dp, cornerRadius = 20.dp)
+            .softShadow(color = Gray1000.copy(alpha = 0.01f), offsetY = 8.dp, blur = 24.dp, cornerRadius = 20.dp)
             .clip(RoundedCornerShape(20.dp))
             .background(White)
             .padding(horizontal = 16.dp, vertical = 12.dp),
@@ -515,7 +547,7 @@ private fun CompletedMissionCard(
     Row(
         modifier = modifier
             .fillMaxWidth()
-            .softShadow(color = Gray1000.copy(alpha = 0.04f), offsetY = 8.dp, blur = 24.dp, cornerRadius = 20.dp)
+            .softShadow(color = Gray1000.copy(alpha = 0.01f), offsetY = 8.dp, blur = 24.dp, cornerRadius = 20.dp)
             .clip(RoundedCornerShape(20.dp))
             .background(White)
             .padding(horizontal = 16.dp, vertical = 12.dp),
@@ -579,11 +611,11 @@ private fun WeeklyCompareTab(weekly: WeeklyCompareReport) {
     Column(modifier = Modifier.fillMaxWidth()) {
         Spacer(Modifier.height(18.dp)) // 탭바 끝(102) → 배너(120) (CSS)
 
-        // 헤더 배너: 화면 전체 폭 Purple/50 (CSS 393x86, r8)
+        // 헤더 배너: 화면 전체 폭 Purple/50 (CSS 393x90, r8 — 높이 86 → 90 디자인 변경 2026-07)
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(86.dp)
+                .height(90.dp)
                 .clip(RoundedCornerShape(8.dp))
                 .background(Primary50)
                 .padding(horizontal = 20.dp),
@@ -632,7 +664,7 @@ private fun WeeklyCompareTab(weekly: WeeklyCompareReport) {
             }
         }
 
-        Spacer(Modifier.height(18.dp)) // 배너 끝(206) → 콘텐츠(224) (CSS)
+        Spacer(Modifier.height(16.dp)) // 배너 끝 → 콘텐츠 간격 18 → 16 (디자인 변경 2026-07)
         Column(modifier = Modifier.padding(horizontal = 16.dp)) {
             Text(text = "핵심 지표 변화", style = TqType.LabelL.figma(), color = Gray800)
             Spacer(Modifier.height(16.dp)) // 제목 → 카드 gap 16 (CSS)
@@ -684,7 +716,7 @@ private fun MetricCard(
     Box(
         modifier = modifier
             .height(76.dp)
-            .softShadow(color = Gray1000.copy(alpha = 0.04f), offsetY = 8.dp, blur = 24.dp, cornerRadius = 12.dp)
+            .softShadow(color = Gray1000.copy(alpha = 0.01f), offsetY = 8.dp, blur = 24.dp, cornerRadius = 12.dp)
             .clip(RoundedCornerShape(12.dp)) // 아이콘 넘침을 카드 모양대로 잘라냄 (피그마와 동일)
             .background(White),
     ) {

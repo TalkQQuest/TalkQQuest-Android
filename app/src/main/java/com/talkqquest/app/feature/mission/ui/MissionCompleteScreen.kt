@@ -286,7 +286,7 @@ private fun DurationCard(durationText: String) {
         modifier = Modifier
             .fillMaxWidth()
             .height(72.dp)
-            .softShadow(color = Gray1000.copy(alpha = 0.04f), offsetY = 8.dp, blur = 24.dp, cornerRadius = 20.dp)
+            .softShadow(color = Gray1000.copy(alpha = 0.01f), offsetY = 8.dp, blur = 24.dp, cornerRadius = 20.dp)
             .clip(RoundedCornerShape(20.dp))
             .background(White)
             .padding(horizontal = 16.dp),

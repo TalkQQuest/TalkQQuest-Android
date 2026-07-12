@@ -35,7 +35,7 @@ fun MainScreen() {
     // currentRoute == null = 첫 프레임(시작 화면 세팅 전) → 숨겼다 늦게 뜨지 않게 바로 표시.
     val bottomBarRoutes = BottomNavItem.entries.map { it.route } +
         Screen.MISSION_LIST + Screen.MISSION_DETAIL + Screen.CONVERSATION_PREP + Screen.CONVERSATION +
-        Screen.REPORT
+        Screen.REPORT + Screen.SAVED_MISSIONS // 저장 목록: UI v4에서 하단 네비 생김(활성 탭=아카이브)
 
     val hazeState = remember { HazeState() }
 

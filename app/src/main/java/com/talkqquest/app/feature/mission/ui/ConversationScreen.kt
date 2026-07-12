@@ -701,7 +701,7 @@ private fun RecommendationCard(
             .fillMaxWidth()
             .padding(horizontal = 2.dp) // 카드(357)가 입력창(361)보다 좌우 2씩 좁음 (CSS)
             .padding(bottom = 17.dp) // 입력창 바닥(716)이 카드 바닥(699)보다 17 아래 (CSS)
-            .softShadow(color = Gray1000.copy(alpha = 0.04f), offsetY = 8.dp, blur = 24.dp, cornerRadius = 24.dp)
+            .softShadow(color = Gray1000.copy(alpha = 0.01f), offsetY = 8.dp, blur = 24.dp, cornerRadius = 24.dp)
             .clip(RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp))
             .background(Color.White)
             .padding(start = 16.dp, end = 16.dp, top = 12.dp, bottom = 39.dp),
@@ -751,7 +751,7 @@ private fun CollapsedRecommendationBar(onToggle: () -> Unit) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .softShadow(color = Gray1000.copy(alpha = 0.04f), offsetY = 8.dp, blur = 24.dp, cornerRadius = 8.dp)
+            .softShadow(color = Gray1000.copy(alpha = 0.01f), offsetY = 8.dp, blur = 24.dp, cornerRadius = 8.dp)
             .clip(RoundedCornerShape(8.dp))
             .background(Color.White)
             .clickable(onClick = onToggle)
@@ -838,7 +838,7 @@ private fun ExitDialog(onContinue: () -> Unit, onExit: () -> Unit) {
         Column(
             modifier = Modifier
                 .widthIn(max = 332.dp)
-                .softShadow(color = Gray1000.copy(alpha = 0.04f), offsetY = 8.dp, blur = 24.dp, cornerRadius = 24.dp)
+                .softShadow(color = Gray1000.copy(alpha = 0.01f), offsetY = 8.dp, blur = 24.dp, cornerRadius = 24.dp)
                 .clip(RoundedCornerShape(24.dp))
                 .background(Gray50)
                 .clickable(

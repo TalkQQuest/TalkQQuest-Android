@@ -1,5 +1,6 @@
 package com.talkqquest.app.navigation
 
+import android.net.Uri
 import android.widget.Toast
 import androidx.compose.animation.AnimatedContentTransitionScope
 import androidx.compose.animation.core.tween
@@ -169,12 +170,21 @@ fun NavGraph(
             FeedbackScreen(
                 onBack = { navController.popBackStack() },
                 onItemClick = { index -> navController.navigate("feedback_detail/$feedbackId?item=$index") },
-                onDetailReport = { navController.navigate(Screen.REPORT) },
+                // 리포트가 어느 미션 것인지 함께 넘김 — 저장 시트 카드 제목이 그 미션명이 됨.
+                // 한글이라 route에 실으려면 인코딩 필요.
+                onDetailReport = { missionTitle ->
+                    navController.navigate("report?missionTitle=${Uri.encode(missionTitle)}")
+                },
                 onHome = { navController.popBackStack(Screen.HOME, inclusive = false) },
             )
         }
         // B담당: 리포트 (성장/주간 비교 탭 통합). 피드백 요약 "상세 리포트"에서 진입.
-        composable(Screen.REPORT) {
+        composable(
+            route = Screen.REPORT,
+            arguments = listOf(
+                navArgument("missionTitle") { type = NavType.StringType; defaultValue = "" },
+            ),
+        ) {
             ReportScreen(
                 onBack = { navController.popBackStack() },
                 onSheetTopChange = onOverlaySheetTop, // 리포트 저장 시트가 하단 네비를 덮는 동안 네비 가림

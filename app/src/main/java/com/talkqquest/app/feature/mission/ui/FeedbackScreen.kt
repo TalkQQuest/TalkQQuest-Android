@@ -85,7 +85,7 @@ import kotlinx.coroutines.launch
 fun FeedbackScreen(
     onBack: () -> Unit = {},
     onItemClick: (Int) -> Unit = {},
-    onDetailReport: () -> Unit = {},
+    onDetailReport: (String) -> Unit = {}, // 미션 제목을 함께 넘김 — 리포트 저장 카드 제목에 쓰임
     onHome: () -> Unit = {},
     viewModel: FeedbackViewModel = hiltViewModel(),
 ) {
@@ -105,7 +105,7 @@ private fun FeedbackScreen(
     uiState: FeedbackUiState,
     onBack: () -> Unit = {},
     onItemClick: (Int) -> Unit = {},
-    onDetailReport: () -> Unit = {},
+    onDetailReport: (String) -> Unit = {},
     onHome: () -> Unit = {},
     onRetry: () -> Unit = {},
 ) = FitDesign { // 작은 화면에선 디자인(393x852) 통째 축소 — 다른 화면들과 동일
@@ -143,7 +143,7 @@ private fun FeedbackContent(
     result: FeedbackResult,
     onBack: () -> Unit,
     onItemClick: (Int) -> Unit,
-    onDetailReport: () -> Unit,
+    onDetailReport: (String) -> Unit,
     onHome: () -> Unit,
     initialStage: Int = 0, // 프리뷰용: 1이면 연출 끝 상태로 그림
 ) {
@@ -246,7 +246,7 @@ private fun FeedbackContent(
         ) {
             TqButton(
                 text = "상세 리포트",
-                onClick = { if (stage >= 1) onDetailReport() },
+                onClick = { if (stage >= 1) onDetailReport(result.missionTitle) },
                 modifier = Modifier.fillMaxWidth(),
             )
             Spacer(Modifier.height(8.dp)) // 버튼 사이 (CSS gap 8)
@@ -408,6 +408,7 @@ private fun FeedbackBandPreview(k: Int, i: Int, e: Int, q: Int) {
         Box(Modifier.background(Gray50)) {
             FeedbackContent(
                 result = FeedbackResult(
+                    missionTitle = "처음 보는 사람에게 짧게 인사하기",
                     nickname = "다민",
                     kindnessScore = k,
                     initiativeScore = i,

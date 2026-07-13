@@ -24,7 +24,7 @@ data class MissionListUiState(
     val missions: List<MissionListItem> = emptyList(),
     val selectedFilter: String = "전체",
     val errorMessage: String? = null,
-    val saveSheetMissionId: Long? = null, // 방금 북마크로 저장해 시트에 띄울 미션 (null = 시트 닫힘)
+    val saveSheetMissionId: String? = null, // 방금 북마크로 저장해 시트에 띄울 미션 (null = 시트 닫힘)
 ) {
     // 선택된 칩 기준으로 걸러낸 목록. 난이도 칩이면 난이도로, 아니면 카테고리로 비교.
     val filteredMissions: List<MissionListItem>
@@ -84,7 +84,7 @@ class MissionListViewModel @Inject constructor(
 
     // 북마크 토글. TODO(서버 연동): POST/DELETE /api/v1/missions/{id}/save 호출로 교체.
     // 저장하는 순간에만 "저장됨" 시트를 띄움. 해제는 시트 없이 아이콘만 되돌림(피그마에 해제 장면 없음 — 합의된 동작).
-    fun toggleSave(missionId: Long) {
+    fun toggleSave(missionId: String) {
         missionRepository.toggleSave(missionId) // 공유 상태에 반영 (다른 화면·저장 목록에서도 보이게)
         _uiState.update { state ->
             val toggled = state.missions.map {

@@ -27,7 +27,7 @@ class FeedbackViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
 ) : ViewModel() {
 
-    private val feedbackId: Long = checkNotNull(savedStateHandle["feedbackId"])
+    private val feedbackId: String = checkNotNull(savedStateHandle["feedbackId"])
 
     private val _uiState = MutableStateFlow(FeedbackUiState())
     val uiState: StateFlow<FeedbackUiState> = _uiState.asStateFlow()

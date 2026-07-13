@@ -114,7 +114,7 @@ fun ReportScreen(
     onSheetTopChange: (Float?) -> Unit = {}, // 저장 시트가 하단 네비를 덮는 동안 네비 가림
     // ── C담당(아카이브) 연결 지점 — 저장 시트 안에서 아카이브로 나가는 두 경로 ──
     onArchiveClick: () -> Unit = {}, // 시트 "보관함 >" → 아카이브 보관함(리포트 탭)
-    onReportClick: (Long) -> Unit = {}, // 시트의 저장된 리포트 카드 → 보관함 리포트 상세
+    onReportClick: (String) -> Unit = {}, // 시트의 저장된 리포트 카드 → 보관함 리포트 상세
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     ReportScreen(
@@ -136,11 +136,11 @@ private fun ReportScreen(
     onBack: () -> Unit = {},
     onRetry: () -> Unit = {},
     onSaveReport: () -> Unit = {},
-    onToggleReportSave: (Long) -> Unit = {},
+    onToggleReportSave: (String) -> Unit = {},
     onDismissSaveSheet: () -> Unit = {},
     onSheetTopChange: (Float?) -> Unit = {},
     onArchiveClick: () -> Unit = {},
-    onReportClick: (Long) -> Unit = {},
+    onReportClick: (String) -> Unit = {},
 ) = FitDesign { // 작은 화면에선 디자인(393x852) 통째 축소 — 다른 화면들과 동일
     Box(
         modifier = Modifier

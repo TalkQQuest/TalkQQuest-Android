@@ -17,10 +17,26 @@ data class HomeSummary(
     val hasNewNotification: Boolean = false, // 알림 있음 — 벨에 점 표시 (서버 몫, 백엔드 필드명 확정 시 조정)
 )
 
+// 내 프로필 — 백엔드 GET /api/v1/users/me 응답 data와 1:1 (user-profile.dto).
+// 홈 인사말(닉네임)·레벨·XP의 실데이터 소스.
+@Serializable
+data class UserMe(
+    val id: String = "",
+    val name: String = "",
+    val nickname: String? = null, // 온보딩 전엔 null — 그동안은 name으로 표시
+    val avatarUrl: String? = null,
+    val bio: String? = null,
+    val level: Int = 1,
+    val xp: Int = 0,
+    val dailyConversationGoal: Int = 1,
+    val onboardingCompleted: Boolean = false,
+)
+
 // 오늘의 미션 요약 (홈 카드용). 중첩 객체 예시.
 @Serializable
 data class TodayMission(
-    val id: Long,
+    val id: String, // 서버 미션 id = UUID 문자열
+
     val title: String,
     val description: String? = null,  // 미션 한 줄 설명 (홈 카드 부제). 백엔드 필드명 확정 시 조정.
     val difficulty: String,       // 예: 쉬움/보통/어려움 (실제 값은 백엔드 확인)

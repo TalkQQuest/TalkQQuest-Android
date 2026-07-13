@@ -40,7 +40,7 @@ class ConversationViewModel @Inject constructor(
 ) : ViewModel() {
 
     // route 인자 conversation/{conversationId}. 서버 전이라 미션 id를 그대로 씀(TODO 서버: 대화 세션 id).
-    private val conversationId: Long = checkNotNull(savedStateHandle["conversationId"])
+    private val conversationId: String = checkNotNull(savedStateHandle["conversationId"])
 
     private val _uiState = MutableStateFlow(ConversationUiState())
     val uiState: StateFlow<ConversationUiState> = _uiState.asStateFlow()
@@ -76,7 +76,7 @@ class ConversationViewModel @Inject constructor(
                             isLoading = false,
                             missionTitle = title,
                             messages = intro.data.map { text ->
-                                ChatMessage(id = nextMessageId++, text = text, isFromUser = false, time = now)
+                                ChatMessage(id = (nextMessageId++).toString(), text = text, isFromUser = false, time = now)
                             },
                         )
                     }
@@ -122,7 +122,7 @@ class ConversationViewModel @Inject constructor(
         _uiState.update {
             it.copy(
                 messages = it.messages +
-                    ChatMessage(nextMessageId++, text, isFromUser = true, time = timeFormat.format(Date())),
+                    ChatMessage((nextMessageId++).toString(), text, isFromUser = true, time = timeFormat.format(Date())),
                 inputText = "",
                 isAiReplying = true,
             )
@@ -133,7 +133,7 @@ class ConversationViewModel @Inject constructor(
                 is ApiResult.Success -> _uiState.update {
                     it.copy(
                         messages = it.messages +
-                            ChatMessage(nextMessageId++, reply.data, isFromUser = false, time = timeFormat.format(Date())),
+                            ChatMessage((nextMessageId++).toString(), reply.data, isFromUser = false, time = timeFormat.format(Date())),
                         isAiReplying = false,
                     )
                 }

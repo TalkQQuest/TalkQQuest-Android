@@ -202,7 +202,7 @@ fun NavGraph(
         // B담당: 미션 상세. "다음" → 대화 준비(아직 없어서 임시 화면, 다음 작업에서 교체).
         composable(
             route = Screen.MISSION_DETAIL,
-            arguments = listOf(navArgument("missionId") { type = NavType.LongType }),
+            arguments = listOf(navArgument("missionId") { type = NavType.StringType }),
         ) {
             MissionDetailScreen(
                 onBack = { navController.popBackStack() },
@@ -222,9 +222,9 @@ fun NavGraph(
         // B담당: 대화 준비(미션 진입). "미션 시작하기" → 대화 화면(아직 없어서 임시, 다음 작업에서 교체).
         composable(
             route = Screen.CONVERSATION_PREP,
-            arguments = listOf(navArgument("missionId") { type = NavType.LongType }),
+            arguments = listOf(navArgument("missionId") { type = NavType.StringType }),
         ) { backStackEntry ->
-            val missionId = backStackEntry.arguments?.getLong("missionId") ?: 0L
+            val missionId = backStackEntry.arguments?.getString("missionId").orEmpty()
             ConversationPrepScreen(
                 onBack = { navController.popBackStack() },
                 onStartClick = { navController.navigate("conversation/$missionId") },
@@ -233,9 +233,9 @@ fun NavGraph(
         // B담당: 대화 진행. 종료하기 → 미션 완료&XP (대화 시간을 인자로 전달).
         composable(
             route = Screen.CONVERSATION,
-            arguments = listOf(navArgument("conversationId") { type = NavType.LongType }),
+            arguments = listOf(navArgument("conversationId") { type = NavType.StringType }),
         ) { backStackEntry ->
-            val missionId = backStackEntry.arguments?.getLong("conversationId") ?: 0L
+            val missionId = backStackEntry.arguments?.getString("conversationId").orEmpty()
             ConversationScreen(
                 onExitConfirm = { durationSec ->
                     // 끝난 대화(및 준비·상세)로 뒤로 못 돌아가게 홈 위를 정리하고 완료 화면으로.
@@ -249,11 +249,11 @@ fun NavGraph(
         composable(
             route = "${Screen.MISSION_COMPLETE}?durationSec={durationSec}",
             arguments = listOf(
-                navArgument("missionId") { type = NavType.LongType },
+                navArgument("missionId") { type = NavType.StringType },
                 navArgument("durationSec") { type = NavType.LongType; defaultValue = 0L },
             ),
         ) { backStackEntry ->
-            val missionId = backStackEntry.arguments?.getLong("missionId") ?: 0L
+            val missionId = backStackEntry.arguments?.getString("missionId").orEmpty()
             MissionCompleteScreen(
                 // stub은 missionId를 feedbackId로 그대로 씀 — 서버 연동 시 완료 응답의 feedbackId로 교체.
                 onContinue = { navController.navigate("feedback/$missionId") },
@@ -263,9 +263,9 @@ fun NavGraph(
         // "상세 리포트" → 리포트 화면. "홈으로" → 홈 복귀.
         composable(
             route = Screen.FEEDBACK,
-            arguments = listOf(navArgument("feedbackId") { type = NavType.LongType }),
+            arguments = listOf(navArgument("feedbackId") { type = NavType.StringType }),
         ) { backStackEntry ->
-            val feedbackId = backStackEntry.arguments?.getLong("feedbackId") ?: 0L
+            val feedbackId = backStackEntry.arguments?.getString("feedbackId").orEmpty()
             FeedbackScreen(
                 onBack = { navController.popBackStack() },
                 onItemClick = { index -> navController.navigate("feedback_detail/$feedbackId?item=$index") },
@@ -298,7 +298,7 @@ fun NavGraph(
         composable(
             route = "${Screen.FEEDBACK_DETAIL}?item={item}",
             arguments = listOf(
-                navArgument("feedbackId") { type = NavType.LongType },
+                navArgument("feedbackId") { type = NavType.StringType },
                 navArgument("item") { type = NavType.IntType; defaultValue = 0 },
             ),
         ) {

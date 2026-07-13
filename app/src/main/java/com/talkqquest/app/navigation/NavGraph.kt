@@ -16,6 +16,11 @@ import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
+import com.talkqquest.app.feature.auth.ui.SignupEmailScreen
+import com.talkqquest.app.feature.auth.ui.SignupPasswordScreen
+import com.talkqquest.app.feature.auth.ui.SignupNicknameScreen
+import com.talkqquest.app.feature.auth.ui.SignupStartScreen
+import com.talkqquest.app.feature.auth.ui.SignupVerifyScreen
 import com.talkqquest.app.feature.home.ui.HomeScreen
 import com.talkqquest.app.feature.mission.ui.ConversationPrepScreen
 import com.talkqquest.app.feature.mission.ui.ConversationScreen
@@ -65,6 +70,38 @@ fun NavGraph(
             else slideOutOfContainer(AnimatedContentTransitionScope.SlideDirection.Right, slideSpec)
         },
     ) {
+        composable(Screen.LOGIN) {
+            SignupStartScreen(
+                onKakaoClick = { navController.navigate(Screen.SIGNUP_NICKNAME) },
+                onNaverClick = { navController.navigate(Screen.SIGNUP_NICKNAME) },
+                onEmailClick = { navController.navigate(Screen.SIGNUP_EMAIL) },
+            )
+        }
+        composable(Screen.SIGNUP_EMAIL) {
+            SignupEmailScreen(
+                onBack = { navController.popBackStack() },
+                onSendClick = { navController.navigate(Screen.SIGNUP_VERIFY) },
+            )
+        }
+        composable(Screen.SIGNUP_VERIFY) {
+            SignupVerifyScreen(
+                onBack = { navController.popBackStack() },
+                onVerified = { navController.navigate(Screen.SIGNUP_PASSWORD) },
+            )
+        }
+        composable(Screen.SIGNUP_PASSWORD) {
+            SignupPasswordScreen(
+                onBack = { navController.popBackStack() },
+                onNextClick = { navController.navigate(Screen.SIGNUP_NICKNAME) },
+            )
+        }
+        composable(Screen.SIGNUP_NICKNAME) {
+            SignupNicknameScreen(
+                onBack = { navController.popBackStack() },
+                onCompleteClick = { navController.navigate(Screen.ONBOARDING_WELCOME) },
+            )
+        }
+        composable(Screen.ONBOARDING_WELCOME) { PlaceholderScreen("온보딩") }
         // 하단 네비 4탭 (임시 — 실제 화면으로 교체)
         // 홈은 화면↔데이터 연결 예시로 실제 구현됨(feature/home 참고). 나머지는 각 담당이 교체.
         composable(Screen.HOME) {

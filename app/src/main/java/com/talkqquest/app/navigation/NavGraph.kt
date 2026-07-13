@@ -7,20 +7,27 @@ import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.IntOffset
+import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavBackStackEntry
 import androidx.navigation.NavHostController
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
+import com.talkqquest.app.feature.auth.data.KakaoLoginClient
+import com.talkqquest.app.feature.auth.data.NaverLoginClient
 import com.talkqquest.app.feature.auth.ui.SignupEmailScreen
 import com.talkqquest.app.feature.auth.ui.SignupPasswordScreen
 import com.talkqquest.app.feature.auth.ui.SignupNicknameScreen
 import com.talkqquest.app.feature.auth.ui.SignupStartScreen
 import com.talkqquest.app.feature.auth.ui.SignupVerifyScreen
+import com.talkqquest.app.feature.auth.viewmodel.AuthViewModel
 import com.talkqquest.app.feature.home.ui.HomeScreen
 import com.talkqquest.app.feature.mission.ui.ConversationPrepScreen
 import com.talkqquest.app.feature.mission.ui.ConversationScreen
@@ -33,6 +40,7 @@ import com.talkqquest.app.feature.mission.ui.SavedMissionsScreen
 import com.talkqquest.app.feature.report.ui.ReportScreen
 import com.talkqquest.app.feature.archive.ui.ArchiveHomeScreen
 import com.talkqquest.app.navigation.Screen
+import kotlinx.coroutines.launch
 
 // 네비게이션 그래프.
 // TODO(각 담당): composable(Screen.XXX) { XxxScreen(navController) } 로 자기 화면 등록. route는 Screen.kt 참고.
@@ -71,9 +79,63 @@ fun NavGraph(
         },
     ) {
         composable(Screen.LOGIN) {
+            val context = LocalContext.current
+            val scope = rememberCoroutineScope()
+            val authViewModel: AuthViewModel = hiltViewModel()
+            val authUiState by authViewModel.uiState.collectAsState()
+
+            authUiState.errorMessage?.let { message ->
+                Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
+                authViewModel.clearError()
+            }
+
+            fun navigateAfterSocialLogin(isNewUser: Boolean, nickname: String?) {
+                val destination = if (isNewUser || nickname.isNullOrBlank()) {
+                    Screen.SIGNUP_NICKNAME
+                } else {
+                    Screen.HOME
+                }
+                navController.navigate(destination) {
+                    popUpTo(Screen.LOGIN) { inclusive = true }
+                    launchSingleTop = true
+                }
+            }
+
             SignupStartScreen(
-                onKakaoClick = { navController.navigate(Screen.SIGNUP_NICKNAME) },
-                onNaverClick = { navController.navigate(Screen.SIGNUP_NICKNAME) },
+                onKakaoClick = {
+                    scope.launch {
+                        KakaoLoginClient.login(context)
+                            .onSuccess { providerAccessToken ->
+                                authViewModel.loginWithKakao(providerAccessToken) { data ->
+                                    navigateAfterSocialLogin(data.isNewUser, data.user.nickname)
+                                }
+                            }
+                            .onFailure { error ->
+                                Toast.makeText(
+                                    context,
+                                    error.message ?: "Kakao login failed.",
+                                    Toast.LENGTH_SHORT,
+                                ).show()
+                            }
+                    }
+                },
+                onNaverClick = {
+                    scope.launch {
+                        NaverLoginClient.login(context)
+                            .onSuccess { providerAccessToken ->
+                                authViewModel.loginWithNaver(providerAccessToken) { data ->
+                                    navigateAfterSocialLogin(data.isNewUser, data.user.nickname)
+                                }
+                            }
+                            .onFailure { error ->
+                                Toast.makeText(
+                                    context,
+                                    error.message ?: "Naver login failed.",
+                                    Toast.LENGTH_SHORT,
+                                ).show()
+                            }
+                    }
+                },
                 onEmailClick = { navController.navigate(Screen.SIGNUP_EMAIL) },
             )
         }

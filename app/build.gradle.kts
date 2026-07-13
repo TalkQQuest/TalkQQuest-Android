@@ -1,3 +1,17 @@
+import java.util.Properties
+
+
+val localProperties = Properties().apply {
+    val file = rootProject.file("local.properties")
+    if (file.exists()) {
+        file.inputStream().use(::load)
+    }
+}
+
+fun localProperty(name: String): String = localProperties.getProperty(name).orEmpty()
+
+fun String.toBuildConfigString(): String = "\"${replace("\\", "\\\\").replace("\"", "\\\"")}\""
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.compose)
@@ -22,6 +36,13 @@ android {
         versionName = "1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+
+        buildConfigField("String", "KAKAO_NATIVE_APP_KEY", localProperty("KAKAO_NATIVE_APP_KEY").toBuildConfigString())
+        manifestPlaceholders["KAKAO_NATIVE_APP_KEY"] = localProperty("KAKAO_NATIVE_APP_KEY")
+
+        buildConfigField("String", "NAVER_CLIENT_ID", localProperty("NAVER_CLIENT_ID").toBuildConfigString())
+        buildConfigField("String", "NAVER_CLIENT_SECRET", localProperty("NAVER_CLIENT_SECRET").toBuildConfigString())
+        buildConfigField("String", "NAVER_CLIENT_NAME", localProperty("NAVER_CLIENT_NAME").ifBlank { "TalkQQuest" }.toBuildConfigString())
     }
 
     buildTypes {
@@ -39,6 +60,7 @@ android {
     }
     buildFeatures {
         compose = true
+        buildConfig = true
     }
 }
 
@@ -84,13 +106,13 @@ dependencies {
     implementation(libs.coil.compose)
     implementation(libs.coil.network.okhttp)
 
-    // Glassmorphism blur (하단 네비 유리효과)
+    // Glassmorphism blur
     implementation(libs.haze)
 
     // Local storage
     implementation(libs.androidx.datastore.preferences)
 
-    // Social login (TODO: 팀 확정 후 카카오/네이버 앱 키 local.properties에 추가 필요)
+    // Social login
     implementation(libs.kakao.sdk.user)
     implementation(libs.naver.login.sdk)
 }

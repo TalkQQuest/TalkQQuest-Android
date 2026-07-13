@@ -41,7 +41,7 @@
 | **미션 완료·XP** | **MissionCompleteScreen** | 대화하기 → 종료 확인 | 미션 완료 & XP 획득 |
 | AI 피드백 요약 | FeedbackScreen | 미션 완료 → (연출 종료 후) 자동 전환 | AI 피드백 |
 | AI 피드백 상세 | FeedbackDetailScreen | 피드백 요약 → 항목 클릭 | AI 피드백 상세 |
-| 성장 리포트 | ReportScreen | ① AI 피드백 요약 → "상세 리포트" ② 아카이브 → 리포트 탭 → 리포트 항목 클릭 | 성장 리포트, 주간 비교 리포트〔같은 탭바 공유 → 1화면 2탭〕 |
+| 성장 리포트 | ReportScreen | AI 피드백 요약 → "상세 리포트" | 성장 리포트, 주간 비교 리포트〔같은 탭바 공유 → 1화면 2탭〕, 리포트 저장〔저장 시트 상태〕 |
 
 > **`저장 목록`(SavedMissionsScreen)은 원래 미션 상세의 "북마크 목록" 상태였으나, 저장 시트에서 진입하는 독립 화면으로 분리해 구현했습니다.** 상태 필터(완료/진행중/미완료)로 저장한 미션을 모아 봅니다.
 >
@@ -49,17 +49,21 @@
 >
 > **`미션 완료·XP` → `AI 피드백 요약`은 완료 연출이 끝나면 자동으로 전환됩니다(피그마 프로토타입 의도). 연출 중 화면을 터치하면 남은 연출을 마친 뒤 즉시 넘어갑니다.**
 >
-> **`성장 리포트`(ReportScreen)** — 성장 리포트 / 주간 비교 리포트가 피그마에서 **같은 탭바를 공유**하는 탭 전환 관계라 **하나의 Screen + 탭 상태**로 구현합니다(route: `Screen.REPORT`). UI는 이미 구현돼 있고(`feature/report`), AI 피드백 요약의 "상세 리포트"에서 진입합니다. 아카이브(C담당)의 '리포트 탭'에서 들어오는 경로도 같은 화면을 씁니다(진입 연결만 C가 맞춤). 현재는 stub 데이터로 그려지며, "리포트 저장하기" 버튼은 아카이브 API 연동 전이라 동작 TODO 상태입니다.
+> **`성장 리포트`(ReportScreen)** — 성장 리포트 / 주간 비교 리포트가 피그마에서 **같은 탭바를 공유**하는 탭 전환 관계라 **하나의 Screen + 탭 상태**로 구현합니다(route: `Screen.REPORT`). UI는 이미 구현돼 있고(`feature/report`), AI 피드백 요약의 "상세 리포트"에서 진입합니다. 현재는 stub 데이터로 그려지며, "리포트 저장하기" 버튼은 아카이브 API 연동 전이라 동작 TODO 상태입니다.
+>
+> **B의 성장 리포트 담당 범위 = `ReportScreen` 화면 자체 + "리포트 저장하기"로 올라오는 저장 시트까지입니다.** 아카이브에서 리포트로 들어가는 경로(`OO(보관함에서 진입)` 프레임들)와 그 화면들은 **C 담당**입니다.
 
-### C담당 (훈/김재훈) — 아카이브 · 커뮤니티 (12개)
+### C담당 (훈/김재훈) — 아카이브 · 커뮤니티 (14개)
 
 | 화면 이름 | 스크린 ID | 진입 경로 | 와이어프레임 대응 |
 | --- | --- | --- | --- |
 | 아카이브 홈 | ArchiveHomeScreen | 하단 네비게이션 '아카이브' 탭 | 아카이브(메인) |
-| 아카이브 검색/필터 | ArchiveSearchScreen | 아카이브 홈 → 검색 아이콘 | 검색, 검색 결과〔결과 상태〕 |
-| 아카이브 목록 | ArchiveListScreen | 아카이브 홈 → 카테고리 선택 | 아카이브(완료한 미션/대화/문장/리포트 선택시)〔4탭〕 |
-| 대화 기록 상세 | ArchiveConversationDetailScreen | 아카이브 목록 → 대화 기록 항목 클릭 | 아카이브(대화 상세) |
-| 저장한 문장 상세 | ArchiveSavedPhraseScreen | 아카이브 목록 → 저장한 문장 항목 클릭 | 아카이브(문장 상세) |
+| 아카이브 검색/필터 | ArchiveSearchScreen | 아카이브 홈 → 검색 아이콘 | 검색, 검색 결과-정렬 선택〔결과 상태〕 |
+| 아카이브 목록 | ArchiveListScreen | 아카이브 홈 → 카테고리 선택 | 아카이브(완료한 미션/대화/문장/리포트 선택시)〔4탭〕, 보관함(미션/대화/문장/리포트) |
+| 대화 기록 상세 | ArchiveConversationDetailScreen | 아카이브 목록 → 대화 기록 항목 클릭 | 아카이브(대화 상세), 대화(보관함에서 진입), 대화-다시보기 |
+| 저장한 문장 상세 | ArchiveSavedPhraseScreen | 아카이브 목록 → 저장한 문장 항목 클릭 | 아카이브(문장 상세), 문장(보관함에서 진입) |
+| **보관함 미션 상세** | **ArchiveMissionDetailScreen** | 아카이브 목록 → 미션 항목 클릭 | 미션(보관함에서 진입)=미션 상세(재시작 가능) |
+| **보관함 리포트** | **ArchiveReportScreen** | 아카이브 목록 → 리포트 항목 클릭 | 성장 리포트(보관함에서 진입), 주간 비교 리포트(보관함에서 진입) |
 | 커뮤니티 목록 | CommunityListScreen | 하단 네비게이션 '모임' 탭 | 모임(메인), 모임(검색 결과)〔검색 상태〕 |
 | 커뮤니티 상세 | CommunityDetailScreen | 커뮤니티 목록 → 카드 클릭 | 모임(상세)×2〔기본/승인 대기〕, 모임(저장시 팝업)〔저장 상태〕, 모임(신청 완료)〔신청 상태〕 |
 | **채팅방 미리보기** | **CommunityChatPreviewScreen** | 커뮤니티 상세 → 채팅방 미리보기 | 모임(채팅창 미리보기) |
@@ -70,7 +74,7 @@
 
 > 이전 `ArchiveMissionListScreen`은 실제 와이어프레임에서 **미션/대화/문장/리포트 4개 탭을 가진 하나의 목록 화면**이라 `ArchiveListScreen`으로 정리했습니다. (완료한 미션만 보는 화면이 아님)
 >
-> **아카이브 목록의 '리포트 탭' → 리포트 항목 클릭 시 `ReportScreen`(B담당)으로 진입합니다.** 화면 자체는 B 소유이므로 아카이브 쪽에서는 진입 연결(route)만 맞추면 됩니다.
+> **아카이브에서 진입하는 상세 화면(`OO(보관함에서 진입)` 프레임들)은 전부 C 담당입니다.** UI 5차에서 미션 상세(재시작 가능)·리포트 2종이 아카이브 전용 프레임으로 추가됐습니다. 미션 상세·리포트가 B의 화면과 비슷해 보여도 **아카이브 흐름의 화면이므로 C가 만듭니다.** B의 `MissionDetailScreen`/`ReportScreen` 컴포넌트를 재사용하고 싶으면 B에게 요청하세요(공통화는 그때 논의).
 
 > **역할 분담 갱신(2026-07): 커뮤니티가 부가 기능이라 피그마 디자인이 뒤로 밀리면서 재분배함** — 아카이브가 A→C로, 성장 리포트가 C→B로 이동. (원래: A 진입·아카이브·프로필 / B 미션·AI 대화 / C 커뮤니티·성장 리포트)
 
@@ -134,7 +138,8 @@ flowchart TD
     Archive --> ArchiveList[ArchiveListScreen]
     ArchiveList -->|대화 탭 → 항목 클릭| ArchiveConvDetail[ArchiveConversationDetailScreen]
     ArchiveList -->|문장 탭 → 항목 클릭| ArchiveSavedPhrase[ArchiveSavedPhraseScreen]
-    ArchiveList -->|리포트 탭 → 항목 클릭| Report[ReportScreen]
+    ArchiveList -->|미션 탭 → 항목 클릭| ArchiveMissionDetail[ArchiveMissionDetailScreen]
+    ArchiveList -->|리포트 탭 → 항목 클릭| ArchiveReport[ArchiveReportScreen]
 
     Community --> CommunityDetail[CommunityDetailScreen]
     CommunityDetail --> CommunityChatPreview[CommunityChatPreviewScreen]

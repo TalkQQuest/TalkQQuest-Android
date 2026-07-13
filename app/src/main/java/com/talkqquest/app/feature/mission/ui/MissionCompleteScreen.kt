@@ -50,7 +50,10 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.repeatOnLifecycle
 import com.talkqquest.app.R
 import com.talkqquest.app.core.designsystem.Error
 import com.talkqquest.app.core.designsystem.FitDesign
@@ -159,34 +162,48 @@ private fun MissionCompleteContent(
     }
     val chipScale = remember { Animatable(1f) } // 레벨업 순간 칩이 튀는 배율
     val chipBurst = remember { Animatable(0f) } // 레벨업 순간 칩 주변 작은 폭죽 진행도 (0/1 = 안 그림)
+    // 연출·자동 전환은 화면이 실제로 보이는 동안(RESUMED)에만 돈다.
+    // 그냥 LaunchedEffect로 두면 홈 버튼으로 앱을 나가 있는 사이에도 delay가 흘러 연출이 끝나고
+    // 자동 전환까지 실행돼, 돌아왔을 때 미션 완료·XP 화면을 통째로 못 보고 피드백에 가 있었다.
+    // repeatOnLifecycle이 백그라운드에서 코루틴을 취소하고 복귀 시 다시 시작해준다.
+    val lifecycle = LocalLifecycleOwner.current.lifecycle
+
     // skipped가 켜지면 진행 중이던 연출 코루틴이 취소되고 끝 상태로 건너뜀
     LaunchedEffect(skipped) {
-        if (skipped) {
-            stage = 3
-            displayLevel = result.levelAfter
-            xpShown.snapTo(result.xpAfter.toFloat())
-            chipScale.snapTo(1f)
-            chipBurst.snapTo(0f)
-            celebrationDone = true
-        } else if (initialStage < 3) {
-            delay(350); stage = 1
-            delay(300); stage = 2
-            delay(300); stage = 3
-            delay(250)
-            if (result.levelAfter > result.levelBefore) {
-                // 레벨업 연출: 바를 끝까지 채우고 → 칩이 튀며 새 레벨로(+작은 폭죽) → 새 레벨 바가 0부터 다시 참
-                xpShown.animateTo(result.nextLevelXp.toFloat(), tween(700))
+        lifecycle.repeatOnLifecycle(Lifecycle.State.RESUMED) {
+            if (skipped) {
+                stage = 3
                 displayLevel = result.levelAfter
-                launch { chipBurst.snapTo(0f); chipBurst.animateTo(1f, tween(600)) } // 칩 튐과 동시 재생
-                chipScale.animateTo(1.4f, tween(150))
-                chipScale.animateTo(1f, spring(dampingRatio = Spring.DampingRatioMediumBouncy))
-                delay(150)
-                xpShown.snapTo(0f)
-                xpShown.animateTo(result.xpAfter.toFloat(), tween(600))
-            } else {
-                xpShown.animateTo(result.xpAfter.toFloat(), tween(800))
+                xpShown.snapTo(result.xpAfter.toFloat())
+                chipScale.snapTo(1f)
+                chipBurst.snapTo(0f)
+                celebrationDone = true
+            } else if (initialStage < 3 && !celebrationDone) {
+                // 복귀 시엔 처음부터 다시 보여줌 (백그라운드에서 취소된 연출을 이어붙이면 어색함)
+                stage = 0
+                displayLevel = result.levelBefore
+                xpShown.snapTo(result.xpBefore.toFloat())
+                chipScale.snapTo(1f)
+                chipBurst.snapTo(0f)
+                delay(350); stage = 1
+                delay(300); stage = 2
+                delay(300); stage = 3
+                delay(250)
+                if (result.levelAfter > result.levelBefore) {
+                    // 레벨업 연출: 바를 끝까지 채우고 → 칩이 튀며 새 레벨로(+작은 폭죽) → 새 레벨 바가 0부터 다시 참
+                    xpShown.animateTo(result.nextLevelXp.toFloat(), tween(700))
+                    displayLevel = result.levelAfter
+                    launch { chipBurst.snapTo(0f); chipBurst.animateTo(1f, tween(600)) } // 칩 튐과 동시 재생
+                    chipScale.animateTo(1.4f, tween(150))
+                    chipScale.animateTo(1f, spring(dampingRatio = Spring.DampingRatioMediumBouncy))
+                    delay(150)
+                    xpShown.snapTo(0f)
+                    xpShown.animateTo(result.xpAfter.toFloat(), tween(600))
+                } else {
+                    xpShown.animateTo(result.xpAfter.toFloat(), tween(800))
+                }
+                celebrationDone = true
             }
-            celebrationDone = true
         }
     }
     val finished = celebrationDone
@@ -195,10 +212,13 @@ private fun MissionCompleteContent(
     // 자동 완주 = 완성 화면을 잠깐(홀드) 보여주고 이동.
     // 터치 스킵 = 안 뜬 것들이 한 번에 뜨는 등장 모션(300ms)까지 보여준 뒤 바로 이동(사용자 결정)
     //  — 0초로 하면 등장 모션이 화면 전환에 잘려서 "다 띄우는" 게 안 보임. 시간 값은 자작(아래 상수).
+    // 홀드도 화면이 보이는 동안에만 흐른다 — 백그라운드에서 넘어가버리지 않게.
     LaunchedEffect(finished) {
         if (finished && initialStage < 3) { // initialStage 3 = 프리뷰 정지 화면 — 자동 이동 없음
-            delay(if (skipped) SKIP_ADVANCE_HOLD_MS else AUTO_ADVANCE_HOLD_MS)
-            advance()
+            lifecycle.repeatOnLifecycle(Lifecycle.State.RESUMED) {
+                delay(if (skipped) SKIP_ADVANCE_HOLD_MS else AUTO_ADVANCE_HOLD_MS)
+                advance() // advanced 플래그로 한 번만 통과 — 복귀가 반복돼도 중복 이동 없음
+            }
         }
     }
 
@@ -286,7 +306,7 @@ private fun DurationCard(durationText: String) {
         modifier = Modifier
             .fillMaxWidth()
             .height(72.dp)
-            .softShadow(color = Gray1000.copy(alpha = 0.04f), offsetY = 8.dp, blur = 24.dp, cornerRadius = 20.dp)
+            .softShadow(color = Gray1000.copy(alpha = 0.01f), offsetY = 8.dp, blur = 24.dp, cornerRadius = 20.dp)
             .clip(RoundedCornerShape(20.dp))
             .background(White)
             .padding(horizontal = 16.dp),

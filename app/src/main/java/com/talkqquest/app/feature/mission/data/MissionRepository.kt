@@ -114,6 +114,10 @@ class MissionRepository @Inject constructor(
     suspend fun getFeedback(feedbackId: Long): ApiResult<FeedbackResult> {
         return ApiResult.Success(
             FeedbackResult(
+                // stub은 missionId를 feedbackId로 받으므로 그 미션의 제목을 그대로 씀.
+                // (서버 연동 시엔 피드백 응답에 담겨 오는 미션 제목으로 교체)
+                missionTitle = stubMissions.firstOrNull { it.id == feedbackId }?.title
+                    ?: stubMissions.first().title,
                 nickname = "다민", // TODO(서버 연동): 유저 프로필 닉네임으로 교체
                 kindnessScore = 92,
                 initiativeScore = 88,

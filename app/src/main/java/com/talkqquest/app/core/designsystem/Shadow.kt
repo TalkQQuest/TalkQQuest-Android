@@ -16,10 +16,10 @@ import androidx.compose.ui.unit.dp
  * `box-shadow: x y blur color` 값(방향·흐림·색·투명도)을 못 담습니다.
  * 이 함수는 그 네 가지를 그대로 받아 직접 그립니다.
  *
- * 사용 예 — 피그마 카드 그림자 `0px 8px 24px rgba(15, 23, 42, 0.04)`:
+ * 사용 예 — 피그마 카드 그림자 `0px 8px 24px rgba(15, 23, 42, 0.01)`:
  * ```
  * Modifier.softShadow(
- *     color = Gray1000.copy(alpha = 0.04f), // rgba(15,23,42,0.04)
+ *     color = Gray1000.copy(alpha = 0.01f), // rgba(15,23,42,0.01)
  *     offsetY = 8.dp,                       // 두 번째 값 (아래로)
  *     blur = 24.dp,                         // 세 번째 값 (흐림)
  *     cornerRadius = 20.dp,                 // 대상의 radius와 동일하게
@@ -42,7 +42,10 @@ fun Modifier.softShadow(
     val paint = Paint().apply { this.color = color }
     val blurPx = blur.toPx()
     if (blurPx > 0f) {
-        paint.asFrameworkPaint().maskFilter = BlurMaskFilter(blurPx, BlurMaskFilter.Blur.NORMAL)
+        // CSS blur는 표준편차 σ = blur/2, BlurMaskFilter는 σ = radius×0.57735+0.5로 해석 —
+        // blur를 그대로 넣으면 σ가 ~20% 커져 그림자가 피그마보다 넓고 진하게 퍼짐. σ 기준 역환산.
+        val radius = ((blurPx / 2f - 0.5f) / 0.57735f).coerceAtLeast(0.1f)
+        paint.asFrameworkPaint().maskFilter = BlurMaskFilter(radius, BlurMaskFilter.Blur.NORMAL)
     }
     drawIntoCanvas { canvas ->
         canvas.drawRoundRect(

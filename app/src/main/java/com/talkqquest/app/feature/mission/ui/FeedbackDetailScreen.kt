@@ -92,6 +92,9 @@ fun FeedbackDetailScreen(
     onBack: () -> Unit = {},
     onOtherMissions: () -> Unit = {},
     viewModel: FeedbackDetailViewModel = hiltViewModel(),
+    // ── C담당(아카이브) 연결 지점 — 문장 저장 시트 안에서 아카이브로 나가는 두 경로 ──
+    onArchiveClick: () -> Unit = {}, // 시트 "보관함 >" → 아카이브 보관함(문장 탭)
+    onPhraseClick: (Long) -> Unit = {}, // 시트의 저장된 문장 카드 → 보관함 문장 상세
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     FeedbackDetailScreen(
@@ -100,6 +103,10 @@ fun FeedbackDetailScreen(
         onOtherMissions = onOtherMissions,
         onTogglePhraseSave = viewModel::togglePhraseSave,
         onRetry = viewModel::loadFeedback,
+        onToggleSavedPhrase = viewModel::toggleSavedPhrase,
+        onDismissSaveSheet = viewModel::dismissSaveSheet,
+        onArchiveClick = onArchiveClick,
+        onPhraseClick = onPhraseClick,
     )
 }
 
@@ -110,6 +117,10 @@ private fun FeedbackDetailScreen(
     onOtherMissions: () -> Unit = {},
     onTogglePhraseSave: () -> Unit = {},
     onRetry: () -> Unit = {},
+    onToggleSavedPhrase: (Long) -> Unit = {},
+    onDismissSaveSheet: () -> Unit = {},
+    onArchiveClick: () -> Unit = {},
+    onPhraseClick: (Long) -> Unit = {},
 ) = FitDesign { // 작은 화면에선 디자인(393x852) 통째 축소 — 다른 화면들과 동일
     Box(
         modifier = Modifier
@@ -128,14 +139,26 @@ private fun FeedbackDetailScreen(
                 }
             }
 
-            uiState.result != null -> FeedbackDetailContent(
-                result = uiState.result,
-                itemIndex = uiState.itemIndex,
-                isPhraseSaved = uiState.isPhraseSaved,
-                onBack = onBack,
-                onOtherMissions = onOtherMissions,
-                onTogglePhraseSave = onTogglePhraseSave,
-            )
+            uiState.result != null ->
+                // 베스트 문장을 저장하면 화면 위로 "저장됨" 시트가 올라옴 (UI 5차 "문장 저장시 바텀 시트").
+                // 표준 시트라 배경 안 어두워지고 뒤 화면도 계속 스크롤 가능 — 미션·리포트 시트와 동일.
+                FeedbackSaveSheetScaffold(
+                    savedPhrase = uiState.saveSheetPhrase,
+                    recentSavedPhrases = uiState.savedPhrases,
+                    onDismiss = onDismissSaveSheet,
+                    onToggleSave = onToggleSavedPhrase,
+                    onArchiveClick = onArchiveClick,
+                    onPhraseClick = onPhraseClick,
+                ) {
+                    FeedbackDetailContent(
+                        result = uiState.result,
+                        itemIndex = uiState.itemIndex,
+                        isPhraseSaved = uiState.isPhraseSaved,
+                        onBack = onBack,
+                        onOtherMissions = onOtherMissions,
+                        onTogglePhraseSave = onTogglePhraseSave,
+                    )
+                }
         }
     }
 }
@@ -210,7 +233,7 @@ private fun FeedbackDetailContent(
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .softShadow(color = Gray1000.copy(alpha = 0.04f), offsetY = 8.dp, blur = 24.dp, cornerRadius = 20.dp)
+                    .softShadow(color = Gray1000.copy(alpha = 0.01f), offsetY = 8.dp, blur = 24.dp, cornerRadius = 20.dp)
                     .clip(RoundedCornerShape(20.dp))
                     .background(White)
                     .padding(horizontal = 16.dp, vertical = 20.dp),
@@ -368,7 +391,7 @@ private fun BestPhraseSection(
     }
 }
 
-// "다민님을 위한 다른 미션 보러가기" 버튼 (CSS Frame 427321060): 362x56 r20.
+// "다민님을 위한 다른 미션 보러가기" 버튼 (CSS Frame 427321060): 362x56 r16.
 // 배경 = 메인 컬러 통일(디자이너 확정). 다트 이미지(66x70, 1.56도 기울임)가
 // 버튼 위로 삐져나오는 디자인이라 배경만 clip하고 내용은 안 자름.
 @Composable
@@ -381,7 +404,7 @@ private fun OtherMissionsButton(nickname: String, onClick: () -> Unit) {
         Box(
             modifier = Modifier
                 .matchParentSize()
-                .clip(RoundedCornerShape(20.dp))
+                .clip(RoundedCornerShape(16.dp)) // r20 → r16 (디자인 변경 2026-07)
                 .background(Primary600)
                 .clickable(onClick = onClick),
         )
@@ -423,6 +446,7 @@ private fun OtherMissionsButton(nickname: String, onClick: () -> Unit) {
 
 // ── Preview ──
 private val previewResult = FeedbackResult(
+    missionTitle = "처음 보는 사람에게 짧게 인사하기",
     nickname = "다민",
     kindnessScore = 92,
     initiativeScore = 88,

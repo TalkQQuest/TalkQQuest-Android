@@ -202,6 +202,7 @@ private fun ArchiveHomeScreen(
                         horizontalArrangement = Arrangement.spacedBy(24.dp, Alignment.CenterHorizontally),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
+                        // weight(1f)를 주어 4개의 아이템이 가로 공간을 균등하게 나눠 갖도록 처리
                         ArchiveCategoryItem(
                             iconRes = R.drawable.img_archive_mission,
                             label = "미션",

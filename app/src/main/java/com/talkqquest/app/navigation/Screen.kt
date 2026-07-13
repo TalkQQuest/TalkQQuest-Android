@@ -10,7 +10,8 @@ package com.talkqquest.app.navigation
  */
 object Screen {
 
-    // ── A담당 (지니/전준호): 진입 · 아카이브 · 프로필 ──
+    // ── A담당 (지니/전준호): 진입 · 프로필 ──
+    // ※ 아카이브 route(ARCHIVE_*)는 역할 재조정(2026-07)으로 C담당으로 넘어갔습니다. 상수 위치만 여기 남음.
     const val SPLASH = "splash"                                   // SplashScreen
     const val LOGIN = "login"                                     // LoginScreen (계정 연동 팝업 상태 포함)
     const val SIGNUP_EMAIL = "signup_email"                       // SignupEmailScreen
@@ -29,7 +30,7 @@ object Screen {
     const val ARCHIVE_SAVED_PHRASE = "archive_saved_phrase/{phraseId}"                     // ArchiveSavedPhraseScreen
     const val PROFILE = "profile"                                 // ProfileScreen (하단 탭 '프로필')
 
-    // ── B담당 (이도/윤기수): 미션 · AI 대화 ──
+    // ── B담당 (이도/윤기수): 미션 · AI 대화 · 성장 리포트 ──
     const val HOME = "home"                                       // HomeScreen
     const val MISSION_LIST = "mission_list"                       // MissionListScreen
     const val MISSION_DETAIL = "mission_detail/{missionId}"       // MissionDetailScreen
@@ -41,7 +42,7 @@ object Screen {
     const val FEEDBACK = "feedback/{feedbackId}"                  // FeedbackScreen
     const val FEEDBACK_DETAIL = "feedback_detail/{feedbackId}"    // FeedbackDetailScreen
 
-    // ── C담당 (훈/김재훈): 커뮤니티 · 성장 리포트 ──
+    // ── C담당 (훈/김재훈): 아카이브 · 커뮤니티 ── (아카이브 route는 위 ARCHIVE_* 참고)
     const val COMMUNITY_LIST = "community_list"                   // CommunityListScreen
     const val COMMUNITY_DETAIL = "community_detail/{communityId}" // CommunityDetailScreen
     const val COMMUNITY_CHAT_PREVIEW = "community_chat_preview/{communityId}" // CommunityChatPreviewScreen
@@ -49,5 +50,7 @@ object Screen {
     const val COMMUNITY_ADDRESS_SEARCH = "community_address_search" // CommunityAddressSearchScreen
     const val COMMUNITY_PREVIEW = "community_preview"            // CommunityPreviewScreen
     const val MY_GROUPS = "my_groups"                            // MyGroupsScreen
-    const val REPORT = "report"                                  // ReportScreen (성장 리포트/주간 비교 탭 통합)
+    // ReportScreen (성장 리포트/주간 비교 탭 통합).
+    // missionTitle = 이 리포트가 나온 미션 제목 (저장 시트 카드 제목에 쓰임). 없으면 빈 값.
+    const val REPORT = "report?missionTitle={missionTitle}"
 }

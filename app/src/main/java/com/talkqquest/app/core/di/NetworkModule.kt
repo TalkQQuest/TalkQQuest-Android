@@ -14,12 +14,12 @@ import retrofit2.converter.kotlinx.serialization.asConverterFactory
 import javax.inject.Singleton
 
 // 네트워크 모듈 (Retrofit/OkHttp/JSON). 각 기능은 주입받은 Retrofit으로 retrofit.create(XxxApi::class.java).
-// TODO(백엔드 확정 후): BASE_URL 을 실제 서버 주소로 교체.
 @Module
 @InstallIn(SingletonComponent::class)
 object NetworkModule {
 
-    private const val BASE_URL = "https://example.com/" // TODO: 실제 서버 주소
+    // 실서버 base URL. 경로 접두사(api/v1)는 각 Api 인터페이스의 상대 경로에 포함.
+    private const val BASE_URL = "https://talkqquest.shop/"
 
     @Provides
     @Singleton

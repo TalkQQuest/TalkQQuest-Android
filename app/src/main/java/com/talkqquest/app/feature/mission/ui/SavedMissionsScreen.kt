@@ -69,7 +69,7 @@ private val StatusFilters = listOf("완료", "진행중", "미완료") // 디자
 fun SavedMissionsScreen(
     viewModel: SavedMissionsViewModel = hiltViewModel(),
     onBack: () -> Unit = {},
-    onMissionClick: (Long) -> Unit = {},
+    onMissionClick: (String) -> Unit = {},
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     SavedMissionsScreen(
@@ -88,8 +88,8 @@ private fun SavedMissionsScreen(
     onBack: () -> Unit,
     onRetry: () -> Unit,
     onStatusSelect: (String) -> Unit = {},
-    onToggleSave: (Long) -> Unit = {},
-    onMissionClick: (Long) -> Unit = {},
+    onToggleSave: (String) -> Unit = {},
+    onMissionClick: (String) -> Unit = {},
 ) = FitDesign { // 작은 화면에선 디자인(393x852) 통째 축소 — 다른 화면들과 동일
     Box(
         modifier = Modifier
@@ -124,8 +124,8 @@ private fun SavedMissionsContent(
     uiState: SavedMissionsUiState,
     onBack: () -> Unit,
     onStatusSelect: (String) -> Unit,
-    onToggleSave: (Long) -> Unit,
-    onMissionClick: (Long) -> Unit,
+    onToggleSave: (String) -> Unit,
+    onMissionClick: (String) -> Unit,
 ) {
     Column(
         modifier = Modifier
@@ -222,9 +222,9 @@ private fun SavedMissionsContent(
 
 // ── Preview ──
 private val previewSaved = listOf(
-    MissionListItem(1, "처음 보는 사람에게 짧게 인사하기", "짧은 대화", "쉬움", 2, 20, isSaved = true, status = "완료"),
-    MissionListItem(2, "최근 본 영화 이야기하기", "짧은 대화", "쉬움", 5, 20, isSaved = true, status = "완료"),
-    MissionListItem(3, "학교 생활 꿀팁 나누기", "일상 대화", "보통", 8, 30, isSaved = true, status = "완료"),
+    MissionListItem("1", "처음 보는 사람에게 짧게 인사하기", "짧은 대화", "쉬움", 2, 20, isSaved = true, status = "완료"),
+    MissionListItem("2", "최근 본 영화 이야기하기", "짧은 대화", "쉬움", 5, 20, isSaved = true, status = "완료"),
+    MissionListItem("3", "학교 생활 꿀팁 나누기", "일상 대화", "보통", 8, 30, isSaved = true, status = "완료"),
 )
 
 @Preview(name = "저장 목록 (393dp)", showSystemUi = true, device = "spec:width=393dp,height=852dp")

@@ -35,7 +35,7 @@ class MissionDetailViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
 ) : ViewModel() {
 
-    private val missionId: Long = checkNotNull(savedStateHandle["missionId"]) // route 인자 mission_detail/{missionId}
+    private val missionId: String = checkNotNull(savedStateHandle["missionId"]) // route 인자 mission_detail/{missionId}
 
     private val _uiState = MutableStateFlow(MissionDetailUiState())
     val uiState: StateFlow<MissionDetailUiState> = _uiState.asStateFlow()
@@ -99,7 +99,7 @@ class MissionDetailViewModel @Inject constructor(
     // 시트가 보라 풀림 → 가라앉는 퇴장 연출을 그리고, 연출 중 재저장하면 카드가 복귀함(시트 담당).
     // (즉시 filter하면 재저장 때 항목을 못 찾아 복귀가 안 됨. 목록 화면은 파생 계산이라 이미 동일 동작)
     // TODO(서버 연동): POST/DELETE /api/v1/missions/{id}/save 호출로 교체. (지금은 로컬 상태만 갱신)
-    fun toggleSaveInList(missionId: Long) {
+    fun toggleSaveInList(missionId: String) {
         val nowSaved = missionRepository.toggleSave(missionId) // 공유 상태 반영
         _uiState.update { state ->
             state.copy(

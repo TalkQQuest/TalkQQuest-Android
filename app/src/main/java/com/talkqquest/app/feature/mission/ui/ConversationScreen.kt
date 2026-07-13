@@ -218,7 +218,7 @@ private fun ConversationContent(
     // ── 전송 비행 연출(카톡 신모션): 내 메시지가 입력창 왼쪽에서 출발해 오른쪽으로
     // 미끄러지다 벽 앞에서 회전하며 위로 빨려 올라가 제자리에 안착. 진짜 리스트 아이템은
     // 비행이 끝날 때까지 숨기고, 화면 위를 나는 오버레이 말풍선이 연기함. ──
-    val flownIds = remember { mutableSetOf<Long>() }
+    val flownIds = remember { mutableSetOf<String>() }
     var flightMessage by remember { androidx.compose.runtime.mutableStateOf<ChatMessage?>(null) }
     val flightProgress = remember { Animatable(1f) }
     // 좌표 실측(px): 출발점(입력창)·도착점(리스트 바닥) 계산용
@@ -308,7 +308,7 @@ private fun ConversationContent(
                 if (uiState.messages.isNotEmpty()) listState.animateScrollToItem(0)
             }
             // 메시지별 등장 애니메이션을 "처음 나타날 때 한 번만" 돌리기 위한 기록
-            val animatedMessageIds = remember { mutableSetOf<Long>() }
+            val animatedMessageIds = remember { mutableSetOf<String>() }
             LazyColumn(
                 state = listState,
                 modifier = Modifier.fillMaxSize(),
@@ -889,11 +889,11 @@ private fun ExitDialog(onContinue: () -> Unit, onExit: () -> Unit) {
 
 // ── Preview ──
 private val previewMessages = listOf(
-    ChatMessage(1, "안녕하세요! 처음 뵙네요 🙂", false, "9:20"),
-    ChatMessage(2, "오늘 여기 처음 오셨어요?", false, "9:20"),
-    ChatMessage(3, "분위기가 좋아보여서요!", true, "9:21"),
-    ChatMessage(4, "오, 그러셨구나. 저는 여기 몇 번 와봤는데 생각보다 괜찮더라고요", false, "9:21"),
-    ChatMessage(5, "오 그렇군요!", true, "9:21"),
+    ChatMessage("1", "안녕하세요! 처음 뵙네요 🙂", false, "9:20"),
+    ChatMessage("2", "오늘 여기 처음 오셨어요?", false, "9:20"),
+    ChatMessage("3", "분위기가 좋아보여서요!", true, "9:21"),
+    ChatMessage("4", "오, 그러셨구나. 저는 여기 몇 번 와봤는데 생각보다 괜찮더라고요", false, "9:21"),
+    ChatMessage("5", "오 그렇군요!", true, "9:21"),
 )
 
 @Preview(name = "대화 시작 (393dp)", showSystemUi = true, device = "spec:width=393dp,height=852dp")

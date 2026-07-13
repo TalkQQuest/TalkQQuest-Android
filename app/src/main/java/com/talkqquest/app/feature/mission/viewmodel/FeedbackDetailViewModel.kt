@@ -7,6 +7,8 @@ import com.talkqquest.app.core.network.ApiResult
 import com.talkqquest.app.feature.mission.data.MissionRepository
 import com.talkqquest.app.feature.mission.data.model.FeedbackResult
 import com.talkqquest.app.feature.mission.data.model.SavedPhraseItem
+import com.talkqquest.app.feature.mission.data.model.scoreItems
+import com.talkqquest.app.feature.mission.data.model.textFor
 import dagger.hilt.android.lifecycle.HiltViewModel
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
@@ -28,13 +30,20 @@ data class FeedbackDetailUiState(
     val saveSheetPhrase: SavedPhraseItem? = null,
     // 보관함(저장된 문장) — TODO(서버 연동): 문장 아카이브 API로 교체. 지금은 목업 샘플
     val savedPhrases: List<SavedPhraseItem> = listOf(
-        SavedPhraseItem(1, "그 말씀 들으니 저도 기분이 좋아지네요", "2026.08.19"),
-        SavedPhraseItem(2, "혹시 그때 어떤 기분이셨어요?", "2026.08.18"),
-        SavedPhraseItem(3, "좋은 이야기 들려주셔서 감사해요", "2026.08.17"),
-        SavedPhraseItem(4, "저도 비슷한 경험이 있어서 공감돼요", "2026.08.16"),
-        SavedPhraseItem(5, "그건 정말 대단한 결정이었네요", "2026.08.15"),
+        SavedPhraseItem("1", "그 말씀 들으니 저도 기분이 좋아지네요", "2026.08.19"),
+        SavedPhraseItem("2", "혹시 그때 어떤 기분이셨어요?", "2026.08.18"),
+        SavedPhraseItem("3", "좋은 이야기 들려주셔서 감사해요", "2026.08.17"),
+        SavedPhraseItem("4", "저도 비슷한 경험이 있어서 공감돼요", "2026.08.16"),
+        SavedPhraseItem("5", "그건 정말 대단한 결정이었네요", "2026.08.15"),
     ),
 )
+
+// 지금 보고 있는 항목(itemIndex)의 베스트 문장 — 항목별 문구가 없으면 피드백 공통 값으로 폴백
+private fun FeedbackDetailUiState.currentPhrase(): String {
+    val res = result ?: return ""
+    val label = res.scoreItems().getOrElse(itemIndex) { res.scoreItems().first() }.first
+    return res.textFor(label).savedPhrase
+}
 
 @HiltViewModel
 class FeedbackDetailViewModel @Inject constructor(
@@ -42,7 +51,7 @@ class FeedbackDetailViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
 ) : ViewModel() {
 
-    private val feedbackId: Long = checkNotNull(savedStateHandle["feedbackId"])
+    private val feedbackId: String = checkNotNull(savedStateHandle["feedbackId"])
 
     // 요약에서 탭한 항목 번호. 직접 진입(딥링크 등) 시 0 = 첫 항목(친절한 태도).
     private val itemIndex: Int = savedStateHandle["item"] ?: 0
@@ -86,8 +95,9 @@ class FeedbackDetailViewModel @Inject constructor(
                 state.copy(
                     isPhraseSaved = true,
                     saveSheetPhrase = SavedPhraseItem(
-                        id = nextSaveId++,
-                        phrase = state.result?.savedPhrase.orEmpty(),
+                        id = (nextSaveId++).toString(),
+                        // 지금 보고 있는 항목의 베스트 문장 (항목마다 다름)
+                        phrase = state.currentPhrase(),
                         savedDate = LocalDate.now().format(DateTimeFormatter.ofPattern("yyyy.MM.dd")),
                     ),
                 )
@@ -97,7 +107,7 @@ class FeedbackDetailViewModel @Inject constructor(
 
     // 시트 안 북마크 토글: 시트에 뜬 문장을 해제하면 시트가 내려가고(화면 쪽 연출),
     // 보관함 카드는 해제 연출 후에도 목록에 남겨둬 다시 누르면 복구됨.
-    fun toggleSavedPhrase(id: Long) {
+    fun toggleSavedPhrase(id: String) {
         _uiState.update { state ->
             val sheet = state.saveSheetPhrase
             if (sheet != null && sheet.id == id) {

@@ -69,8 +69,10 @@ import com.talkqquest.app.core.designsystem.TqType
 import com.talkqquest.app.core.designsystem.White
 import com.talkqquest.app.core.designsystem.component.TqButton
 import com.talkqquest.app.core.designsystem.softShadow
+import com.talkqquest.app.feature.mission.data.stubItemTexts
 import com.talkqquest.app.feature.mission.data.model.FeedbackResult
 import com.talkqquest.app.feature.mission.data.model.scoreItems
+import com.talkqquest.app.feature.mission.data.model.textFor
 import com.talkqquest.app.feature.mission.viewmodel.FeedbackDetailUiState
 import com.talkqquest.app.feature.mission.viewmodel.FeedbackDetailViewModel
 
@@ -94,7 +96,7 @@ fun FeedbackDetailScreen(
     viewModel: FeedbackDetailViewModel = hiltViewModel(),
     // ── C담당(아카이브) 연결 지점 — 문장 저장 시트 안에서 아카이브로 나가는 두 경로 ──
     onArchiveClick: () -> Unit = {}, // 시트 "보관함 >" → 아카이브 보관함(문장 탭)
-    onPhraseClick: (Long) -> Unit = {}, // 시트의 저장된 문장 카드 → 보관함 문장 상세
+    onPhraseClick: (String) -> Unit = {}, // 시트의 저장된 문장 카드 → 보관함 문장 상세
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     FeedbackDetailScreen(
@@ -117,10 +119,10 @@ private fun FeedbackDetailScreen(
     onOtherMissions: () -> Unit = {},
     onTogglePhraseSave: () -> Unit = {},
     onRetry: () -> Unit = {},
-    onToggleSavedPhrase: (Long) -> Unit = {},
+    onToggleSavedPhrase: (String) -> Unit = {},
     onDismissSaveSheet: () -> Unit = {},
     onArchiveClick: () -> Unit = {},
-    onPhraseClick: (Long) -> Unit = {},
+    onPhraseClick: (String) -> Unit = {},
 ) = FitDesign { // 작은 화면에선 디자인(393x852) 통째 축소 — 다른 화면들과 동일
     Box(
         modifier = Modifier
@@ -174,6 +176,8 @@ private fun FeedbackDetailContent(
 ) {
     // 배너에 보여줄 항목 — 범위 밖 값(딥링크 등)은 첫 항목으로
     val (label, score) = result.scoreItems().getOrElse(itemIndex) { result.scoreItems().first() }
+    // 잘한 점·개선할 점·베스트 문장은 항목별 값 (없으면 피드백 공통 값으로 폴백)
+    val itemText = result.textFor(label)
 
     Column(
         modifier = Modifier
@@ -243,16 +247,16 @@ private fun FeedbackDetailContent(
                     chipLabel = "잘한 점",
                     chipBg = StrengthChipBg,
                     chipTextColor = Success,
-                    bullets = result.strengths,
+                    bullets = itemText.strengths,
                 )
                 FeedbackSection(
                     chipLabel = "개선할 점",
                     chipBg = ImproveChipBg,
                     chipTextColor = ImproveText,
-                    bullets = result.improvements,
+                    bullets = itemText.improvements,
                 )
                 BestPhraseSection(
-                    phrase = result.savedPhrase,
+                    phrase = itemText.savedPhrase,
                     isSaved = isPhraseSaved,
                     onToggleSave = onTogglePhraseSave,
                 )
@@ -462,6 +466,7 @@ private val previewResult = FeedbackResult(
         "상대의 감정을 확인하는 표현을 사용해보세요",
     ),
     savedPhrase = "그렇군요! 저도 생각보다 편해서 놀랐어요",
+    itemTexts = stubItemTexts, // 항목별 문구 (에뮬과 같은 stub)
 )
 
 @Preview(name = "피드백 상세 393dp", widthDp = 393, heightDp = 852, showBackground = true)
@@ -474,6 +479,32 @@ private fun FeedbackDetailScreenPreview() {
         )
     }
 }
+
+// ── 4개 항목 문구 비교용 (줄바꿈·자간·불릿 정렬 확인) ──
+@Composable
+private fun FeedbackDetailItemPreview(index: Int) {
+    TalkQQuestTheme {
+        FeedbackDetailScreen(
+            uiState = FeedbackDetailUiState(isLoading = false, result = previewResult, itemIndex = index),
+        )
+    }
+}
+
+@Preview(name = "1행 친절한 태도 (92)", widthDp = 393, heightDp = 852, showBackground = true)
+@Composable
+private fun FeedbackDetailItem0Preview() = FeedbackDetailItemPreview(0)
+
+@Preview(name = "2행 대화 주도 (88·긴 문장)", widthDp = 393, heightDp = 852, showBackground = true)
+@Composable
+private fun FeedbackDetailItem1Preview() = FeedbackDetailItemPreview(1)
+
+@Preview(name = "3행 공감 능력 (85·짧은 문장)", widthDp = 393, heightDp = 852, showBackground = true)
+@Composable
+private fun FeedbackDetailItem2Preview() = FeedbackDetailItemPreview(2)
+
+@Preview(name = "4행 질문 연결성 (78·기호 포함)", widthDp = 393, heightDp = 852, showBackground = true)
+@Composable
+private fun FeedbackDetailItem3Preview() = FeedbackDetailItemPreview(3)
 
 // 저장된 상태 + 다른 항목 배너 확인용
 @Preview(name = "피드백 상세 - 질문 연결성/저장됨", widthDp = 393, heightDp = 852, showBackground = true)

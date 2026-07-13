@@ -27,7 +27,7 @@ class ConversationPrepViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
 ) : ViewModel() {
 
-    private val missionId: Long = checkNotNull(savedStateHandle["missionId"]) // route 인자 conversation_prep/{missionId}
+    private val missionId: String = checkNotNull(savedStateHandle["missionId"]) // route 인자 conversation_prep/{missionId}
     private var refreshIndex = 0 // 새로고침 누를 때마다 다음 문장 묶음으로 (stub용, 서버 연동 시 불필요)
 
     private val _uiState = MutableStateFlow(ConversationPrepUiState())

@@ -99,8 +99,8 @@ private val detailGradientStops: Array<Pair<Float, Color>> = Array(21) { i ->
 fun MissionDetailScreen(
     viewModel: MissionDetailViewModel = hiltViewModel(),
     onBack: () -> Unit = {},
-    onNextClick: (Long) -> Unit = {},
-    onMissionClick: (Long) -> Unit = {}, // 시트 안 카드 클릭 → 그 미션 상세
+    onNextClick: (String) -> Unit = {},
+    onMissionClick: (String) -> Unit = {}, // 시트 안 카드 클릭 → 그 미션 상세
     onSheetTopChange: (Float?) -> Unit = {},
     onSavedListClick: () -> Unit = {}, // 시트 "저장 목록 >" → 저장 목록 화면
 ) {
@@ -127,10 +127,10 @@ private fun MissionDetailScreen(
     onBack: () -> Unit,
     onRetry: () -> Unit,
     onToggleSave: () -> Unit,
-    onToggleSaveInList: (Long) -> Unit = {},
+    onToggleSaveInList: (String) -> Unit = {},
     onDismissSaveSheet: () -> Unit = {},
-    onNextClick: (Long) -> Unit = {},
-    onMissionClick: (Long) -> Unit = {},
+    onNextClick: (String) -> Unit = {},
+    onMissionClick: (String) -> Unit = {},
     onSheetTopChange: (Float?) -> Unit = {},
     onSavedListClick: () -> Unit = {},
 ) = FitDesign { // 작은 화면에선 디자인(393x852) 통째 축소 — 스크롤 없이 한 화면에
@@ -189,7 +189,7 @@ private fun MissionDetailContent(
     detail: MissionDetail,
     onBack: () -> Unit,
     onToggleSave: () -> Unit,
-    onNextClick: (Long) -> Unit,
+    onNextClick: (String) -> Unit,
 ) {
     BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
         // 세로 배치: 내용이 다 들어가는 화면에선 여백을 늘려 피그마 비례를 유지.
@@ -436,7 +436,7 @@ private fun RewardCard(rewardXp: Int) {
 
 // ── Preview ──
 private val previewDetail = MissionDetail(
-    id = 1,
+    id = "1",
     title = "처음 보는 사람에게 짧게 인사하기",
     category = "짧은 대화",
     difficulty = "쉬움",

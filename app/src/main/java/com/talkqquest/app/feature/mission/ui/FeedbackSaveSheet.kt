@@ -70,10 +70,10 @@ internal fun FeedbackSaveSheetScaffold(
     savedPhrase: SavedPhraseItem?,
     recentSavedPhrases: List<SavedPhraseItem>,
     onDismiss: () -> Unit,
-    onToggleSave: (Long) -> Unit,
+    onToggleSave: (String) -> Unit,
     onSheetTopChange: (Float?) -> Unit = {}, // 시트 위 끝 y(px), null=시트 없음 — 하단 네비 가림 처리
     onArchiveClick: () -> Unit = {},
-    onPhraseClick: (Long) -> Unit = {},
+    onPhraseClick: (String) -> Unit = {},
     content: @Composable () -> Unit,
 ) {
     // 내려가는 애니메이션 동안 보여줄 마지막 목록 (항목 유지는 스캐폴드가 하고, 목록은 여기서)
@@ -103,9 +103,9 @@ internal fun FeedbackSaveSheetScaffold(
 private fun FeedbackSaveSheetContent(
     savedPhrase: SavedPhraseItem,
     recentSavedPhrases: List<SavedPhraseItem>,
-    onToggleSave: (Long) -> Unit,
+    onToggleSave: (String) -> Unit,
     onArchiveClick: () -> Unit = {},
-    onPhraseClick: (Long) -> Unit = {},
+    onPhraseClick: (String) -> Unit = {},
 ) {
     Column(
         modifier = Modifier
@@ -184,8 +184,8 @@ private fun FeedbackSaveSheetContent(
 @Composable
 private fun SavedPhraseCard(
     item: SavedPhraseItem,
-    onToggleSave: (Long) -> Unit,
-    onClick: (Long) -> Unit = {}, // C담당 연결 지점: 보관함 문장 상세로
+    onToggleSave: (String) -> Unit,
+    onClick: (String) -> Unit = {}, // C담당 연결 지점: 보관함 문장 상세로
 ) {
     Row(
         modifier = Modifier
@@ -250,11 +250,11 @@ private fun SavedPhraseCard(
 
 // ── Preview (시트 내용만 확인 — 올라오는 동작은 에뮬에서) ──
 private val previewPhrases = listOf(
-    SavedPhraseItem(1, "그렇군요! 저도 편해서 놀랐어요", "2026.08.20"),
-    SavedPhraseItem(2, "그 말씀 들으니 저도 기분이 좋아지네요", "2026.08.19"),
-    SavedPhraseItem(3, "혹시 그때 어떤 기분이셨어요?", "2026.08.18"),
-    SavedPhraseItem(4, "좋은 이야기 들려주셔서 감사해요", "2026.08.17"),
-    SavedPhraseItem(5, "저도 비슷한 경험이 있어서 공감돼요", "2026.08.16"),
+    SavedPhraseItem("1", "그렇군요! 저도 편해서 놀랐어요", "2026.08.20"),
+    SavedPhraseItem("2", "그 말씀 들으니 저도 기분이 좋아지네요", "2026.08.19"),
+    SavedPhraseItem("3", "혹시 그때 어떤 기분이셨어요?", "2026.08.18"),
+    SavedPhraseItem("4", "좋은 이야기 들려주셔서 감사해요", "2026.08.17"),
+    SavedPhraseItem("5", "저도 비슷한 경험이 있어서 공감돼요", "2026.08.16"),
 )
 
 @Preview(name = "문장 저장 시트 내용", showBackground = true, backgroundColor = 0xFFF8FAFC)
@@ -262,7 +262,7 @@ private val previewPhrases = listOf(
 private fun FeedbackSaveSheetContentPreview() {
     TalkQQuestTheme {
         FeedbackSaveSheetContent(
-            savedPhrase = SavedPhraseItem(100, "그렇군요! 저도 편해서 놀랐어요", "2026.08.20"),
+            savedPhrase = SavedPhraseItem("100", "그렇군요! 저도 편해서 놀랐어요", "2026.08.20"),
             recentSavedPhrases = previewPhrases,
             onToggleSave = {},
         )
@@ -275,7 +275,7 @@ private fun FeedbackSaveSheetContentPreview() {
 private fun FeedbackSaveSheetFirstSavePreview() {
     TalkQQuestTheme {
         FeedbackSaveSheetContent(
-            savedPhrase = SavedPhraseItem(100, "그렇군요! 저도 편해서 놀랐어요", "2026.08.20"),
+            savedPhrase = SavedPhraseItem("100", "그렇군요! 저도 편해서 놀랐어요", "2026.08.20"),
             recentSavedPhrases = emptyList(),
             onToggleSave = {},
         )

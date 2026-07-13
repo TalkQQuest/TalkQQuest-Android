@@ -73,17 +73,21 @@ internal fun RecentActivityCard(
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    // 💡 TqCard 대신 Row + softShadow 조합으로 재설계했습니다.
+    val isMission = activity.type == ActivityType.MISSION
+
     // 카드 전체 영역 (클릭 가능)
     Row(
         modifier = modifier
             .fillMaxWidth()
-            .softShadow(color = Gray1000.copy(alpha = 0.04f), offsetY = 8.dp, blur = 24.dp, cornerRadius = 20.dp)
+            // 💡 CSS Frame 427321227(미션 85px) vs Frame 427321181(일반 72px)
+            .height(if (isMission) 85.dp else 72.dp)
+            // 💡 CSS box-shadow: rgba(15, 23, 42, 0.01)
+            .softShadow(color = Gray1000.copy(alpha = 0.01f), offsetY = 8.dp, blur = 24.dp, cornerRadius = 20.dp)
             .clip(RoundedCornerShape(20.dp))
             .clickable(onClick = onClick)
             .background(White)
-            // 💡 상하 14dp, 좌측 16dp, 우측 13dp로 내부 여백을 조율했습니다.
-            .padding(start = 16.dp, top = 14.dp, bottom = 14.dp, end = 13.dp),
+            // 💡 CSS padding: 0 6px 0 16px (CenterVertically가 상하를 자동 중앙 정렬해 줌)
+            .padding(start = 16.dp, end = 6.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
 
@@ -97,42 +101,48 @@ internal fun RecentActivityCard(
             ActivityType.REPORT -> R.drawable.img_archive_report
         }
 
-        // 아이콘 영역 (48x48 컨테이너 내 40x40 이미지)
-        Image(
-            painter = painterResource(id = iconRes),
-            contentDescription = null,
-            modifier = Modifier.size(40.dp)
-        )
+        // 아이콘 영역 (💡 CSS Frame 427321186/427321187: 48x48)
+        Box(
+            modifier = Modifier.size(48.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            Image(
+                painter = painterResource(id = iconRes),
+                contentDescription = null,
+                modifier = Modifier.size(40.dp)
+            )
+        }
 
-        Spacer(modifier = Modifier.width(10.dp))
+        // 💡 CSS Frame 427321225(미션) gap: 8px, Frame 427321179(일반) gap: 12px
+        Spacer(modifier = Modifier.width(if (isMission) 8.dp else 12.dp))
 
         // ==========================================
         // [중앙 영역] 텍스트 및 태그 컨테이너
         // ==========================================
         Column(
-            // 💡 불필요하게 걸려있던 padding(end=8.dp)를 없애 텍스트가 남은 가로폭을 전부 100% 사용하게 합니다.
-            // (지난번에 주석만 달고 안 지웠던 패딩을 이번에 확실히 제거하여 가로폭 추가 확보!)
             modifier = Modifier.weight(1f),
-            verticalArrangement = Arrangement.spacedBy(7.dp) // 제목 ↔ 메타줄 (CSS Frame 350 gap)
+            // 💡 CSS Frame 350(미션) gap: 7px, 일반은 0px
+            verticalArrangement = Arrangement.spacedBy(if (isMission) 7.dp else 0.dp)
         ) {
             // 제목 CSS: font 16px, weight 500, color #1E293B
             Text(
-                // 💡 단어 잘림 방지 로직 적용
+                // 단어 잘림 방지 로직 적용
                 text = activity.title.glueShortWords().keepWordsIntact(),
                 // CSS: Body/L Medium (16/24, 굵기 500)
                 style = TqType.BodyL.figma().copy(fontWeight = FontWeight.Medium, lineBreak = LineBreak.Heading),
                 color = Gray900,
                 maxLines = 1,
-                overflow = TextOverflow.Visible // 💡 극도로 좁은 기기에서 화면을 뚫고 나갈 때만 ... 표기
+                overflow = TextOverflow.Visible // 극도로 좁은 기기에서 화면을 뚫고 나갈 때만 ... 표기
             )
 
             // 💡 타입이 MISSION이면 미션 전용 태그(난이도, 카테고리, 시간, XP) 렌더링
-            if (activity.type == ActivityType.MISSION) {
+            if (isMission) {
                 Row(
                     // 좁은 화면에서 메타줄이 안 들어가면 글자를 꺾지 말고 가로 스크롤
                     modifier = Modifier.horizontalScroll(rememberScrollState()),
                     verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(8.dp) // 알약 간격 (CSS Frame 349/348 gap)
+                    // 💡 CSS Frame 349 gap: 8px
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     DifficultyLabel(difficulty = activity.difficulty ?: "쉬움")
                     CategoryTag(category = activity.category ?: "대화")
@@ -144,43 +154,51 @@ internal fun RecentActivityCard(
             }
             // 💡 그 외 타입(대화, 문장, 리포트)은 기존의 상태 | 날짜 렌더링
             else {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    // 상태 텍스트
-                    Text(
-                        text = activity.status,
-                        style = TqType.Caption.figma(),
-                        color = Gray500
-                    )
+                // 💡 CSS Frame 347: height 22px, padding 0 2px
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.height(22.dp).padding(horizontal = 2.dp)
+                ) {
+                    // 상태 텍스트 (💡 CSS Frame 343: padding 2 10 2 0)
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(4.dp),
+                        modifier = Modifier.padding(start = 0.dp, top = 2.dp, end = 10.dp, bottom = 2.dp)
+                    ) {
+                        Text(
+                            text = activity.status,
+                            style = TqType.Caption.figma(),
+                            color = Gray500
+                        )
+                    }
 
-                    Spacer(modifier = Modifier.width(8.dp))
-
-                    // 구분선 (CSS: 1x9px, color #CBD5E1)
+                    // 구분선 (💡 CSS: 1x9px, color #CBD5E1)
                     Box(
                         modifier = Modifier
                             .size(width = 1.dp, height = 9.dp)
                             .background(Gray300)
                     )
 
-                    Spacer(modifier = Modifier.width(8.dp))
-
-                    // 날짜 텍스트
-                    Text(
-                        text = activity.date,
-                        style = TqType.Caption.figma(),
-                        color = Gray500
-                    )
+                    // 날짜 텍스트 (💡 CSS Frame 344: padding 2 0 2 10)
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(2.dp),
+                        modifier = Modifier.padding(start = 10.dp, top = 2.dp, end = 0.dp, bottom = 2.dp)
+                    ) {
+                        Text(
+                            text = activity.date,
+                            style = TqType.Caption.figma(),
+                            color = Gray500
+                        )
+                    }
                 }
             }
         }
 
-        // 💡 텍스트와 쉐브론 사이 간격을 4dp로 최소화하여 텍스트 영역 극대화
-        Spacer(modifier = Modifier.width(4.dp))
-
         // ==========================================
         // [우측 영역] 이동 꺾쇠 (Chevron)
         // ==========================================
-        // 💡 항상 우측 꺾쇠 노출 (북마크 X)
-        // 💡 44x44 터치 영역 규격 적용
+        // 💡 CSS chevoren_left: 44x44
         Box(
             modifier = Modifier.size(44.dp),
             contentAlignment = Alignment.Center,
@@ -189,7 +207,6 @@ internal fun RecentActivityCard(
                 imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
                 contentDescription = "상세 보기",
                 tint = Gray600,
-                modifier = Modifier.size(20.dp)
             )
         }
     }
@@ -198,7 +215,7 @@ internal fun RecentActivityCard(
 // ── 미션 전용 태그 컴포넌트 ──
 
 /**
- * 난이도 알약 (CSS Frame 345): radius 16, padding 4x12, Label/M. 색은 난이도별(CSS 원본값).
+ * 난이도 알약 (💡 CSS Frame 345): radius 16, padding 4x12, Label/M, height 26.
  */
 @Composable
 private fun DifficultyLabel(difficulty: String) {
@@ -206,20 +223,21 @@ private fun DifficultyLabel(difficulty: String) {
         "쉬움" -> Success to EasyBg
         "보통" -> OrangeText to NormalBg
         "어려움" -> Error to HardBg
-        else -> Gray700 to Gray100 // 알 수 없는 값 대비(서버 값 변동 방어)
+        else -> Gray700 to Gray100
     }
     Box(
         modifier = Modifier
             .clip(RoundedCornerShape(16.dp))
             .background(bgColor)
             .padding(horizontal = 12.dp, vertical = 4.dp),
+        contentAlignment = Alignment.Center
     ) {
         Text(text = difficulty, style = TqType.LabelM.figma(), color = textColor)
     }
 }
 
 /**
- * 카테고리 태그 (CSS Frame 342): radius 16, padding 4x12, Gray100 배경, Caption Gray500.
+ * 카테고리 태그 (💡 CSS Frame 342): radius 16, padding 4x12, Gray100 배경, Caption Gray500, height 26.
  */
 @Composable
 private fun CategoryTag(category: String) {
@@ -228,20 +246,21 @@ private fun CategoryTag(category: String) {
             .clip(RoundedCornerShape(16.dp))
             .background(Gray100)
             .padding(horizontal = 12.dp, vertical = 4.dp),
+        contentAlignment = Alignment.Center
     ) {
         Text(text = category, style = TqType.Caption.figma(), color = Gray500)
     }
 }
 
 /**
- * 시간 · 구분선 · XP (CSS Frame 347: [시계 9 + N분] | 1x9 구분선 | [플러스 + NXP], 안쪽 여백 10)
+ * 시간 · 구분선 · XP (💡 CSS Frame 347: [시계 9 + N분] | 1x9 구분선 | [플러스 + NXP])
  */
 @Composable
 private fun TimeXpRow(minutes: Int, xp: Int) {
     Row(verticalAlignment = Alignment.CenterVertically) {
+        // 💡 CSS Frame 343 원본 (horizontal = 10.dp, height = 22.dp)
         Row(
-            // 💡 원본 규격 복구 (horizontal = 10.dp)
-            modifier = Modifier.padding(horizontal = 10.dp, vertical = 2.dp),
+            modifier = Modifier.padding(horizontal = 10.dp, vertical = 2.dp).height(22.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(4.dp),
         ) {
@@ -258,15 +277,16 @@ private fun TimeXpRow(minutes: Int, xp: Int) {
                 .height(9.dp)
                 .background(Gray300),
         )
+        // 💡 CSS Frame 344 원본 (horizontal = 10.dp, height = 22.dp)
         Row(
-            modifier = Modifier.padding(horizontal = 10.dp, vertical = 2.dp),
+            modifier = Modifier.padding(horizontal = 10.dp, vertical = 2.dp).height(22.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(2.dp),
         ) {
             Image(
                 painter = painterResource(R.drawable.ic_mission_xp),
                 contentDescription = null,
-                modifier = Modifier.size(7.dp),
+                modifier = Modifier.size(11.dp), // CSS Frame 344 기준 11x11
             )
             Text(text = "${xp}XP", style = TqType.Caption.figma(), color = Gray500, softWrap = false)
         }

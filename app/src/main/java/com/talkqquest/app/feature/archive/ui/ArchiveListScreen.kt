@@ -33,7 +33,6 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -62,7 +61,6 @@ import com.talkqquest.app.feature.archive.viewmodel.RecentActivity
 
 import kotlinx.coroutines.launch
 
-// 💡 1. 최상위 화면 함수
 @Composable
 fun ArchiveListScreen(
     initialTabIndex: Int = 0,
@@ -90,7 +88,6 @@ fun ArchiveListScreen(
     )
 }
 
-// 💡 2. 순수 UI 컴포넌트
 @Composable
 private fun ArchiveListScreenContent(
     initialTabIndex: Int,
@@ -119,10 +116,17 @@ private fun ArchiveListScreenContent(
         ) {
             // [1] 상단 헤더
             Box(
-                modifier = Modifier.fillMaxWidth().padding(top = 8.dp).height(44.dp)
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 8.dp)
+                    .height(44.dp)
             ) {
                 Box(
-                    modifier = Modifier.size(44.dp).align(Alignment.CenterStart).clip(CircleShape).clickable(onClick = onBackClick),
+                    modifier = Modifier
+                        .size(44.dp)
+                        .align(Alignment.CenterStart)
+                        .clip(CircleShape)
+                        .clickable(onClick = onBackClick),
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(Icons.AutoMirrored.Filled.KeyboardArrowLeft, contentDescription = "뒤로가기", tint = Gray500)
@@ -132,22 +136,38 @@ private fun ArchiveListScreenContent(
 
             // [2] 카테고리 탭
             Spacer(modifier = Modifier.height(16.dp))
-            Box(modifier = Modifier.fillMaxWidth().height(38.dp)) {
-                Box(modifier = Modifier.fillMaxWidth().height(1.dp).background(Gray300).align(Alignment.BottomCenter))
-                Row(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
+            Box(modifier = Modifier
+                .fillMaxWidth()
+                .height(38.dp)) {
+                Box(modifier = Modifier
+                    .fillMaxWidth()
+                    .height(1.dp)
+                    .background(Gray300)
+                    .align(Alignment.BottomCenter))
+                Row(modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp)) {
                     tabs.forEachIndexed { index, tab ->
                         val isActive = (pagerState.currentPage == index)
                         Box(
-                            modifier = Modifier.weight(1f).clip(RoundedCornerShape(12.dp)).clickable {
-                                coroutineScope.launch { pagerState.animateScrollToPage(index) }
-                            },
+                            modifier = Modifier
+                                .weight(1f)
+                                .clip(RoundedCornerShape(12.dp))
+                                .clickable {
+                                    coroutineScope.launch { pagerState.animateScrollToPage(index) }
+                                },
                             contentAlignment = Alignment.TopCenter
                         ) {
                             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                                 Text(tab, style = TqType.TitleL.figma(), color = if (isActive) Gray800 else Gray400, modifier = Modifier.height(28.dp))
                                 Spacer(modifier = Modifier.height(10.dp))
                             }
-                            if (isActive) Box(Modifier.align(Alignment.BottomCenter).requiredWidth(44.dp).height(3.dp).background(Gray800, RoundedCornerShape(topStart = 4.dp, topEnd = 4.dp)))
+                            if (isActive) Box(
+                                Modifier
+                                    .align(Alignment.BottomCenter)
+                                    .requiredWidth(44.dp)
+                                    .height(3.dp)
+                                    .background(Gray800, RoundedCornerShape(topStart = 4.dp, topEnd = 4.dp)))
                         }
                     }
                 }
@@ -157,7 +177,10 @@ private fun ArchiveListScreenContent(
             if (pagerState.currentPage == 0) {
                 Spacer(modifier = Modifier.height(27.dp))
                 Row(
-                    modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(horizontal = 15.dp),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .horizontalScroll(rememberScrollState())
+                        .padding(horizontal = 15.dp),
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     filters.forEach { filter ->
@@ -174,51 +197,85 @@ private fun ArchiveListScreenContent(
 
             // [4] Pager 리스트
             HorizontalPager(state = pagerState, modifier = Modifier.weight(1f)) { page ->
-                LazyColumn(
-                    modifier = Modifier.fillMaxSize(),
-                    contentPadding = PaddingValues(top = 16.dp, bottom = 100.dp, start = 16.dp, end = 16.dp),
-                    verticalArrangement = Arrangement.spacedBy(16.dp)
-                ) {
-                    when (page) {
-                        0 -> { // 🌟 미션 탭 (독립 카드 적용)
-                            items(uiState.filteredMissions, key = { it.id }) { mission ->
-                                ArchiveMissionCard(
-                                    mission = mission,
-                                    onClick = { onMissionClick(mission.id) },
-                                    onToggleSave = { onToggleMissionSave(mission.id) },
-                                    modifier = Modifier.animateItem()
-                                )
+                // 💡 1. 현재 탭의 리스트가 비어있는지 확인합니다.
+                val isListEmpty = when (page) {
+                    0 -> uiState.filteredMissions.isEmpty()
+                    1 -> uiState.conversations.isEmpty()
+                    2 -> uiState.sentences.isEmpty()
+                    3 -> uiState.reports.isEmpty()
+                    else -> true
+                }
+
+                if (isListEmpty) {
+                    // 💡 2. 리스트가 비어있다면 탭에 맞는 안내 문구를 출력합니다.
+                    val emptyMessage = when (page) {
+                        0 -> "저장한 미션이 없어요"
+                        1 -> "진행한 대화가 없어요"
+                        2 -> "저장한 문장이 없어요"
+                        3 -> "저장한 리포트가 없어요"
+                        else -> "저장된 항목이 없어요"
+                    }
+
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(bottom = 100.dp), // 하단 여백을 고려해 중앙을 맞춥니다
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = emptyMessage,
+                            style = TqType.BodyL.copy(fontWeight = FontWeight.Medium).figma(),
+                            color = Gray500
+                        )
+                    }
+                } else {
+                    // 💡 3. 리스트에 데이터가 있다면 기존처럼 카드를 그려줍니다.
+                    LazyColumn(
+                        modifier = Modifier.fillMaxSize(),
+                        contentPadding = PaddingValues(top = 16.dp, bottom = 100.dp, start = 16.dp, end = 16.dp),
+                        verticalArrangement = Arrangement.spacedBy(16.dp)
+                    ) {
+                        when (page) {
+                            0 -> { // 미션 탭
+                                items(uiState.filteredMissions, key = { it.id }) { mission ->
+                                    ArchiveMissionCard(
+                                        mission = mission,
+                                        onClick = { onMissionClick(mission.id) },
+                                        onToggleSave = { onToggleMissionSave(mission.id) },
+                                        modifier = Modifier.animateItem()
+                                    )
+                                }
                             }
-                        }
-                        1 -> { // 🌟 대화 탭 (요청하신 RecentActivityCard 완벽 적용!)
-                            items(uiState.conversations, key = { it.id }) { conversation ->
-                                RecentActivityCard(
-                                    activity = conversation,
-                                    onClick = { onConversationClick(conversation.id) },
-                                    modifier = Modifier.animateItem()
-                                )
+                            1 -> { // 대화 탭
+                                items(uiState.conversations, key = { it.id }) { conversation ->
+                                    RecentActivityCard(
+                                        activity = conversation,
+                                        onClick = { onConversationClick(conversation.id) },
+                                        modifier = Modifier.animateItem()
+                                    )
+                                }
                             }
-                        }
-                        2 -> { // 🌟 문장 탭 (공통 북마크 카드)
-                            items(uiState.sentences, key = { it.id }) { sentence ->
-                                BookmarkCard(
-                                    item = sentence,
-                                    isSentence = true,
-                                    onClick = { onSentenceClick(sentence.id) },
-                                    onToggleSave = { onToggleSentenceSave(sentence.id) },
-                                    modifier = Modifier.animateItem()
-                                )
+                            2 -> { // 문장 탭
+                                items(uiState.sentences, key = { it.id }) { sentence ->
+                                    BookmarkCard(
+                                        item = sentence,
+                                        isSentence = true,
+                                        onClick = { onSentenceClick(sentence.id) },
+                                        onToggleSave = { onToggleSentenceSave(sentence.id) },
+                                        modifier = Modifier.animateItem()
+                                    )
+                                }
                             }
-                        }
-                        3 -> { // 🌟 리포트 탭 (공통 북마크 카드)
-                            items(uiState.reports, key = { it.id }) { report ->
-                                BookmarkCard(
-                                    item = report,
-                                    isSentence = false,
-                                    onClick = { onReportClick(report.id) },
-                                    onToggleSave = { onToggleReportSave(report.id) },
-                                    modifier = Modifier.animateItem()
-                                )
+                            3 -> { // 리포트 탭
+                                items(uiState.reports, key = { it.id }) { report ->
+                                    BookmarkCard(
+                                        item = report,
+                                        isSentence = false,
+                                        onClick = { onReportClick(report.id) },
+                                        onToggleSave = { onToggleReportSave(report.id) },
+                                        modifier = Modifier.animateItem()
+                                    )
+                                }
                             }
                         }
                     }
@@ -233,13 +290,21 @@ private fun ArchiveListScreenContent(
 private fun FilterChip(text: String, isSelected: Boolean, onClick: () -> Unit) {
     val shape = RoundedCornerShape(20.dp)
     val baseModifier = if (isSelected) {
-        Modifier.clip(shape).background(Primary600)
+        Modifier
+            .clip(shape)
+            .background(Primary600)
     } else {
-        Modifier.softShadow(color = Gray1000.copy(alpha = 0.01f), offsetY = 8.dp, blur = 24.dp, cornerRadius = 20.dp).clip(shape).background(White)
+        Modifier
+            .softShadow(color = Gray1000.copy(alpha = 0.01f), offsetY = 8.dp, blur = 24.dp, cornerRadius = 20.dp)
+            .clip(shape)
+            .background(White)
     }
 
     Box(
-        modifier = baseModifier.clickable(onClick = onClick).height(34.dp).padding(horizontal = 18.dp),
+        modifier = baseModifier
+            .clickable(onClick = onClick)
+            .height(34.dp)
+            .padding(horizontal = 18.dp),
         contentAlignment = Alignment.Center
     ) {
         Text(

@@ -1,6 +1,7 @@
 package com.talkqquest.app.feature.archive.viewmodel
 
 import androidx.lifecycle.ViewModel
+import com.talkqquest.app.feature.archive.data.ArchiveRepository
 import com.talkqquest.app.feature.archive.ui.ArchiveMissionItem
 import com.talkqquest.app.feature.archive.ui.BookmarkArchiveItem
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -21,20 +22,22 @@ data class ArchiveUiState(
     // 💡 ViewModel 내에서 필터링된 결과만 바로 빼서 쓸 수 있도록 계산 속성(Computed Property)을 둡니다.
     val filteredMissions: List<ArchiveMissionItem>
         get() = when (selectedFilter) {
-            "완료" -> missions.filter { it.isCompleted } // 실제 속성명에 맞게 변경
-            "미완료" -> missions.filter { !it.isCompleted } // 실제 속성명에 맞게 변경
+            "완료" -> missions.filter { it.isCompleted }
+            "미완료" -> missions.filter { !it.isCompleted }
             else -> missions
         }
 }
 
 @HiltViewModel
-class ArchiveViewModel @Inject constructor() : ViewModel() {
+class ArchiveViewModel @Inject constructor(
+    private val repository: ArchiveRepository // 💡 새로 만든 Repository를 주입받습니다!
+) : ViewModel() {
 
     private val _uiState = MutableStateFlow(ArchiveUiState())
     val uiState: StateFlow<ArchiveUiState> = _uiState.asStateFlow()
 
     init {
-        loadMockData() // 초기 더미 데이터 로드
+        loadMockData() // 초기 통합 데이터 로드
     }
 
     // 필터 변경
@@ -42,7 +45,7 @@ class ArchiveViewModel @Inject constructor() : ViewModel() {
         _uiState.update { it.copy(selectedFilter = filter) }
     }
 
-    // 미션 북마크 해제 (해제 시 리스트에서 제거)
+    // 미션 북마크 해제 (보관함 화면이므로 해제 시 리스트에서 즉시 제거됩니다)
     fun toggleMissionSave(id: Long) {
         _uiState.update { state ->
             val updatedMissions = state.missions.map {
@@ -72,30 +75,16 @@ class ArchiveViewModel @Inject constructor() : ViewModel() {
         }
     }
 
-    // ── 임시 더미 데이터 셋업 ──
+    // ── Repository 연동으로 단일 진실 공급원(SSOT) 바라보기 ──
     private fun loadMockData() {
         _uiState.update { state ->
             state.copy(
-                missions = listOf(
-                    ArchiveMissionItem(1, "처음 보는 사람에게 짧게 인사하기", "짧은 대화", "쉬움", 2, 20, isCompleted = true, isSaved = true),
-                    ArchiveMissionItem(2, "최근 본 영화 이야기하기", "짧은 대화", "쉬움", 5, 20, isCompleted = false, isSaved = true),
-                    ArchiveMissionItem(3, "학교 생활 꿀팁 나누기", "일상 대화", "보통", 8, 30, isCompleted = true, isSaved = true)
-                ),
-                conversations = listOf(
-                    RecentActivity(id = "1", title = "처음 보는 사람에게 짧게 인사하기", type = ActivityType.CONVERSATION, status = "대화 완료", date = "2026.08.20"),
-                    RecentActivity(id = "2", title = "최근 본 영화 이야기하기", type = ActivityType.CONVERSATION, status = "대화 완료", date = "2026.08.20"),
-                    RecentActivity(id = "3", title = "학교 생활 꿀팁 나누기", type = ActivityType.CONVERSATION, status = "대화 완료", date = "2026.08.20")
-                ),
-                sentences = listOf(
-                    BookmarkArchiveItem("1", "그렇군요! 저도 편해서 놀랐어요.", "문장 저장", "2026.08.20"),
-                    BookmarkArchiveItem("2", "그 말씀 들으니 저도 기분이 좋아지네요", "문장 저장", "2026.08.19"),
-                    BookmarkArchiveItem("3", "혹시 그때 어떤 기분이셨어요?", "문장 저장", "2026.08.18")
-                ),
-                reports = listOf(
-                    BookmarkArchiveItem("1", "처음 보는 사람에게 짧게 인사하기", "리포트 열람", "2026.08.20"),
-                    BookmarkArchiveItem("2", "최근 본 영화 이야기하기", "리포트 열람", "2026.08.19"),
-                    BookmarkArchiveItem("3", "학교 생활 꿀팁 나누기", "리포트 열람", "2026.08.18")
-                )
+                // 💡 하드코딩된 더미를 지우고 Repository에서 통합된 원본 데이터를 가져옵니다.
+                // 보관함 목록이므로 '저장된(isSaved = true)' 아이템만 명시적으로 필터링해서 넣습니다.
+                missions = repository.getArchiveMissions().filter { it.isSaved },
+                conversations = repository.getArchiveConversations(), // 대화는 자동저장이므로 전체 로드
+                sentences = repository.getArchiveSentences().filter { it.isSaved },
+                reports = repository.getArchiveReports().filter { it.isSaved }
             )
         }
     }

@@ -18,11 +18,20 @@ class TokenDataStore @Inject constructor(
     @ApplicationContext private val context: Context,
 ) {
     private val accessTokenKey = stringPreferencesKey("access_token")
+    private val refreshTokenKey = stringPreferencesKey("refresh_token")
 
     val accessToken: Flow<String?> = context.dataStore.data.map { prefs -> prefs[accessTokenKey] }
+    val refreshToken: Flow<String?> = context.dataStore.data.map { prefs -> prefs[refreshTokenKey] }
 
     suspend fun saveAccessToken(token: String) {
         context.dataStore.edit { prefs -> prefs[accessTokenKey] = token }
+    }
+
+    suspend fun saveTokens(accessToken: String, refreshToken: String) {
+        context.dataStore.edit { prefs ->
+            prefs[accessTokenKey] = accessToken
+            prefs[refreshTokenKey] = refreshToken
+        }
     }
 
     suspend fun clear() {

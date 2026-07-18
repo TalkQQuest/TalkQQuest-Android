@@ -31,10 +31,10 @@ data class ReportUiState(
     val saveSheetReport: SavedReportItem? = null,
     // 보관함(저장된 리포트) — TODO(서버 연동): 리포트 아카이브 API(E102)로 교체. 지금은 CSS 샘플 목업
     val savedReports: List<SavedReportItem> = listOf(
-        SavedReportItem(id = 1, title = "최근 본 영화 이야기 하기", savedDate = "2026.08.20"),
-        SavedReportItem(id = 2, title = "학교 생활 꿀팁 나누기", savedDate = "2026.08.19"),
-        SavedReportItem(id = 3, title = "주말 계획 이야기하기", savedDate = "2026.08.18"),
-        SavedReportItem(id = 4, title = "나의 취미를 소개해보기", savedDate = "2026.08.17"),
+        SavedReportItem(id = "1", title = "최근 본 영화 이야기 하기", savedDate = "2026.08.20"),
+        SavedReportItem(id = "2", title = "학교 생활 꿀팁 나누기", savedDate = "2026.08.19"),
+        SavedReportItem(id = "3", title = "주말 계획 이야기하기", savedDate = "2026.08.18"),
+        SavedReportItem(id = "4", title = "나의 취미를 소개해보기", savedDate = "2026.08.17"),
     ),
 )
 
@@ -67,7 +67,7 @@ class ReportViewModel @Inject constructor(
             val kept = state.saveSheetReport?.takeIf { it.isSaved }
             state.copy(
                 saveSheetReport = SavedReportItem(
-                    id = nextSaveId++,
+                    id = (nextSaveId++).toString(),
                     // 미션명이 없는 경로(아카이브 등 직접 진입)로 들어온 경우만 화면 이름으로 대체
                     title = state.missionTitle.ifBlank { "성장 리포트" },
                     savedDate = LocalDate.now().format(DateTimeFormatter.ofPattern("yyyy.MM.dd")),
@@ -79,7 +79,7 @@ class ReportViewModel @Inject constructor(
 
     // 시트 안 북마크 토글: 시트에 뜬 리포트를 해제하면 시트가 내려가고(화면 쪽 연출),
     // 보관함 카드는 해제 연출 후에도 목록에 남겨둬 다시 누르면 복구됨.
-    fun toggleReportSave(id: Long) {
+    fun toggleReportSave(id: String) {
         _uiState.update { state ->
             val sheet = state.saveSheetReport
             if (sheet != null && sheet.id == id) {

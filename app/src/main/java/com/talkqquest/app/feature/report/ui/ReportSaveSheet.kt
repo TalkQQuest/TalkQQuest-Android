@@ -70,10 +70,10 @@ internal fun ReportSaveSheetScaffold(
     savedReport: SavedReportItem?,
     recentSavedReports: List<SavedReportItem>,
     onDismiss: () -> Unit,
-    onToggleSave: (Long) -> Unit,
+    onToggleSave: (String) -> Unit,
     onSheetTopChange: (Float?) -> Unit = {}, // 시트 위 끝 y(px), null=시트 없음 — 하단 네비 가림 처리
     onArchiveClick: () -> Unit = {},
-    onReportClick: (Long) -> Unit = {},
+    onReportClick: (String) -> Unit = {},
     content: @Composable () -> Unit,
 ) {
     // 내려가는 애니메이션 동안 보여줄 마지막 목록 (항목 유지는 스캐폴드가 하고, 목록은 여기서)
@@ -103,9 +103,9 @@ internal fun ReportSaveSheetScaffold(
 private fun ReportSaveSheetContent(
     savedReport: SavedReportItem,
     recentSavedReports: List<SavedReportItem>,
-    onToggleSave: (Long) -> Unit,
+    onToggleSave: (String) -> Unit,
     onArchiveClick: () -> Unit = {},
-    onReportClick: (Long) -> Unit = {},
+    onReportClick: (String) -> Unit = {},
 ) {
     Column(
         modifier = Modifier
@@ -184,8 +184,8 @@ private fun ReportSaveSheetContent(
 @Composable
 private fun SavedReportCard(
     report: SavedReportItem,
-    onToggleSave: (Long) -> Unit,
-    onClick: (Long) -> Unit = {}, // C담당 연결 지점: 보관함 리포트 상세로
+    onToggleSave: (String) -> Unit,
+    onClick: (String) -> Unit = {}, // C담당 연결 지점: 보관함 리포트 상세로
 ) {
     Row(
         modifier = Modifier
@@ -263,12 +263,12 @@ private fun ReportSaveSheetContentPreview() {
     TalkQQuestTheme {
         ReportSaveSheetContent(
             // 카드 제목 = 이 리포트가 나온 미션명 (CSS 목업과 동일)
-            savedReport = SavedReportItem(100, "처음 보는 사람에게 짧게 인사하기", "2026.08.21"),
+            savedReport = SavedReportItem("100", "처음 보는 사람에게 짧게 인사하기", "2026.08.21"),
             recentSavedReports = listOf(
-                SavedReportItem(1, "최근 본 영화 이야기 하기", "2026.08.20"),
-                SavedReportItem(2, "학교 생활 꿀팁 나누기", "2026.08.19"),
-                SavedReportItem(3, "주말 계획 이야기하기", "2026.08.18"),
-                SavedReportItem(4, "나의 취미를 소개해보기", "2026.08.17"),
+                SavedReportItem("1", "최근 본 영화 이야기 하기", "2026.08.20"),
+                SavedReportItem("2", "학교 생활 꿀팁 나누기", "2026.08.19"),
+                SavedReportItem("3", "주말 계획 이야기하기", "2026.08.18"),
+                SavedReportItem("4", "나의 취미를 소개해보기", "2026.08.17"),
             ),
             onToggleSave = {},
         )
@@ -281,7 +281,7 @@ private fun ReportSaveSheetContentPreview() {
 private fun ReportSaveSheetFirstSavePreview() {
     TalkQQuestTheme {
         ReportSaveSheetContent(
-            savedReport = SavedReportItem(100, "처음 보는 사람에게 짧게 인사하기", "2026.08.21"),
+            savedReport = SavedReportItem("100", "처음 보는 사람에게 짧게 인사하기", "2026.08.21"),
             recentSavedReports = emptyList(),
             onToggleSave = {},
         )

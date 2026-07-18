@@ -57,8 +57,8 @@ internal fun MissionSaveSheetScaffold(
     savedMission: MissionListItem?,
     recentSavedMissions: List<MissionListItem>,
     onDismiss: () -> Unit,
-    onMissionClick: (Long) -> Unit,
-    onToggleSave: (Long) -> Unit,
+    onMissionClick: (String) -> Unit,
+    onToggleSave: (String) -> Unit,
     onSheetTopChange: (Float?) -> Unit = {}, // 시트 위 끝 y(px), null=시트 없음. 하단 네비가 이 선 아래를 안 그려 시트 뒤에 있던 것처럼 드러남
     onSavedListClick: () -> Unit = {},
     content: @Composable () -> Unit,
@@ -90,8 +90,8 @@ internal fun MissionSaveSheetScaffold(
 private fun MissionSaveSheetContent(
     savedMission: MissionListItem,
     recentSavedMissions: List<MissionListItem>,
-    onMissionClick: (Long) -> Unit,
-    onToggleSave: (Long) -> Unit,
+    onMissionClick: (String) -> Unit,
+    onToggleSave: (String) -> Unit,
     onSavedListClick: () -> Unit,
 ) {
     // "저장 목록" 카드의 해제 퇴장 연출용 표시 목록.
@@ -197,10 +197,10 @@ private fun MissionSaveSheetContent(
 private fun MissionSaveSheetContentPreview() {
     TalkQQuestTheme {
         MissionSaveSheetContent(
-            savedMission = MissionListItem(1, "처음 보는 사람에게 짧게 인사하기", "짧은 대화", "쉬움", 2, 20, isSaved = true),
+            savedMission = MissionListItem("1", "처음 보는 사람에게 짧게 인사하기", "짧은 대화", "쉬움", 2, 20, isSaved = true),
             recentSavedMissions = listOf(
-                MissionListItem(2, "최근 본 영화 이야기하기", "짧은 대화", "쉬움", 5, 20, isSaved = true),
-                MissionListItem(3, "학교 생활 꿀팁 나누기", "일상 대화", "보통", 8, 30, isSaved = true),
+                MissionListItem("2", "최근 본 영화 이야기하기", "짧은 대화", "쉬움", 5, 20, isSaved = true),
+                MissionListItem("3", "학교 생활 꿀팁 나누기", "일상 대화", "보통", 8, 30, isSaved = true),
             ),
             onMissionClick = {}, onToggleSave = {}, onSavedListClick = {},
         )
@@ -213,7 +213,7 @@ private fun MissionSaveSheetContentPreview() {
 private fun MissionSaveSheetFirstSavePreview() {
     TalkQQuestTheme {
         MissionSaveSheetContent(
-            savedMission = MissionListItem(1, "처음 보는 사람에게 짧게 인사하기", "짧은 대화", "쉬움", 2, 20, isSaved = true),
+            savedMission = MissionListItem("1", "처음 보는 사람에게 짧게 인사하기", "짧은 대화", "쉬움", 2, 20, isSaved = true),
             recentSavedMissions = emptyList(),
             onMissionClick = {}, onToggleSave = {}, onSavedListClick = {},
         )

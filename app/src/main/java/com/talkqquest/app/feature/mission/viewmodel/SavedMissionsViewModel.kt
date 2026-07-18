@@ -64,12 +64,12 @@ class SavedMissionsViewModel @Inject constructor(
     }
 
     // 해제 후 목록에서 실제 제거까지의 대기 — 화면의 퇴장 연출(풀림 인지 250 + 퇴장 350)보다 살짝 길게.
-    private val removalJobs = mutableMapOf<Long, Job>()
+    private val removalJobs = mutableMapOf<String, Job>()
 
     // 북마크 토글. TODO(서버 연동): POST/DELETE /api/v1/missions/{id}/save 호출로 교체.
     // 해제: isSaved=false로 두고(화면이 퇴장 연출을 그림) 연출이 끝난 뒤 목록에서 제거.
     // 연출 중 재저장: 제거 예약을 취소하고 카드 복귀(실수 복구).
-    fun toggleSave(missionId: Long) {
+    fun toggleSave(missionId: String) {
         val nowSaved = missionRepository.toggleSave(missionId) // 공유 상태 반영
         _uiState.update { state ->
             state.copy(

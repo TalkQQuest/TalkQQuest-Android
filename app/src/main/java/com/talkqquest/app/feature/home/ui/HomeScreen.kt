@@ -98,7 +98,7 @@ import kotlinx.coroutines.launch
 @Composable
 fun HomeScreen(
     viewModel: HomeViewModel = hiltViewModel(),
-    onStartMissionClick: (Long) -> Unit = {}, // 오늘의 미션 "미션 시작하기" → 미션 상세
+    onStartMissionClick: (String) -> Unit = {}, // 오늘의 미션 "미션 시작하기" → 미션 상세
     onOtherMissionsClick: () -> Unit = {},    // "다른 미션 보기" → 미션 목록
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -116,7 +116,7 @@ fun HomeScreen(
 private fun HomeScreen(
     uiState: HomeUiState,
     onRetry: () -> Unit,
-    onStartMissionClick: (Long) -> Unit = {},
+    onStartMissionClick: (String) -> Unit = {},
     onOtherMissionsClick: () -> Unit = {},
 ) = FitDesign { // 작은 화면에선 디자인(393x852) 통째 축소 — 미션 화면들과 동일하게 스크롤 없이 한 화면에
     Box(
@@ -177,7 +177,7 @@ private fun HomeCard(
 @Composable
 private fun HomeContent(
     summary: HomeSummary,
-    onStartMissionClick: (Long) -> Unit = {},
+    onStartMissionClick: (String) -> Unit = {},
     onOtherMissionsClick: () -> Unit = {},
 ) {
     Column(
@@ -541,7 +541,7 @@ private val previewSummary = HomeSummary(
     currentXp = 30,
     nextLevelXp = 100,
     todayMission = TodayMission(
-        id = 1,
+        id = "1",
         title = "처음 보는 사람에게 짧게 인사하기", // 실제 서버값 그대로(\n 없음) — 줄바꿈은 알고리즘이 처리한 결과를 확인
         description = "가벼운 인사로 좋은 대화의 시작을 열어보세요!",
         difficulty = "쉬움",

@@ -29,7 +29,7 @@ class MissionCompleteViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
 ) : ViewModel() {
 
-    private val missionId: Long = checkNotNull(savedStateHandle["missionId"])
+    private val missionId: String = checkNotNull(savedStateHandle["missionId"])
 
     // 대화 화면이 넘겨준 대화 시간(초). 직접 진입(딥링크 등) 시 0 → 00:00.
     private val durationSec: Long = savedStateHandle["durationSec"] ?: 0L

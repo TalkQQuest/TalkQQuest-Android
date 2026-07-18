@@ -1,6 +1,7 @@
 package com.talkqquest.app.feature.archive.viewmodel
 
 import androidx.lifecycle.ViewModel
+import com.talkqquest.app.feature.archive.data.ArchiveRepository
 import com.talkqquest.app.feature.archive.ui.ArchiveMissionItem
 import com.talkqquest.app.feature.archive.ui.BookmarkArchiveItem
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -135,7 +136,7 @@ data class ArchiveSearchUiState(
                 ArchiveSortType.SAVED -> {
                     results.sortWith(
                         compareByDescending<Any> { if (isItemSaved(it)) 1 else 0 } // 1순위: 저장된 카드가 무조건 위로
-                            .thenByDescending { savedTimestamps[getItemKey(it)] ?: 0L } // 2순위: 💡 방금 북마크를 눌러 저장된 시간이 큰 카드가 최상단으로!
+                            .thenByDescending { savedTimestamps[getItemKey(it)] ?: 0L } // 2순위: 방금 북마크를 눌러 저장된 시간이 큰 카드가 최상단으로!
                             .thenByDescending { getItemId(it) } // 3순위: 기존부터 저장되어 있던 카드들의 원래 순서
                     )
                 }
@@ -146,13 +147,15 @@ data class ArchiveSearchUiState(
 }
 
 @HiltViewModel
-class ArchiveSearchViewModel @Inject constructor() : ViewModel() {
+class ArchiveSearchViewModel @Inject constructor(
+    private val repository: ArchiveRepository // 💡 새로 만든 Repository를 주입받습니다!
+) : ViewModel() {
 
     private val _uiState = MutableStateFlow(ArchiveSearchUiState())
     val uiState: StateFlow<ArchiveSearchUiState> = _uiState.asStateFlow()
 
     init {
-        loadMockData()
+        loadMockData() // 초기 통합 데이터 로드
     }
 
     fun updateSearchQuery(query: String) {
@@ -271,21 +274,15 @@ class ArchiveSearchViewModel @Inject constructor() : ViewModel() {
         }
     }
 
+    // ── Repository 연동으로 단일 진실 공급원(SSOT) 바라보기 ──
     private fun loadMockData() {
         _uiState.update { state ->
             state.copy(
-                allMissions = listOf(
-                    ArchiveMissionItem(1L, "처음 보는 사람에게 짧게 인사하기", "짧은 대화", "쉬움", 2, 20, isCompleted = true, isSaved = true, completedDate = "2026.07.16")
-                ),
-                allConversations = listOf(
-                    RecentActivity(id = "1", title = "식당에서 메뉴 추천받고 주문하기", type = ActivityType.CONVERSATION, status = "대화 완료", date = "2026.07.15")
-                ),
-                allSentences = listOf(
-                    BookmarkArchiveItem("1", "그렇군요! 저도 편해서 놀랐어요.", "문장 저장", "2026.06.25", isSaved = false)
-                ),
-                allReports = listOf(
-                    BookmarkArchiveItem("2", "자기소개와 취미 공유하기", "리포트 열람", "2026.05.05", isSaved = true)
-                )
+                // 💡 Repository에서 통합된 원본 데이터를 가져옵니다.
+                allMissions = repository.getArchiveMissions(),
+                allConversations = repository.getArchiveConversations(),
+                allSentences = repository.getArchiveSentences(),
+                allReports = repository.getArchiveReports()
             )
         }
     }

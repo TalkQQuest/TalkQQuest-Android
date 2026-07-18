@@ -12,26 +12,25 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
-// 1. UI용 데이터 모델 및 Enum 정의
+// 🚨 주의: 만약 다른 ViewModel(ex: ArchiveSearchViewModel) 파일에
+// ActivityType과 RecentActivity가 이미 선언되어 있다면 중복 에러가 발생할 수 있습니다.
+// 그럴 경우 여기 있는 선언은 지우고 기존 파일을 import 해서 사용해 주세요!
 enum class ActivityType {
     MISSION, CONVERSATION, SENTENCE, REPORT
 }
 
-// 💡 미션용 부가 데이터 필드 추가
 data class RecentActivity(
     val id: String,
     val type: ActivityType,
     val title: String,
     val status: String,
     val date: String,
-    // 💡 미션 카드용 추가 필드 (기본값 null로 설정하여 기존 로직과 호환 유지)
     val difficulty: String? = null,
     val category: String? = null,
     val estimatedMinutes: Int? = null,
     val rewardXp: Int? = null
 )
 
-// 2. UI 상태 클래스 정의
 data class ArchiveHomeUiState(
     val completedMissionCount: Int = 0,
     val conversationCount: Int = 0,
@@ -42,10 +41,9 @@ data class ArchiveHomeUiState(
     val errorMessage: String? = null
 )
 
-// 3. ViewModel 구현
 @HiltViewModel
 class ArchiveHomeViewModel @Inject constructor(
-    private val archiveRepository: ArchiveRepository // 💡 새로 만든 Repository 주입
+    private val archiveRepository: ArchiveRepository
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(ArchiveHomeUiState())
@@ -59,24 +57,32 @@ class ArchiveHomeViewModel @Inject constructor(
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true, errorMessage = null) }
 
-            // 💡 Repository를 통해 (임시) API 호출 결과를 받아옴
             when (val result = archiveRepository.getArchiveSummary()) {
                 is ApiResult.Success -> {
                     val summary = result.data
 
-                    // 서버 DTO(ArchiveRecentActivity)를 UI 모델(RecentActivity)로 매핑
+                    // 💡 핵심: Repository에서 전체 미션 원본 데이터를 가져옵니다.
+                    val allMissions = archiveRepository.getArchiveMissions()
+
                     val uiActivities = summary.recentActivities.map { dto ->
+                        val isMission = dto.type.uppercase() == "MISSION"
+
+                        // 💡 타입이 '미션'일 경우에만 ID를 비교하여 원본 부가 데이터를 찾아옵니다.
+                        val matchedMission = if (isMission) {
+                            allMissions.find { it.id.toString() == dto.id }
+                        } else null
+
                         RecentActivity(
                             id = dto.id,
                             type = mapToActivityType(dto.type),
                             title = dto.title,
                             status = dto.status,
                             date = dto.date,
-                            // TODO: 서버에서 내려주는 미션 부가 데이터 매핑 필요
-                            difficulty = "쉬움",
-                            category = "짧은 대화",
-                            estimatedMinutes = 2,
-                            rewardXp = 20
+                            // 매칭된 미션 데이터가 있다면 그 값을, 없다면 null을 안전하게 주입합니다.
+                            difficulty = matchedMission?.difficulty,
+                            category = matchedMission?.category,
+                            estimatedMinutes = matchedMission?.duration,
+                            rewardXp = matchedMission?.xp
                         )
                     }
 
@@ -105,14 +111,13 @@ class ArchiveHomeViewModel @Inject constructor(
         }
     }
 
-    // 서버의 String 타입을 UI의 Enum 타입으로 안전하게 변환하는 헬퍼 함수
     private fun mapToActivityType(typeString: String): ActivityType {
         return when (typeString.uppercase()) {
             "MISSION" -> ActivityType.MISSION
             "CONVERSATION" -> ActivityType.CONVERSATION
             "SENTENCE" -> ActivityType.SENTENCE
             "REPORT" -> ActivityType.REPORT
-            else -> ActivityType.MISSION // 알 수 없는 값일 경우 기본값 폴백
+            else -> ActivityType.MISSION
         }
     }
 }

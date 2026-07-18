@@ -32,6 +32,8 @@ import com.talkqquest.app.feature.mission.ui.MissionListScreen
 import com.talkqquest.app.feature.mission.ui.SavedMissionsScreen
 import com.talkqquest.app.feature.report.ui.ReportScreen
 import com.talkqquest.app.feature.archive.ui.ArchiveHomeScreen
+import com.talkqquest.app.feature.archive.ui.ArchiveListScreen // 💡 [추가] 아카이브 목록 화면 import
+import com.talkqquest.app.feature.archive.ui.ArchiveSearchScreen
 import com.talkqquest.app.navigation.Screen
 
 // 네비게이션 그래프.
@@ -110,17 +112,17 @@ fun NavGraph(
                 onOtherMissionsClick = { navController.navigate(Screen.MISSION_LIST) },
             )
         }
+        // C담당: 아카이브 홈 화면
         composable(Screen.ARCHIVE_HOME) {
             val context = LocalContext.current
 
             ArchiveHomeScreen(
                 onNavigateToSearch = {
-                    Toast.makeText(context, "아카이브 검색: 준비 중인 기능입니다.", Toast.LENGTH_SHORT).show()
-                    // navController.navigate(Screen.ARCHIVE_SEARCH)
+                    navController.navigate(Screen.ARCHIVE_SEARCH)
                 },
                 onNavigateToList = { tabIndex ->
-                    Toast.makeText(context, "아카이브 목록: 준비 중인 기능입니다.", Toast.LENGTH_SHORT).show()
-                    // navController.navigate(Screen.ARCHIVE_LIST)
+                    // 💡 [핵심 연동] 클릭한 카테고리의 인덱스를 파라미터로 넘겨주며 이동!
+                    navController.navigate("${Screen.ARCHIVE_LIST}/$tabIndex")
                 },
                 onNavigateToDetail = { activityId ->
                     Toast.makeText(context, "최근 활동 상세: 준비 중인 기능입니다.", Toast.LENGTH_SHORT).show()
@@ -128,6 +130,28 @@ fun NavGraph(
                 }
             )
         }
+        // C담당: 아카이브 검색 화면
+        composable(Screen.ARCHIVE_SEARCH) {
+            ArchiveSearchScreen(
+                onBackClick = {
+                    // '<' 뒤로가기 버튼 클릭 시 백스택에서 화면을 빼서 이전 화면(홈)으로 돌아갑니다.
+                    navController.popBackStack()
+                }
+            )
+        }
+
+        // C담당: 아카이브 탭 목록 화면 (미션/대화/문장/리포트)
+        composable(
+            route = "${Screen.ARCHIVE_LIST}/{tabIndex}",
+            arguments = listOf(navArgument("tabIndex") { type = NavType.IntType; defaultValue = 0 })
+        ) { backStackEntry ->
+            val tabIndex = backStackEntry.arguments?.getInt("tabIndex") ?: 0
+            ArchiveListScreen(
+                initialTabIndex = tabIndex,
+                onBackClick = { navController.popBackStack() }
+            )
+        }
+
         // B담당: 미션 목록 (홈 → 다른 미션 보기). 카드 클릭 → 미션 상세({missionId}는 실제 값으로 치환).
         composable(Screen.MISSION_LIST) {
             MissionListScreen(
@@ -225,9 +249,8 @@ fun NavGraph(
             ReportScreen(
                 onBack = { navController.popBackStack() },
                 onSheetTopChange = onOverlaySheetTop, // 리포트 저장 시트가 하단 네비를 덮는 동안 네비 가림
-                // ↓ C담당(아카이브)이 채울 자리 — 아카이브 화면이 생기면 navigate만 넣으면 됨.
-                //   "보관함 >" → 보관함 리포트 탭 (예: navController.navigate(Screen.ARCHIVE_LIST))
-                onArchiveClick = { /* TODO(C): 아카이브 보관함(리포트 탭)으로 */ },
+                // 💡 (리포트 탭의 인덱스는 3)
+                onArchiveClick = { navController.navigate("${Screen.ARCHIVE_LIST}/3") },
                 //   저장된 리포트 카드 클릭 → 보관함 리포트 상세
                 onReportClick = { reportId -> /* TODO(C): 보관함 리포트 상세로 (reportId) */ },
             )
@@ -245,9 +268,8 @@ fun NavGraph(
                 onOtherMissions = {
                     navController.navigate(Screen.MISSION_LIST) { popUpTo(Screen.HOME) }
                 },
-                // ↓ C담당(아카이브)이 채울 자리 — 문장 저장 시트에서 아카이브로 나가는 두 경로.
-                //   "보관함 >" → 보관함 문장 탭 (예: navController.navigate(Screen.ARCHIVE_LIST))
-                onArchiveClick = { /* TODO(C): 아카이브 보관함(문장 탭)으로 */ },
+                // 💡 (문장 탭의 인덱스는 2)
+                onArchiveClick = { navController.navigate("${Screen.ARCHIVE_LIST}/2") },
                 //   저장된 문장 카드 클릭 → 보관함 문장 상세 (Screen.ARCHIVE_SAVED_PHRASE)
                 onPhraseClick = { phraseId -> /* TODO(C): 보관함 문장 상세로 (phraseId) */ },
             )

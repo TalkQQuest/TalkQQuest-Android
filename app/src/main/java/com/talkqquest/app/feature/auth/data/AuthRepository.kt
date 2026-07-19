@@ -19,6 +19,32 @@ class AuthRepository @Inject constructor(
     suspend fun loginWithNaver(providerAccessToken: String): ApiResult<SocialLoginData> =
         loginWithProvider(providerAccessToken) { request -> authApi.loginWithNaver(request) }
 
+    suspend fun loginWithEmail(email: String, password: String): ApiResult<EmailLoginData> {
+        val result = try {
+            safeApiCall {
+                authApi.loginWithEmail(
+                    EmailLoginRequest(
+                        email = email,
+                        password = password,
+                    ),
+                )
+            }
+        } catch (e: HttpException) {
+            ApiResult.Error(code = e.code(), message = emailLoginErrorMessage(e.code()))
+        }
+        if (result is ApiResult.Success) {
+            tokenDataStore.saveTokens(
+                accessToken = result.data.accessToken,
+                refreshToken = result.data.refreshToken,
+            )
+        }
+        return if (result is ApiResult.Error && result.code != null) {
+            result.copy(message = emailLoginErrorMessage(result.code))
+        } else {
+            result
+        }
+    }
+
     suspend fun requestEmailCode(email: String): ApiResult<Unit> =
         callUnitApi { authApi.requestEmailCode(EmailCodeRequest(email = email)) }
 
@@ -73,6 +99,11 @@ class AuthRepository @Inject constructor(
             ApiResult.Exception(e)
         }
 
+    private fun emailLoginErrorMessage(code: Int): String = when (code) {
+        403 -> "탈퇴한 계정입니다."
+        500 -> "서버 내부 오류가 발생했습니다. 잠시 후 다시 시도해주세요."
+        else -> "이메일 또는 비밀번호를 확인해주세요."
+    }
     private fun emailAuthErrorMessage(code: Int): String = when (code) {
         400 -> "이메일 또는 인증번호 형식을 확인해주세요."
         409 -> "이미 가입된 이메일입니다."

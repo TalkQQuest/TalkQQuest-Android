@@ -22,6 +22,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
 import com.talkqquest.app.feature.auth.data.KakaoLoginClient
 import com.talkqquest.app.feature.auth.data.NaverLoginClient
+import com.talkqquest.app.feature.auth.ui.EmailLoginScreen
 import com.talkqquest.app.feature.auth.ui.SignupEmailScreen
 import com.talkqquest.app.feature.auth.ui.SignupPasswordScreen
 import com.talkqquest.app.feature.auth.ui.SignupNicknameScreen
@@ -140,9 +141,31 @@ fun NavGraph(
                     }
                 },
                 onEmailSignupClick = { navController.navigate(Screen.SIGNUP_EMAIL) },
-                onEmailLoginClick = {
-                    Toast.makeText(context, "이메일 로그인 화면은 준비 중입니다.", Toast.LENGTH_SHORT).show()
+                onEmailLoginClick = { navController.navigate(Screen.EMAIL_LOGIN) },
+            )
+        }
+        composable(Screen.EMAIL_LOGIN) {
+            val context = LocalContext.current
+            val authViewModel: AuthViewModel = hiltViewModel()
+            val authUiState by authViewModel.uiState.collectAsState()
+
+            EmailLoginScreen(
+                onBack = { navController.popBackStack() },
+                onLoginClick = { email, password ->
+                    authViewModel.loginWithEmail(email, password) {
+                        navController.navigate(Screen.HOME) {
+                            popUpTo(Screen.LOGIN) { inclusive = true }
+                            launchSingleTop = true
+                        }
+                    }
                 },
+                onFindIdClick = {
+                    Toast.makeText(context, "아이디 찾기는 준비 중입니다.", Toast.LENGTH_SHORT).show()
+                },
+                onFindPasswordClick = {
+                    Toast.makeText(context, "비밀번호 찾기는 준비 중입니다.", Toast.LENGTH_SHORT).show()
+                },
+                errorMessage = authUiState.errorMessage,
             )
         }
         composable(Screen.SIGNUP_EMAIL) {

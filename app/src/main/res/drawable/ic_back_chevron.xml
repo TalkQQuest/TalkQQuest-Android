@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 뒤로가기 화살표 (CSS chevron-left: 선 12x6, stroke 2, -90° 회전 → 화면상 6깊이x12길이 + 스트로크).
+     머티리얼 KeyboardArrowLeft(7.4x12)가 디자인(8x14)보다 ~15% 작아 CSS 수치로 직접 그림 (2026-07-20).
+     색은 사용처에서 tint로 지정. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+    <path
+        android:pathData="M15,6 L9,12 L15,18"
+        android:strokeWidth="2"
+        android:strokeColor="#FF000000"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:fillColor="@android:color/transparent" />
+</vector>

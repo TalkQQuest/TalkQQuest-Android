@@ -3,6 +3,8 @@ package com.talkqquest.app.feature.home.ui
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -14,6 +16,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
@@ -22,10 +25,9 @@ import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
+import androidx.compose.material3.ripple
 import androidx.compose.material3.Text
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.Spring
@@ -40,7 +42,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.graphics.graphicsLayer
@@ -100,6 +101,7 @@ fun HomeScreen(
     viewModel: HomeViewModel = hiltViewModel(),
     onStartMissionClick: (String) -> Unit = {}, // 오늘의 미션 "미션 시작하기" → 미션 상세
     onOtherMissionsClick: () -> Unit = {},    // "다른 미션 보기" → 미션 목록
+    onNotificationClick: () -> Unit = {},     // 상단 벨 → 알림창
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     // 화면 복귀 시(미션 완료 후 등) XP·레벨 최신값 조용히 재조회 — 미션 목록과 같은 패턴
@@ -109,6 +111,7 @@ fun HomeScreen(
         onRetry = viewModel::loadHome,
         onStartMissionClick = onStartMissionClick,
         onOtherMissionsClick = onOtherMissionsClick,
+        onNotificationClick = onNotificationClick,
     )
 }
 
@@ -118,6 +121,7 @@ private fun HomeScreen(
     onRetry: () -> Unit,
     onStartMissionClick: (String) -> Unit = {},
     onOtherMissionsClick: () -> Unit = {},
+    onNotificationClick: () -> Unit = {},
 ) = FitDesign { // 작은 화면에선 디자인(393x852) 통째 축소 — 미션 화면들과 동일하게 스크롤 없이 한 화면에
     Box(
         modifier = Modifier
@@ -143,6 +147,7 @@ private fun HomeScreen(
                     summary = uiState.summary,
                     onStartMissionClick = onStartMissionClick,
                     onOtherMissionsClick = onOtherMissionsClick,
+                    onNotificationClick = onNotificationClick,
                 )
             }
         }
@@ -179,15 +184,21 @@ private fun HomeContent(
     summary: HomeSummary,
     onStartMissionClick: (String) -> Unit = {},
     onOtherMissionsClick: () -> Unit = {},
+    onNotificationClick: () -> Unit = {},
 ) {
     Column(
         modifier = Modifier
             .fillMaxSize()
             .verticalScroll(rememberScrollState())
             .statusBarsPadding()
-            .padding(horizontal = 16.dp),
+            // CSS: 카드 묶음 Frame 430 left 16, 폭 362 → 우측 여백 15 (좌우 비대칭)
+            .padding(start = 16.dp, end = 15.dp),
     ) {
-        HomeHeader(nickname = summary.nickname, hasNewNotification = summary.hasNewNotification)
+        HomeHeader(
+            nickname = summary.nickname,
+            hasNewNotification = summary.hasNewNotification,
+            onNotificationClick = onNotificationClick,
+        )
         Spacer(Modifier.height(18.dp)) // CSS: 인사(bottom ~132.67) → 콘텐츠(top 151) ≈ 18
         HomeLevelCard(
             level = summary.level,
@@ -266,19 +277,32 @@ private fun MissionTitleText(title: String, modifier: Modifier = Modifier) {
 
 // 인사 영역 + 알림 벨.
 @Composable
-private fun HomeHeader(nickname: String, hasNewNotification: Boolean = false) {
+private fun HomeHeader(
+    nickname: String,
+    hasNewNotification: Boolean = false,
+    onNotificationClick: () -> Unit = {},
+) {
     // CSS 절대위치 전사(상태바 40 기준): 인사 top 79 → 아래 39, 벨 top 50 → 아래 10 (벨이 29 위).
     // statusBarsPadding이 실제 상태바를 처리하고, 그 아래 이 오프셋만큼 배치.
     Box(modifier = Modifier.fillMaxWidth()) {
         // 알림 벨 — 우측, 상태바 아래 10. 알림 있으면 점 붙은 변형(피그마 Property 1=알림있음).
+        val bellInteraction = remember { MutableInteractionSource() }
         Box(
             modifier = Modifier
                 .align(Alignment.TopEnd)
+                // CSS: 알람 left=343 → 우측 여백 6px. 이 헤더는 좌우 16 패딩 안이라 그대로면 16px에서 멈춤 → 10 더 내보냄.
+                .offset(x = 10.dp)
                 .padding(top = 10.dp)
-                .size(44.dp),
+                .size(44.dp)
+                .clip(CircleShape) // 리플이 원형으로 퍼지도록 먼저 원형 클립
+                .clickable(
+                    interactionSource = bellInteraction,
+                    indication = ripple(bounded = true, color = Primary600), // 원 안을 채우는 원형 물결(브랜드색으로 진하게)
+                    onClick = onNotificationClick,
+                ),
             contentAlignment = Alignment.Center,
         ) {
-            // TODO: 알림 화면 생기면 클릭 배선. home_bell.svg / 알림있음.svg 전사.
+            // 벨 → 알림창(placeholder). 알림창 디자인 나오면 NotificationScreen 본문만 채우면 됨.
             if (hasNewNotification) {
                 Icon(
                     painter = painterResource(R.drawable.ic_home_bell_active),
@@ -310,10 +334,10 @@ private fun HomeHeader(nickname: String, hasNewNotification: Boolean = false) {
                 Image(
                     painter = painterResource(R.drawable.img_home_waving_hand),
                     contentDescription = null,
-                    // 손 흔들기: CSS 21.52 x 29.74, -5.5° 회전
-                    modifier = Modifier
-                        .size(width = 21.52.dp, height = 29.74.dp)
-                        .rotate(-5.5f),
+                    // 손 흔들기: PNG(73x95)는 CSS "Frame 304"(24.27 x 31.67 = -5.5° 회전 후 경계)의 3배 export로,
+                    // 회전까지 이미 구워져 있음(알파 실측: 내용이 캔버스를 꽉 채움) → 프레임 크기로만 그린다.
+                    // ⚠️ 여기에 .rotate(-5.5f)를 또 걸면 이중 회전(~11°)이 됨 — 사용자 제보로 제거 (2026-07-20)
+                    modifier = Modifier.size(width = 24.27.dp, height = 31.67.dp),
                 )
             }
             Text(text = "오늘도 좋은 대화를 시작해볼까요?", style = TqType.BodyS.figma(), color = Gray600)
@@ -352,8 +376,10 @@ private fun HomeLevelCard(level: Int, currentXp: Int, nextLevelXp: Int) {
         Text(text = "대화 진행 레벨", style = TqType.LabelL.figma(), color = Gray600)
         Spacer(Modifier.height(5.dp)) // CSS Frame428 gap 5
         Row(
-            modifier = Modifier.fillMaxWidth(),
+            // CSS Frame 333 높이 22 (Lv 배지 틀 22, 텍스트 18) — 없으면 행이 18로 줄어 카드가 4px 낮아짐
+            modifier = Modifier.fillMaxWidth().height(22.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically,
         ) {
             Box {
                 LevelUpBurst(progress = levelBurst.value, modifier = Modifier.matchParentSize()) // 글자 뒤 폭죽
@@ -446,8 +472,9 @@ private fun HomeMissionCard(mission: TodayMission, onStartClick: () -> Unit = {}
         }
         Spacer(Modifier.height(16.dp))
         // 난이도 / 예상 시간 / 보상 (세로 구분선으로 3분할)
+        // CSS Frame 321: 행 54 = 상하 패딩 8 + 칸 38. (좌우 29는 칸 고정폭 합이 330을 넘는 과제약 → weight 유지)
         Row(
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             MissionInfo(
@@ -476,7 +503,7 @@ private fun RowScope.MissionInfo(label: String, value: String, valueColor: Color
     Column(
         modifier = Modifier.weight(1f),
         horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(2.dp),
+        // CSS Frame 316: 칸 38 = 라벨 18 + 값 20, 사이 gap 0
     ) {
         Text(text = label, style = TqType.Caption.figma(), color = Gray500)
         Text(text = value, style = TqType.LabelL.figma(), color = valueColor, textAlign = TextAlign.Center)
@@ -526,10 +553,11 @@ private fun OtherMissionsCard(onClick: () -> Unit) {
             Text(text = "다른 미션 보기", style = TqType.BodyL.figma(), color = Gray600)
         }
         Icon(
-            imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+            // CSS: 뒤로가기와 같은 chevron(12x6·stroke2, 글리프 8x14)의 좌우반전 — 머티리얼 대신 실측 벡터
+            painter = painterResource(R.drawable.ic_forward_chevron),
             contentDescription = null,
             tint = Gray400,
-            modifier = Modifier.size(28.dp),
+            modifier = Modifier.size(24.dp),
         )
     }
 }

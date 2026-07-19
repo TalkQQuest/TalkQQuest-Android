@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 복사 토스트의 체크 (CSS "마이페이지 연속 미션" 26x26: GREEN #36DA21 원 + 흰 체크
+     Vector inset L19.23/R21.15/T38.46/B26.92% stroke 2 → 글리프 15.5x9.0). 2026-07-20 -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="26dp"
+    android:height="26dp"
+    android:viewportWidth="26"
+    android:viewportHeight="26">
+    <path
+        android:pathData="M13,0 A13,13 0 1 1 12.99,0 Z"
+        android:fillColor="#36DA21" />
+    <path
+        android:pathData="M5,14 L10.3,19 L20.5,10"
+        android:strokeWidth="2"
+        android:strokeColor="#F8FAFC"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:fillColor="@android:color/transparent" />
+</vector>

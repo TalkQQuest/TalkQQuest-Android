@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 효과 카드 체크 (CSS check-01: 24박스, inset 좌우30%/상하35%, stroke 2 → 글리프 9.6x7.2 + 스트로크).
+     머티리얼 Icons.Default.Check(17.6x13.4)가 디자인(11.6x9.2)보다 ~52% 커서 CSS 수치로 직접 그림 (2026-07-20).
+     색은 사용처 tint(Purple600)로. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+    <path
+        android:pathData="M7.2,12.4 L10.4,15.6 L16.8,8.4"
+        android:strokeWidth="2"
+        android:strokeColor="#FF000000"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:fillColor="@android:color/transparent" />
+</vector>

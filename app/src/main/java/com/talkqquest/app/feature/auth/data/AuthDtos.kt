@@ -61,3 +61,15 @@ data class EmailSignupData(
     val accessToken: String,
     val refreshToken: String,
 )
+@Serializable
+data class EmailLoginRequest(
+    val email: String,
+    val password: String,
+)
+
+@Serializable
+data class EmailLoginData(
+    val accessToken: String,
+    val refreshToken: String,
+    val tokenType: String = "Bearer",
+)

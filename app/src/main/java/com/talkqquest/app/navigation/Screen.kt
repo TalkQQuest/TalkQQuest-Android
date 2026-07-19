@@ -14,6 +14,7 @@ object Screen {
     // ※ 아카이브 route(ARCHIVE_*)는 역할 재조정(2026-07)으로 C담당으로 넘어갔습니다. 상수 위치만 여기 남음.
     const val SPLASH = "splash"                                   // SplashScreen
     const val LOGIN = "login"                                     // LoginScreen (계정 연동 팝업 상태 포함)
+    const val EMAIL_LOGIN = "email_login"                         // EmailLoginScreen
     const val SIGNUP_EMAIL = "signup_email"                       // SignupEmailScreen
     const val SIGNUP_VERIFY = "signup_verify"                     // SignupVerifyScreen
     const val SIGNUP_PASSWORD = "signup_password"                 // SignupPasswordScreen

@@ -39,6 +39,33 @@ class AuthViewModel @Inject constructor(
         login(onSuccess) { authRepository.loginWithNaver(providerAccessToken) }
     }
 
+    fun loginWithEmail(
+        email: String,
+        password: String,
+        onSuccess: () -> Unit,
+    ) {
+        if (email.isBlank() || password.isBlank()) {
+            _uiState.update { it.copy(errorMessage = "이메일 또는 비밀번호를 확인해주세요.") }
+            return
+        }
+
+        viewModelScope.launch {
+            _uiState.update { it.copy(isLoading = true, errorMessage = null) }
+            when (val result = authRepository.loginWithEmail(email.trim(), password)) {
+                is ApiResult.Success -> {
+                    _uiState.update { it.copy(isLoading = false) }
+                    onSuccess()
+                }
+                is ApiResult.Error -> _uiState.update {
+                    it.copy(isLoading = false, errorMessage = result.message ?: "이메일 또는 비밀번호를 확인해주세요.")
+                }
+                is ApiResult.Exception -> _uiState.update {
+                    it.copy(isLoading = false, errorMessage = "네트워크 연결을 확인해주세요.")
+                }
+            }
+        }
+    }
+
     fun requestEmailCode(
         email: String,
         onSuccess: () -> Unit,

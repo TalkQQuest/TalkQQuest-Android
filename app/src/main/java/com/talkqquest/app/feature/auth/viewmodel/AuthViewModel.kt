@@ -39,6 +39,31 @@ class AuthViewModel @Inject constructor(
         login(onSuccess) { authRepository.loginWithNaver(providerAccessToken) }
     }
 
+    fun requestEmailCode(
+        email: String,
+        onSuccess: () -> Unit,
+    ) {
+        runUnitAuthCall(
+            emptyInputMessage = "이메일을 입력해주세요.",
+            isInputValid = email.isNotBlank(),
+            call = { authRepository.requestEmailCode(email.trim()) },
+            onSuccess = onSuccess,
+        )
+    }
+
+    fun verifyEmailCode(
+        email: String,
+        code: String,
+        onSuccess: () -> Unit,
+    ) {
+        runUnitAuthCall(
+            emptyInputMessage = "인증번호 6자리를 입력해주세요.",
+            isInputValid = email.isNotBlank() && code.length == 6,
+            call = { authRepository.verifyEmailCode(email.trim(), code) },
+            onSuccess = onSuccess,
+        )
+    }
+
     fun clearError() {
         _uiState.update { it.copy(errorMessage = null) }
     }
@@ -56,6 +81,34 @@ class AuthViewModel @Inject constructor(
                 }
                 is ApiResult.Error -> _uiState.update {
                     it.copy(isLoading = false, errorMessage = result.message ?: "로그인에 실패했어요.")
+                }
+                is ApiResult.Exception -> _uiState.update {
+                    it.copy(isLoading = false, errorMessage = "네트워크 연결을 확인해주세요.")
+                }
+            }
+        }
+    }
+
+    private fun runUnitAuthCall(
+        emptyInputMessage: String,
+        isInputValid: Boolean,
+        call: suspend () -> ApiResult<Unit>,
+        onSuccess: () -> Unit,
+    ) {
+        if (!isInputValid) {
+            _uiState.update { it.copy(errorMessage = emptyInputMessage) }
+            return
+        }
+
+        viewModelScope.launch {
+            _uiState.update { it.copy(isLoading = true, errorMessage = null) }
+            when (val result = call()) {
+                is ApiResult.Success -> {
+                    _uiState.update { it.copy(isLoading = false) }
+                    onSuccess()
+                }
+                is ApiResult.Error -> _uiState.update {
+                    it.copy(isLoading = false, errorMessage = result.message ?: "요청에 실패했어요.")
                 }
                 is ApiResult.Exception -> _uiState.update {
                     it.copy(isLoading = false, errorMessage = "네트워크 연결을 확인해주세요.")

@@ -1,7 +1,6 @@
 package com.talkqquest.app.feature.archive.data
 
 import com.talkqquest.app.core.network.ApiResult
-import com.talkqquest.app.core.network.safeApiCall
 import com.talkqquest.app.feature.archive.data.model.ArchiveRecentActivity
 import com.talkqquest.app.feature.archive.data.model.ArchiveSummary
 import com.talkqquest.app.feature.archive.ui.ArchiveMissionItem
@@ -10,36 +9,45 @@ import com.talkqquest.app.feature.archive.viewmodel.ActivityType
 import com.talkqquest.app.feature.archive.viewmodel.RecentActivity
 import javax.inject.Inject
 
-// 아카이브 Repository. ViewModel과 API 사이를 잇는 계층.
-class ArchiveRepository @Inject constructor(
-    // private val archiveApi: ArchiveApi
-) {
-    // =========================================================================
-    // 💡 [단일 진실 공급원] 모든 화면이 공유하는 원본 더미 데이터
-    // =========================================================================
+data class ReviewChatMessage(
+    val id: String,
+    val text: String,
+    val isFromUser: Boolean,
+    val time: String
+)
 
-    // 1. 미션 (3개) - 현재 날짜(07.18) 이전으로 수정
+data class ConversationDetailMock(
+    val id: String,
+    val title: String,
+    val date: String,
+    val duration: String,
+    val summaryKeywords: List<String>,
+    val summaryText: String,
+    val mainContentText: String,
+    val feedbacks: List<Pair<String, Int>>,
+    val messages: List<ReviewChatMessage>
+)
+
+class ArchiveRepository @Inject constructor() {
+
     private val stubMissions = listOf(
         ArchiveMissionItem(1L, "처음 보는 사람에게 짧게 인사하기", "짧은 대화", "쉬움", 2, 20, isCompleted = true, isSaved = true, completedDate = "2026.07.16"),
         ArchiveMissionItem(2L, "최근 본 영화 이야기하기", "짧은 대화", "쉬움", 5, 20, isCompleted = false, isSaved = true, completedDate = "2026.07.15"),
         ArchiveMissionItem(3L, "학교 생활 꿀팁 나누기", "일상 대화", "보통", 8, 30, isCompleted = true, isSaved = true, completedDate = "2026.07.14")
     )
 
-    // 2. 대화 (3개) - 현재 날짜 이전으로 수정
     private val stubConversations = listOf(
         RecentActivity(id = "1", title = "처음 보는 사람에게 짧게 인사하기", type = ActivityType.CONVERSATION, status = "대화 완료", date = "2026.07.16"),
         RecentActivity(id = "2", title = "주말에 다녀온 맛집 후기 공유하기", type = ActivityType.CONVERSATION, status = "대화 완료", date = "2026.07.15"),
         RecentActivity(id = "3", title = "단골 카페에서 메뉴 추천받기", type = ActivityType.CONVERSATION, status = "대화 완료", date = "2026.07.14")
     )
 
-    // 3. 문장 (3개) - 현재 날짜 이전으로 수정
     private val stubSentences = listOf(
         BookmarkArchiveItem(id = "1", title = "\"그렇군요! 저도 편해서 놀랐습니다. 혹시라도 불편하신 점 있다면 알려주세요!!\"", status = "문장 저장", date = "2026.07.16", isSaved = true),
         BookmarkArchiveItem(id = "2", title = "\"아, 그 영화 저도 봤어요! 특히 마지막 액션 장면이 정말 인상 깊더라고요.\"", status = "문장 저장", date = "2026.07.15", isSaved = true),
         BookmarkArchiveItem(id = "3", title = "\"오늘은 날씨가 꽤 선선하네요. 이런 날에는 산책하기 딱 좋은 것 같아요.\"", status = "문장 저장", date = "2026.07.14", isSaved = true)
     )
 
-    // 4. 리포트 (4개) - 현재 날짜 이전으로 수정
     private val stubReports = listOf(
         BookmarkArchiveItem(id = "4", title = "처음 보는 사람에게 짧게 인사하기", status = "리포트 열람", date = "2026.07.16", isSaved = true),
         BookmarkArchiveItem(id = "5", title = "동아리 첫 모임에서 자기소개하기", status = "리포트 열람", date = "2026.07.15", isSaved = true),
@@ -47,17 +55,88 @@ class ArchiveRepository @Inject constructor(
         BookmarkArchiveItem(id = "7", title = "엘리베이터에서 이웃과 스몰토크", status = "리포트 열람", date = "2026.07.13", isSaved = true)
     )
 
-    // =========================================================================
-    // 💡 ViewModel에서 데이터를 꺼내갈 수 있도록 열어둔 함수들
-    // =========================================================================
+    private val stubConversationDetails = listOf(
+        // 첫 번째 대화 (ID: 1)
+        ConversationDetailMock(
+            id = "1",
+            title = "처음 보는 사람에게 짧게 인사하기",
+            date = "2026.07.16",
+            duration = "5분 30초",
+            summaryKeywords = listOf("자기 성장", "첫 만남", "스몰 토크"),
+            summaryText = "카페에서 처음 만난 사람에게 자연스럽게 인사를 건네고, 간단한 질문을 이어가며 어색하지 않게 대화를 시작하는 연습을 진행했습니다.",
+            mainContentText = "먼저 인사를 건네며 대화를 시작했어요. \"자주는 오시나요?\"와 같은 질문으로 대화를 이어갔어요. 상대의 답변에 반응하고 공감하며 대화를 마무리했어요.",
+            feedbacks = listOf("친절한 태도" to 92, "대화 주도" to 88, "공감 능력" to 85, "질문 연결성" to 78),
+            messages = listOf(
+                ReviewChatMessage("1", "안녕하세요! 처음 뵙네요 \uD83D\uDE42", false, "9:20"),
+                ReviewChatMessage("2", "오늘 여기 처음 오셨어요?", false, "9:20"),
+                ReviewChatMessage("3", "분위기가 좋아보여서요!", true, "9:21"),
+                ReviewChatMessage("4", "오, 그러셨구나. 저는 여기 몇 번 와봤는데 생각보다 괜찮더라고요", false, "9:21"),
+                ReviewChatMessage("5", "오 그렇군요!", true, "9:21"),
+                ReviewChatMessage("6", "혹시 이런 곳 자주 다니세요?", true, "9:21"),
+                ReviewChatMessage("7", "자주는 아니고 가끔 생각날 때 오는 편이에요. 분위기가 편해서 좋더라고요", false, "9:21"),
+                ReviewChatMessage("8", "그렇군요! 저도 생각보다 편해서 놀랐어요", true, "9:21"),
+                ReviewChatMessage("9", "맞아요ㅎㅎ 처음 와도 부담이 없어서 좋은 것 같아요.", false, "9:21")
+            )
+        ),
+        // 두 번째 대화 (ID: 2)
+        ConversationDetailMock(
+            id = "2",
+            title = "주말에 다녀온 맛집 후기 공유하기",
+            date = "2026.07.15",
+            duration = "7분 15초",
+            summaryKeywords = listOf("일상 대화", "취향 공유", "리액션"),
+            summaryText = "친구에게 주말에 다녀온 맛집의 분위기와 추천 메뉴를 생생하게 설명하고, 상대방의 반응을 이끌어내는 대화를 나누었습니다.",
+            mainContentText = "\"주말에 새로 생긴 파스타 집에 갔는데 진짜 맛있더라!\"라며 대화를 열었어요. 음식 맛뿐만 아니라 인테리어에 대한 느낌도 구체적으로 묘사했습니다. 상대방이 좋아하는 음식 취향도 자연스럽게 물어봤어요.",
+            feedbacks = listOf("친절한 태도" to 95, "대화 주도" to 82, "공감 능력" to 88, "질문 연결성" to 85),
+            messages = listOf(
+                ReviewChatMessage("1", "주말에 새로 생긴 파스타 집에 갔는데 진짜 맛있더라!", true, "12:30"),
+                ReviewChatMessage("2", "오 진짜? 어디 있는 곳이야? 나도 파스타 좋아하는데!", false, "12:30"),
+                ReviewChatMessage("3", "연남동 쪽에 있는 곳인데, 인테리어도 엄청 예뻤어.", true, "12:31"),
+                ReviewChatMessage("4", "분위기 좋은 맛집인가 보네. 제일 맛있었던 메뉴는 뭐야?", false, "12:31"),
+                ReviewChatMessage("5", "트러플 크림 파스타! 너도 크림 파스타 좋아해?", true, "12:32"),
+                ReviewChatMessage("6", "완전 좋아하지! 다음에 나도 한번 가봐야겠다. 추천 고마워!", false, "12:32")
+            )
+        ),
+        // 세 번째 대화 (ID: 3) - 💡 스크롤 테스트용으로 엄청 길어진 대화
+        ConversationDetailMock(
+            id = "3",
+            title = "단골 카페에서 메뉴 추천받기",
+            date = "2026.07.14",
+            duration = "8분 40초",
+            summaryKeywords = listOf("상황극", "요청하기", "정중함"),
+            summaryText = "카페 직원에게 평소 마시던 메뉴 대신 새로운 음료를 추천해 달라고 정중하게 요청하고, 취향을 설명하는 연습을 했습니다.",
+            mainContentText = "\"항상 아메리카노만 마셨는데, 오늘은 좀 달달한 걸 먹고 싶어요\"라고 취향을 명확히 전달했어요. 직원이 추천해준 메뉴에 대해 어떤 맛인지 추가로 질문하며 대화를 이어갔습니다. 마지막엔 감사 인사도 잊지 않았어요.",
+            feedbacks = listOf("친절한 태도" to 90, "대화 주도" to 75, "공감 능력" to 80, "질문 연결성" to 92),
+            messages = listOf(
+                ReviewChatMessage("1", "안녕하세요! 주문 도와드릴까요?", false, "15:00"),
+                ReviewChatMessage("2", "네, 안녕하세요. 항상 아메리카노만 마셨는데, 오늘은 좀 달달한 걸 먹고 싶어요.", true, "15:00"),
+                ReviewChatMessage("3", "아, 달콤한 음료 찾으시는구나! 혹시 커피 들어간 거 괜찮으세요?", false, "15:00"),
+                ReviewChatMessage("4", "네, 커피 들어간 걸로 추천해 주시겠어요?", true, "15:01"),
+                ReviewChatMessage("5", "그럼 저희 시그니처인 바닐라 크림 콜드브루는 어떠세요? 많이 달지 않고 부드러워요.", false, "15:01"),
+                ReviewChatMessage("6", "오, 그거 좋네요. 어떤 맛인지 궁금해요!", true, "15:02"),
+                ReviewChatMessage("7", "은은한 바닐라 향이랑 깔끔한 콜드브루가 잘 어울려서 인기 메뉴예요. 시럽은 원하시면 조절 가능합니다.", false, "15:02"),
+                ReviewChatMessage("8", "그럼 시럽은 기본으로 해서 그걸로 한 잔 주세요.", true, "15:03"),
+                ReviewChatMessage("9", "네, 알겠습니다. 사이즈는 어떻게 준비해 드릴까요? 레귤러와 라지 사이즈가 있습니다.", false, "15:03"),
+                ReviewChatMessage("10", "라지 사이즈로 할게요. 아, 혹시 디카페인으로도 변경 가능한가요?", true, "15:04"),
+                ReviewChatMessage("11", "네, 디카페인 원두로 변경 가능합니다. 500원 추가되는데 괜찮으신가요?", false, "15:04"),
+                ReviewChatMessage("12", "네 괜찮아요. 그리고 테이크아웃 할게요.", true, "15:04"),
+                ReviewChatMessage("13", "알겠습니다. 바닐라 크림 콜드브루 라지 사이즈, 디카페인 변경해서 테이크아웃으로 준비해 드릴게요. 결제 도와드리겠습니다.", false, "15:05"),
+                ReviewChatMessage("14", "여기 카드요. 아, 그리고 영수증은 버려주세요.", true, "15:05"),
+                ReviewChatMessage("15", "네, 결제 완료되었습니다. 주문하신 음료는 저쪽 픽업대에서 금방 준비해 드릴게요.", false, "15:06"),
+                ReviewChatMessage("16", "네, 감사합니다. 수고하세요!", true, "15:06"),
+                ReviewChatMessage("17", "감사합니다! 좋은 하루 보내세요~", false, "15:06")
+            )
+        )
+    )
 
     fun getArchiveMissions(): List<ArchiveMissionItem> = stubMissions
     fun getArchiveConversations(): List<RecentActivity> = stubConversations
     fun getArchiveSentences(): List<BookmarkArchiveItem> = stubSentences
     fun getArchiveReports(): List<BookmarkArchiveItem> = stubReports
 
-    // TODO(서버 연동 전 임시): 백엔드 아카이브 API가 붙으면 아래 stub 리턴을 지우고 주석 처리된 리턴으로 복구.
-    // suspend fun getArchiveSummary(): ApiResult<ArchiveSummary> = safeApiCall { archiveApi.getArchiveSummary() }
+    fun getConversationDetail(id: String): ConversationDetailMock? {
+        return stubConversationDetails.find { it.id == id }
+    }
 
     suspend fun getArchiveSummary(): ApiResult<ArchiveSummary> {
         val summary = ArchiveSummary(
@@ -65,7 +144,6 @@ class ArchiveRepository @Inject constructor(
             conversationCount = stubConversations.size,
             savedSentenceCount = stubSentences.count { it.isSaved },
             reportCount = stubReports.size,
-
             recentActivities = listOf(
                 ArchiveRecentActivity("1", "MISSION", stubMissions[0].title, "미션 완료", stubMissions[0].completedDate),
                 ArchiveRecentActivity("2", "CONVERSATION", stubConversations[0].title, stubConversations[0].status, stubConversations[0].date),

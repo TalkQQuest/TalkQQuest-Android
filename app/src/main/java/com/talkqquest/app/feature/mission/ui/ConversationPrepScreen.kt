@@ -1,6 +1,8 @@
 package com.talkqquest.app.feature.mission.ui
 
-import android.widget.Toast
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -24,19 +26,22 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalClipboardManager
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontWeight
@@ -45,6 +50,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import kotlinx.coroutines.delay
 import com.talkqquest.app.R
 import com.talkqquest.app.core.designsystem.Error
 import com.talkqquest.app.core.designsystem.FitDesign
@@ -137,6 +143,17 @@ private fun ConversationPrepContent(
         // 판정은 maxHeight(FitDesign 안에서 뒤집힘)가 아니라 FitDesign 축소율로. (2026-07-11)
         val shrink = 1f
         val compact = LocalDesignScale.current <= 0.5f
+
+        // 복사 토스트: 복사할 때마다 2초 노출 (연타 시 타이머 리셋). 시스템 Toast는 커스텀 불가라 인앱 오버레이로.
+        var copyTick by remember { mutableIntStateOf(0) }
+        var copyToastVisible by remember { mutableStateOf(false) }
+        LaunchedEffect(copyTick) {
+            if (copyTick > 0) {
+                copyToastVisible = true
+                delay(2000)
+                copyToastVisible = false
+            }
+        }
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -150,7 +167,7 @@ private fun ConversationPrepContent(
                     .then(if (compact) Modifier else Modifier.weight(1f)) // 남는 공간은 흰 영역이 흡수
                     .background(White)
                     .statusBarsPadding()
-                    .padding(bottom = 29.dp * shrink), // 흰 영역 끝(437) → 첫 마디 섹션(454) 사이 여백
+                    .padding(bottom = 28.dp * shrink), // 칩 끝(404) → 흰 영역 끝(432) = 28 (UI 7차)
             ) {
                 Spacer(Modifier.height(8.dp)) // 상태바 → 헤더 (CSS Frame 361 top 48)
                 // 헤더: 뒤로가기만 (제목은 디자인 개정으로 삭제됨)
@@ -162,13 +179,13 @@ private fun ConversationPrepContent(
                     contentAlignment = Alignment.Center,
                 ) {
                     Icon(
-                        imageVector = Icons.AutoMirrored.Filled.KeyboardArrowLeft,
+                        painter = painterResource(R.drawable.ic_back_chevron),
                         contentDescription = "뒤로가기",
                         tint = Gray500,
                     )
                 }
 
-                Spacer(Modifier.height(45.dp * shrink)) // 헤더 끝(92) → 일러스트 틀(top 137) = 45 (CSS)
+                Spacer(Modifier.height(35.dp * shrink)) // 헤더 끝(92) → 일러스트 틀(top 127) = 35 (UI 7차: v4의 137에서 위로 이동)
                 if (!compact) Spacer(Modifier.weight(1f)) // 화면이 길어진 만큼은 전부 이 사이로
 
                 // 말풍선 일러스트: PNG(423x423)가 피그마 141x141 틀의 3배수 export라
@@ -181,7 +198,7 @@ private fun ConversationPrepContent(
                         .size(141.dp * shrink),
                 )
 
-                // 일러스트 틀 끝(278) → 제목(top 272): CSS상 6 겹침 — 겹치게는 못 그려서 0 (6px 차이 고지)
+                // 일러스트 틀 끝(268) = 제목 top(268) — UI 7차는 겹침 없이 딱 맞닿음 → 간격 0
 
                 Text(
                     text = "가볍게 시작하기 좋은 주제예요",
@@ -206,8 +223,9 @@ private fun ConversationPrepContent(
 
             // ── 바로 쓰는 첫 마디 (CSS Frame 427321161, 좌우 17) ──
             Column(
-                modifier = Modifier.padding(start = 17.dp, end = 17.dp, top = 17.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp),
+                // CSS: 섹션 left 17 · 폭 360(→우측 16), 흰 영역 끝(432) → 섹션(456) = 24 (UI 7차)
+                modifier = Modifier.padding(start = 17.dp, end = 16.dp, top = 24.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp), // 헤더행 ↔ 카드 그룹 (CSS Frame 427321161 gap 16)
             ) {
                 // 헤더 줄: 제목+설명 / 새로고침 (CSS Frame 413, space-between)
                 Row(
@@ -216,7 +234,7 @@ private fun ConversationPrepContent(
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Column(
-                        modifier = Modifier.padding(start = 2.dp),
+                        modifier = Modifier.padding(start = 4.dp), // CSS Frame 413 padding left 4
                         verticalArrangement = Arrangement.spacedBy(4.dp),
                     ) {
                         Text(
@@ -241,36 +259,72 @@ private fun ConversationPrepContent(
                         Image(
                             painter = painterResource(R.drawable.ic_conversation_refresh),
                             contentDescription = "첫 마디 새로고침",
-                            modifier = Modifier.size(20.dp),
+                            // SVG(17x16)가 글리프 타이트 export — 20 박스로 그리면 17.6% 확대됨 → 실크기로 (2026-07-20)
+                            modifier = Modifier.size(width = 17.dp, height = 16.dp),
                         )
                     }
                 }
 
-                // 첫 마디 카드들 (서버 개수 가변, 각 복사 가능) — CSS Frame 398 gap 8
-                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                // 첫 마디 카드들 (서버 개수 가변, 각 복사 가능) — CSS Frame 398 gap 12 (UI 7차, v4는 8)
+                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                     prep.openers.forEach { opener ->
-                        OpenerCard(text = opener)
+                        OpenerCard(text = opener, onCopied = { copyTick++ })
                     }
                 }
             }
 
-            // 카드 끝이 하단 고정 버튼(52)+간격(12)+알약 영역(92)에 안 가리게.
-            // 알약 몫 92는 축소 대상이 아니라 비율로 나눠 실제 크기 유지.
-            Spacer(Modifier.height(64.dp + 92.dp / LocalDesignScale.current))
+            // 카드 끝(674) → 버튼(728) 간격 54 + 버튼 52 + 버튼 아래 24 — 스크롤 폴백 시 고정 버튼에 안 가리게.
+            // (UI 7차: 이 화면 하단 네비 없음 → 옛 알약 몫 92/scale 제거)
+            Spacer(Modifier.height(54.dp + 52.dp + 24.dp))
         }
 
-        // 미션 시작하기 버튼 (CSS Frame 272: left 16, 폭 361 = 좌우 16): 알약 위 16에 고정.
-        // 피그마(852) 기준에선 내용 바로 뒤 = 바닥 고정이 같은 위치 — 바닥 고정이 의도로 판단(사용자 결정).
-        // 하단 92(알약 아래 12 + 알약 64 + 간격 16, CSS)는 알약이 축소 대상이 아니라 비율로 나눠 실제 크기 유지.
+        // 미션 시작하기 버튼 (CSS Frame 272: left 16, top 728, 361x52 = 좌우 16 · 아래 72).
+        // 아래 72 = 시스템 네비(48) + 24 → navigationBarsPadding + 24 로 재현 (UI 7차: 하단 네비 없음).
         TqButton(
             text = "미션 시작하기",
             onClick = onStartClick,
             modifier = Modifier
                 .align(Alignment.BottomCenter)
                 .navigationBarsPadding()
-                .padding(start = 16.dp, end = 16.dp, bottom = 92.dp / LocalDesignScale.current)
+                .padding(start = 16.dp, end = 16.dp, bottom = 24.dp)
                 .fillMaxWidth(),
         )
+
+        // 복사 토스트 (CSS Frame 427321356: (16,669) 361x66 · pad 13x26 · gap 16 · r36 · 회색 그라데이션 0.7→0.8).
+        // 토스트 끝 y 735 → 아래 여백 = 852 - 735 - 시스템네비(48) = 69.
+        AnimatedVisibility(
+            visible = copyToastVisible,
+            enter = fadeIn(),
+            exit = fadeOut(),
+            modifier = Modifier.align(Alignment.BottomCenter),
+        ) {
+            Row(
+                modifier = Modifier
+                    .navigationBarsPadding()
+                    .padding(start = 16.dp, end = 16.dp, bottom = 69.dp)
+                    .fillMaxWidth()
+                    .height(66.dp)
+                    .clip(RoundedCornerShape(36.dp))
+                    .background(
+                        // CSS linear-gradient(95.78deg, rgba(111,116,123,.7) → .8) — 거의 수평이라 horizontal로
+                        Brush.horizontalGradient(listOf(Color(0xB36F747B), Color(0xCC6F747B))),
+                    )
+                    .padding(horizontal = 26.dp, vertical = 13.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(16.dp),
+            ) {
+                Image(
+                    painter = painterResource(R.drawable.ic_toast_check),
+                    contentDescription = null,
+                    modifier = Modifier.size(26.dp),
+                )
+                Text(
+                    text = "클립보드에 복사했어요.\n원하는 곳에 붙여넣어 사용해보세요.",
+                    style = TqType.LabelL.figma(), // Label/L 14/20 (CSS)
+                    color = Gray50,
+                )
+            }
+        }
     }
 }
 
@@ -299,9 +353,8 @@ private fun TopicChips(topics: List<String>, modifier: Modifier = Modifier) {
 
 // 첫 마디 카드 (CSS Frame 395~397): 흰 배경 radius 8, 높이 44, 왼쪽 pad 12, 오른쪽 복사 버튼.
 @Composable
-private fun OpenerCard(text: String) {
+private fun OpenerCard(text: String, onCopied: () -> Unit = {}) {
     val clipboard = LocalClipboardManager.current
-    val context = LocalContext.current
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -325,14 +378,15 @@ private fun OpenerCard(text: String) {
                 .clip(CircleShape) // 리플이 동그랗게 퍼지도록
                 .clickable {
                     clipboard.setText(AnnotatedString(text))
-                    Toast.makeText(context, "복사했어요", Toast.LENGTH_SHORT).show()
+                    onCopied() // 디자인 토스트는 화면 레벨 오버레이가 띄움 (시스템 Toast → 커스텀 교체, UI 7차)
                 },
             contentAlignment = Alignment.Center,
         ) {
             Image(
                 painter = painterResource(R.drawable.ic_conversation_copy),
                 contentDescription = "복사",
-                modifier = Modifier.size(20.dp),
+                // SVG(15x17)가 글리프 타이트 export — 20 박스로 그리면 17.6% 확대됨 → 실크기로 (2026-07-20)
+                modifier = Modifier.size(width = 15.dp, height = 17.dp),
             )
         }
     }

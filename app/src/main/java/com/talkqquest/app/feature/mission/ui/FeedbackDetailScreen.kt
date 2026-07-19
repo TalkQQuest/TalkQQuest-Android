@@ -23,9 +23,6 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
-import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
@@ -195,7 +192,7 @@ private fun FeedbackDetailContent(
                 contentAlignment = Alignment.Center,
             ) {
                 Icon(
-                    imageVector = Icons.AutoMirrored.Filled.KeyboardArrowLeft,
+                    painter = painterResource(R.drawable.ic_back_chevron),
                     contentDescription = "뒤로가기",
                     tint = Gray500,
                 )
@@ -439,7 +436,7 @@ private fun OtherMissionsButton(nickname: String, onClick: () -> Unit) {
             )
             Spacer(Modifier.weight(1f))
             Icon(
-                imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight, // CSS chevron 좌우반전
+                painter = painterResource(R.drawable.ic_forward_chevron), // CSS chevron 좌우반전(수치 동일)
                 contentDescription = null,
                 tint = Gray100,
             )

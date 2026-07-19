@@ -30,6 +30,7 @@ import com.talkqquest.app.feature.auth.ui.SignupStartScreen
 import com.talkqquest.app.feature.auth.ui.SignupVerifyScreen
 import com.talkqquest.app.feature.auth.viewmodel.AuthViewModel
 import com.talkqquest.app.feature.home.ui.HomeScreen
+import com.talkqquest.app.feature.notification.ui.NotificationScreen
 import com.talkqquest.app.feature.mission.ui.ConversationPrepScreen
 import com.talkqquest.app.feature.mission.ui.ConversationScreen
 import com.talkqquest.app.feature.mission.ui.FeedbackDetailScreen
@@ -44,6 +45,7 @@ import com.talkqquest.app.feature.archive.ui.ArchiveListScreen
 import com.talkqquest.app.feature.archive.ui.ArchiveSearchScreen
 import com.talkqquest.app.feature.archive.ui.ArchiveConversationDetailScreen // 💡 [추가] 대화 기록 상세 화면 import
 import com.talkqquest.app.navigation.Screen
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 // 네비게이션 그래프.
@@ -238,10 +240,22 @@ fun NavGraph(
         // 하단 네비 4탭 (임시 — 실제 화면으로 교체)
         // 홈은 화면↔데이터 연결 예시로 실제 구현됨(feature/home 참고). 나머지는 각 담당이 교체.
         composable(Screen.HOME) {
+            val homeScope = rememberCoroutineScope()
             HomeScreen(
                 onStartMissionClick = { missionId -> navController.navigate("mission_detail/$missionId") },
                 onOtherMissionsClick = { navController.navigate(Screen.MISSION_LIST) },
+                // 물결(리플)이 먼저 보인 뒤 전환되도록 살짝 지연 — 즉시 navigate 시 탭 물결이 안 보임
+                onNotificationClick = {
+                    homeScope.launch {
+                        delay(140)
+                        navController.navigate(Screen.NOTIFICATION)
+                    }
+                },
             )
+        }
+        // 알림창 (홈 벨 → 진입). 디자인 미완성이라 빈 상태 placeholder.
+        composable(Screen.NOTIFICATION) {
+            NotificationScreen(onBack = { navController.popBackStack() })
         }
         // C담당: 아카이브 홈 화면
         composable(Screen.ARCHIVE_HOME) {

@@ -139,19 +139,64 @@ fun NavGraph(
                             }
                     }
                 },
-                onEmailClick = { navController.navigate(Screen.SIGNUP_EMAIL) },
+                onEmailSignupClick = { navController.navigate(Screen.SIGNUP_EMAIL) },
+                onEmailLoginClick = {
+                    Toast.makeText(context, "이메일 로그인 화면은 준비 중입니다.", Toast.LENGTH_SHORT).show()
+                },
             )
         }
         composable(Screen.SIGNUP_EMAIL) {
+            val context = LocalContext.current
+            val authViewModel: AuthViewModel = hiltViewModel()
+            val authUiState by authViewModel.uiState.collectAsState()
+
+            authUiState.errorMessage?.let { message ->
+                Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
+                authViewModel.clearError()
+            }
+
             SignupEmailScreen(
                 onBack = { navController.popBackStack() },
-                onSendClick = { navController.navigate(Screen.SIGNUP_VERIFY) },
+                onSendClick = { email ->
+                    authViewModel.requestEmailCode(email) {
+                        navController.currentBackStackEntry
+                            ?.savedStateHandle
+                            ?.set("signup_email", email.trim())
+                        navController.navigate(Screen.SIGNUP_VERIFY)
+                    }
+                },
             )
         }
         composable(Screen.SIGNUP_VERIFY) {
+            val context = LocalContext.current
+            val authViewModel: AuthViewModel = hiltViewModel()
+            val authUiState by authViewModel.uiState.collectAsState()
+            val email = navController.previousBackStackEntry
+                ?.savedStateHandle
+                ?.get<String>("signup_email")
+                .orEmpty()
+
+            authUiState.errorMessage?.let { message ->
+                Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
+                authViewModel.clearError()
+            }
+
             SignupVerifyScreen(
+                email = email.ifBlank { "Talkqquest1234@gmail.com" },
                 onBack = { navController.popBackStack() },
-                onVerified = { navController.navigate(Screen.SIGNUP_PASSWORD) },
+                onVerifyCode = { code ->
+                    authViewModel.verifyEmailCode(email, code) {
+                        navController.currentBackStackEntry
+                            ?.savedStateHandle
+                            ?.set("signup_email", email)
+                        navController.navigate(Screen.SIGNUP_PASSWORD)
+                    }
+                },
+                onResendClick = {
+                    authViewModel.requestEmailCode(email) {
+                        Toast.makeText(context, "인증 코드가 재발송되었습니다.", Toast.LENGTH_SHORT).show()
+                    }
+                },
             )
         }
         composable(Screen.SIGNUP_PASSWORD) {

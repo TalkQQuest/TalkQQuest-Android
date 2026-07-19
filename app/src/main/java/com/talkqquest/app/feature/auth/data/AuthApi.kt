@@ -14,4 +14,19 @@ interface AuthApi {
     suspend fun loginWithNaver(
         @Body request: SocialLoginRequest,
     ): ApiResponse<SocialLoginData>
+
+    @POST("api/v1/auth/email/request")
+    suspend fun requestEmailCode(
+        @Body request: EmailCodeRequest,
+    ): ApiResponse<Unit>
+
+    @POST("api/v1/auth/email/verify")
+    suspend fun verifyEmailCode(
+        @Body request: EmailVerifyRequest,
+    ): ApiResponse<Unit>
+
+    @POST("api/v1/auth/signup")
+    suspend fun signupWithEmail(
+        @Body request: EmailSignupRequest,
+    ): ApiResponse<EmailSignupData>
 }

@@ -39,8 +39,9 @@ import com.talkqquest.app.feature.mission.ui.MissionListScreen
 import com.talkqquest.app.feature.mission.ui.SavedMissionsScreen
 import com.talkqquest.app.feature.report.ui.ReportScreen
 import com.talkqquest.app.feature.archive.ui.ArchiveHomeScreen
-import com.talkqquest.app.feature.archive.ui.ArchiveListScreen // 💡 [추가] 아카이브 목록 화면 import
+import com.talkqquest.app.feature.archive.ui.ArchiveListScreen
 import com.talkqquest.app.feature.archive.ui.ArchiveSearchScreen
+import com.talkqquest.app.feature.archive.ui.ArchiveConversationDetailScreen // 💡 [추가] 대화 기록 상세 화면 import
 import com.talkqquest.app.navigation.Screen
 import kotlinx.coroutines.launch
 
@@ -187,8 +188,8 @@ fun NavGraph(
                     navController.navigate("${Screen.ARCHIVE_LIST}/$tabIndex")
                 },
                 onNavigateToDetail = { activityId ->
+                    // 💡 홈에서 대화 클릭 시에도 상세 화면으로 갈 수 있도록 추가 가능 (현재는 Toast 유지)
                     Toast.makeText(context, "최근 활동 상세: 준비 중인 기능입니다.", Toast.LENGTH_SHORT).show()
-                    // navController.navigate("상세 경로 추가 필요")
                 }
             )
         }
@@ -196,7 +197,6 @@ fun NavGraph(
         composable(Screen.ARCHIVE_SEARCH) {
             ArchiveSearchScreen(
                 onBackClick = {
-                    // '<' 뒤로가기 버튼 클릭 시 백스택에서 화면을 빼서 이전 화면(홈)으로 돌아갑니다.
                     navController.popBackStack()
                 }
             )
@@ -210,6 +210,22 @@ fun NavGraph(
             val tabIndex = backStackEntry.arguments?.getInt("tabIndex") ?: 0
             ArchiveListScreen(
                 initialTabIndex = tabIndex,
+                onBackClick = { navController.popBackStack() },
+                // 💡 [추가] 대화 카드 클릭 시 대화 기록(상세) 화면으로 이동
+                onConversationClick = { conversationId ->
+                    navController.navigate("archive_conversation_detail/$conversationId")
+                }
+            )
+        }
+
+        // 💡 [추가] C담당: 보관함 대화 기록(상세) 화면
+        composable(
+            route = "archive_conversation_detail/{conversationId}",
+            arguments = listOf(navArgument("conversationId") { type = NavType.StringType })
+        ) { backStackEntry ->
+            val conversationId = backStackEntry.arguments?.getString("conversationId").orEmpty()
+            // 향후 ViewModel에 conversationId를 넘겨서 서버 API를 호출하도록 짤 수 있습니다.
+            ArchiveConversationDetailScreen(
                 onBackClick = { navController.popBackStack() }
             )
         }

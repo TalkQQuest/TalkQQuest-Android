@@ -28,9 +28,6 @@ import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
-import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
@@ -210,7 +207,7 @@ private fun ReportContent(
                 contentAlignment = Alignment.Center,
             ) {
                 Icon(
-                    imageVector = Icons.AutoMirrored.Filled.KeyboardArrowLeft,
+                    painter = painterResource(R.drawable.ic_back_chevron), // CSS 12x6+stroke2 회전 = 8x14 (머티리얼 글리프 7.4x12보다 큼)
                     contentDescription = "뒤로가기",
                     tint = Gray500,
                 )
@@ -594,10 +591,10 @@ private fun CompletedMissionCard(
                 Text(text = "완료한 미션", style = TqType.LabelM.figma(), color = Gray600)
                 Spacer(Modifier.width(2.dp)) // 글자 → 화살표 gap 2 (CSS)
                 Icon(
-                    imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                    painter = painterResource(R.drawable.ic_forward_chevron_small), // CSS 16x17, 글리프 4x8+stroke1.5
                     contentDescription = null,
                     tint = Gray500,
-                    modifier = Modifier.size(16.dp),
+                    modifier = Modifier.size(width = 16.dp, height = 17.dp),
                 )
             }
         }
@@ -611,11 +608,12 @@ private fun WeeklyCompareTab(weekly: WeeklyCompareReport) {
     Column(modifier = Modifier.fillMaxWidth()) {
         Spacer(Modifier.height(18.dp)) // 탭바 끝(102) → 배너(120) (CSS)
 
-        // 헤더 배너: 화면 전체 폭 Purple/50 (CSS 393x90, r8 — 높이 86 → 90 디자인 변경 2026-07)
+        // 헤더 배너: 화면 전체 폭 Purple/50 (V7 CSS 393x86, r8 — 이전 "90 디자인 변경" 주석은
+        // V7(7/18) 이전 정보라 V7 수치로 환원 2026-07-20)
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(90.dp)
+                .height(86.dp)
                 .clip(RoundedCornerShape(8.dp))
                 .background(Primary50)
                 .padding(horizontal = 20.dp),
@@ -664,9 +662,14 @@ private fun WeeklyCompareTab(weekly: WeeklyCompareReport) {
             }
         }
 
-        Spacer(Modifier.height(16.dp)) // 배너 끝 → 콘텐츠 간격 18 → 16 (디자인 변경 2026-07)
-        Column(modifier = Modifier.padding(horizontal = 16.dp)) {
-            Text(text = "핵심 지표 변화", style = TqType.LabelL.figma(), color = Gray800)
+        Spacer(Modifier.height(18.dp)) // 배너 끝(206) → 콘텐츠(224) = 18 (V7 CSS로 환원)
+        Column(modifier = Modifier.padding(start = 16.dp, end = 14.dp)) { // 콘텐츠 열 left 16 / w363 → 오른쪽 14 (CSS)
+            Text(
+                text = "핵심 지표 변화",
+                style = TqType.LabelL.figma(),
+                color = Gray800,
+                modifier = Modifier.padding(horizontal = 2.dp), // 라벨 들임 (CSS padding 0 2)
+            )
             Spacer(Modifier.height(16.dp)) // 제목 → 카드 gap 16 (CSS)
             // 2x2 지표 카드 (행 안 gap 16 / 행 사이 gap 12)
             val metrics = weekly.metrics
@@ -684,7 +687,12 @@ private fun WeeklyCompareTab(weekly: WeeklyCompareReport) {
             }
 
             Spacer(Modifier.height(16.dp)) // 지표 → 하이라이트 섹션 gap 16 (CSS)
-            Text(text = "개선 하이라이트", style = TqType.LabelL.figma(), color = Gray800)
+            Text(
+                text = "개선 하이라이트",
+                style = TqType.LabelL.figma(),
+                color = Gray800,
+                modifier = Modifier.padding(horizontal = 2.dp), // 라벨 들임 (CSS padding 0 2)
+            )
             weekly.highlights.forEach { highlight ->
                 Spacer(Modifier.height(16.dp)) // 섹션 안 gap 16 (CSS)
                 HighlightRow(item = highlight)

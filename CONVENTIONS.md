@@ -97,6 +97,7 @@ com.talkqquest.app
 │   │   └── di/           # 이 기능 전용 Hilt 모듈 (AuthModule 등) — 필요할 때만
 │   ├── onboarding/
 │   ├── home/
+│   ├── notification/
 │   ├── mission/
 │   ├── conversation/
 │   ├── archive/
@@ -164,7 +165,7 @@ object Screen {
 
 **와이어프레임 프레임 ≠ Screen 개수 (중요)**
 
-피그마 와이어프레임에는 화면 크기 프레임이 **54개**, 팝업이 **4개** 있지만, 이걸 그대로 54개 화면으로 만들지 않습니다.
+피그마 와이어프레임에는 화면 크기 프레임이 아주 많지만(UI 5차 54개 → **UI 7차 87개**), 이걸 그대로 화면 수만큼 만들지 않습니다.
 
 - **같은 화면의 상태 변형**은 하나의 `Screen` + 하나의 `UiState`로 구현합니다.
   - 예: 와이어프레임의 `홈 화면(미션 상세)` 2개, `대화 진행(기본)` 2개, `모임(상세)` 2개, `내 모임(참여중)` 2개 → 각각 **1개 Screen**. 상태 차이는 `UiState`의 값으로 표현합니다.
@@ -172,7 +173,7 @@ object Screen {
   - 예: `아카이브(미션/대화/문장/리포트 선택시)` 4개 → `ArchiveListScreen` 1개(탭 상태).
 - **팝업**은 별도 Screen이 아니라 해당 화면 위에 띄우는 다이얼로그(Composable)로 구현합니다.
 
-이 정리를 거쳐 **실제 구현 대상은 논리 화면 35개 + 팝업 4개**입니다. 화면별 "와이어프레임 대응" 관계는 [`NAVIGATION.md`](NAVIGATION.md)에 정리돼 있으니, 내 담당 화면이 어떤 프레임에서 왔는지 거기서 확인하세요.
+이 정리를 거쳐 UI 5차 기준 **논리 화면 35개 + 팝업 4개**로 집계했습니다(UI 7차 기준 재집계는 아직). 화면별 "와이어프레임 대응" 관계는 [`NAVIGATION.md`](NAVIGATION.md)에 정리돼 있으니, 내 담당 화면이 어떤 프레임에서 왔는지 거기서 확인하세요.
 
 ## 7. 라이브러리 버전 (고정)
 
@@ -203,7 +204,7 @@ object Screen {
 ## 8. 디자인 토큰 & 공통 컴포넌트 (참고)
 
 > **이제 `core/designsystem`에 코드로 구현·커밋 완료됐습니다.** 색은 `Primary600`·`Gray200` 등 이름으로, 타이포는 `TqType.HeadingL`, 컴포넌트는 `TqButton`/`TqChip`/`TqCard`로 **갖다 쓰면 됩니다**(새로 만들지 마세요). 아래 표는 그 스펙 요약입니다.
-> 원래 값의 출처(source of truth)는 디자이너가 넘긴 `design/design-system.css` / `design/components.css`이고, 지금 코드는 그 기준의 **초안**입니다 — **피그마 확정 시 맞춰야 합니다.** (자세한 사용법은 팀 배포용 `공통 세팅 안내.md` 참고)
+> **값의 최종 출처(source of truth)는 디자이너가 넘긴 최신 UI CSS 추출본(현재 UI 7차, 2026-07-18)입니다.** 아래 표와 다르면 항상 최신 추출본이 우선이고, 화면을 만들 땐 그 화면의 프레임 CSS를 직접 열어 값을 그대로 옮겨 적으세요(눈대중 재구성 금지). 초기에 받은 `design/design-system.css` / `design/components.css`는 1차 기준이라 최신과 어긋난 값이 있습니다. (자세한 사용법은 팀 배포용 `공통 세팅 안내.md` 참고)
 
 ### 색상 (Color)
 
@@ -251,11 +252,11 @@ object Screen {
 | 하단 네비게이션 | 4탭: 아카이브 / 홈 / 모임 / 프로필. 활성 = Primary 600, 비활성 = Gray 300 |
 | 버튼 L (예: "다음") | 높이 52, 배경 Primary 600, radius **16**, 텍스트 Gray 50, SemiBold 16 |
 | 버튼 M (예: "미션 시작하기") | 높이 44, 배경 Primary 600, radius **12** |
-| 칩 (select) | 높이 40, 흰 배경 + Gray 200 보더, radius **20**, 선택 시 색 반전 |
+| 칩 (select) | 높이 **34**(미션 목록·저장 목록 기준, 화면에 따라 40도 있음), radius **20**, 선택 = Primary 600 배경 + Primary 50 글자 / 미선택 = 흰 배경 + 카드 그림자 + Gray 900 글자 |
 | 난이도 라벨 | 쉬움 = GREEN / 보통 / 어려움 (색으로 구분) |
-| 카드 | 흰 배경, radius **20**, 그림자 `0 8px 24px rgba(15,23,42,0.06)`, stroke/fill 2종 |
+| 카드 | 흰 배경, radius **20**, 그림자 `0 8px 24px rgba(15,23,42,0.01)`, stroke/fill 2종 |
 
-> **위 컴포넌트는 대부분 구현 완료됐습니다.** 색/타이포 + 하단네비 + 버튼(`TqButton`)/칩(`TqChip`)/카드(`TqCard`)는 `core/designsystem`에 커밋돼 있으니 갖다 쓰면 됩니다. 다만 **난이도 라벨은 아직 컴포넌트로 없으니**, 먼저 필요한 담당이 같은 규칙(`core/designsystem/component/`)으로 만들어 PR 올려주세요.
+> **위 컴포넌트는 대부분 구현 완료됐습니다.** 색/타이포 + 하단네비 + 버튼(`TqButton`)/칩(`TqChip`)/카드(`TqCard`) + 저장 바텀시트 틀(`TqSaveSheetScaffold` — 미션·문장·리포트 저장 시트 공용)은 `core/designsystem`에 커밋돼 있으니 갖다 쓰면 됩니다. 다만 **난이도 라벨은 아직 공통 컴포넌트로 없고**(현재 `feature/mission`의 미션 카드 안에 있음), 다른 파트에서도 필요해지면 같은 규칙(`core/designsystem/component/`)으로 옮겨 PR 올려주세요.
 
 ## 9. 리소스(이미지·아이콘) 네이밍 규칙
 

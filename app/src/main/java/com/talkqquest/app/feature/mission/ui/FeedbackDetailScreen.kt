@@ -205,7 +205,7 @@ private fun FeedbackDetailContent(
                 .fillMaxWidth()
                 .verticalScroll(rememberScrollState()) // 서버 문구가 길어 카드가 화면을 넘치면 스크롤
                 .navigationBarsPadding()
-                .padding(horizontal = 16.dp), // 콘텐츠 열 left 16 / w362 (CSS)
+                .padding(start = 16.dp, end = 15.dp), // 콘텐츠 열 left 16 / w362 → 오른쪽 15 (CSS, 홈과 동일 비대칭)
         ) {
             // 배너 (CSS Frame 427321050): Gray100 r20, 패딩 8x20, [항목명] ↔ [점수 /100]
             Row(
@@ -238,7 +238,6 @@ private fun FeedbackDetailContent(
                     .clip(RoundedCornerShape(20.dp))
                     .background(White)
                     .padding(horizontal = 16.dp, vertical = 20.dp),
-                verticalArrangement = Arrangement.spacedBy(40.dp),
             ) {
                 FeedbackSection(
                     chipLabel = "잘한 점",
@@ -246,12 +245,16 @@ private fun FeedbackDetailContent(
                     chipTextColor = Success,
                     bullets = itemText.strengths,
                 )
+                // 잘한점 → 개선할점 34 (CSS는 40이지만 잘한점 프레임이 내용(128)보다 6 작은
+                // 122로 잠겨 있어, 실렌더 기준 다음 칩까지 거리 = 40-6. 카드 총높이 406 검산 일치)
+                Spacer(Modifier.height(34.dp))
                 FeedbackSection(
                     chipLabel = "개선할 점",
                     chipBg = ImproveChipBg,
                     chipTextColor = ImproveText,
                     bullets = itemText.improvements,
                 )
+                Spacer(Modifier.height(40.dp)) // 개선할점 → 베스트 문장 (CSS gap 40)
                 BestPhraseSection(
                     phrase = itemText.savedPhrase,
                     isSaved = isPhraseSaved,
@@ -313,7 +316,9 @@ private fun BestPhraseSection(
     onToggleSave: () -> Unit,
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) { // 헤더 ↔ 인용 (CSS gap 10)
-        Row(verticalAlignment = Alignment.CenterVertically) {
+        // 헤더행 높이 = 28 (CSS Frame 427321188): 40짜리 북마크 버튼이 행 밖으로 위아래 6씩
+        // 삐져나오는 배치 — 행을 40으로 잡으면 카드가 12 길어져 아래 버튼까지 밀림 (실측 확인)
+        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.height(28.dp)) {
             Box(
                 modifier = Modifier
                     .clip(RoundedCornerShape(8.dp))
@@ -327,7 +332,8 @@ private fun BestPhraseSection(
             // TODO(서버 연동): 저장 시 아카이브 '문장'으로 — 지금은 화면 토글만.
             Box(
                 modifier = Modifier
-                    .size(40.dp)
+                    .offset(x = (-4).dp) // CSS 칩 margin -4: 버튼이 칩에 4 겹침
+                    .requiredSize(40.dp) // 행(28)보다 큰 터치영역 — 위아래로 흘러넘침 (CSS 배치)
                     .clickable(
                         interactionSource = remember { MutableInteractionSource() },
                         indication = null,

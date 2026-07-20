@@ -36,7 +36,7 @@ fun MainScreen() {
     // ※ CONVERSATION_PREP(미션 진입)은 제외 — UI 7차 "미션 진입" 프레임에 하단 네비게이션이 없음(2026-07-19 CSS 확인).
     val bottomBarRoutes = BottomNavItem.entries.map { it.route } +
         Screen.MISSION_LIST + Screen.MISSION_DETAIL + Screen.CONVERSATION +
-        Screen.REPORT + Screen.SAVED_MISSIONS // 저장 목록: UI v4에서 하단 네비 생김(활성 탭=아카이브)
+        Screen.REPORT
 
     val hazeState = remember { HazeState() }
 

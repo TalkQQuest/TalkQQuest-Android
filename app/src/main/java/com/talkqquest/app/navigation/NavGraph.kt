@@ -30,6 +30,10 @@ import com.talkqquest.app.feature.auth.ui.SignupStartScreen
 import com.talkqquest.app.feature.auth.ui.SignupVerifyScreen
 import com.talkqquest.app.feature.auth.viewmodel.AuthViewModel
 import com.talkqquest.app.feature.home.ui.HomeScreen
+import com.talkqquest.app.feature.onboarding.ui.OnboardingDifficultyScreen
+import com.talkqquest.app.feature.onboarding.ui.OnboardingGoalScreen
+import com.talkqquest.app.feature.onboarding.ui.OnboardingPersonalityScreen
+import com.talkqquest.app.feature.onboarding.ui.OnboardingWelcomeScreen
 import com.talkqquest.app.feature.notification.ui.NotificationScreen
 import com.talkqquest.app.feature.mission.ui.ConversationPrepScreen
 import com.talkqquest.app.feature.mission.ui.ConversationScreen
@@ -235,10 +239,55 @@ fun NavGraph(
         composable(Screen.SIGNUP_NICKNAME) {
             SignupNicknameScreen(
                 onBack = { navController.popBackStack() },
-                onCompleteClick = { navController.navigate(Screen.ONBOARDING_WELCOME) },
+                onCompleteClick = { nickname ->
+                    navController.currentBackStackEntry
+                        ?.savedStateHandle
+                        ?.set("onboarding_nickname", nickname.trim())
+                    navController.navigate(Screen.ONBOARDING_WELCOME)
+                },
             )
         }
-        composable(Screen.ONBOARDING_WELCOME) { PlaceholderScreen("온보딩") }
+        composable(Screen.ONBOARDING_WELCOME) {
+            val nickname = navController.previousBackStackEntry
+                ?.savedStateHandle
+                ?.get<String>("onboarding_nickname")
+                .orEmpty()
+            OnboardingWelcomeScreen(
+                nickname = nickname,
+                onFinished = { displayNickname ->
+                    navController.navigate(Screen.ONBOARDING_PERSONALITY) {
+                        popUpTo(Screen.ONBOARDING_WELCOME) { inclusive = true }
+                        launchSingleTop = true
+                    }
+                    navController.currentBackStackEntry
+                        ?.savedStateHandle
+                        ?.set("onboarding_nickname", displayNickname)
+                },
+            )
+        }
+        composable(Screen.ONBOARDING_PERSONALITY) {
+            val nickname = navController.currentBackStackEntry
+                ?.savedStateHandle
+                ?.get<String>("onboarding_nickname")
+                .orEmpty()
+            OnboardingPersonalityScreen(
+                nickname = nickname,
+                onBack = { navController.popBackStack() },
+                onNextClick = { navController.navigate(Screen.ONBOARDING_DIFFICULTY) },
+            )
+        }
+        composable(Screen.ONBOARDING_DIFFICULTY) {
+            OnboardingDifficultyScreen(
+                onBack = { navController.popBackStack() },
+                onNextClick = { navController.navigate(Screen.ONBOARDING_GOAL) },
+            )
+        }
+        composable(Screen.ONBOARDING_GOAL) {
+            OnboardingGoalScreen(
+                onBack = { navController.popBackStack() },
+                onCompleteClick = { navController.navigate(Screen.HOME) },
+            )
+        }
         // 하단 네비 4탭 (임시 — 실제 화면으로 교체)
         // 홈은 화면↔데이터 연결 예시로 실제 구현됨(feature/home 참고). 나머지는 각 담당이 교체.
         composable(Screen.HOME) {

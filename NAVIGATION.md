@@ -2,7 +2,9 @@
 
 스크린 ID 네이밍 규칙은 [`CONVENTIONS.md`](CONVENTIONS.md)의 "6. 화면 네이밍 규칙" 참고.
 
-> **집계 기준**: 피그마 와이어프레임에는 **화면 크기 프레임 54개 + 팝업 4개**가 있습니다. 이 중 같은 화면의 상태 변형(예: `홈 화면(미션 상세)`가 2개, `대화 진행(기본)`이 2개)은 하나의 Screen으로 구현하므로, **실제 구현 대상은 논리 화면 35개 + 팝업 4개**입니다. 아래 표의 "와이어프레임 대응" 칸에 각 Screen이 어떤 프레임에서 왔는지 적어두었습니다.
+> **집계 기준**: 같은 화면의 상태 변형(예: `홈 화면(미션 상세)`가 2개, `대화 진행(기본)`이 2개)은 하나의 Screen으로 구현합니다. 아래 표의 "와이어프레임 대응" 칸에 각 Screen이 어떤 프레임에서 왔는지 적어두었습니다.
+>
+> **⚠️ 디자인 기준은 UI 7차(2026-07-18)입니다.** 아래 표의 화면 수는 UI 5차 기준(전체화면 프레임 54개 → 논리 화면 35개 + 팝업 4개)으로 집계된 값입니다. **UI 7차의 전체화면 프레임은 87개로 늘었고**(보관함 진입 화면들·탈퇴 플로우 등 추가), 논리 화면 재집계는 아직 하지 않았습니다. 화면 존재 여부의 최종 기준은 항상 **UI 7차 원본**이며, 이 표와 다르면 원본이 우선입니다.
 
 ---
 
@@ -27,14 +29,15 @@
 
 > **온보딩 두 애니메이션 프레임 구분**: `온보딩(가입 완료 애니메이션)` = 회원가입 직후 환영 화면(→ `OnboardingWelcomeScreen`, "반가워요, @@님!"), `온보딩(완료 애니메이션)` = 온보딩 전체를 마친 완료 화면(→ `OnboardingCompleteScreen`). 좌표 순서(left 3510 → 5687)와 "반가워요" 텍스트 위치로 확인됨.
 
-### B담당 (이도/윤기수) — 미션 · AI 대화 · 성장 리포트 (11개)
+### B담당 (이도/윤기수) — 미션 · AI 대화 · 성장 리포트 (12개)
 
 | 화면 이름 | 스크린 ID | 진입 경로 | 와이어프레임 대응 |
 | --- | --- | --- | --- |
 | 홈 | HomeScreen | 로그인/온보딩 완료 후, 하단 네비게이션 '홈' 탭 | 홈 화면(메인) |
+| **알림** | **NotificationScreen** | 홈 → 우측 상단 종 버튼 | 알림창 |
 | 미션 목록 | MissionListScreen | 홈 → 다른 미션 보기 | 홈 화면(미션 목록) |
 | 미션 상세 | MissionDetailScreen | 홈 카드 또는 미션 목록 → 카드 클릭 | 홈 화면(미션 상세)×2, 미션 상세-북마크 / 북마크 올렸을 때〔저장 상태〕 |
-| 저장 목록 | SavedMissionsScreen | 미션 목록·상세의 저장 시트 → "저장 목록 >" | 미션 상세-북마크 목록〔저장한 미션 목록·상태 필터〕 |
+| ~~저장 목록~~ | ~~SavedMissionsScreen~~ | *(UI 7차에서 아카이브 보관함으로 대체 — 진입 경로 없음)* | 북마크→저장목록(변경됨) |
 | 대화 준비 | ConversationPrepScreen | 미션 상세 → 미션 시작하기 | 홈 화면(미션 진입) |
 | 대화하기 | ConversationScreen | 대화 준비 → 미션 시작하기 | 대화 진행(기본)×2, 대화 진행(뒤로가기)〔나가기 팝업 상태〕 |
 | 대화 완료 | ConversationCompleteScreen | *(현재 미구현 — 대화 종료 시 미션 완료로 바로 이동)* | 대화 완료 |
@@ -43,7 +46,10 @@
 | AI 피드백 상세 | FeedbackDetailScreen | 피드백 요약 → 항목 클릭 | AI 피드백 상세 |
 | 성장 리포트 | ReportScreen | AI 피드백 요약 → "상세 리포트" | 성장 리포트, 주간 비교 리포트〔같은 탭바 공유 → 1화면 2탭〕, 리포트 저장〔저장 시트 상태〕 |
 
-> **`저장 목록`(SavedMissionsScreen)은 원래 미션 상세의 "북마크 목록" 상태였으나, 저장 시트에서 진입하는 독립 화면으로 분리해 구현했습니다.** 상태 필터(완료/진행중/미완료)로 저장한 미션을 모아 봅니다.
+> **`저장 목록`(SavedMissionsScreen) — UI 7차에서 폐기됐습니다.** 7차의 `북마크→저장목록(변경됨)` 프레임을 보면 미션/대화/문장/리포트 **4탭 + 전체/완료/미완료 필터**를 가진 아카이브 보관함 화면으로 바뀌었습니다(= C담당 `ArchiveListScreen`과 동일). 그래서 **미션 목록·상세의 저장 시트에서 "보관함 >"을 누르면 `archive_list/0`(미션 탭)으로 이동**합니다. 문장 저장 시트(→`archive_list/2`)·리포트 저장 시트(→`archive_list/3`)와 같은 방식으로 통일된 상태입니다.
+> `SavedMissionsScreen`과 `Screen.SAVED_MISSIONS` route는 되돌릴 일에 대비해 코드에 남겨뒀지만 진입 경로가 없습니다(팀 확인 후 정리 예정).
+>
+> **알림 화면(`NotificationScreen`)은 빈 상태만 구현돼 있습니다.** UI 7차의 `알림창` 프레임 자체가 빈 껍데기(헤더만 있고 내용 없음)라, "새로운 알림이 없어요" 빈 상태로 두고 디자인 확정 시 채웁니다.
 >
 > **`대화 완료`(대화 요약)는 UI 시안(v3)에 별도 프레임이 없어 만들지 않았고, 대화 진행에서 종료 확인 시 `미션 완료·XP`로 바로 이동합니다.** route 상수(`CONVERSATION_COMPLETE`)만 남겨둔 상태이며, 나중에 대화 요약 화면이 필요해지면 그 사이에 끼워 넣습니다.
 >
@@ -74,7 +80,7 @@
 
 > 이전 `ArchiveMissionListScreen`은 실제 와이어프레임에서 **미션/대화/문장/리포트 4개 탭을 가진 하나의 목록 화면**이라 `ArchiveListScreen`으로 정리했습니다. (완료한 미션만 보는 화면이 아님)
 >
-> **아카이브에서 진입하는 상세 화면(`OO(보관함에서 진입)` 프레임들)은 전부 C 담당입니다.** UI 5차에서 미션 상세(재시작 가능)·리포트 2종이 아카이브 전용 프레임으로 추가됐습니다. 미션 상세·리포트가 B의 화면과 비슷해 보여도 **아카이브 흐름의 화면이므로 C가 만듭니다.** B의 `MissionDetailScreen`/`ReportScreen` 컴포넌트를 재사용하고 싶으면 B에게 요청하세요(공통화는 그때 논의).
+> **아카이브에서 진입하는 상세 화면(`OO(보관함에서 진입)` 프레임들)은 전부 C 담당입니다.** UI 5차에서 미션 상세(재시작 가능)·리포트 2종이 아카이브 전용 프레임으로 추가됐고, UI 7차에도 유지됩니다. 미션 상세·리포트가 B의 화면과 비슷해 보여도 **아카이브 흐름의 화면이므로 C가 만듭니다.** B의 `MissionDetailScreen`/`ReportScreen` 컴포넌트를 재사용하고 싶으면 B에게 요청하세요(공통화는 그때 논의).
 
 > **역할 분담 갱신(2026-07): 커뮤니티가 부가 기능이라 피그마 디자인이 뒤로 밀리면서 재분배함** — 아카이브가 A→C로, 성장 리포트가 C→B로 이동. (원래: A 진입·아카이브·프로필 / B 미션·AI 대화 / C 커뮤니티·성장 리포트)
 
@@ -117,18 +123,20 @@ flowchart TD
     OnboardGoal --> OnboardComplete[OnboardingCompleteScreen]
     OnboardComplete --> Home
 
+    Home -->|종 버튼| Notification[NotificationScreen]
     Home -->|다른 미션 보기| MissionList[MissionListScreen]
     Home -->|오늘의 미션 카드| MissionDetail[MissionDetailScreen]
     MissionList --> MissionDetail
-    MissionList -->|저장 시트 → 저장 목록| SavedMissions[SavedMissionsScreen]
-    MissionDetail -->|저장 시트 → 저장 목록| SavedMissions
-    SavedMissions -->|카드 클릭| MissionDetail
+    MissionList -->|저장 시트 → 보관함| ArchiveList
+    MissionDetail -->|저장 시트 → 보관함| ArchiveList
     MissionDetail -->|미션 시작하기| ConvPrep[ConversationPrepScreen]
     ConvPrep -->|미션 시작하기| Conversation[ConversationScreen]
     Conversation -->|종료 확인| MissionComplete[MissionCompleteScreen]
     MissionComplete -->|연출 종료 후 자동 전환| Feedback[FeedbackScreen]
     Feedback -->|항목 클릭| FeedbackDetail[FeedbackDetailScreen]
     Feedback -->|상세 리포트| Report[ReportScreen]
+    FeedbackDetail -->|문장 저장 시트 → 보관함| ArchiveList
+    Report -->|리포트 저장 시트 → 보관함| ArchiveList
 
     Home -->|하단 네비게이션| Archive[ArchiveHomeScreen]
     Home -->|하단 네비게이션| Community[CommunityListScreen]

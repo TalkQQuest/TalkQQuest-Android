@@ -43,7 +43,8 @@ import com.talkqquest.app.feature.report.ui.ReportScreen
 import com.talkqquest.app.feature.archive.ui.ArchiveHomeScreen
 import com.talkqquest.app.feature.archive.ui.ArchiveListScreen
 import com.talkqquest.app.feature.archive.ui.ArchiveSearchScreen
-import com.talkqquest.app.feature.archive.ui.ArchiveConversationDetailScreen // 💡 [추가] 대화 기록 상세 화면 import
+import com.talkqquest.app.feature.archive.ui.ArchiveConversationDetailScreen
+import com.talkqquest.app.feature.archive.ui.ArchiveSavedPhraseScreen
 import com.talkqquest.app.navigation.Screen
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -266,11 +267,9 @@ fun NavGraph(
                     navController.navigate(Screen.ARCHIVE_SEARCH)
                 },
                 onNavigateToList = { tabIndex ->
-                    // 💡 [핵심 연동] 클릭한 카테고리의 인덱스를 파라미터로 넘겨주며 이동!
                     navController.navigate("${Screen.ARCHIVE_LIST}/$tabIndex")
                 },
                 onNavigateToDetail = { activityId ->
-                    // 💡 홈에서 대화 클릭 시에도 상세 화면으로 갈 수 있도록 추가 가능 (현재는 Toast 유지)
                     Toast.makeText(context, "최근 활동 상세: 준비 중인 기능입니다.", Toast.LENGTH_SHORT).show()
                 }
             )
@@ -293,22 +292,35 @@ fun NavGraph(
             ArchiveListScreen(
                 initialTabIndex = tabIndex,
                 onBackClick = { navController.popBackStack() },
-                // 💡 [추가] 대화 카드 클릭 시 대화 기록(상세) 화면으로 이동
                 onConversationClick = { conversationId ->
                     navController.navigate("archive_conversation_detail/$conversationId")
+                },
+                onSentenceClick = { phraseId ->
+                    navController.navigate("archive_saved_phrase/$phraseId")
                 }
             )
         }
 
-        // 💡 [추가] C담당: 보관함 대화 기록(상세) 화면
+        // C담당: 보관함 대화 기록(상세) 화면
         composable(
             route = "archive_conversation_detail/{conversationId}",
             arguments = listOf(navArgument("conversationId") { type = NavType.StringType })
-        ) { backStackEntry ->
-            val conversationId = backStackEntry.arguments?.getString("conversationId").orEmpty()
-            // 향후 ViewModel에 conversationId를 넘겨서 서버 API를 호출하도록 짤 수 있습니다.
+        ) {
             ArchiveConversationDetailScreen(
                 onBackClick = { navController.popBackStack() }
+            )
+        }
+
+        // C담당: 보관함 베스트 문장 상세 화면
+        composable(
+            route = "archive_saved_phrase/{phraseId}",
+            arguments = listOf(navArgument("phraseId") { type = NavType.StringType })
+        ) {
+            ArchiveSavedPhraseScreen(
+                onBackClick = { navController.popBackStack() },
+                onConversationClick = { conversationId ->
+                    navController.navigate("archive_conversation_detail/$conversationId")
+                }
             )
         }
 
@@ -430,13 +442,11 @@ fun NavGraph(
                 },
                 // 💡 (문장 탭의 인덱스는 2)
                 onArchiveClick = { navController.navigate("${Screen.ARCHIVE_LIST}/2") },
-                //   저장된 문장 카드 클릭 → 보관함 문장 상세 (Screen.ARCHIVE_SAVED_PHRASE)
-                onPhraseClick = { phraseId -> /* TODO(C): 보관함 문장 상세로 (phraseId) */ },
+                // 피드백 상세에서 문장 칩 클릭 시 보관함 베스트 문장 상세로 바로 이동
+                onPhraseClick = { phraseId -> navController.navigate("archive_saved_phrase/$phraseId") },
             )
         }
         composable(Screen.COMMUNITY_LIST) { PlaceholderScreen("모임") }
         composable(Screen.PROFILE) { PlaceholderScreen("프로필") }
-
-        // 예) composable(Screen.LOGIN) { LoginScreen(navController) }
     }
 }

@@ -27,7 +27,6 @@ import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material3.Icon
@@ -161,7 +160,12 @@ private fun ArchiveSearchScreenContent(
                             .clickable { onBackClick() },
                         contentAlignment = Alignment.Center
                     ) {
-                        Icon(imageVector = Icons.AutoMirrored.Filled.KeyboardArrowLeft, contentDescription = "뒤로가기", tint = Gray500)
+                        // 💡 [수정됨] 커스텀 뒤로가기 아이콘으로 변경
+                        Icon(
+                            painter = painterResource(id = R.drawable.ic_back_chevron),
+                            contentDescription = "뒤로가기",
+                            tint = Gray500
+                        )
                     }
 
                     Text(

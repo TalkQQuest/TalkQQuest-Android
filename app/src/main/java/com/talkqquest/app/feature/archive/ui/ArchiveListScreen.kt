@@ -23,8 +23,6 @@ import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -33,12 +31,14 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 
+import com.talkqquest.app.R
 import com.talkqquest.app.core.designsystem.FitDesign
 import com.talkqquest.app.core.designsystem.Gray1000
 import com.talkqquest.app.core.designsystem.Gray300
@@ -129,7 +129,11 @@ private fun ArchiveListScreenContent(
                         .clickable(onClick = onBackClick),
                     contentAlignment = Alignment.Center
                 ) {
-                    Icon(Icons.AutoMirrored.Filled.KeyboardArrowLeft, contentDescription = "뒤로가기", tint = Gray500)
+                    Icon(
+                        painter = painterResource(id = R.drawable.ic_back_chevron),
+                        contentDescription = "뒤로가기",
+                        tint = Gray500
+                    )
                 }
                 Text("보관함", style = TqType.BodyL.copy(fontWeight = FontWeight.Medium).figma(), color = Gray800, modifier = Modifier.align(Alignment.Center))
             }

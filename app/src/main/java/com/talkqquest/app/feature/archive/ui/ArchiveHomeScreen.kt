@@ -23,8 +23,6 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
@@ -159,8 +157,9 @@ private fun ArchiveHomeScreen(
                                     .size(width = 32.dp, height = 30.dp),
                                 contentAlignment = Alignment.Center
                             ) {
+                                // 💡 [수정됨] 커스텀 우측 꺾쇠 아이콘으로 변경
                                 Icon(
-                                    imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                                    painter = painterResource(id = R.drawable.ic_forward_chevron),
                                     contentDescription = "보관함 전체 보기",
                                     tint = Gray700,
                                 )
@@ -324,7 +323,6 @@ private fun ArchiveHomeScreenPreview() {
         RecentActivity("4", ActivityType.REPORT, "처음 보는 사람에게 짧게 인사하기", "리포트 열람", "2026.08.20")
     )
     TalkQQuestTheme {
-        // 💡 [수정됨] 프리뷰에서 올바른 파라미터 이름을 사용하도록 수정했습니다.
         ArchiveHomeScreen(
             uiState = ArchiveHomeUiState(3, 3, 2, 3, mockActivities),
             onSearchClick = {},

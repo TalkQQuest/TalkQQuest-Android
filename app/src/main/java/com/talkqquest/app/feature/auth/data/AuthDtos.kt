@@ -33,3 +33,43 @@ data class SocialLoginUser(
     val nickname: String? = null,
     val provider: String,
 )
+
+@Serializable
+data class EmailCodeRequest(
+    val email: String,
+)
+
+@Serializable
+data class EmailVerifyRequest(
+    val email: String,
+    val code: String,
+)
+
+@Serializable
+data class EmailSignupRequest(
+    val email: String,
+    val password: String,
+    val name: String,
+    val birthDate: String,
+    val schoolOrJob: String,
+    val termsAgreedAt: String,
+)
+
+@Serializable
+data class EmailSignupData(
+    val userId: String,
+    val accessToken: String,
+    val refreshToken: String,
+)
+@Serializable
+data class EmailLoginRequest(
+    val email: String,
+    val password: String,
+)
+
+@Serializable
+data class EmailLoginData(
+    val accessToken: String,
+    val refreshToken: String,
+    val tokenType: String = "Bearer",
+)

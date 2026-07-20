@@ -30,22 +30,26 @@ import com.talkqquest.app.R
 import com.talkqquest.app.core.designsystem.FitDesign
 import com.talkqquest.app.core.designsystem.Gray200
 import com.talkqquest.app.core.designsystem.Gray300
+import com.talkqquest.app.core.designsystem.Gray600
 import com.talkqquest.app.core.designsystem.Gray800
 import com.talkqquest.app.core.designsystem.Primary600
 import com.talkqquest.app.core.designsystem.TalkQQuestTheme
 import com.talkqquest.app.core.designsystem.TqType
 import com.talkqquest.app.core.designsystem.White
 
+
+private val SignupStartBackground = Color(0xFFF8F6FF)
 @Composable
 fun SignupStartScreen(
     onKakaoClick: () -> Unit = {},
     onNaverClick: () -> Unit = {},
-    onEmailClick: () -> Unit = {},
+    onEmailSignupClick: () -> Unit = {},
+    onEmailLoginClick: () -> Unit = {},
 ) = FitDesign {
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(White)
+            .background(SignupStartBackground)
             .statusBarsPadding()
             .padding(horizontal = 16.dp),
     ) {
@@ -81,9 +85,11 @@ fun SignupStartScreen(
             contentColor = White,
             onClick = onNaverClick,
         )
-        Spacer(Modifier.height(24.dp))
+        Spacer(Modifier.height(20.dp))
         Row(
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 28.dp),
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 28.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(10.dp),
         ) {
@@ -91,16 +97,22 @@ fun SignupStartScreen(
             Text(text = "또는", style = TqType.LabelM, color = Gray300)
             Box(modifier = Modifier.weight(1f).height(1.dp).background(Gray200))
         }
-        Spacer(Modifier.height(18.dp))
-        SocialStartButton(
-            text = "이메일로 시작하기",
-            icon = {
-                Text(text = "✉", style = TqType.TitleL.copy(fontWeight = FontWeight.Bold), color = Gray300)
-            },
-            containerColor = White,
-            contentColor = Gray800,
-            onClick = onEmailClick,
-        )
+        Spacer(Modifier.height(20.dp))
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(18.dp),
+        ) {
+            EmailStartButton(
+                text = "이메일로 회원가입",
+                onClick = onEmailSignupClick,
+                modifier = Modifier.weight(1f),
+            )
+            EmailStartButton(
+                text = "이메일로 로그인",
+                onClick = onEmailLoginClick,
+                modifier = Modifier.weight(1f),
+            )
+        }
         Spacer(Modifier.height(92.dp))
     }
 }
@@ -126,6 +138,24 @@ private fun SocialStartButton(
         icon()
         Spacer(Modifier.width(10.dp))
         Text(text = text, style = TqType.BodyL.copy(fontWeight = FontWeight.SemiBold), color = contentColor)
+    }
+}
+
+@Composable
+private fun EmailStartButton(
+    text: String,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Box(
+        modifier = modifier
+            .height(56.dp)
+            .clip(RoundedCornerShape(16.dp))
+            .background(White)
+            .clickable(onClick = onClick),
+        contentAlignment = Alignment.Center,
+    ) {
+        Text(text = text, style = TqType.BodyL.copy(fontWeight = FontWeight.SemiBold), color = Gray600)
     }
 }
 

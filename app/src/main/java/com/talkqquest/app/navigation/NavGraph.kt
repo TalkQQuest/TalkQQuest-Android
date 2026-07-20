@@ -22,6 +22,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
 import com.talkqquest.app.feature.auth.data.KakaoLoginClient
 import com.talkqquest.app.feature.auth.data.NaverLoginClient
+import com.talkqquest.app.feature.auth.ui.EmailLoginScreen
 import com.talkqquest.app.feature.auth.ui.SignupEmailScreen
 import com.talkqquest.app.feature.auth.ui.SignupPasswordScreen
 import com.talkqquest.app.feature.auth.ui.SignupNicknameScreen
@@ -29,6 +30,7 @@ import com.talkqquest.app.feature.auth.ui.SignupStartScreen
 import com.talkqquest.app.feature.auth.ui.SignupVerifyScreen
 import com.talkqquest.app.feature.auth.viewmodel.AuthViewModel
 import com.talkqquest.app.feature.home.ui.HomeScreen
+import com.talkqquest.app.feature.notification.ui.NotificationScreen
 import com.talkqquest.app.feature.mission.ui.ConversationPrepScreen
 import com.talkqquest.app.feature.mission.ui.ConversationScreen
 import com.talkqquest.app.feature.mission.ui.FeedbackDetailScreen
@@ -43,6 +45,7 @@ import com.talkqquest.app.feature.archive.ui.ArchiveListScreen
 import com.talkqquest.app.feature.archive.ui.ArchiveSearchScreen
 import com.talkqquest.app.feature.archive.ui.ArchiveConversationDetailScreen // 💡 [추가] 대화 기록 상세 화면 import
 import com.talkqquest.app.navigation.Screen
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 // 네비게이션 그래프.
@@ -139,19 +142,86 @@ fun NavGraph(
                             }
                     }
                 },
-                onEmailClick = { navController.navigate(Screen.SIGNUP_EMAIL) },
+                onEmailSignupClick = { navController.navigate(Screen.SIGNUP_EMAIL) },
+                onEmailLoginClick = { navController.navigate(Screen.EMAIL_LOGIN) },
+            )
+        }
+        composable(Screen.EMAIL_LOGIN) {
+            val context = LocalContext.current
+            val authViewModel: AuthViewModel = hiltViewModel()
+            val authUiState by authViewModel.uiState.collectAsState()
+
+            EmailLoginScreen(
+                onBack = { navController.popBackStack() },
+                onLoginClick = { email, password ->
+                    authViewModel.loginWithEmail(email, password) {
+                        navController.navigate(Screen.HOME) {
+                            popUpTo(Screen.LOGIN) { inclusive = true }
+                            launchSingleTop = true
+                        }
+                    }
+                },
+                onFindIdClick = {
+                    Toast.makeText(context, "아이디 찾기는 준비 중입니다.", Toast.LENGTH_SHORT).show()
+                },
+                onFindPasswordClick = {
+                    Toast.makeText(context, "비밀번호 찾기는 준비 중입니다.", Toast.LENGTH_SHORT).show()
+                },
+                errorMessage = authUiState.errorMessage,
             )
         }
         composable(Screen.SIGNUP_EMAIL) {
+            val context = LocalContext.current
+            val authViewModel: AuthViewModel = hiltViewModel()
+            val authUiState by authViewModel.uiState.collectAsState()
+
+            authUiState.errorMessage?.let { message ->
+                Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
+                authViewModel.clearError()
+            }
+
             SignupEmailScreen(
                 onBack = { navController.popBackStack() },
-                onSendClick = { navController.navigate(Screen.SIGNUP_VERIFY) },
+                onSendClick = { email ->
+                    authViewModel.requestEmailCode(email) {
+                        navController.currentBackStackEntry
+                            ?.savedStateHandle
+                            ?.set("signup_email", email.trim())
+                        navController.navigate(Screen.SIGNUP_VERIFY)
+                    }
+                },
             )
         }
         composable(Screen.SIGNUP_VERIFY) {
+            val context = LocalContext.current
+            val authViewModel: AuthViewModel = hiltViewModel()
+            val authUiState by authViewModel.uiState.collectAsState()
+            val email = navController.previousBackStackEntry
+                ?.savedStateHandle
+                ?.get<String>("signup_email")
+                .orEmpty()
+
+            authUiState.errorMessage?.let { message ->
+                Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
+                authViewModel.clearError()
+            }
+
             SignupVerifyScreen(
+                email = email.ifBlank { "Talkqquest1234@gmail.com" },
                 onBack = { navController.popBackStack() },
-                onVerified = { navController.navigate(Screen.SIGNUP_PASSWORD) },
+                onVerifyCode = { code ->
+                    authViewModel.verifyEmailCode(email, code) {
+                        navController.currentBackStackEntry
+                            ?.savedStateHandle
+                            ?.set("signup_email", email)
+                        navController.navigate(Screen.SIGNUP_PASSWORD)
+                    }
+                },
+                onResendClick = {
+                    authViewModel.requestEmailCode(email) {
+                        Toast.makeText(context, "인증 코드가 재발송되었습니다.", Toast.LENGTH_SHORT).show()
+                    }
+                },
             )
         }
         composable(Screen.SIGNUP_PASSWORD) {
@@ -170,10 +240,22 @@ fun NavGraph(
         // 하단 네비 4탭 (임시 — 실제 화면으로 교체)
         // 홈은 화면↔데이터 연결 예시로 실제 구현됨(feature/home 참고). 나머지는 각 담당이 교체.
         composable(Screen.HOME) {
+            val homeScope = rememberCoroutineScope()
             HomeScreen(
                 onStartMissionClick = { missionId -> navController.navigate("mission_detail/$missionId") },
                 onOtherMissionsClick = { navController.navigate(Screen.MISSION_LIST) },
+                // 물결(리플)이 먼저 보인 뒤 전환되도록 살짝 지연 — 즉시 navigate 시 탭 물결이 안 보임
+                onNotificationClick = {
+                    homeScope.launch {
+                        delay(140)
+                        navController.navigate(Screen.NOTIFICATION)
+                    }
+                },
             )
+        }
+        // 알림창 (홈 벨 → 진입). 디자인 미완성이라 빈 상태 placeholder.
+        composable(Screen.NOTIFICATION) {
+            NotificationScreen(onBack = { navController.popBackStack() })
         }
         // C담당: 아카이브 홈 화면
         composable(Screen.ARCHIVE_HOME) {

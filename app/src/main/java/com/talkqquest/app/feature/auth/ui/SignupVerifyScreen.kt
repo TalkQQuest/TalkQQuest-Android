@@ -1,6 +1,7 @@
 package com.talkqquest.app.feature.auth.ui
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -28,13 +29,11 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import com.talkqquest.app.core.designsystem.Error
 import com.talkqquest.app.core.designsystem.FitDesign
 import com.talkqquest.app.core.designsystem.Gray200
 import com.talkqquest.app.core.designsystem.Gray300
 import com.talkqquest.app.core.designsystem.Gray500
 import com.talkqquest.app.core.designsystem.Gray800
-import com.talkqquest.app.core.designsystem.Gray900
 import com.talkqquest.app.core.designsystem.Primary600
 import com.talkqquest.app.core.designsystem.TalkQQuestTheme
 import com.talkqquest.app.core.designsystem.TqType
@@ -43,19 +42,13 @@ import com.talkqquest.app.core.designsystem.White
 @Composable
 fun SignupVerifyScreen(
     email: String = "Talkqquest1234@gmail.com",
-    expectedCode: String = "123456",
     onBack: () -> Unit = {},
-    onVerified: () -> Unit = {},
+    onVerifyCode: (String) -> Unit = {},
     onResendClick: () -> Unit = {},
 ) {
     var code by remember { mutableStateOf("") }
     val isComplete = code.length == 6
-    val isMatched = isComplete && code == expectedCode
-    val codeColor = when {
-        !isComplete -> Gray300
-        isMatched -> Gray800
-        else -> Error
-    }
+    val codeColor = if (isComplete) Gray800 else Gray300
 
     Box(modifier = Modifier.fillMaxSize()) {
         FitDesign {
@@ -74,7 +67,7 @@ fun SignupVerifyScreen(
                         placeholder = "",
                         onValueChange = {},
                         actionText = "인증",
-                        onActionClick = { if (isMatched) onVerified() },
+                        onActionClick = { if (isComplete) onVerifyCode(code) },
                         modifier = Modifier.fillMaxWidth(),
                     )
                 }
@@ -110,7 +103,9 @@ fun SignupVerifyScreen(
                             text = "재요청",
                             style = TqType.LabelL,
                             color = Gray500,
-                            modifier = Modifier.padding(start = 1.dp),
+                            modifier = Modifier
+                                .padding(start = 1.dp)
+                                .clickable(onClick = onResendClick),
                         )
                     }
                 }
@@ -120,7 +115,7 @@ fun SignupVerifyScreen(
                     onValueChange = { input ->
                         val digits = input.filter { it.isDigit() }.take(6)
                         code = digits
-                        if (digits.length == 6 && digits == expectedCode) onVerified()
+                        if (digits.length == 6) onVerifyCode(digits)
                     },
                     singleLine = true,
                     textStyle = TqType.HeadingXL.copy(

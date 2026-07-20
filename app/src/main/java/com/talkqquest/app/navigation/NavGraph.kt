@@ -330,7 +330,8 @@ fun NavGraph(
                 onBack = { navController.popBackStack() },
                 onMissionClick = { missionId -> navController.navigate("mission_detail/$missionId") },
                 onSheetTopChange = onOverlaySheetTop, // 저장 시트가 하단 네비를 덮는 동안 네비 가림
-                onSavedListClick = { navController.navigate(Screen.SAVED_MISSIONS) },
+                // 💡 [수정] 보관함(미션) 탭으로 이동
+                onSavedListClick = { navController.navigate("${Screen.ARCHIVE_LIST}/0") },
             )
         }
         // B담당: 미션 상세. "다음" → 대화 준비(아직 없어서 임시 화면, 다음 작업에서 교체).
@@ -343,10 +344,12 @@ fun NavGraph(
                 onNextClick = { missionId -> navController.navigate("conversation_prep/$missionId") },
                 onMissionClick = { missionId -> navController.navigate("mission_detail/$missionId") },
                 onSheetTopChange = onOverlaySheetTop,
-                onSavedListClick = { navController.navigate(Screen.SAVED_MISSIONS) },
+                // 💡 [수정] 보관함(미션) 탭으로 이동
+                onSavedListClick = { navController.navigate("${Screen.ARCHIVE_LIST}/0") },
             )
         }
         // B담당: 저장 목록 (저장 시트 "저장 목록 >"에서 진입). 카드 클릭 → 미션 상세.
+        // 현재 통합 보관함으로 이동하도록 처리되어 더 이상 진입점은 없으나, 혹시 모를 사이드이펙트 방지를 위해 남겨둠
         composable(Screen.SAVED_MISSIONS) {
             SavedMissionsScreen(
                 onBack = { navController.popBackStack() },

@@ -174,7 +174,6 @@ private fun ArchiveConversationDetailContent(
                     modifier = Modifier.size(44.dp).align(Alignment.CenterStart).clip(CircleShape).clickable(onClick = onBackClick),
                     contentAlignment = Alignment.Center
                 ) {
-                    // 💡 [수정됨] 커스텀 뒤로가기 아이콘으로 변경
                     Icon(
                         painter = painterResource(id = R.drawable.ic_back_chevron),
                         contentDescription = "뒤로가기",
@@ -206,7 +205,8 @@ private fun ArchiveConversationDetailContent(
                     ConversationAiFeedbackSection(uiState.feedbacks)
                 }
 
-                Spacer(modifier = Modifier.height(120.dp))
+                // 💡 [수정됨] 하단 고정 버튼/마스크 영역(158dp)에 가려지지 않도록 패딩을 180dp로 충분히 확보
+                Spacer(modifier = Modifier.height(180.dp))
             }
         }
 
@@ -274,7 +274,8 @@ private fun ArchiveConversationReviewContent(
             Box(modifier = Modifier.fillMaxWidth().weight(1f)) {
                 LazyColumn(
                     modifier = Modifier.fillMaxSize(),
-                    contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 88.dp, bottom = 48.dp)
+                    // 💡 [수정됨] 하단 마스크(203.dp)에 가려지지 않고 끝까지 스크롤될 수 있도록 bottom 패딩을 220.dp로 크게 확보
+                    contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 88.dp, bottom = 220.dp)
                 ) {
                     itemsIndexed(uiState.messages) { index, message ->
                         val prev = uiState.messages.getOrNull(index - 1)

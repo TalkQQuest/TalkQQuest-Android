@@ -33,7 +33,6 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.Icon
@@ -175,7 +174,12 @@ private fun ArchiveConversationDetailContent(
                     modifier = Modifier.size(44.dp).align(Alignment.CenterStart).clip(CircleShape).clickable(onClick = onBackClick),
                     contentAlignment = Alignment.Center
                 ) {
-                    Icon(imageVector = Icons.AutoMirrored.Filled.KeyboardArrowLeft, contentDescription = "뒤로가기", tint = Gray500)
+                    // 💡 [수정됨] 커스텀 뒤로가기 아이콘으로 변경
+                    Icon(
+                        painter = painterResource(id = R.drawable.ic_back_chevron),
+                        contentDescription = "뒤로가기",
+                        tint = Gray500
+                    )
                 }
                 Text(text = "대화 기록", style = TqType.BodyL.copy(fontWeight = FontWeight.Medium).figma(), color = Gray800, modifier = Modifier.align(Alignment.Center))
             }

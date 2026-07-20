@@ -45,6 +45,7 @@ import com.talkqquest.app.feature.archive.ui.ArchiveListScreen
 import com.talkqquest.app.feature.archive.ui.ArchiveSearchScreen
 import com.talkqquest.app.feature.archive.ui.ArchiveConversationDetailScreen
 import com.talkqquest.app.feature.archive.ui.ArchiveSavedPhraseScreen
+import com.talkqquest.app.feature.archive.ui.ArchiveReportScreen // 💡 [추가] 보관함 리포트 상세 화면 import
 import com.talkqquest.app.navigation.Screen
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -297,6 +298,10 @@ fun NavGraph(
                 },
                 onSentenceClick = { phraseId ->
                     navController.navigate("archive_saved_phrase/$phraseId")
+                },
+                // 💡 [추가] 리포트 클릭 시 리포트 상세로 이동
+                onReportClick = { reportId ->
+                    navController.navigate("archive_report/$reportId")
                 }
             )
         }
@@ -324,13 +329,22 @@ fun NavGraph(
             )
         }
 
+        // 💡 [추가] C담당: 보관함 리포트 상세 화면
+        composable(
+            route = "archive_report/{reportId}",
+            arguments = listOf(navArgument("reportId") { type = NavType.StringType })
+        ) {
+            ArchiveReportScreen(
+                onBackClick = { navController.popBackStack() }
+            )
+        }
+
         // B담당: 미션 목록 (홈 → 다른 미션 보기). 카드 클릭 → 미션 상세({missionId}는 실제 값으로 치환).
         composable(Screen.MISSION_LIST) {
             MissionListScreen(
                 onBack = { navController.popBackStack() },
                 onMissionClick = { missionId -> navController.navigate("mission_detail/$missionId") },
                 onSheetTopChange = onOverlaySheetTop, // 저장 시트가 하단 네비를 덮는 동안 네비 가림
-                // 💡 [수정] 보관함(미션) 탭으로 이동
                 onSavedListClick = { navController.navigate("${Screen.ARCHIVE_LIST}/0") },
             )
         }
@@ -344,7 +358,6 @@ fun NavGraph(
                 onNextClick = { missionId -> navController.navigate("conversation_prep/$missionId") },
                 onMissionClick = { missionId -> navController.navigate("mission_detail/$missionId") },
                 onSheetTopChange = onOverlaySheetTop,
-                // 💡 [수정] 보관함(미션) 탭으로 이동
                 onSavedListClick = { navController.navigate("${Screen.ARCHIVE_LIST}/0") },
             )
         }
@@ -424,10 +437,11 @@ fun NavGraph(
             ReportScreen(
                 onBack = { navController.popBackStack() },
                 onSheetTopChange = onOverlaySheetTop, // 리포트 저장 시트가 하단 네비를 덮는 동안 네비 가림
-                // 💡 (리포트 탭의 인덱스는 3)
                 onArchiveClick = { navController.navigate("${Screen.ARCHIVE_LIST}/3") },
-                //   저장된 리포트 카드 클릭 → 보관함 리포트 상세
-                onReportClick = { reportId -> /* TODO(C): 보관함 리포트 상세로 (reportId) */ },
+                // 💡 [수정] 보관함 리포트 상세로 이동 연동 완료
+                onReportClick = { reportId ->
+                    navController.navigate("archive_report/$reportId")
+                },
             )
         }
         // B담당: AI 피드백 상세. "다른 미션 보러가기" → 정산 흐름(완료·피드백)을 정리하고 미션 목록으로.
@@ -443,9 +457,7 @@ fun NavGraph(
                 onOtherMissions = {
                     navController.navigate(Screen.MISSION_LIST) { popUpTo(Screen.HOME) }
                 },
-                // 💡 (문장 탭의 인덱스는 2)
                 onArchiveClick = { navController.navigate("${Screen.ARCHIVE_LIST}/2") },
-                // 피드백 상세에서 문장 칩 클릭 시 보관함 베스트 문장 상세로 바로 이동
                 onPhraseClick = { phraseId -> navController.navigate("archive_saved_phrase/$phraseId") },
             )
         }

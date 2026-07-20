@@ -3,30 +3,18 @@ package com.talkqquest.app.feature.archive.data
 import com.talkqquest.app.core.network.ApiResult
 import com.talkqquest.app.feature.archive.data.model.ArchiveRecentActivity
 import com.talkqquest.app.feature.archive.data.model.ArchiveSummary
+import com.talkqquest.app.feature.archive.data.model.ConversationDetailMock
+import com.talkqquest.app.feature.archive.data.model.ReviewChatMessage
 import com.talkqquest.app.feature.archive.ui.ArchiveMissionItem
 import com.talkqquest.app.feature.archive.ui.BookmarkArchiveItem
 import com.talkqquest.app.feature.archive.viewmodel.ActivityType
 import com.talkqquest.app.feature.archive.viewmodel.RecentActivity
+import com.talkqquest.app.feature.report.data.model.CategoryRank
+import com.talkqquest.app.feature.report.data.model.GrowthReport
+import com.talkqquest.app.feature.report.data.model.HighlightItem
+import com.talkqquest.app.feature.report.data.model.MetricChange
+import com.talkqquest.app.feature.report.data.model.WeeklyCompareReport
 import javax.inject.Inject
-
-data class ReviewChatMessage(
-    val id: String,
-    val text: String,
-    val isFromUser: Boolean,
-    val time: String
-)
-
-data class ConversationDetailMock(
-    val id: String,
-    val title: String,
-    val date: String,
-    val duration: String,
-    val summaryKeywords: List<String>,
-    val summaryText: String,
-    val mainContentText: String,
-    val feedbacks: List<Pair<String, Int>>,
-    val messages: List<ReviewChatMessage>
-)
 
 class ArchiveRepository @Inject constructor() {
 
@@ -36,24 +24,22 @@ class ArchiveRepository @Inject constructor() {
         ArchiveMissionItem(3L, "학교 생활 꿀팁 나누기", "일상 대화", "보통", 8, 30, isCompleted = true, isSaved = true, completedDate = "2026.07.14")
     )
 
-    // 💡 [대화 목록] ID: 1, 2, 3
     private val stubConversations = listOf(
         RecentActivity(id = "1", title = "처음 보는 사람에게 짧게 인사하기", type = ActivityType.CONVERSATION, status = "대화 완료", date = "2026.07.16"),
         RecentActivity(id = "2", title = "주말에 다녀온 맛집 후기 공유하기", type = ActivityType.CONVERSATION, status = "대화 완료", date = "2026.07.15"),
         RecentActivity(id = "3", title = "단골 카페에서 메뉴 추천받기", type = ActivityType.CONVERSATION, status = "대화 완료", date = "2026.07.14")
     )
 
-    // 💡 [문장 목록] 대화 1, 2, 3과 1:1로 완벽히 매칭된 목업 데이터
     private val stubSentences = listOf(
         BookmarkArchiveItem(
             id = "1",
-            title = "\"그렇군요! 저도 편해서 놀랐어요\"",
+            title = "\"그렇군요! 저도 생각보다 편해서 놀랐어요\"",
             status = "문장 저장",
             date = "2026.07.16",
             isSaved = true,
             memoKeywords = listOf("자기 성장", "첫 만남", "스몰 토크"),
             memoText = "상대방의 감정을 자연스럽게 열어줄 수 있는 좋은 문장이에요.",
-            relatedConversationId = "1" // 대화 1번 매칭
+            relatedConversationId = "1"
         ),
         BookmarkArchiveItem(
             id = "2",
@@ -63,7 +49,7 @@ class ArchiveRepository @Inject constructor() {
             isSaved = true,
             memoKeywords = listOf("일상 대화", "취향 공유", "리액션"),
             memoText = "상대방의 추천에 긍정적으로 호응하며 기분을 좋게 만드는 완벽한 리액션입니다.",
-            relatedConversationId = "2" // 대화 2번 매칭
+            relatedConversationId = "2"
         ),
         BookmarkArchiveItem(
             id = "3",
@@ -73,7 +59,7 @@ class ArchiveRepository @Inject constructor() {
             isSaved = true,
             memoKeywords = listOf("상황극", "요청하기", "정중함"),
             memoText = "자신의 평소 취향과 현재 원하는 바를 명확하고 정중하게 전달하는 표현입니다.",
-            relatedConversationId = "3" // 대화 3번 매칭
+            relatedConversationId = "3"
         )
     )
 
@@ -84,6 +70,99 @@ class ArchiveRepository @Inject constructor() {
         BookmarkArchiveItem(id = "7", title = "엘리베이터에서 이웃과 스몰토크", status = "리포트 열람", date = "2026.07.13", isSaved = true)
     )
 
+    // 리포트 상세 데이터 (ID 4~7에 해당하는 1:1 매칭 데이터)
+    private val stubReportDetails = mapOf(
+        "4" to Pair(
+            GrowthReport(
+                prevLevel = 1, currentLevel = 2, growthPercent = 18,
+                weekLabels = listOf("7월 4주", "8월 1주", "8월 2주", "8월 3주"),
+                categoryRanks = listOf(
+                    CategoryRank("여행", 10), CategoryRank("음식", 9),
+                    CategoryRank("일상", 7), CategoryRank("인사", 4)
+                ),
+                completedMissions = 26, totalMissions = 100
+            ),
+            WeeklyCompareReport(
+                metrics = listOf(
+                    MetricChange("친절한 태도", 88, 92), MetricChange("대화 주도", 86, 88),
+                    MetricChange("공감 표현", 82, 85), MetricChange("질문 연결성", 74, 78)
+                ),
+                highlights = listOf(
+                    HighlightItem("전체 점수", "가 78점에서 86점으로 상승했어요"),
+                    HighlightItem("친절한 태도", "가 가장 많이 상승되었어요"),
+                    HighlightItem("질문 연결성", "을 꾸준히 개선하고 있어요")
+                )
+            )
+        ),
+        "5" to Pair(
+            GrowthReport(
+                prevLevel = 2, currentLevel = 3, growthPercent = 24,
+                weekLabels = listOf("7월 3주", "7월 4주", "8월 1주", "8월 2주"),
+                categoryRanks = listOf(
+                    CategoryRank("학교", 12), CategoryRank("일상", 8),
+                    CategoryRank("모임", 6), CategoryRank("음식", 3)
+                ),
+                completedMissions = 32, totalMissions = 100
+            ),
+            WeeklyCompareReport(
+                metrics = listOf(
+                    MetricChange("친절한 태도", 90, 94), MetricChange("대화 주도", 78, 84),
+                    MetricChange("공감 표현", 80, 86), MetricChange("질문 연결성", 82, 88)
+                ),
+                highlights = listOf(
+                    HighlightItem("대화 주도", "가 눈에 띄게 좋아졌어요"),
+                    HighlightItem("질문 연결성", "이 크게 향상되었어요"),
+                    HighlightItem("공감 표현", "도 자연스럽게 늘고 있어요")
+                )
+            )
+        ),
+        "6" to Pair(
+            GrowthReport(
+                prevLevel = 3, currentLevel = 3, growthPercent = 5,
+                weekLabels = listOf("7월 2주", "7월 3주", "7월 4주", "8월 1주"),
+                categoryRanks = listOf(
+                    CategoryRank("업무", 15), CategoryRank("학교", 10),
+                    CategoryRank("설득", 8), CategoryRank("일상", 5)
+                ),
+                completedMissions = 40, totalMissions = 100
+            ),
+            WeeklyCompareReport(
+                metrics = listOf(
+                    MetricChange("친절한 태도", 85, 85), MetricChange("대화 주도", 92, 95),
+                    MetricChange("공감 표현", 70, 75), MetricChange("질문 연결성", 88, 90)
+                ),
+                highlights = listOf(
+                    HighlightItem("공감 표현", "이 이전보다 훨씬 부드러워졌어요"),
+                    HighlightItem("대화 주도", "능력이 팀 회의에서 돋보여요"),
+                    HighlightItem("전체 점수", "가 안정적으로 유지되고 있어요")
+                )
+            )
+        ),
+        "7" to Pair(
+            GrowthReport(
+                prevLevel = 1, currentLevel = 1, growthPercent = 12,
+                weekLabels = listOf("7월 1주", "7월 2주", "7월 3주", "7월 4주"),
+                categoryRanks = listOf(
+                    CategoryRank("인사", 14), CategoryRank("이웃", 9),
+                    CategoryRank("일상", 6), CategoryRank("날씨", 4)
+                ),
+                completedMissions = 15, totalMissions = 100
+            ),
+            WeeklyCompareReport(
+                metrics = listOf(
+                    MetricChange("친절한 태도", 95, 98), MetricChange("대화 주도", 60, 68),
+                    MetricChange("공감 표현", 85, 88), MetricChange("질문 연결성", 65, 72)
+                ),
+                highlights = listOf(
+                    HighlightItem("질문 연결성", "이 눈에 띄게 좋아졌어요"),
+                    HighlightItem("대화 주도", "점수가 꾸준히 오르고 있어요"),
+                    HighlightItem("친절한 태도", "는 항상 훌륭해요")
+                )
+            )
+        )
+    )
+
+    // 💡 [수정됨] 누락되었던 2번, 3번 대화 상세 데이터를 복구했습니다!
     private val stubConversationDetails = listOf(
         ConversationDetailMock(
             id = "1",
@@ -164,11 +243,16 @@ class ArchiveRepository @Inject constructor() {
         return stubConversationDetails.find { it.id == id }
     }
 
-    // 💡 방금 에러가 났던 원인! 이 함수가 누락되어 있었습니다. (추가 완료)
     fun getSavedSentenceDetail(id: String): Pair<BookmarkArchiveItem, RecentActivity?>? {
         val sentence = stubSentences.find { it.id == id } ?: return null
         val relatedConversation = stubConversations.find { it.id == sentence.relatedConversationId }
         return Pair(sentence, relatedConversation)
+    }
+
+    fun getArchiveReportDetail(id: String): Triple<String, GrowthReport, WeeklyCompareReport>? {
+        val title = stubReports.find { it.id == id }?.title ?: "성장 리포트"
+        val reports = stubReportDetails[id] ?: return null
+        return Triple(title, reports.first, reports.second)
     }
 
     suspend fun getArchiveSummary(): ApiResult<ArchiveSummary> {

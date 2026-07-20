@@ -75,7 +75,8 @@ import com.talkqquest.app.core.designsystem.TqType
 import com.talkqquest.app.core.designsystem.White
 import com.talkqquest.app.core.designsystem.softShadow
 
-import com.talkqquest.app.feature.archive.data.ReviewChatMessage
+// 💡 [수정됨] ReviewChatMessage의 변경된 경로 반영
+import com.talkqquest.app.feature.archive.data.model.ReviewChatMessage
 import com.talkqquest.app.feature.archive.viewmodel.ArchiveConversationDetailUiState
 import com.talkqquest.app.feature.archive.viewmodel.ArchiveConversationDetailViewModel
 import com.talkqquest.app.feature.archive.viewmodel.AiFeedbackItem
@@ -205,7 +206,7 @@ private fun ArchiveConversationDetailContent(
                     ConversationAiFeedbackSection(uiState.feedbacks)
                 }
 
-                // 💡 [수정됨] 하단 고정 버튼/마스크 영역(158dp)에 가려지지 않도록 패딩을 180dp로 충분히 확보
+                // 💡 하단 고정 버튼/마스크 영역(158dp)에 가려지지 않도록 패딩을 180dp로 확보
                 Spacer(modifier = Modifier.height(180.dp))
             }
         }
@@ -274,7 +275,7 @@ private fun ArchiveConversationReviewContent(
             Box(modifier = Modifier.fillMaxWidth().weight(1f)) {
                 LazyColumn(
                     modifier = Modifier.fillMaxSize(),
-                    // 💡 [수정됨] 하단 마스크(203.dp)에 가려지지 않고 끝까지 스크롤될 수 있도록 bottom 패딩을 220.dp로 크게 확보
+                    // 💡 하단 마스크(203.dp)에 가려지지 않고 끝까지 스크롤될 수 있도록 bottom 패딩을 220.dp로 확보
                     contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 88.dp, bottom = 220.dp)
                 ) {
                     itemsIndexed(uiState.messages) { index, message ->

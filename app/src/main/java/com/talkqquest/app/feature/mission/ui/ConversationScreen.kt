@@ -55,6 +55,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
@@ -82,9 +83,7 @@ import com.talkqquest.app.core.designsystem.Error
 import com.talkqquest.app.core.designsystem.FitDesign
 import com.talkqquest.app.core.designsystem.Gray100
 import com.talkqquest.app.core.designsystem.Gray1000
-import com.talkqquest.app.core.designsystem.Gray200
 import com.talkqquest.app.core.designsystem.Gray300
-import com.talkqquest.app.core.designsystem.Gray400
 import com.talkqquest.app.core.designsystem.Gray50
 import com.talkqquest.app.core.designsystem.Gray500
 import com.talkqquest.app.core.designsystem.Gray600
@@ -286,26 +285,34 @@ private fun ConversationContent(
             )
         }
 
-        // ── 메시지 영역 ──
+        // ── 메시지 영역 + 하단부(추천 답변·입력창) 겹침 ──
+        // 목록이 하단부 뒤까지 깔리고, 그 경계에서 배경색으로 녹아 사라짐(CSS 하단 스크롤 마스크).
+        // 목록을 하단부 위에서 끊으면 옛 메시지가 카드 경계에서 뚝 잘려 마스크를 쓸 수 없음.
         val listState = rememberLazyListState()
         val scrollScope = rememberCoroutineScope()
+        val density = LocalDensity.current
+        // 하단부(카드+입력창+네비 여백) 실측 높이 — 목록 아래 여백·마스크 크기가 이 값을 따라감
+        var bottomSectionHeight by remember { mutableStateOf(0.dp) }
+        Box(modifier = Modifier.fillMaxWidth().weight(1f)) {
         Box(
             modifier = Modifier
-                .fillMaxWidth()
-                .weight(1f)
-                // 영역 높이가 변하는 동안(추천 카드 펼침/접힘 애니, 키보드) 매 프레임
+                .fillMaxSize()
+                // 영역 높이가 변하는 동안(키보드) 매 프레임
                 // 맨 아래로 붙잡아 마지막 메시지가 가려지지 않게 함. (reverseLayout이라 0 = 최신)
                 .onSizeChanged {
                     if (uiState.messages.isNotEmpty()) {
                         scrollScope.launch { listState.scrollToItem(0) }
                     }
-                }
-                // 비행 도착점(리스트 바닥) 실측
-                .onGloballyPositioned { listBottomGlobalY = it.positionInRoot().y + it.size.height },
+                },
         ) {
             // 위로 스크롤해 옛 메시지를 보다가 새 메시지가 오면 바닥으로 복귀
             LaunchedEffect(uiState.messages.size) {
                 if (uiState.messages.isNotEmpty()) listState.animateScrollToItem(0)
+            }
+            // 카드 펼침/접힘으로 아래 여백이 변하는 동안에도 최신 메시지를 바닥에 붙잡음
+            // (예전엔 영역 높이 변화로 감지했지만, 이제 영역은 고정이고 여백만 변함)
+            LaunchedEffect(bottomSectionHeight) {
+                if (uiState.messages.isNotEmpty()) listState.scrollToItem(0)
             }
             // 메시지별 등장 애니메이션을 "처음 나타날 때 한 번만" 돌리기 위한 기록
             val animatedMessageIds = remember { mutableSetOf<String>() }
@@ -320,8 +327,10 @@ private fun ConversationContent(
                 // (목업 "대화 시작"의 위 정렬 유지)
                 verticalArrangement = Arrangement.Bottom,
                 // top 88 = 아바타(104~174)를 지나 메시지 시작(top 180) - 헤더 끝(92) (CSS)
+                // bottom = 하단부 높이 + 16 → 평소엔 최신 메시지가 카드 바로 위에 놓이고,
+                // 위로 스크롤하면 옛 메시지가 그 여백(=카드 뒤)으로 내려가며 마스크에 녹아 사라짐
                 contentPadding = androidx.compose.foundation.layout.PaddingValues(
-                    start = 16.dp, end = 16.dp, top = 88.dp, bottom = 16.dp,
+                    start = 16.dp, end = 16.dp, top = 88.dp, bottom = bottomSectionHeight + 16.dp,
                 ),
             ) {
                 items(count = uiState.messages.size, key = { uiState.messages[uiState.messages.size - 1 - it].id }) { reversedIndex ->
@@ -386,8 +395,6 @@ private fun ConversationContent(
                     .height(65.dp)
                     .background(scrollMaskBrush(topDown = true)),
             )
-            // (피그마의 하단 마스크는 절대좌표에서 메시지가 카드 밑으로 지나가는 구간용 —
-            //  우리 구조는 메시지/카드가 분리돼 있어 최신 메시지만 흐려져서 뺌, 사용자 결정)
             // 봇 아바타 (CSS Frame 427320975): 70 원 + 보라 그림자, 이미지(70x81)가 원을 위아래로 살짝 벗어남
             Box(
                 modifier = Modifier
@@ -411,10 +418,35 @@ private fun ConversationContent(
             }
         }
 
+        // 아래 스크롤 마스크 (CSS Frame 427320988): 하단부 위 88을 그라데이션으로 덮어
+        // 옛 메시지가 카드에 닿기 전에 배경색으로 녹아 사라지게 함. 그 아래(하단부 높이만큼)는
+        // 단색 — 카드 좌우 16 여백으로 메시지가 비쳐 지나가는 것도 같이 가림.
+        // 하단부보다 먼저 그려 카드·입력창 뒤에 깔림 (CSS 레이어 순서와 동일).
+        Column(modifier = Modifier.align(Alignment.BottomCenter).fillMaxWidth()) {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(88.dp)
+                    .background(scrollMaskBrush(topDown = false)),
+            )
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(bottomSectionHeight)
+                    .background(Gray50.copy(alpha = 0.8f)), // 그라데이션 끝 알파와 이어짐
+            )
+        }
+
         // ── 하단: 추천 답변 + 입력창 (하단 네비 알약 위 88 = CSS 입력창 바닥 716 → 네비존 804) ──
         Column(
             modifier = Modifier
+                .align(Alignment.BottomCenter)
                 .fillMaxWidth()
+                // 실측: 목록 아래 여백·마스크 크기 기준 + 비행 도착점(=하단부 위 끝, 예전 리스트 바닥과 동일)
+                .onGloballyPositioned {
+                    listBottomGlobalY = it.positionInRoot().y
+                    bottomSectionHeight = with(density) { it.size.height.toDp() }
+                }
                 .padding(horizontal = 16.dp)
                 .navigationBarsPadding()
                 // 하단 네비 알약 몫 88은 축소 대상 밖(MainScreen)이라 비율로 되돌려 실제 크기 유지.
@@ -484,6 +516,7 @@ private fun ConversationContent(
                 )
             }
         }
+        } // 메시지+하단부 겹침 Box
     }
     // 비행 중인 말풍선 오버레이 (입력창·네비 위에 그려짐)
     flightMessage?.let { flying ->
@@ -821,7 +854,7 @@ private fun MessageInputRow(
     }
 }
 
-// 나가기 팝업 (CSS "미션 종료 팝업" Frame 427321198): 카드 332, r24, Gray50 + 카드그림자.
+// 나가기 팝업 (CSS "미션 종료 팝업" Frame 427321198): 카드 332x180, r24, Gray50 + 카드그림자.
 // 디자인에 어두운 배경 층이 없어 투명 층으로 뒤 터치만 막음.
 @Composable
 private fun ExitDialog(onContinue: () -> Unit, onExit: () -> Unit) {
@@ -837,7 +870,8 @@ private fun ExitDialog(onContinue: () -> Unit, onExit: () -> Unit) {
     ) {
         Column(
             modifier = Modifier
-                .widthIn(max = 332.dp)
+                .offset(y = (-21).dp) // CSS top 315 = 화면 중앙(336)보다 21 위
+                .width(332.dp) // CSS 고정폭 (내용맞춤이면 297로 좁아짐)
                 .softShadow(color = Gray1000.copy(alpha = 0.01f), offsetY = 8.dp, blur = 24.dp, cornerRadius = 24.dp)
                 .clip(RoundedCornerShape(24.dp))
                 .background(Gray50)
@@ -846,7 +880,7 @@ private fun ExitDialog(onContinue: () -> Unit, onExit: () -> Unit) {
                     indication = null,
                     onClick = {}, // 카드 자체 터치는 흡수
                 )
-                .padding(vertical = 24.dp, horizontal = 12.dp),
+                .padding(vertical = 24.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(24.dp), // 문구↔버튼 gap 24 (CSS)
         ) {
@@ -864,17 +898,17 @@ private fun ExitDialog(onContinue: () -> Unit, onExit: () -> Unit) {
             Row(horizontalArrangement = Arrangement.spacedBy(25.dp)) { // 버튼 간격 25 (CSS)
                 Box(
                     modifier = Modifier
-                        .size(width = 124.dp, height = 52.dp)
+                        .size(width = 124.dp, height = 48.dp)
                         .clip(RoundedCornerShape(12.dp))
-                        .background(Gray200)
+                        .background(Gray100) // CSS Gray/100 #F1F5F9
                         .clickable(onClick = onContinue),
                     contentAlignment = Alignment.Center,
                 ) {
-                    Text(text = "계속하기", style = TqType.TitleL.figma(), color = Gray400)
+                    Text(text = "계속하기", style = TqType.TitleL.figma(), color = Gray500) // CSS Gray/500
                 }
                 Box(
                     modifier = Modifier
-                        .size(width = 124.dp, height = 52.dp)
+                        .size(width = 124.dp, height = 48.dp)
                         .clip(RoundedCornerShape(12.dp))
                         .background(Error) // RED #F14444
                         .clickable(onClick = onExit),

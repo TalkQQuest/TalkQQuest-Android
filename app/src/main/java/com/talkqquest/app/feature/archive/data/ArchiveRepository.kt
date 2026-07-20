@@ -36,16 +36,45 @@ class ArchiveRepository @Inject constructor() {
         ArchiveMissionItem(3L, "학교 생활 꿀팁 나누기", "일상 대화", "보통", 8, 30, isCompleted = true, isSaved = true, completedDate = "2026.07.14")
     )
 
+    // 💡 [대화 목록] ID: 1, 2, 3
     private val stubConversations = listOf(
         RecentActivity(id = "1", title = "처음 보는 사람에게 짧게 인사하기", type = ActivityType.CONVERSATION, status = "대화 완료", date = "2026.07.16"),
         RecentActivity(id = "2", title = "주말에 다녀온 맛집 후기 공유하기", type = ActivityType.CONVERSATION, status = "대화 완료", date = "2026.07.15"),
         RecentActivity(id = "3", title = "단골 카페에서 메뉴 추천받기", type = ActivityType.CONVERSATION, status = "대화 완료", date = "2026.07.14")
     )
 
+    // 💡 [문장 목록] 대화 1, 2, 3과 1:1로 완벽히 매칭된 목업 데이터
     private val stubSentences = listOf(
-        BookmarkArchiveItem(id = "1", title = "\"그렇군요! 저도 편해서 놀랐습니다. 혹시라도 불편하신 점 있다면 알려주세요!!\"", status = "문장 저장", date = "2026.07.16", isSaved = true),
-        BookmarkArchiveItem(id = "2", title = "\"아, 그 영화 저도 봤어요! 특히 마지막 액션 장면이 정말 인상 깊더라고요.\"", status = "문장 저장", date = "2026.07.15", isSaved = true),
-        BookmarkArchiveItem(id = "3", title = "\"오늘은 날씨가 꽤 선선하네요. 이런 날에는 산책하기 딱 좋은 것 같아요.\"", status = "문장 저장", date = "2026.07.14", isSaved = true)
+        BookmarkArchiveItem(
+            id = "1",
+            title = "\"그렇군요! 저도 편해서 놀랐어요\"",
+            status = "문장 저장",
+            date = "2026.07.16",
+            isSaved = true,
+            memoKeywords = listOf("자기 성장", "첫 만남", "스몰 토크"),
+            memoText = "상대방의 감정을 자연스럽게 열어줄 수 있는 좋은 문장이에요.",
+            relatedConversationId = "1" // 대화 1번 매칭
+        ),
+        BookmarkArchiveItem(
+            id = "2",
+            title = "\"완전 좋아하지! 다음에 나도 한번 가봐야겠다. 추천 고마워!\"",
+            status = "문장 저장",
+            date = "2026.07.15",
+            isSaved = true,
+            memoKeywords = listOf("일상 대화", "취향 공유", "리액션"),
+            memoText = "상대방의 추천에 긍정적으로 호응하며 기분을 좋게 만드는 완벽한 리액션입니다.",
+            relatedConversationId = "2" // 대화 2번 매칭
+        ),
+        BookmarkArchiveItem(
+            id = "3",
+            title = "\"네, 안녕하세요. 항상 아메리카노만 마셨는데, 오늘은 좀 달달한 걸 먹고 싶어요.\"",
+            status = "문장 저장",
+            date = "2026.07.14",
+            isSaved = true,
+            memoKeywords = listOf("상황극", "요청하기", "정중함"),
+            memoText = "자신의 평소 취향과 현재 원하는 바를 명확하고 정중하게 전달하는 표현입니다.",
+            relatedConversationId = "3" // 대화 3번 매칭
+        )
     )
 
     private val stubReports = listOf(
@@ -56,7 +85,6 @@ class ArchiveRepository @Inject constructor() {
     )
 
     private val stubConversationDetails = listOf(
-        // 첫 번째 대화 (ID: 1)
         ConversationDetailMock(
             id = "1",
             title = "처음 보는 사람에게 짧게 인사하기",
@@ -78,7 +106,6 @@ class ArchiveRepository @Inject constructor() {
                 ReviewChatMessage("9", "맞아요ㅎㅎ 처음 와도 부담이 없어서 좋은 것 같아요.", false, "9:21")
             )
         ),
-        // 두 번째 대화 (ID: 2)
         ConversationDetailMock(
             id = "2",
             title = "주말에 다녀온 맛집 후기 공유하기",
@@ -97,7 +124,6 @@ class ArchiveRepository @Inject constructor() {
                 ReviewChatMessage("6", "완전 좋아하지! 다음에 나도 한번 가봐야겠다. 추천 고마워!", false, "12:32")
             )
         ),
-        // 세 번째 대화 (ID: 3) - 💡 스크롤 테스트용으로 엄청 길어진 대화
         ConversationDetailMock(
             id = "3",
             title = "단골 카페에서 메뉴 추천받기",
@@ -136,6 +162,13 @@ class ArchiveRepository @Inject constructor() {
 
     fun getConversationDetail(id: String): ConversationDetailMock? {
         return stubConversationDetails.find { it.id == id }
+    }
+
+    // 💡 방금 에러가 났던 원인! 이 함수가 누락되어 있었습니다. (추가 완료)
+    fun getSavedSentenceDetail(id: String): Pair<BookmarkArchiveItem, RecentActivity?>? {
+        val sentence = stubSentences.find { it.id == id } ?: return null
+        val relatedConversation = stubConversations.find { it.id == sentence.relatedConversationId }
+        return Pair(sentence, relatedConversation)
     }
 
     suspend fun getArchiveSummary(): ApiResult<ArchiveSummary> {

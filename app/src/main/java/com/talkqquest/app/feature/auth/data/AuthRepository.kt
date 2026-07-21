@@ -59,7 +59,11 @@ class AuthRepository @Inject constructor(
                 refreshToken = result.data.refreshToken,
             )
         }
-        return result
+        return if (result is ApiResult.Error && result.code != null) {
+            result.copy(message = emailSignupErrorMessage(result.code))
+        } else {
+            result
+        }
     }
 
     private suspend fun loginWithProvider(
@@ -103,6 +107,14 @@ class AuthRepository @Inject constructor(
         403 -> "\uD0C8\uD1F4\uD55C \uACC4\uC815\uC785\uB2C8\uB2E4."
         500 -> "\uC11C\uBC84 \uB0B4\uBD80 \uC624\uB958\uAC00 \uBC1C\uC0DD\uD588\uC2B5\uB2C8\uB2E4. \uC7A0\uC2DC \uD6C4 \uB2E4\uC2DC \uC2DC\uB3C4\uD574\uC8FC\uC138\uC694."
         else -> "\uC774\uBA54\uC77C \uB610\uB294 \uBE44\uBC00\uBC88\uD638\uB97C \uD655\uC778\uD574\uC8FC\uC138\uC694."
+    }
+
+    private fun emailSignupErrorMessage(code: Int): String = when (code) {
+        400 -> "\uC785\uB825\uAC12\uC744 \uD655\uC778\uD574\uC8FC\uC138\uC694."
+        409 -> "\uC774\uBBF8 \uC0AC\uC6A9 \uC911\uC778 \uC774\uBA54\uC77C\uC785\uB2C8\uB2E4."
+        422 -> "\uC774\uBA54\uC77C \uC778\uC99D\uC774 \uC644\uB8CC\uB418\uC9C0 \uC54A\uC558\uC2B5\uB2C8\uB2E4."
+        500 -> "\uC11C\uBC84 \uB0B4\uBD80 \uC624\uB958\uAC00 \uBC1C\uC0DD\uD588\uC2B5\uB2C8\uB2E4. \uC7A0\uC2DC \uD6C4 \uB2E4\uC2DC \uC2DC\uB3C4\uD574\uC8FC\uC138\uC694."
+        else -> "\uD68C\uC6D0\uAC00\uC785\uC5D0 \uC2E4\uD328\uD588\uC5B4\uC694."
     }
 
     private fun emailAuthErrorMessage(code: Int): String = when (code) {

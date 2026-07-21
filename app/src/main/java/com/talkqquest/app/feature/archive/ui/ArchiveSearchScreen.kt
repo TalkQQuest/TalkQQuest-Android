@@ -27,12 +27,12 @@ import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -79,9 +79,14 @@ import java.time.format.DateTimeFormatter
 @Composable
 fun ArchiveSearchScreen(
     onBackClick: () -> Unit = {},
+    onNavigateToDetail: (String, ActivityType) -> Unit = { _, _ -> },
     viewModel: ArchiveSearchViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+
+    LaunchedEffect(Unit) {
+        viewModel.refreshData()
+    }
 
     ArchiveSearchScreenContent(
         uiState = uiState,
@@ -104,7 +109,8 @@ fun ArchiveSearchScreen(
         onToggleMissionBookmark = viewModel::toggleMissionBookmark,
         onToggleSentenceBookmark = viewModel::toggleSentenceBookmark,
         onToggleReportBookmark = viewModel::toggleReportBookmark,
-        onSortSelected = viewModel::setSortType
+        onSortSelected = viewModel::setSortType,
+        onNavigateToDetail = onNavigateToDetail
     )
 }
 
@@ -121,10 +127,11 @@ private fun ArchiveSearchScreenContent(
     onClearSearch: () -> Unit,
     onClearDateFilter: () -> Unit,
     onClearCategoryFilter: () -> Unit,
-    onToggleMissionBookmark: (Long) -> Unit,
+    onToggleMissionBookmark: (String) -> Unit, // 💡 Long -> String 변경
     onToggleSentenceBookmark: (String) -> Unit,
     onToggleReportBookmark: (String) -> Unit,
-    onSortSelected: (ArchiveSortType) -> Unit
+    onSortSelected: (ArchiveSortType) -> Unit,
+    onNavigateToDetail: (String, ActivityType) -> Unit
 ) {
     val dateFormatter = DateTimeFormatter.ofPattern("yyyy.MM.dd")
     val focusManager = LocalFocusManager.current
@@ -161,7 +168,11 @@ private fun ArchiveSearchScreenContent(
                             .clickable { onBackClick() },
                         contentAlignment = Alignment.Center
                     ) {
-                        Icon(imageVector = Icons.AutoMirrored.Filled.KeyboardArrowLeft, contentDescription = "뒤로가기", tint = Gray500)
+                        Icon(
+                            painter = painterResource(id = R.drawable.ic_back_chevron),
+                            contentDescription = "뒤로가기",
+                            tint = Gray500
+                        )
                     }
 
                     Text(
@@ -328,7 +339,6 @@ private fun ArchiveSearchScreenContent(
                         ) {
                             items(
                                 items = uiState.searchResults,
-                                // 💡 고유 키 부여: 카드 타입이 섞여 있으므로 접두어를 붙여 완벽히 구분합니다.
                                 key = { item ->
                                     when (item) {
                                         is ArchiveMissionItem -> "mission_${item.id}"
@@ -341,19 +351,22 @@ private fun ArchiveSearchScreenContent(
                                 when (item) {
                                     is ArchiveMissionItem -> ArchiveMissionCard(
                                         mission = item,
-                                        onClick = {},
+                                        onClick = { onNavigateToDetail(item.id.toString(), ActivityType.MISSION) },
                                         onToggleSave = { onToggleMissionBookmark(item.id) },
-                                        modifier = Modifier.animateItem() // 💡 애니메이션 적용!
+                                        modifier = Modifier.animateItem()
                                     )
                                     is RecentActivity -> RecentActivityCard(
                                         activity = item,
-                                        onClick = {},
-                                        modifier = Modifier.animateItem() // 💡 애니메이션 적용!
+                                        onClick = { onNavigateToDetail(item.id, item.type) },
+                                        modifier = Modifier.animateItem()
                                     )
                                     is SearchBookmarkWrapper -> BookmarkCard(
                                         item = item.item,
                                         isSentence = item.isSentence,
-                                        onClick = {},
+                                        onClick = {
+                                            val type = if (item.isSentence) ActivityType.SENTENCE else ActivityType.REPORT
+                                            onNavigateToDetail(item.item.id, type)
+                                        },
                                         onToggleSave = {
                                             if (item.isSentence) {
                                                 onToggleSentenceBookmark(item.item.id)
@@ -361,7 +374,7 @@ private fun ArchiveSearchScreenContent(
                                                 onToggleReportBookmark(item.item.id)
                                             }
                                         },
-                                        modifier = Modifier.animateItem() // 💡 애니메이션 적용!
+                                        modifier = Modifier.animateItem()
                                     )
                                 }
                             }
@@ -551,7 +564,8 @@ private val previewUiState = ArchiveSearchUiState(
     isCategoryChipVisible = true,
     sortType = ArchiveSortType.LATEST,
     allMissions = listOf(
-        ArchiveMissionItem(1L, "처음 보는 사람에게 짧게 인사하기", "짧은 대화", "쉬움", 2, 20, isCompleted = true, isSaved = true, completedDate = "2026.07.16")
+        // 💡 1L -> "1" 로 타입 변경
+        ArchiveMissionItem("1", "처음 보는 사람에게 짧게 인사하기", "짧은 대화", "쉬움", 2, 20, isCompleted = true, isSaved = true, completedDate = "2026.07.16")
     ),
     allConversations = listOf(
         RecentActivity(
@@ -593,7 +607,7 @@ private fun ArchiveSearchFilterPreview() {
             onSearchQueryChanged = {}, onSearchTriggered = {}, onClearSearch = {},
             onClearDateFilter = {}, onClearCategoryFilter = {},
             onToggleMissionBookmark = {}, onToggleSentenceBookmark = {}, onToggleReportBookmark = {},
-            onSortSelected = {}
+            onSortSelected = {}, onNavigateToDetail = { _, _ -> }
         )
     }
 }
@@ -609,7 +623,7 @@ private fun ArchiveSearchResultsPreview() {
             onSearchQueryChanged = {}, onSearchTriggered = {}, onClearSearch = {},
             onClearDateFilter = {}, onClearCategoryFilter = {},
             onToggleMissionBookmark = {}, onToggleSentenceBookmark = {}, onToggleReportBookmark = {},
-            onSortSelected = {}
+            onSortSelected = {}, onNavigateToDetail = { _, _ -> }
         )
     }
 }

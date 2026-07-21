@@ -27,8 +27,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Check
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
@@ -326,12 +324,13 @@ private fun DurationCard(durationText: String) {
     }
 }
 
-// 체크리스트 카드 (CSS Frame 427321022): 흰 r20(그림자 없음), 상하 16, 행 gap 12
+// 체크리스트 카드 (CSS Frame 427321022): 흰 r20 + 카드그림자(1%), 상하 16, 행 gap 12
 @Composable
 private fun ChecklistCard(checklist: List<String>) {
     Column(
         modifier = Modifier
             .fillMaxWidth()
+            .softShadow(color = Gray1000.copy(alpha = 0.01f), offsetY = 8.dp, blur = 24.dp, cornerRadius = 20.dp)
             .clip(RoundedCornerShape(20.dp))
             .background(White)
             .padding(vertical = 16.dp),
@@ -344,7 +343,7 @@ private fun ChecklistCard(checklist: List<String>) {
                 horizontalArrangement = Arrangement.spacedBy(16.dp),
             ) {
                 Icon(
-                    imageVector = Icons.Default.Check, // 미션 상세와 동일(머티리얼 근사)
+                    painter = painterResource(R.drawable.ic_benefit_check), // CSS check-01(inset 30%/35%) — 미션 상세와 동일 아이콘
                     contentDescription = null,
                     tint = Primary600,
                     modifier = Modifier.size(24.dp),
@@ -355,7 +354,7 @@ private fun ChecklistCard(checklist: List<String>) {
     }
 }
 
-// XP 카드 (CSS Frame 427321028): 흰 r20(그림자 없음), 12x16, +XP·레벨 칩 / 진행 바 / 안내 문구
+// XP 카드 (CSS Frame 427321028): 흰 r20 + 카드그림자(1%), 12x16, +XP·레벨 칩 / 진행 바 / 안내 문구
 // xpShown: 카운트업 중인 현재 표시 XP. 레벨업 땐 가득 찼다가 0에서 다시 참.
 // level/chipScale: 레벨 칩 표시 레벨과 튀는 배율(레벨업 순간 1→1.4→1).
 // chipBurst: 레벨업 순간 칩 주변 작은 폭죽 진행도(0→1, 0/1이면 안 그림).
@@ -370,6 +369,7 @@ private fun XpCard(
     Column(
         modifier = Modifier
             .fillMaxWidth()
+            .softShadow(color = Gray1000.copy(alpha = 0.01f), offsetY = 8.dp, blur = 24.dp, cornerRadius = 20.dp)
             .clip(RoundedCornerShape(20.dp))
             .background(White)
             .padding(horizontal = 16.dp, vertical = 12.dp),

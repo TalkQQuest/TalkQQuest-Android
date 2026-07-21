@@ -25,9 +25,6 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
-import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
@@ -185,7 +182,7 @@ private fun FeedbackContent(
                 contentAlignment = Alignment.Center,
             ) {
                 Icon(
-                    imageVector = Icons.AutoMirrored.Filled.KeyboardArrowLeft,
+                    painter = painterResource(R.drawable.ic_back_chevron),
                     contentDescription = "뒤로가기",
                     tint = Gray500,
                 )
@@ -382,7 +379,7 @@ private fun ScoreRow(
         }
         Box(modifier = Modifier.size(44.dp), contentAlignment = Alignment.Center) {
             Icon(
-                imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight, // CSS: chevron-left 좌우반전
+                painter = painterResource(R.drawable.ic_forward_chevron), // CSS chevron-left 좌우반전(수치 동일)
                 contentDescription = "$label 상세",
                 tint = Gray400,
             )

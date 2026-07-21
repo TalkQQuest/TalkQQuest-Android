@@ -33,10 +33,10 @@ object Screen {
 
     // ── B담당 (이도/윤기수): 미션 · AI 대화 · 성장 리포트 ──
     const val HOME = "home"                                       // HomeScreen
+    const val NOTIFICATION = "notification"                       // NotificationScreen (홈 벨 → 알림창, 디자인 미완성 placeholder)
     const val MISSION_LIST = "mission_list"                       // MissionListScreen
     const val MISSION_DETAIL = "mission_detail/{missionId}"       // MissionDetailScreen
     const val CONVERSATION_PREP = "conversation_prep/{missionId}" // ConversationPrepScreen
-    const val SAVED_MISSIONS = "saved_missions"                    // SavedMissionsScreen (북마크→저장목록)
     const val CONVERSATION = "conversation/{conversationId}"      // ConversationScreen
     const val CONVERSATION_COMPLETE = "conversation_complete/{conversationId}" // ConversationCompleteScreen (대화 요약)
     const val MISSION_COMPLETE = "mission_complete/{missionId}"   // MissionCompleteScreen (XP 획득)

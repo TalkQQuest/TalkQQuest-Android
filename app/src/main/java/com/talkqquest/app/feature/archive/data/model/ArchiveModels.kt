@@ -22,3 +22,25 @@ data class ArchiveRecentActivity(
     val status: String,
     val date: String
 )
+
+// 💡 ArchiveRepository.kt 에서 여기로 옮겨온 데이터 클래스들
+
+data class ReviewChatMessage(
+    val id: String,
+    val text: String,
+    val isFromUser: Boolean,
+    val time: String
+)
+
+// 나중에 서버 응답에 맞춰 수정될 수 있도록 Mock 대신 일반적인 이름 추천
+data class ConversationDetailMock(
+    val id: String,
+    val title: String,
+    val date: String,
+    val duration: String,
+    val summaryKeywords: List<String>,
+    val summaryText: String,
+    val mainContentText: String,
+    val feedbacks: List<Pair<String, Int>>,
+    val messages: List<ReviewChatMessage>
+)

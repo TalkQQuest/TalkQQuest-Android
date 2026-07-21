@@ -30,6 +30,11 @@ import com.talkqquest.app.feature.auth.ui.SignupStartScreen
 import com.talkqquest.app.feature.auth.ui.SignupVerifyScreen
 import com.talkqquest.app.feature.auth.viewmodel.AuthViewModel
 import com.talkqquest.app.feature.home.ui.HomeScreen
+import com.talkqquest.app.feature.onboarding.ui.OnboardingDifficultyScreen
+import com.talkqquest.app.feature.onboarding.ui.OnboardingGoalScreen
+import com.talkqquest.app.feature.onboarding.ui.OnboardingPersonalityScreen
+import com.talkqquest.app.feature.onboarding.ui.OnboardingWelcomeScreen
+import com.talkqquest.app.feature.notification.ui.NotificationScreen
 import com.talkqquest.app.feature.mission.ui.ConversationPrepScreen
 import com.talkqquest.app.feature.mission.ui.ConversationScreen
 import com.talkqquest.app.feature.mission.ui.FeedbackDetailScreen
@@ -37,13 +42,16 @@ import com.talkqquest.app.feature.mission.ui.FeedbackScreen
 import com.talkqquest.app.feature.mission.ui.MissionCompleteScreen
 import com.talkqquest.app.feature.mission.ui.MissionDetailScreen
 import com.talkqquest.app.feature.mission.ui.MissionListScreen
-import com.talkqquest.app.feature.mission.ui.SavedMissionsScreen
 import com.talkqquest.app.feature.report.ui.ReportScreen
 import com.talkqquest.app.feature.archive.ui.ArchiveHomeScreen
 import com.talkqquest.app.feature.archive.ui.ArchiveListScreen
 import com.talkqquest.app.feature.archive.ui.ArchiveSearchScreen
-import com.talkqquest.app.feature.archive.ui.ArchiveConversationDetailScreen // 💡 [추가] 대화 기록 상세 화면 import
+import com.talkqquest.app.feature.archive.ui.ArchiveConversationDetailScreen
+import com.talkqquest.app.feature.archive.ui.ArchiveSavedPhraseScreen
+import com.talkqquest.app.feature.archive.ui.ArchiveReportScreen
+import com.talkqquest.app.feature.archive.viewmodel.ActivityType
 import com.talkqquest.app.navigation.Screen
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 // 네비게이션 그래프.
@@ -231,17 +239,74 @@ fun NavGraph(
         composable(Screen.SIGNUP_NICKNAME) {
             SignupNicknameScreen(
                 onBack = { navController.popBackStack() },
-                onCompleteClick = { navController.navigate(Screen.ONBOARDING_WELCOME) },
+                onCompleteClick = { nickname ->
+                    navController.currentBackStackEntry
+                        ?.savedStateHandle
+                        ?.set("onboarding_nickname", nickname.trim())
+                    navController.navigate(Screen.ONBOARDING_WELCOME)
+                },
             )
         }
-        composable(Screen.ONBOARDING_WELCOME) { PlaceholderScreen("온보딩") }
+        composable(Screen.ONBOARDING_WELCOME) {
+            val nickname = navController.previousBackStackEntry
+                ?.savedStateHandle
+                ?.get<String>("onboarding_nickname")
+                .orEmpty()
+            OnboardingWelcomeScreen(
+                nickname = nickname,
+                onFinished = { displayNickname ->
+                    navController.navigate(Screen.ONBOARDING_PERSONALITY) {
+                        popUpTo(Screen.ONBOARDING_WELCOME) { inclusive = true }
+                        launchSingleTop = true
+                    }
+                    navController.currentBackStackEntry
+                        ?.savedStateHandle
+                        ?.set("onboarding_nickname", displayNickname)
+                },
+            )
+        }
+        composable(Screen.ONBOARDING_PERSONALITY) {
+            val nickname = navController.currentBackStackEntry
+                ?.savedStateHandle
+                ?.get<String>("onboarding_nickname")
+                .orEmpty()
+            OnboardingPersonalityScreen(
+                nickname = nickname,
+                onBack = { navController.popBackStack() },
+                onNextClick = { navController.navigate(Screen.ONBOARDING_DIFFICULTY) },
+            )
+        }
+        composable(Screen.ONBOARDING_DIFFICULTY) {
+            OnboardingDifficultyScreen(
+                onBack = { navController.popBackStack() },
+                onNextClick = { navController.navigate(Screen.ONBOARDING_GOAL) },
+            )
+        }
+        composable(Screen.ONBOARDING_GOAL) {
+            OnboardingGoalScreen(
+                onBack = { navController.popBackStack() },
+                onCompleteClick = { navController.navigate(Screen.HOME) },
+            )
+        }
         // 하단 네비 4탭 (임시 — 실제 화면으로 교체)
         // 홈은 화면↔데이터 연결 예시로 실제 구현됨(feature/home 참고). 나머지는 각 담당이 교체.
         composable(Screen.HOME) {
+            val homeScope = rememberCoroutineScope()
             HomeScreen(
                 onStartMissionClick = { missionId -> navController.navigate("mission_detail/$missionId") },
                 onOtherMissionsClick = { navController.navigate(Screen.MISSION_LIST) },
+                // 물결(리플)이 먼저 보인 뒤 전환되도록 살짝 지연 — 즉시 navigate 시 탭 물결이 안 보임
+                onNotificationClick = {
+                    homeScope.launch {
+                        delay(140)
+                        navController.navigate(Screen.NOTIFICATION)
+                    }
+                },
             )
+        }
+        // 알림창 (홈 벨 → 진입). 디자인 미완성이라 빈 상태 placeholder.
+        composable(Screen.NOTIFICATION) {
+            NotificationScreen(onBack = { navController.popBackStack() })
         }
         // C담당: 아카이브 홈 화면
         composable(Screen.ARCHIVE_HOME) {
@@ -251,13 +316,17 @@ fun NavGraph(
                 onNavigateToSearch = {
                     navController.navigate(Screen.ARCHIVE_SEARCH)
                 },
-                onNavigateToList = { tabIndex ->
-                    // 💡 [핵심 연동] 클릭한 카테고리의 인덱스를 파라미터로 넘겨주며 이동!
+                onNavigateToList = { tabIndex: Int ->
                     navController.navigate("${Screen.ARCHIVE_LIST}/$tabIndex")
                 },
-                onNavigateToDetail = { activityId ->
-                    // 💡 홈에서 대화 클릭 시에도 상세 화면으로 갈 수 있도록 추가 가능 (현재는 Toast 유지)
-                    Toast.makeText(context, "최근 활동 상세: 준비 중인 기능입니다.", Toast.LENGTH_SHORT).show()
+                // 💡 C담당: 람다 파라미터 타입 명시 유지
+                onNavigateToDetail = { activityId: String, type: ActivityType ->
+                    when (type) {
+                        ActivityType.CONVERSATION -> navController.navigate("archive_conversation_detail/$activityId")
+                        ActivityType.SENTENCE -> navController.navigate("archive_saved_phrase/$activityId")
+                        ActivityType.REPORT -> navController.navigate("archive_report/$activityId")
+                        ActivityType.MISSION -> navController.navigate("mission_detail/$activityId")
+                    }
                 }
             )
         }
@@ -266,6 +335,15 @@ fun NavGraph(
             ArchiveSearchScreen(
                 onBackClick = {
                     navController.popBackStack()
+                },
+                // 💡 C담당: 람다 파라미터 타입 명시 유지
+                onNavigateToDetail = { activityId: String, type: ActivityType ->
+                    when (type) {
+                        ActivityType.CONVERSATION -> navController.navigate("archive_conversation_detail/$activityId")
+                        ActivityType.SENTENCE -> navController.navigate("archive_saved_phrase/$activityId")
+                        ActivityType.REPORT -> navController.navigate("archive_report/$activityId")
+                        ActivityType.MISSION -> navController.navigate("mission_detail/$activityId")
+                    }
                 }
             )
         }
@@ -279,21 +357,52 @@ fun NavGraph(
             ArchiveListScreen(
                 initialTabIndex = tabIndex,
                 onBackClick = { navController.popBackStack() },
-                // 💡 [추가] 대화 카드 클릭 시 대화 기록(상세) 화면으로 이동
-                onConversationClick = { conversationId ->
+                // 💡 [수정] 보관함 리스트 화면의 미션 카드 클릭 시, 미션 상세 화면으로 이동하도록 연결 완료!
+                onMissionClick = { missionId: String ->
+                    navController.navigate("mission_detail/$missionId")
+                },
+                // 💡 C담당: 람다 파라미터 타입 명시 유지
+                onConversationClick = { conversationId: String ->
+                    navController.navigate("archive_conversation_detail/$conversationId")
+                },
+                onSentenceClick = { phraseId: String ->
+                    navController.navigate("archive_saved_phrase/$phraseId")
+                },
+                onReportClick = { reportId: String ->
+                    navController.navigate("archive_report/$reportId")
+                }
+            )
+        }
+
+        // C담당: 보관함 대화 기록(상세) 화면
+        composable(
+            route = "archive_conversation_detail/{conversationId}",
+            arguments = listOf(navArgument("conversationId") { type = NavType.StringType })
+        ) {
+            ArchiveConversationDetailScreen(
+                onBackClick = { navController.popBackStack() }
+            )
+        }
+
+        // C담당: 보관함 베스트 문장 상세 화면
+        composable(
+            route = "archive_saved_phrase/{phraseId}",
+            arguments = listOf(navArgument("phraseId") { type = NavType.StringType })
+        ) {
+            ArchiveSavedPhraseScreen(
+                onBackClick = { navController.popBackStack() },
+                onConversationClick = { conversationId: String ->
                     navController.navigate("archive_conversation_detail/$conversationId")
                 }
             )
         }
 
-        // 💡 [추가] C담당: 보관함 대화 기록(상세) 화면
+        // C담당: 보관함 리포트 상세 화면
         composable(
-            route = "archive_conversation_detail/{conversationId}",
-            arguments = listOf(navArgument("conversationId") { type = NavType.StringType })
-        ) { backStackEntry ->
-            val conversationId = backStackEntry.arguments?.getString("conversationId").orEmpty()
-            // 향후 ViewModel에 conversationId를 넘겨서 서버 API를 호출하도록 짤 수 있습니다.
-            ArchiveConversationDetailScreen(
+            route = "archive_report/{reportId}",
+            arguments = listOf(navArgument("reportId") { type = NavType.StringType })
+        ) {
+            ArchiveReportScreen(
                 onBackClick = { navController.popBackStack() }
             )
         }
@@ -304,7 +413,7 @@ fun NavGraph(
                 onBack = { navController.popBackStack() },
                 onMissionClick = { missionId -> navController.navigate("mission_detail/$missionId") },
                 onSheetTopChange = onOverlaySheetTop, // 저장 시트가 하단 네비를 덮는 동안 네비 가림
-                onSavedListClick = { navController.navigate(Screen.SAVED_MISSIONS) },
+                onSavedListClick = { navController.navigate("${Screen.ARCHIVE_LIST}/0") },
             )
         }
         // B담당: 미션 상세. "다음" → 대화 준비(아직 없어서 임시 화면, 다음 작업에서 교체).
@@ -317,14 +426,7 @@ fun NavGraph(
                 onNextClick = { missionId -> navController.navigate("conversation_prep/$missionId") },
                 onMissionClick = { missionId -> navController.navigate("mission_detail/$missionId") },
                 onSheetTopChange = onOverlaySheetTop,
-                onSavedListClick = { navController.navigate(Screen.SAVED_MISSIONS) },
-            )
-        }
-        // B담당: 저장 목록 (저장 시트 "저장 목록 >"에서 진입). 카드 클릭 → 미션 상세.
-        composable(Screen.SAVED_MISSIONS) {
-            SavedMissionsScreen(
-                onBack = { navController.popBackStack() },
-                onMissionClick = { missionId -> navController.navigate("mission_detail/$missionId") },
+                onSavedListClick = { navController.navigate("${Screen.ARCHIVE_LIST}/0") },
             )
         }
         // B담당: 대화 준비(미션 진입). "미션 시작하기" → 대화 화면(아직 없어서 임시, 다음 작업에서 교체).
@@ -395,10 +497,11 @@ fun NavGraph(
             ReportScreen(
                 onBack = { navController.popBackStack() },
                 onSheetTopChange = onOverlaySheetTop, // 리포트 저장 시트가 하단 네비를 덮는 동안 네비 가림
-                // 💡 (리포트 탭의 인덱스는 3)
                 onArchiveClick = { navController.navigate("${Screen.ARCHIVE_LIST}/3") },
-                //   저장된 리포트 카드 클릭 → 보관함 리포트 상세
-                onReportClick = { reportId -> /* TODO(C): 보관함 리포트 상세로 (reportId) */ },
+                // 💡 [수정] 보관함 리포트 상세로 이동 연동 완료
+                onReportClick = { reportId ->
+                    navController.navigate("archive_report/$reportId")
+                },
             )
         }
         // B담당: AI 피드백 상세. "다른 미션 보러가기" → 정산 흐름(완료·피드백)을 정리하고 미션 목록으로.
@@ -414,15 +517,11 @@ fun NavGraph(
                 onOtherMissions = {
                     navController.navigate(Screen.MISSION_LIST) { popUpTo(Screen.HOME) }
                 },
-                // 💡 (문장 탭의 인덱스는 2)
                 onArchiveClick = { navController.navigate("${Screen.ARCHIVE_LIST}/2") },
-                //   저장된 문장 카드 클릭 → 보관함 문장 상세 (Screen.ARCHIVE_SAVED_PHRASE)
-                onPhraseClick = { phraseId -> /* TODO(C): 보관함 문장 상세로 (phraseId) */ },
+                onPhraseClick = { phraseId -> navController.navigate("archive_saved_phrase/$phraseId") },
             )
         }
         composable(Screen.COMMUNITY_LIST) { PlaceholderScreen("모임") }
         composable(Screen.PROFILE) { PlaceholderScreen("프로필") }
-
-        // 예) composable(Screen.LOGIN) { LoginScreen(navController) }
     }
 }

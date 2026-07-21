@@ -33,7 +33,6 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.Icon
@@ -76,7 +75,8 @@ import com.talkqquest.app.core.designsystem.TqType
 import com.talkqquest.app.core.designsystem.White
 import com.talkqquest.app.core.designsystem.softShadow
 
-import com.talkqquest.app.feature.archive.data.ReviewChatMessage
+// 💡 [수정됨] ReviewChatMessage의 변경된 경로 반영
+import com.talkqquest.app.feature.archive.data.model.ReviewChatMessage
 import com.talkqquest.app.feature.archive.viewmodel.ArchiveConversationDetailUiState
 import com.talkqquest.app.feature.archive.viewmodel.ArchiveConversationDetailViewModel
 import com.talkqquest.app.feature.archive.viewmodel.AiFeedbackItem
@@ -175,7 +175,11 @@ private fun ArchiveConversationDetailContent(
                     modifier = Modifier.size(44.dp).align(Alignment.CenterStart).clip(CircleShape).clickable(onClick = onBackClick),
                     contentAlignment = Alignment.Center
                 ) {
-                    Icon(imageVector = Icons.AutoMirrored.Filled.KeyboardArrowLeft, contentDescription = "뒤로가기", tint = Gray500)
+                    Icon(
+                        painter = painterResource(id = R.drawable.ic_back_chevron),
+                        contentDescription = "뒤로가기",
+                        tint = Gray500
+                    )
                 }
                 Text(text = "대화 기록", style = TqType.BodyL.copy(fontWeight = FontWeight.Medium).figma(), color = Gray800, modifier = Modifier.align(Alignment.Center))
             }
@@ -202,7 +206,8 @@ private fun ArchiveConversationDetailContent(
                     ConversationAiFeedbackSection(uiState.feedbacks)
                 }
 
-                Spacer(modifier = Modifier.height(120.dp))
+                // 💡 하단 고정 버튼/마스크 영역(158dp)에 가려지지 않도록 패딩을 180dp로 확보
+                Spacer(modifier = Modifier.height(180.dp))
             }
         }
 
@@ -270,7 +275,8 @@ private fun ArchiveConversationReviewContent(
             Box(modifier = Modifier.fillMaxWidth().weight(1f)) {
                 LazyColumn(
                     modifier = Modifier.fillMaxSize(),
-                    contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 88.dp, bottom = 48.dp)
+                    // 💡 하단 마스크(203.dp)에 가려지지 않고 끝까지 스크롤될 수 있도록 bottom 패딩을 220.dp로 확보
+                    contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 88.dp, bottom = 220.dp)
                 ) {
                     itemsIndexed(uiState.messages) { index, message ->
                         val prev = uiState.messages.getOrNull(index - 1)

@@ -31,6 +31,7 @@ import androidx.compose.ui.unit.dp
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.currentBackStackEntryAsState
+import com.talkqquest.app.R
 import com.talkqquest.app.core.designsystem.Gray100
 import com.talkqquest.app.core.designsystem.Gray300
 import com.talkqquest.app.core.designsystem.Primary500
@@ -54,9 +55,6 @@ private fun tabRouteOf(route: String?): String? = when (route) {
     Screen.CONVERSATION_PREP -> Screen.HOME
     Screen.CONVERSATION -> Screen.HOME
     Screen.REPORT -> Screen.HOME // 홈 플로우(피드백 → 상세 리포트)로 진입 — 홈 유지 (사용자 결정)
-    // 저장 목록: 진입은 홈 플로우(저장 시트)지만 UI v4 CSS가 아카이브 아이콘만 Purple600으로
-    // 칠해뒀음 → 디자인 그대로 아카이브 탭 하이라이트. (v4에서 이 화면 = 아카이브 "보관함(미션)"과 동일)
-    Screen.SAVED_MISSIONS -> Screen.ARCHIVE_HOME
     else -> route
 }
 
@@ -180,10 +178,19 @@ private fun TqBottomBarContent(
                                     .border(1.dp, White.copy(alpha = 0.4f), RoundedCornerShape(22.dp)),
                             )
                         }
+                        // 프로필만 선택 시 '보라 배경 + 연회색 사람'(피그마 반전). 색이 baked된
+                        // 전용 드로어블을 tint 없이 그림. 나머지 탭·미선택은 단색 tint 그대로.
+                        val profileSelected = selected && item == BottomNavItem.Profile
                         Icon(
-                            painter = painterResource(item.iconRes),
+                            painter = painterResource(
+                                if (profileSelected) R.drawable.ic_nav_profile_selected else item.iconRes,
+                            ),
                             contentDescription = item.label,
-                            tint = if (selected) Primary600 else Gray300,
+                            tint = when {
+                                profileSelected -> Color.Unspecified
+                                selected -> Primary600
+                                else -> Gray300
+                            },
                             // 아이콘 벡터가 44프레임에 CSS inset대로 배치돼 44dp로 채우면 크기·위치 정확.
                             modifier = Modifier.size(44.dp),
                         )

@@ -71,6 +71,7 @@ import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.layout.positionInRoot
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.IntOffset
@@ -83,6 +84,7 @@ import com.talkqquest.app.core.designsystem.Error
 import com.talkqquest.app.core.designsystem.FitDesign
 import com.talkqquest.app.core.designsystem.Gray100
 import com.talkqquest.app.core.designsystem.Gray1000
+import com.talkqquest.app.core.designsystem.Gray200
 import com.talkqquest.app.core.designsystem.Gray300
 import com.talkqquest.app.core.designsystem.Gray50
 import com.talkqquest.app.core.designsystem.Gray500
@@ -95,6 +97,7 @@ import com.talkqquest.app.core.designsystem.Primary500
 import com.talkqquest.app.core.designsystem.Primary600
 import com.talkqquest.app.core.designsystem.TalkQQuestTheme
 import com.talkqquest.app.core.designsystem.TqType
+import com.talkqquest.app.core.designsystem.White
 import com.talkqquest.app.core.designsystem.component.TqButton
 import com.talkqquest.app.core.designsystem.component.TqButtonSize
 import com.talkqquest.app.core.designsystem.softShadow
@@ -193,14 +196,12 @@ private fun ConversationScreen(
             )
         }
 
-        // 나가기 팝업 (CSS "미션 종료 팝업" — 배경을 어둡게 하는 층은 디자인에 없음.
-        // 뒤 화면 오작동만 막게 투명 층으로 터치를 흡수하고, 카드만 화면 중앙에 띄움)
-        // FitDesign: 카드가 고정폭(332)이라 320dp 같은 작은 화면에선 통째 비율 축소
+        // 대화 종료 팝업 (CSS "탈퇴 모달" 프레임 — 최종 확정 2026-07-21).
+        // ★ 별도 FitDesign으로 감싸지 않는다: 이미 이 화면 전체가 바깥 FitDesign(171줄) 안이라
+        //   여기서 또 감싸면 팝업만 다른 좌표계가 돼 위치가 어긋남(살짝 아래로 밀렸던 원인).
+        //   메인 콘텐츠와 같은 프레임에 두면 CSS top 313이 다른 요소들과 동일 규칙으로 맞음.
         if (uiState.showExitDialog) {
-            // 바깥 FitDesign이 이미 상태바 보정을 했으니 중첩에선 끔 (팝업이 중앙에서 밀리지 않게)
-            FitDesign(compensateStatusBar = false) {
-                ExitDialog(onContinue = onExitDismiss, onExit = onExitConfirm)
-            }
+            ExitDialog(onContinue = onExitDismiss, onExit = onExitConfirm)
         }
     }
 }
@@ -855,52 +856,57 @@ private fun MessageInputRow(
 }
 
 // 나가기 팝업 (CSS "미션 종료 팝업" Frame 427321198): 카드 332x180, r24, Gray50 + 카드그림자.
-// 디자인에 어두운 배경 층이 없어 투명 층으로 뒤 터치만 막음.
+// 대화 종료 확인 팝업 (CSS "탈퇴 모달" 프레임 — 최종 확정 2026-07-21, 보류 마커 해제).
+// 오버레이 = Gray700 23% 딤 / 모달 = 흰 배경 radius16 / 종료하기 = Primary600(빨강 아님, 확정).
 @Composable
 private fun ExitDialog(onContinue: () -> Unit, onExit: () -> Unit) {
     Box(
         modifier = Modifier
             .fillMaxSize()
+            .background(Gray700.copy(alpha = 0.23f)) // CSS op bg #334155 opacity 0.23
             .clickable(
                 interactionSource = remember { MutableInteractionSource() },
                 indication = null,
                 onClick = onContinue, // 카드 밖 터치 = 계속하기와 동일(닫기)
             ),
-        contentAlignment = Alignment.Center,
+        contentAlignment = Alignment.TopCenter, // CSS는 화면 top 기준 절대 위치 → 위에서부터 정렬
     ) {
         Column(
             modifier = Modifier
-                .offset(y = (-21).dp) // CSS top 315 = 화면 중앙(336)보다 21 위
-                .width(332.dp) // CSS 고정폭 (내용맞춤이면 297로 좁아짐)
-                .softShadow(color = Gray1000.copy(alpha = 0.01f), offsetY = 8.dp, blur = 24.dp, cornerRadius = 24.dp)
-                .clip(RoundedCornerShape(24.dp))
-                .background(Gray50)
+                // 화면 콘텐츠와 동일한 상단 기준(상태바 아래 = 디자인 y40)에 맞춤 — 안 맞추면
+                // FitDesign 상태바 보정분만큼 팝업만 아래로 밀림(살짝 내려앉던 원인).
+                .statusBarsPadding()
+                .offset(y = 273.dp) // CSS top 313 − 상태바 밴드 40 (그 40은 statusBarsPadding이 담당)
+                .width(336.dp) // CSS 고정폭
+                .clip(RoundedCornerShape(16.dp))
+                .background(White) // CSS #FFFFFF (그림자 없음)
                 .clickable(
                     interactionSource = remember { MutableInteractionSource() },
                     indication = null,
                     onClick = {}, // 카드 자체 터치는 흡수
                 )
-                .padding(vertical = 24.dp),
+                .padding(start = 24.dp, end = 24.dp, top = 24.dp, bottom = 20.dp), // CSS padding 24 24 20
             horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(24.dp), // 문구↔버튼 gap 24 (CSS)
+            verticalArrangement = Arrangement.spacedBy(16.dp), // 문구↔버튼 gap 16 (CSS)
         ) {
             Column(
                 horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy(8.dp), // 제목↔설명 gap 8 (CSS)
+                verticalArrangement = Arrangement.spacedBy(4.dp), // 제목↔설명 gap 4 (CSS)
             ) {
-                Text(text = "대화를 종료하시겠어요?", style = TqType.TitleL.figma(), color = Gray900)
+                Text(text = "대화를 종료하시겠어요?", style = TqType.HeadingM.figma(), color = Gray900) // CSS Heading/M 20
                 Text(
-                    text = "대화를 종료하면 현재 미션이 완료됩니다",
-                    style = TqType.BodyL.figma().copy(fontWeight = androidx.compose.ui.text.font.FontWeight.Medium),
+                    text = "대화를 종료하면 현재 미션이 완료됩니다.",
+                    style = TqType.BodyM.figma(), // CSS Body/M 14 regular
                     color = Gray600,
+                    textAlign = TextAlign.Center,
                 )
             }
-            Row(horizontalArrangement = Arrangement.spacedBy(25.dp)) { // 버튼 간격 25 (CSS)
+            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) { // 버튼 간격 12 (CSS)
                 Box(
                     modifier = Modifier
-                        .size(width = 124.dp, height = 48.dp)
-                        .clip(RoundedCornerShape(12.dp))
-                        .background(Gray100) // CSS Gray/100 #F1F5F9
+                        .size(width = 138.dp, height = 48.dp)
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(Gray200) // CSS Gray/200 #E2E8F0
                         .clickable(onClick = onContinue),
                     contentAlignment = Alignment.Center,
                 ) {
@@ -908,9 +914,9 @@ private fun ExitDialog(onContinue: () -> Unit, onExit: () -> Unit) {
                 }
                 Box(
                     modifier = Modifier
-                        .size(width = 124.dp, height = 48.dp)
-                        .clip(RoundedCornerShape(12.dp))
-                        .background(Error) // RED #F14444
+                        .size(width = 138.dp, height = 48.dp)
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(Primary600) // CSS Purple/600 #6353F0
                         .clickable(onClick = onExit),
                     contentAlignment = Alignment.Center,
                 ) {

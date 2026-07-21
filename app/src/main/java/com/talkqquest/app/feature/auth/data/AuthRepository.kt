@@ -59,7 +59,11 @@ class AuthRepository @Inject constructor(
                 refreshToken = result.data.refreshToken,
             )
         }
-        return result
+        return if (result is ApiResult.Error && result.code != null) {
+            result.copy(message = emailSignupErrorMessage(result.code))
+        } else {
+            result
+        }
     }
 
     private suspend fun loginWithProvider(
@@ -100,17 +104,27 @@ class AuthRepository @Inject constructor(
         }
 
     private fun emailLoginErrorMessage(code: Int): String = when (code) {
-        403 -> "탈퇴한 계정입니다."
-        500 -> "서버 내부 오류가 발생했습니다. 잠시 후 다시 시도해주세요."
-        else -> "이메일 또는 비밀번호를 확인해주세요."
+        403 -> "\uD0C8\uD1F4\uD55C \uACC4\uC815\uC785\uB2C8\uB2E4."
+        500 -> "\uC11C\uBC84 \uB0B4\uBD80 \uC624\uB958\uAC00 \uBC1C\uC0DD\uD588\uC2B5\uB2C8\uB2E4. \uC7A0\uC2DC \uD6C4 \uB2E4\uC2DC \uC2DC\uB3C4\uD574\uC8FC\uC138\uC694."
+        else -> "\uC774\uBA54\uC77C \uB610\uB294 \uBE44\uBC00\uBC88\uD638\uB97C \uD655\uC778\uD574\uC8FC\uC138\uC694."
     }
+
+    private fun emailSignupErrorMessage(code: Int): String = when (code) {
+        400 -> "\uC785\uB825\uAC12\uC744 \uD655\uC778\uD574\uC8FC\uC138\uC694."
+        409 -> "\uC774\uBBF8 \uC0AC\uC6A9 \uC911\uC778 \uC774\uBA54\uC77C\uC785\uB2C8\uB2E4."
+        422 -> "\uC774\uBA54\uC77C \uC778\uC99D\uC774 \uC644\uB8CC\uB418\uC9C0 \uC54A\uC558\uC2B5\uB2C8\uB2E4."
+        500 -> "\uC11C\uBC84 \uB0B4\uBD80 \uC624\uB958\uAC00 \uBC1C\uC0DD\uD588\uC2B5\uB2C8\uB2E4. \uC7A0\uC2DC \uD6C4 \uB2E4\uC2DC \uC2DC\uB3C4\uD574\uC8FC\uC138\uC694."
+        else -> "\uD68C\uC6D0\uAC00\uC785\uC5D0 \uC2E4\uD328\uD588\uC5B4\uC694."
+    }
+
     private fun emailAuthErrorMessage(code: Int): String = when (code) {
-        400 -> "이메일 또는 인증번호 형식을 확인해주세요."
-        409 -> "이미 가입된 이메일입니다."
-        410 -> "인증 코드가 만료되었습니다. 다시 요청해주세요."
-        500 -> "서버 내부 오류가 발생했습니다. 잠시 후 다시 시도해주세요."
-        else -> "요청에 실패했어요."
+        400 -> "\uC774\uBA54\uC77C \uB610\uB294 \uC778\uC99D\uBC88\uD638 \uD615\uC2DD\uC744 \uD655\uC778\uD574\uC8FC\uC138\uC694."
+        409 -> "\uC774\uBBF8 \uAC00\uC785\uB41C \uC774\uBA54\uC77C\uC785\uB2C8\uB2E4."
+        410 -> "\uC778\uC99D \uCF54\uB4DC\uAC00 \uB9CC\uB8CC\uB418\uC5C8\uC2B5\uB2C8\uB2E4. \uB2E4\uC2DC \uC694\uCCAD\uD574\uC8FC\uC138\uC694."
+        500 -> "\uC11C\uBC84 \uB0B4\uBD80 \uC624\uB958\uAC00 \uBC1C\uC0DD\uD588\uC2B5\uB2C8\uB2E4. \uC7A0\uC2DC \uD6C4 \uB2E4\uC2DC \uC2DC\uB3C4\uD574\uC8FC\uC138\uC694."
+        else -> "\uC694\uCCAD\uC5D0 \uC2E4\uD328\uD588\uC5B4\uC694."
     }
+
     private fun currentDeviceInfo(): DeviceInfo = DeviceInfo(
         platform = "android",
         model = Build.MODEL.orEmpty(),

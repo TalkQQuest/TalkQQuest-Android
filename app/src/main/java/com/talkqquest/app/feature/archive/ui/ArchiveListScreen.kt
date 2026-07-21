@@ -26,6 +26,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
@@ -67,12 +68,16 @@ fun ArchiveListScreen(
     initialTabIndex: Int = 0,
     viewModel: ArchiveViewModel = hiltViewModel(),
     onBackClick: () -> Unit = {},
-    onMissionClick: (Long) -> Unit = {},
+    onMissionClick: (String) -> Unit = {}, // 💡 Long -> String 으로 변경
     onConversationClick: (String) -> Unit = {},
     onSentenceClick: (String) -> Unit = {},
     onReportClick: (String) -> Unit = {}
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+
+    LaunchedEffect(Unit) {
+        viewModel.refreshData()
+    }
 
     ArchiveListScreenContent(
         initialTabIndex = initialTabIndex,
@@ -95,8 +100,8 @@ private fun ArchiveListScreenContent(
     uiState: ArchiveUiState,
     onBackClick: () -> Unit,
     onFilterSelect: (String) -> Unit,
-    onMissionClick: (Long) -> Unit,
-    onToggleMissionSave: (Long) -> Unit,
+    onMissionClick: (String) -> Unit, // 💡 Long -> String 으로 변경
+    onToggleMissionSave: (String) -> Unit, // 💡 Long -> String 으로 변경
     onConversationClick: (String) -> Unit,
     onSentenceClick: (String) -> Unit,
     onToggleSentenceSave: (String) -> Unit,
@@ -202,7 +207,6 @@ private fun ArchiveListScreenContent(
 
             // [4] Pager 리스트
             HorizontalPager(state = pagerState, modifier = Modifier.weight(1f)) { page ->
-                // 💡 1. 현재 탭의 리스트가 비어있는지 확인합니다.
                 val isListEmpty = when (page) {
                     0 -> uiState.filteredMissions.isEmpty()
                     1 -> uiState.conversations.isEmpty()
@@ -212,7 +216,6 @@ private fun ArchiveListScreenContent(
                 }
 
                 if (isListEmpty) {
-                    // 💡 2. 리스트가 비어있다면 탭에 맞는 안내 문구를 출력합니다.
                     val emptyMessage = when (page) {
                         0 -> "저장한 미션이 없어요"
                         1 -> "진행한 대화가 없어요"
@@ -224,7 +227,7 @@ private fun ArchiveListScreenContent(
                     Box(
                         modifier = Modifier
                             .fillMaxSize()
-                            .padding(bottom = 100.dp), // 하단 여백을 고려해 중앙을 맞춥니다
+                            .padding(bottom = 100.dp),
                         contentAlignment = Alignment.Center
                     ) {
                         Text(
@@ -234,7 +237,6 @@ private fun ArchiveListScreenContent(
                         )
                     }
                 } else {
-                    // 💡 3. 리스트에 데이터가 있다면 기존처럼 카드를 그려줍니다.
                     LazyColumn(
                         modifier = Modifier.fillMaxSize(),
                         contentPadding = PaddingValues(top = 16.dp, bottom = 100.dp, start = 16.dp, end = 16.dp),
@@ -326,8 +328,9 @@ private fun FilterChip(text: String, isSelected: Boolean, onClick: () -> Unit) {
 private val previewUiState = ArchiveUiState(
     selectedFilter = "전체",
     missions = listOf(
-        ArchiveMissionItem(1, "처음 보는 사람에게 짧게 인사하기", "짧은 대화", "쉬움", 2, 20, isCompleted = true, isSaved = true),
-        ArchiveMissionItem(2, "최근 본 영화 이야기하기", "짧은 대화", "쉬움", 5, 20, isCompleted = false, isSaved = true)
+        // 💡 미리보기 데이터의 ID도 Int(1, 2)에서 String("1", "2")로 변경
+        ArchiveMissionItem("1", "처음 보는 사람에게 짧게 인사하기", "짧은 대화", "쉬움", 2, 20, isCompleted = true, isSaved = true),
+        ArchiveMissionItem("2", "최근 본 영화 이야기하기", "짧은 대화", "쉬움", 5, 20, isCompleted = false, isSaved = true)
     ),
     conversations = listOf(
         RecentActivity(id = "1", title = "처음 보는 사람에게 짧게 인사하기", type = ActivityType.CONVERSATION, status = "대화 완료", date = "2026.08.20")

@@ -44,12 +44,16 @@ class ArchiveReportViewModel @Inject constructor(
 
             val reportDetail = repository.getArchiveReportDetail(reportId)
 
+            // 💡 저장소에서 리포트의 최신 북마크 상태를 가져옴
+            val isBookmarked = repository.getArchiveReports().find { it.id == reportId }?.isSaved ?: false
+
             if (reportDetail != null) {
                 val (title, growth, weekly) = reportDetail
                 _uiState.update {
                     it.copy(
                         isLoading = false,
                         title = title,
+                        isBookmarked = isBookmarked, // 💡 초기 북마크 상태 적용
                         growth = growth,
                         weekly = weekly
                     )
@@ -66,6 +70,12 @@ class ArchiveReportViewModel @Inject constructor(
     }
 
     fun toggleBookmark() {
-        _uiState.update { it.copy(isBookmarked = !it.isBookmarked) }
+        val id = _uiState.value.reportId
+        if (id.isNotEmpty()) {
+            // 💡 1. 공통 저장소 데이터 갱신
+            repository.toggleReportBookmark(id)
+            // 💡 2. 로컬 UI 상태 갱신
+            _uiState.update { it.copy(isBookmarked = !it.isBookmarked) }
+        }
     }
 }

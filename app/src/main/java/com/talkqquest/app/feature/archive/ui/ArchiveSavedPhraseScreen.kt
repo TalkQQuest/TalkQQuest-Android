@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
@@ -31,7 +32,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.LineBreak
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -187,11 +187,13 @@ private fun PhraseHighlightCard(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .height(72.dp)
+            // 💡 [수정됨] 고정 높이 72dp 대신 최소 높이로 지정하여 문장 길이에 따라 카드가 늘어나도록 변경
+            .heightIn(min = 72.dp)
             .clip(RoundedCornerShape(20.dp))
             .background(White)
             .padding(start = 12.dp, top = 12.dp, bottom = 12.dp, end = 6.dp),
-        verticalAlignment = Alignment.CenterVertically,
+        // 💡 [수정됨] 문장이 여러 줄일 때 아이콘들이 첫 줄에 맞춰 상단 정렬되도록 CSS flex-start(Top) 반영
+        verticalAlignment = Alignment.Top,
         horizontalArrangement = Arrangement.SpaceBetween
     ) {
         Box(modifier = Modifier.size(48.dp), contentAlignment = Alignment.Center) {
@@ -202,15 +204,16 @@ private fun PhraseHighlightCard(
             )
         }
 
-        // 💡 [수정됨] 텍스트가 길어질 경우 한 줄(maxLines = 1)로 제한하고 말줄임표(Ellipsis) 처리
+        // 💡 [수정됨] 최대 4줄까지 표기 가능하도록 늘리고, 수직 패딩(10.dp)을 주어 아이콘과 줄을 맞춤
         Text(
             text = phraseText,
             style = TqType.BodyL.copy(fontWeight = FontWeight.Medium).figma(),
             color = Gray900,
-            textAlign = TextAlign.Center,
-            maxLines = 1,
+            maxLines = 4,
             overflow = TextOverflow.Ellipsis,
-            modifier = Modifier.weight(1f).padding(horizontal = 4.dp)
+            modifier = Modifier
+                .weight(1f)
+                .padding(horizontal = 4.dp, vertical = 10.dp)
         )
 
         Box(
@@ -371,7 +374,7 @@ private fun ArchiveSavedPhraseScreenPreview() {
     TalkQQuestTheme {
         ArchiveSavedPhraseContent(
             uiState = ArchiveSavedPhraseUiState(
-                phraseText = "“그렇군요! 저도 생각보다 편해서 많이 놀랐어요. 정말 길이가 아주 아주 긴 문장 테스트입니다.”",
+                phraseText = "“그렇군요! 저도 생각보다 편해서 많이 놀랐어요. 정말 길이가 아주 아주 긴 문장 테스트입니다. 세 줄 네 줄까지 넘어가는지 확인하기 위한 긴 텍스트를 입력하고 있습니다.”",
                 isBookmarked = true,
                 memoKeywords = listOf("자기 성장", "첫 만남", "스몰 토크"),
                 memoText = "상대방의 감정을 자연 스럽게 열어줄 수 있는 좋은 문장이에요.",

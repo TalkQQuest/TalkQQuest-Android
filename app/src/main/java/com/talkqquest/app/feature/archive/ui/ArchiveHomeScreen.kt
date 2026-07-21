@@ -31,6 +31,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
@@ -53,17 +54,12 @@ import com.talkqquest.app.feature.archive.viewmodel.ArchiveHomeUiState
 import com.talkqquest.app.feature.archive.viewmodel.ArchiveHomeViewModel
 import com.talkqquest.app.feature.archive.viewmodel.RecentActivity
 
-// ── 아카이브 화면 로컬 텍스트 도구 ──
 private val FullLeading = LineHeightStyle(
     alignment = LineHeightStyle.Alignment.Center,
     trim = LineHeightStyle.Trim.None,
 )
 internal fun TextStyle.figma(): TextStyle = copy(lineHeightStyle = FullLeading)
 
-/**
- * 1. 화면 진입점 (Stateful)
- * ViewModel과 연동하여 상태(State)를 구독하고, 네비게이션 이벤트를 처리합니다.
- */
 @Composable
 fun ArchiveHomeScreen(
     viewModel: ArchiveHomeViewModel = hiltViewModel(),
@@ -73,8 +69,9 @@ fun ArchiveHomeScreen(
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
+    // 💡 화면으로 돌아올 때마다(예: 상세 페이지에서 해제하고 백 버튼) 최신 카운트를 갱신합니다!
     LaunchedEffect(Unit) {
-        viewModel.loadArchiveHomeData()
+        viewModel.refreshData()
     }
 
     ArchiveHomeScreen(
@@ -94,9 +91,6 @@ fun ArchiveHomeScreen(
     )
 }
 
-/**
- * 2. 순수 UI 컴포넌트 (Stateless)
- */
 @Composable
 private fun ArchiveHomeScreen(
     uiState: ArchiveHomeUiState,
@@ -111,13 +105,11 @@ private fun ArchiveHomeScreen(
             .background(Gray50),
         contentAlignment = Alignment.TopStart
     ) {
-        // API 데이터를 불러오는 동안 로딩 스피너 노출
         if (uiState.isLoading) {
             Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                 CircularProgressIndicator(color = Primary600)
             }
         } else {
-            // 메인 스크롤 콘텐츠
             LazyColumn(
                 modifier = Modifier
                     .fillMaxSize()
@@ -128,9 +120,7 @@ private fun ArchiveHomeScreen(
                     bottom = 32.dp
                 )
             ) {
-                // ==========================================
                 // [헤더 영역] 보관함 타이틀
-                // ==========================================
                 item {
                     Column(
                         modifier = Modifier
@@ -174,9 +164,7 @@ private fun ArchiveHomeScreen(
 
                 item { Spacer(modifier = Modifier.height(24.dp)) }
 
-                // ==========================================
-                // [카테고리 영역] 미션 / 대화 / 문장 / 리포트
-                // ==========================================
+                // [카테고리 영역]
                 item {
                     Row(
                         modifier = Modifier
@@ -214,9 +202,7 @@ private fun ArchiveHomeScreen(
 
                 item { Spacer(modifier = Modifier.height(24.dp)) }
 
-                // ==========================================
                 // [최근 활동 리스트 영역]
-                // ==========================================
                 item {
                     Text(
                         text = "최근 활동",
@@ -230,7 +216,6 @@ private fun ArchiveHomeScreen(
 
                 item { Spacer(modifier = Modifier.height(16.dp)) }
 
-                // 💡 다시 RecentActivityCard 단일 사용으로 원복
                 items(uiState.recentActivities) { activity ->
                     RecentActivityCard(
                         activity = activity,
@@ -241,9 +226,7 @@ private fun ArchiveHomeScreen(
                 }
             }
 
-            // ==========================================
             // [검색 아이콘]
-            // ==========================================
             Box(
                 modifier = Modifier
                     .align(Alignment.TopEnd)
@@ -264,9 +247,6 @@ private fun ArchiveHomeScreen(
     }
 }
 
-/**
- * 3. 카테고리 개별 아이템 컴포넌트
- */
 @Composable
 private fun ArchiveCategoryItem(
     modifier: Modifier = Modifier,
@@ -310,7 +290,6 @@ private fun ArchiveCategoryItem(
     }
 }
 
-// ── Preview ──
 @Preview(name = "보관함 메인 (393dp)", showSystemUi = true, device = "spec:width=393dp,height=852dp")
 @Composable
 private fun ArchiveHomeScreenPreview() {

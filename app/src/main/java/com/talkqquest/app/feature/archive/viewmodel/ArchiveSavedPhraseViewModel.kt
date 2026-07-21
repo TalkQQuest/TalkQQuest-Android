@@ -7,6 +7,7 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
 import javax.inject.Inject
 
 data class ArchiveSavedPhraseUiState(
@@ -21,15 +22,13 @@ data class ArchiveSavedPhraseUiState(
 @HiltViewModel
 class ArchiveSavedPhraseViewModel @Inject constructor(
     private val repository: ArchiveRepository,
-    savedStateHandle: SavedStateHandle // 💡 네비게이션 인자(phraseId)를 자동으로 받아오는 마법의 클래스입니다!
+    savedStateHandle: SavedStateHandle
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(ArchiveSavedPhraseUiState())
     val uiState: StateFlow<ArchiveSavedPhraseUiState> = _uiState.asStateFlow()
 
     init {
-        // 💡 뷰모델이 생성될 때 네비게이션에서 넘어온 phraseId를 찾아 데이터를 로드합니다.
-        // 이렇게 하면 UI 컴포저블에 파라미터를 추가할 필요가 없어 에러가 나지 않습니다.
         val phraseId: String? = savedStateHandle.get<String>("phraseId")
         if (phraseId != null) {
             loadPhraseData(phraseId)
@@ -37,7 +36,6 @@ class ArchiveSavedPhraseViewModel @Inject constructor(
     }
 
     private fun loadPhraseData(id: String) {
-        // 이전에 Repository에 만들어둔 연관 데이터 조회 함수를 호출합니다.
         val detail = repository.getSavedSentenceDetail(id)
         if (detail != null) {
             val (sentence, conversation) = detail
@@ -53,6 +51,12 @@ class ArchiveSavedPhraseViewModel @Inject constructor(
     }
 
     fun toggleBookmark() {
-        _uiState.value = _uiState.value.copy(isBookmarked = !_uiState.value.isBookmarked)
+        val id = _uiState.value.phraseId
+        if (id.isNotEmpty()) {
+            // 💡 1. 공통 저장소 데이터 갱신
+            repository.toggleSentenceBookmark(id)
+            // 💡 2. 로컬 UI 상태 갱신
+            _uiState.update { it.copy(isBookmarked = !it.isBookmarked) }
+        }
     }
 }

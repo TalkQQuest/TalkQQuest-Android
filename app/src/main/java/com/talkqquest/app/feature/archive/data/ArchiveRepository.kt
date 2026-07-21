@@ -15,25 +15,28 @@ import com.talkqquest.app.feature.report.data.model.HighlightItem
 import com.talkqquest.app.feature.report.data.model.MetricChange
 import com.talkqquest.app.feature.report.data.model.WeeklyCompareReport
 import javax.inject.Inject
+import javax.inject.Singleton
 
+@Singleton
 class ArchiveRepository @Inject constructor() {
 
-    private val stubMissions = listOf(
-        ArchiveMissionItem(1L, "처음 보는 사람에게 짧게 인사하기", "짧은 대화", "쉬움", 2, 20, isCompleted = true, isSaved = true, completedDate = "2026.07.16"),
-        ArchiveMissionItem(2L, "최근 본 영화 이야기하기", "짧은 대화", "쉬움", 5, 20, isCompleted = false, isSaved = true, completedDate = "2026.07.15"),
-        ArchiveMissionItem(3L, "학교 생활 꿀팁 나누기", "일상 대화", "보통", 8, 30, isCompleted = true, isSaved = true, completedDate = "2026.07.14")
+    // 💡 1L, 2L, 3L 로 되어있던 Long 타입을 "1", "2", "3" (String)으로 변경
+    private val stubMissions = mutableListOf(
+        ArchiveMissionItem("1", "처음 보는 사람에게 짧게 인사하기", "짧은 대화", "쉬움", 2, 20, isCompleted = true, isSaved = true, completedDate = "2026.07.16"),
+        ArchiveMissionItem("2", "최근 본 영화 이야기하기", "짧은 대화", "쉬움", 5, 20, isCompleted = false, isSaved = true, completedDate = "2026.07.15"),
+        ArchiveMissionItem("3", "학교 생활 꿀팁 나누기", "일상 대화", "보통", 8, 30, isCompleted = true, isSaved = true, completedDate = "2026.07.14")
     )
 
-    private val stubConversations = listOf(
+    private val stubConversations = mutableListOf(
         RecentActivity(id = "1", title = "처음 보는 사람에게 짧게 인사하기", type = ActivityType.CONVERSATION, status = "대화 완료", date = "2026.07.16"),
         RecentActivity(id = "2", title = "주말에 다녀온 맛집 후기 공유하기", type = ActivityType.CONVERSATION, status = "대화 완료", date = "2026.07.15"),
         RecentActivity(id = "3", title = "단골 카페에서 메뉴 추천받기", type = ActivityType.CONVERSATION, status = "대화 완료", date = "2026.07.14")
     )
 
-    private val stubSentences = listOf(
+    private val stubSentences = mutableListOf(
         BookmarkArchiveItem(
             id = "1",
-            title = "\"그렇군요! 저도 생각보다 편해서 놀랐어요\"",
+            title = "\"그렇군요! 저도 편해서 놀랐어요\"",
             status = "문장 저장",
             date = "2026.07.16",
             isSaved = true,
@@ -63,14 +66,13 @@ class ArchiveRepository @Inject constructor() {
         )
     )
 
-    private val stubReports = listOf(
+    private val stubReports = mutableListOf(
         BookmarkArchiveItem(id = "4", title = "처음 보는 사람에게 짧게 인사하기", status = "리포트 열람", date = "2026.07.16", isSaved = true),
         BookmarkArchiveItem(id = "5", title = "동아리 첫 모임에서 자기소개하기", status = "리포트 열람", date = "2026.07.15", isSaved = true),
         BookmarkArchiveItem(id = "6", title = "팀 프로젝트 역할 분담 회의하기", status = "리포트 열람", date = "2026.07.14", isSaved = true),
         BookmarkArchiveItem(id = "7", title = "엘리베이터에서 이웃과 스몰토크", status = "리포트 열람", date = "2026.07.13", isSaved = true)
     )
 
-    // 리포트 상세 데이터 (ID 4~7에 해당하는 1:1 매칭 데이터)
     private val stubReportDetails = mapOf(
         "4" to Pair(
             GrowthReport(
@@ -180,7 +182,7 @@ class ArchiveRepository @Inject constructor() {
                 ReviewChatMessage("5", "오 그렇군요!", true, "9:21"),
                 ReviewChatMessage("6", "혹시 이런 곳 자주 다니세요?", true, "9:21"),
                 ReviewChatMessage("7", "자주는 아니고 가끔 생각날 때 오는 편이에요. 분위기가 편해서 좋더라고요", false, "9:21"),
-                ReviewChatMessage("8", "그렇군요! 저도 생각보다 편해서 놀랐어요", true, "9:21"),
+                ReviewChatMessage("8", "그렇군요! 저도 편해서 놀랐어요", true, "9:21"),
                 ReviewChatMessage("9", "맞아요ㅎㅎ 처음 와도 부담이 없어서 좋은 것 같아요.", false, "9:21")
             )
         ),
@@ -233,10 +235,31 @@ class ArchiveRepository @Inject constructor() {
         )
     )
 
-    fun getArchiveMissions(): List<ArchiveMissionItem> = stubMissions
-    fun getArchiveConversations(): List<RecentActivity> = stubConversations
-    fun getArchiveSentences(): List<BookmarkArchiveItem> = stubSentences
-    fun getArchiveReports(): List<BookmarkArchiveItem> = stubReports
+    fun toggleMissionBookmark(id: String) {
+        val index = stubMissions.indexOfFirst { it.id == id }
+        if (index != -1) {
+            stubMissions[index] = stubMissions[index].copy(isSaved = !stubMissions[index].isSaved)
+        }
+    }
+
+    fun toggleSentenceBookmark(id: String) {
+        val index = stubSentences.indexOfFirst { it.id == id }
+        if (index != -1) {
+            stubSentences[index] = stubSentences[index].copy(isSaved = !stubSentences[index].isSaved)
+        }
+    }
+
+    fun toggleReportBookmark(id: String) {
+        val index = stubReports.indexOfFirst { it.id == id }
+        if (index != -1) {
+            stubReports[index] = stubReports[index].copy(isSaved = !stubReports[index].isSaved)
+        }
+    }
+
+    fun getArchiveMissions(): List<ArchiveMissionItem> = stubMissions.toList()
+    fun getArchiveConversations(): List<RecentActivity> = stubConversations.toList()
+    fun getArchiveSentences(): List<BookmarkArchiveItem> = stubSentences.toList()
+    fun getArchiveReports(): List<BookmarkArchiveItem> = stubReports.toList()
 
     fun getConversationDetail(id: String): ConversationDetailMock? {
         return stubConversationDetails.find { it.id == id }
@@ -255,32 +278,31 @@ class ArchiveRepository @Inject constructor() {
     }
 
     suspend fun getArchiveSummary(): ApiResult<ArchiveSummary> {
-        // 💡 1. 4개의 목업 데이터를 하나의 리스트로 통합
         val allMockActivities = mutableListOf<ArchiveRecentActivity>()
 
-        stubMissions.filter { it.isCompleted }.forEach {
-            allMockActivities.add(ArchiveRecentActivity(it.id.toString(), "MISSION", it.title, "미션 완료", it.completedDate))
+        stubMissions.filter { it.isCompleted && it.isSaved }.forEach {
+            // 💡 it.id가 이미 String이므로 toString() 제거
+            allMockActivities.add(ArchiveRecentActivity(it.id, "MISSION", it.title, "미션 완료", it.completedDate))
         }
         stubConversations.forEach {
             allMockActivities.add(ArchiveRecentActivity(it.id, "CONVERSATION", it.title, it.status, it.date))
         }
-        stubSentences.forEach {
+        stubSentences.filter { it.isSaved }.forEach {
             allMockActivities.add(ArchiveRecentActivity(it.id, "SENTENCE", it.title, it.status, it.date))
         }
-        stubReports.forEach {
+        stubReports.filter { it.isSaved }.forEach {
             allMockActivities.add(ArchiveRecentActivity(it.id, "REPORT", it.title, it.status, it.date))
         }
 
-        // 💡 2. 통합된 리스트를 날짜(최신순)로 내림차순 정렬 후 상위 4개만 가져옴
         val top4RecentActivities = allMockActivities
             .sortedByDescending { it.date }
             .take(4)
 
         val summary = ArchiveSummary(
-            completedMissionCount = stubMissions.count { it.isCompleted },
+            completedMissionCount = stubMissions.count { it.isSaved },
             conversationCount = stubConversations.size,
             savedSentenceCount = stubSentences.count { it.isSaved },
-            reportCount = stubReports.size,
+            reportCount = stubReports.count { it.isSaved },
             recentActivities = top4RecentActivities
         )
         return ApiResult.Success(summary)

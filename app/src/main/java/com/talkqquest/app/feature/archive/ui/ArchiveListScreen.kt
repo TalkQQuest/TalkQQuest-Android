@@ -26,6 +26,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
@@ -73,6 +74,11 @@ fun ArchiveListScreen(
     onReportClick: (String) -> Unit = {}
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+
+    // 💡 상세 화면에서 돌아왔을 때 최신 북마크 상태를 다시 불러오도록 반영
+    LaunchedEffect(Unit) {
+        viewModel.refreshData()
+    }
 
     ArchiveListScreenContent(
         initialTabIndex = initialTabIndex,
@@ -202,7 +208,6 @@ private fun ArchiveListScreenContent(
 
             // [4] Pager 리스트
             HorizontalPager(state = pagerState, modifier = Modifier.weight(1f)) { page ->
-                // 💡 1. 현재 탭의 리스트가 비어있는지 확인합니다.
                 val isListEmpty = when (page) {
                     0 -> uiState.filteredMissions.isEmpty()
                     1 -> uiState.conversations.isEmpty()
@@ -212,7 +217,6 @@ private fun ArchiveListScreenContent(
                 }
 
                 if (isListEmpty) {
-                    // 💡 2. 리스트가 비어있다면 탭에 맞는 안내 문구를 출력합니다.
                     val emptyMessage = when (page) {
                         0 -> "저장한 미션이 없어요"
                         1 -> "진행한 대화가 없어요"
@@ -224,7 +228,7 @@ private fun ArchiveListScreenContent(
                     Box(
                         modifier = Modifier
                             .fillMaxSize()
-                            .padding(bottom = 100.dp), // 하단 여백을 고려해 중앙을 맞춥니다
+                            .padding(bottom = 100.dp),
                         contentAlignment = Alignment.Center
                     ) {
                         Text(
@@ -234,7 +238,6 @@ private fun ArchiveListScreenContent(
                         )
                     }
                 } else {
-                    // 💡 3. 리스트에 데이터가 있다면 기존처럼 카드를 그려줍니다.
                     LazyColumn(
                         modifier = Modifier.fillMaxSize(),
                         contentPadding = PaddingValues(top = 16.dp, bottom = 100.dp, start = 16.dp, end = 16.dp),

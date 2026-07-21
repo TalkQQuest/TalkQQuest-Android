@@ -43,7 +43,6 @@ data class ArchiveSearchUiState(
     val allSentences: List<BookmarkArchiveItem> = emptyList(),
     val allReports: List<BookmarkArchiveItem> = emptyList(),
 
-    // 💡 실시간으로 북마크를 누른 '시간'을 기억하는 맵 추가!
     val savedTimestamps: Map<String, Long> = emptyMap()
 ) {
     val searchResults: List<Any>
@@ -85,7 +84,6 @@ data class ArchiveSearchUiState(
                 }
             }
 
-            // 💡 아이템별 고유 식별 키 생성 함수 (저장 시간 매칭용)
             fun getItemKey(item: Any): String {
                 return when (item) {
                     is ArchiveMissionItem -> "mission_${item.id}"
@@ -111,8 +109,13 @@ data class ArchiveSearchUiState(
                 })
             }
             if (showSentence) {
-                results.addAll(allSentences.filter {
-                    (query.isEmpty() || it.title.lowercase().contains(query)) && isDateInRange(it)
+                results.addAll(allSentences.filter { sentence ->
+                    // 💡 [수정] 문장 내용 검사뿐만 아니라, 원본 대화의 제목도 함께 검사합니다.
+                    val matchSentenceTitle = sentence.title.lowercase().contains(query)
+                    val relatedConv = allConversations.find { it.id == sentence.relatedConversationId }
+                    val matchConvTitle = relatedConv?.title?.lowercase()?.contains(query) == true
+
+                    (query.isEmpty() || matchSentenceTitle || matchConvTitle) && isDateInRange(sentence)
                 }.map { SearchBookmarkWrapper(it, isSentence = true) })
             }
             if (showReport) {
@@ -129,15 +132,14 @@ data class ArchiveSearchUiState(
                 }
             }
 
-            // 💡 완벽하게 수정된 '저장한 순' 정렬
             when (sortType) {
                 ArchiveSortType.LATEST -> results.sortByDescending { getItemDate(it) }
                 ArchiveSortType.OLDEST -> results.sortBy { getItemDate(it) }
                 ArchiveSortType.SAVED -> {
                     results.sortWith(
-                        compareByDescending<Any> { if (isItemSaved(it)) 1 else 0 } // 1순위: 저장된 카드가 무조건 위로
-                            .thenByDescending { savedTimestamps[getItemKey(it)] ?: 0L } // 2순위: 방금 북마크를 눌러 저장된 시간이 큰 카드가 최상단으로!
-                            .thenByDescending { getItemId(it) } // 3순위: 기존부터 저장되어 있던 카드들의 원래 순서
+                        compareByDescending<Any> { if (isItemSaved(it)) 1 else 0 }
+                            .thenByDescending { savedTimestamps[getItemKey(it)] ?: 0L }
+                            .thenByDescending { getItemId(it) }
                     )
                 }
             }
@@ -148,14 +150,14 @@ data class ArchiveSearchUiState(
 
 @HiltViewModel
 class ArchiveSearchViewModel @Inject constructor(
-    private val repository: ArchiveRepository // 💡 새로 만든 Repository를 주입받습니다!
+    private val repository: ArchiveRepository
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(ArchiveSearchUiState())
     val uiState: StateFlow<ArchiveSearchUiState> = _uiState.asStateFlow()
 
     init {
-        loadMockData() // 초기 통합 데이터 로드
+        refreshData()
     }
 
     fun updateSearchQuery(query: String) {
@@ -223,62 +225,57 @@ class ArchiveSearchViewModel @Inject constructor(
         _uiState.update { it.copy(selectedCategoryTab = "전체", isCategoryChipVisible = false) }
     }
 
-    // ==================================================
-    // 💡 북마크 토글 시 현재 시간(System.currentTimeMillis) 기록!
-    // ==================================================
     fun toggleMissionBookmark(missionId: Long) {
+        val isCurrentlySaved = _uiState.value.allMissions.find { it.id == missionId }?.isSaved == true
+
+        repository.toggleMissionBookmark(missionId)
+        refreshData()
+
         _uiState.update { state ->
-            val isCurrentlySaved = state.allMissions.find { it.id == missionId }?.isSaved == true
-            val updatedMissions = state.allMissions.map {
-                if (it.id == missionId) it.copy(isSaved = !it.isSaved) else it
-            }
             val key = "mission_$missionId"
             val updatedTimestamps = state.savedTimestamps.toMutableMap()
             if (!isCurrentlySaved) {
-                updatedTimestamps[key] = System.currentTimeMillis() // 새롭게 저장할 때의 시간을 기록!
+                updatedTimestamps[key] = System.currentTimeMillis()
             }
-
-            state.copy(allMissions = updatedMissions, savedTimestamps = updatedTimestamps)
+            state.copy(savedTimestamps = updatedTimestamps)
         }
     }
 
     fun toggleSentenceBookmark(sentenceId: String) {
+        val isCurrentlySaved = _uiState.value.allSentences.find { it.id == sentenceId }?.isSaved == true
+
+        repository.toggleSentenceBookmark(sentenceId)
+        refreshData()
+
         _uiState.update { state ->
-            val isCurrentlySaved = state.allSentences.find { it.id == sentenceId }?.isSaved == true
-            val updatedSentences = state.allSentences.map {
-                if (it.id == sentenceId) it.copy(isSaved = !it.isSaved) else it
-            }
             val key = "bookmark_true_$sentenceId"
             val updatedTimestamps = state.savedTimestamps.toMutableMap()
             if (!isCurrentlySaved) {
                 updatedTimestamps[key] = System.currentTimeMillis()
             }
-
-            state.copy(allSentences = updatedSentences, savedTimestamps = updatedTimestamps)
+            state.copy(savedTimestamps = updatedTimestamps)
         }
     }
 
     fun toggleReportBookmark(reportId: String) {
+        val isCurrentlySaved = _uiState.value.allReports.find { it.id == reportId }?.isSaved == true
+
+        repository.toggleReportBookmark(reportId)
+        refreshData()
+
         _uiState.update { state ->
-            val isCurrentlySaved = state.allReports.find { it.id == reportId }?.isSaved == true
-            val updatedReports = state.allReports.map {
-                if (it.id == reportId) it.copy(isSaved = !it.isSaved) else it
-            }
             val key = "bookmark_false_$reportId"
             val updatedTimestamps = state.savedTimestamps.toMutableMap()
             if (!isCurrentlySaved) {
                 updatedTimestamps[key] = System.currentTimeMillis()
             }
-
-            state.copy(allReports = updatedReports, savedTimestamps = updatedTimestamps)
+            state.copy(savedTimestamps = updatedTimestamps)
         }
     }
 
-    // ── Repository 연동으로 단일 진실 공급원(SSOT) 바라보기 ──
-    private fun loadMockData() {
+    fun refreshData() {
         _uiState.update { state ->
             state.copy(
-                // 💡 Repository에서 통합된 원본 데이터를 가져옵니다.
                 allMissions = repository.getArchiveMissions(),
                 allConversations = repository.getArchiveConversations(),
                 allSentences = repository.getArchiveSentences(),

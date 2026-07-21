@@ -32,6 +32,7 @@ import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -78,9 +79,15 @@ import java.time.format.DateTimeFormatter
 @Composable
 fun ArchiveSearchScreen(
     onBackClick: () -> Unit = {},
+    onNavigateToDetail: (String, ActivityType) -> Unit = { _, _ -> },
     viewModel: ArchiveSearchViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+
+    // 💡 상세 화면에서 뒤로가기하여 이 화면이 다시 보일 때마다 Repository 최신 상태 동기화!
+    LaunchedEffect(Unit) {
+        viewModel.refreshData()
+    }
 
     ArchiveSearchScreenContent(
         uiState = uiState,
@@ -103,7 +110,8 @@ fun ArchiveSearchScreen(
         onToggleMissionBookmark = viewModel::toggleMissionBookmark,
         onToggleSentenceBookmark = viewModel::toggleSentenceBookmark,
         onToggleReportBookmark = viewModel::toggleReportBookmark,
-        onSortSelected = viewModel::setSortType
+        onSortSelected = viewModel::setSortType,
+        onNavigateToDetail = onNavigateToDetail
     )
 }
 
@@ -123,7 +131,8 @@ private fun ArchiveSearchScreenContent(
     onToggleMissionBookmark: (Long) -> Unit,
     onToggleSentenceBookmark: (String) -> Unit,
     onToggleReportBookmark: (String) -> Unit,
-    onSortSelected: (ArchiveSortType) -> Unit
+    onSortSelected: (ArchiveSortType) -> Unit,
+    onNavigateToDetail: (String, ActivityType) -> Unit
 ) {
     val dateFormatter = DateTimeFormatter.ofPattern("yyyy.MM.dd")
     val focusManager = LocalFocusManager.current
@@ -160,7 +169,6 @@ private fun ArchiveSearchScreenContent(
                             .clickable { onBackClick() },
                         contentAlignment = Alignment.Center
                     ) {
-                        // 💡 [수정됨] 커스텀 뒤로가기 아이콘으로 변경
                         Icon(
                             painter = painterResource(id = R.drawable.ic_back_chevron),
                             contentDescription = "뒤로가기",
@@ -332,7 +340,6 @@ private fun ArchiveSearchScreenContent(
                         ) {
                             items(
                                 items = uiState.searchResults,
-                                // 💡 고유 키 부여: 카드 타입이 섞여 있으므로 접두어를 붙여 완벽히 구분합니다.
                                 key = { item ->
                                     when (item) {
                                         is ArchiveMissionItem -> "mission_${item.id}"
@@ -345,19 +352,22 @@ private fun ArchiveSearchScreenContent(
                                 when (item) {
                                     is ArchiveMissionItem -> ArchiveMissionCard(
                                         mission = item,
-                                        onClick = {},
+                                        onClick = { onNavigateToDetail(item.id.toString(), ActivityType.MISSION) },
                                         onToggleSave = { onToggleMissionBookmark(item.id) },
-                                        modifier = Modifier.animateItem() // 💡 애니메이션 적용!
+                                        modifier = Modifier.animateItem()
                                     )
                                     is RecentActivity -> RecentActivityCard(
                                         activity = item,
-                                        onClick = {},
-                                        modifier = Modifier.animateItem() // 💡 애니메이션 적용!
+                                        onClick = { onNavigateToDetail(item.id, item.type) },
+                                        modifier = Modifier.animateItem()
                                     )
                                     is SearchBookmarkWrapper -> BookmarkCard(
                                         item = item.item,
                                         isSentence = item.isSentence,
-                                        onClick = {},
+                                        onClick = {
+                                            val type = if (item.isSentence) ActivityType.SENTENCE else ActivityType.REPORT
+                                            onNavigateToDetail(item.item.id, type)
+                                        },
                                         onToggleSave = {
                                             if (item.isSentence) {
                                                 onToggleSentenceBookmark(item.item.id)
@@ -365,7 +375,7 @@ private fun ArchiveSearchScreenContent(
                                                 onToggleReportBookmark(item.item.id)
                                             }
                                         },
-                                        modifier = Modifier.animateItem() // 💡 애니메이션 적용!
+                                        modifier = Modifier.animateItem()
                                     )
                                 }
                             }
@@ -597,7 +607,7 @@ private fun ArchiveSearchFilterPreview() {
             onSearchQueryChanged = {}, onSearchTriggered = {}, onClearSearch = {},
             onClearDateFilter = {}, onClearCategoryFilter = {},
             onToggleMissionBookmark = {}, onToggleSentenceBookmark = {}, onToggleReportBookmark = {},
-            onSortSelected = {}
+            onSortSelected = {}, onNavigateToDetail = { _, _ -> }
         )
     }
 }
@@ -613,7 +623,7 @@ private fun ArchiveSearchResultsPreview() {
             onSearchQueryChanged = {}, onSearchTriggered = {}, onClearSearch = {},
             onClearDateFilter = {}, onClearCategoryFilter = {},
             onToggleMissionBookmark = {}, onToggleSentenceBookmark = {}, onToggleReportBookmark = {},
-            onSortSelected = {}
+            onSortSelected = {}, onNavigateToDetail = { _, _ -> }
         )
     }
 }

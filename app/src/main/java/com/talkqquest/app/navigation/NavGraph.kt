@@ -317,11 +317,11 @@ fun NavGraph(
                 onNavigateToSearch = {
                     navController.navigate(Screen.ARCHIVE_SEARCH)
                 },
-                onNavigateToList = { tabIndex ->
+                onNavigateToList = { tabIndex: Int ->
                     navController.navigate("${Screen.ARCHIVE_LIST}/$tabIndex")
                 },
-                // 💡 [수정됨] id와 Type을 함께 넘겨받아 상세 화면으로 연결
-                onNavigateToDetail = { activityId, type ->
+                // 💡 C담당: 람다 파라미터 타입 명시 유지
+                onNavigateToDetail = { activityId: String, type: ActivityType ->
                     when (type) {
                         ActivityType.CONVERSATION -> navController.navigate("archive_conversation_detail/$activityId")
                         ActivityType.SENTENCE -> navController.navigate("archive_saved_phrase/$activityId")
@@ -336,6 +336,15 @@ fun NavGraph(
             ArchiveSearchScreen(
                 onBackClick = {
                     navController.popBackStack()
+                },
+                // 💡 C담당: 람다 파라미터 타입 명시 유지
+                onNavigateToDetail = { activityId: String, type: ActivityType ->
+                    when (type) {
+                        ActivityType.CONVERSATION -> navController.navigate("archive_conversation_detail/$activityId")
+                        ActivityType.SENTENCE -> navController.navigate("archive_saved_phrase/$activityId")
+                        ActivityType.REPORT -> navController.navigate("archive_report/$activityId")
+                        ActivityType.MISSION -> navController.navigate("mission_detail/$activityId")
+                    }
                 }
             )
         }
@@ -349,14 +358,14 @@ fun NavGraph(
             ArchiveListScreen(
                 initialTabIndex = tabIndex,
                 onBackClick = { navController.popBackStack() },
-                onConversationClick = { conversationId ->
+                // 💡 C담당: 람다 파라미터 타입 명시 유지
+                onConversationClick = { conversationId: String ->
                     navController.navigate("archive_conversation_detail/$conversationId")
                 },
-                onSentenceClick = { phraseId ->
+                onSentenceClick = { phraseId: String ->
                     navController.navigate("archive_saved_phrase/$phraseId")
                 },
-                // 💡 [추가] 리포트 클릭 시 리포트 상세로 이동
-                onReportClick = { reportId ->
+                onReportClick = { reportId: String ->
                     navController.navigate("archive_report/$reportId")
                 }
             )
@@ -379,13 +388,13 @@ fun NavGraph(
         ) {
             ArchiveSavedPhraseScreen(
                 onBackClick = { navController.popBackStack() },
-                onConversationClick = { conversationId ->
+                onConversationClick = { conversationId: String ->
                     navController.navigate("archive_conversation_detail/$conversationId")
                 }
             )
         }
 
-        // 💡 [추가] C담당: 보관함 리포트 상세 화면
+        // C담당: 보관함 리포트 상세 화면
         composable(
             route = "archive_report/{reportId}",
             arguments = listOf(navArgument("reportId") { type = NavType.StringType })

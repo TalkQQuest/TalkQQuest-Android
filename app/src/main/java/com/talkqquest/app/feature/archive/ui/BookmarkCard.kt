@@ -40,7 +40,10 @@ data class BookmarkArchiveItem(
     val title: String,
     val status: String,
     val date: String,
-    val isSaved: Boolean = true
+    val isSaved: Boolean = true,
+    val memoKeywords: List<String> = emptyList(),
+    val memoText: String = "",
+    val relatedConversationId: String? = null
 )
 
 @Composable

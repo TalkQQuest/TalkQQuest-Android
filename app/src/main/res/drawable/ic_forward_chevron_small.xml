@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 리포트 "완료한 미션" 칩의 오른쪽 화살표 (CSS chevron-left 16x17 좌우반전:
+     Vector 8x4 stroke 1.5 회전 → 글리프 4x8, 박스 중앙. 색은 사용처 tint(Gray500)로. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="16dp"
+    android:height="17dp"
+    android:viewportWidth="16"
+    android:viewportHeight="17">
+    <path
+        android:pathData="M6,4.5 L10,8.5 L6,12.5"
+        android:strokeWidth="1.5"
+        android:strokeColor="#FF000000"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:fillColor="@android:color/transparent" />
+</vector>

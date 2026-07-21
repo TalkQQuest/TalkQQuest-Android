@@ -39,12 +39,39 @@ class AuthViewModel @Inject constructor(
         login(onSuccess) { authRepository.loginWithNaver(providerAccessToken) }
     }
 
+    fun loginWithEmail(
+        email: String,
+        password: String,
+        onSuccess: () -> Unit,
+    ) {
+        if (email.isBlank() || password.isBlank()) {
+            _uiState.update { it.copy(errorMessage = "\uC774\uBA54\uC77C \uB610\uB294 \uBE44\uBC00\uBC88\uD638\uB97C \uD655\uC778\uD574\uC8FC\uC138\uC694.") }
+            return
+        }
+
+        viewModelScope.launch {
+            _uiState.update { it.copy(isLoading = true, errorMessage = null) }
+            when (val result = authRepository.loginWithEmail(email.trim(), password)) {
+                is ApiResult.Success -> {
+                    _uiState.update { it.copy(isLoading = false) }
+                    onSuccess()
+                }
+                is ApiResult.Error -> _uiState.update {
+                    it.copy(isLoading = false, errorMessage = result.message ?: "\uC774\uBA54\uC77C \uB610\uB294 \uBE44\uBC00\uBC88\uD638\uB97C \uD655\uC778\uD574\uC8FC\uC138\uC694.")
+                }
+                is ApiResult.Exception -> _uiState.update {
+                    it.copy(isLoading = false, errorMessage = "\uB124\uD2B8\uC6CC\uD06C \uC5F0\uACB0\uC744 \uD655\uC778\uD574\uC8FC\uC138\uC694.")
+                }
+            }
+        }
+    }
+
     fun requestEmailCode(
         email: String,
         onSuccess: () -> Unit,
     ) {
         runUnitAuthCall(
-            emptyInputMessage = "이메일을 입력해주세요.",
+            emptyInputMessage = "\uC774\uBA54\uC77C\uC744 \uC785\uB825\uD574\uC8FC\uC138\uC694.",
             isInputValid = email.isNotBlank(),
             call = { authRepository.requestEmailCode(email.trim()) },
             onSuccess = onSuccess,
@@ -57,7 +84,7 @@ class AuthViewModel @Inject constructor(
         onSuccess: () -> Unit,
     ) {
         runUnitAuthCall(
-            emptyInputMessage = "인증번호 6자리를 입력해주세요.",
+            emptyInputMessage = "\uC778\uC99D\uBC88\uD638 6\uC790\uB9AC\uB97C \uC785\uB825\uD574\uC8FC\uC138\uC694.",
             isInputValid = email.isNotBlank() && code.length == 6,
             call = { authRepository.verifyEmailCode(email.trim(), code) },
             onSuccess = onSuccess,
@@ -80,10 +107,10 @@ class AuthViewModel @Inject constructor(
                     onSuccess(result.data)
                 }
                 is ApiResult.Error -> _uiState.update {
-                    it.copy(isLoading = false, errorMessage = result.message ?: "로그인에 실패했어요.")
+                    it.copy(isLoading = false, errorMessage = result.message ?: "\uB85C\uADF8\uC778\uC5D0 \uC2E4\uD328\uD588\uC5B4\uC694.")
                 }
                 is ApiResult.Exception -> _uiState.update {
-                    it.copy(isLoading = false, errorMessage = "네트워크 연결을 확인해주세요.")
+                    it.copy(isLoading = false, errorMessage = "\uB124\uD2B8\uC6CC\uD06C \uC5F0\uACB0\uC744 \uD655\uC778\uD574\uC8FC\uC138\uC694.")
                 }
             }
         }
@@ -108,10 +135,10 @@ class AuthViewModel @Inject constructor(
                     onSuccess()
                 }
                 is ApiResult.Error -> _uiState.update {
-                    it.copy(isLoading = false, errorMessage = result.message ?: "요청에 실패했어요.")
+                    it.copy(isLoading = false, errorMessage = result.message ?: "\uC694\uCCAD\uC5D0 \uC2E4\uD328\uD588\uC5B4\uC694.")
                 }
                 is ApiResult.Exception -> _uiState.update {
-                    it.copy(isLoading = false, errorMessage = "네트워크 연결을 확인해주세요.")
+                    it.copy(isLoading = false, errorMessage = "\uB124\uD2B8\uC6CC\uD06C \uC5F0\uACB0\uC744 \uD655\uC778\uD574\uC8FC\uC138\uC694.")
                 }
             }
         }

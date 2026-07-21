@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 앞으로(>) 화살표 = CSS chevron-left의 좌우반전(matrix(-1,0,0,1)) — ic_back_chevron과 같은 규격(깊이6·길이12·stroke2).
+     머티리얼 KeyboardArrowRight(7.4x12)가 디자인(8x14)보다 ~15% 작아 교체 (2026-07-20). 색은 tint로. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+    <path
+        android:pathData="M9,6 L15,12 L9,18"
+        android:strokeWidth="2"
+        android:strokeColor="#FF000000"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:fillColor="@android:color/transparent" />
+</vector>

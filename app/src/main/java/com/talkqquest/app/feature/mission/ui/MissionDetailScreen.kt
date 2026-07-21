@@ -22,9 +22,6 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
-import androidx.compose.material.icons.filled.Check
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
@@ -74,7 +71,6 @@ import com.talkqquest.app.feature.mission.data.model.MissionDetail
 import com.talkqquest.app.feature.mission.data.model.MissionListItem
 import com.talkqquest.app.feature.mission.viewmodel.MissionDetailUiState
 import com.talkqquest.app.feature.mission.viewmodel.MissionDetailViewModel
-import kotlin.math.pow
 
 // ── 미션 상세 (UI 1차 v2.css "미션 상세"/"미션 상세에서 북마크" 전사) ──
 // 화면 = 2단 분리(state hoisting): (1) viewModel 연결용 / (2) 값만 받아 그리는 부분(Preview용). 홈 패턴 동일.
@@ -82,16 +78,15 @@ import kotlin.math.pow
 // CSS 그라데이션 rgba(248,247,255,.8) → rgba(168,159,244,.01) 재현용 지점 21개.
 // 안드로이드는 투명도를 색에 먼저 곱해 보간해서 두 점만 주면 중간 보라가 죽고,
 // 지점을 조금만 찍으면 경계가 계단처럼 보임 → 중간값을 20등분으로 깔아 부드럽게.
-// 투명도는 직선이 아니라 완만→막판 급감 곡선: 직선으로 빼면 끝의 투명도(1%) 근처 긴 구간이
-// 눈에 안 보여서 "실제 끝보다 한참 위에서 끝난 것처럼" 느껴짐. 곡선을 쓰면 눈에 보이는
-// 끝이 실제 끝(효과 카드 머리)과 일치.
+// 색·투명도 모두 CSS 직선 보간 그대로 (이전의 투명도 급감 곡선(pow 0.8)은 중하단이
+// 피그마보다 최대 46% 진해져 제거 — 2026-07-20 실기기 대조).
 private val detailGradientStops: Array<Pair<Float, Color>> = Array(21) { i ->
     val t = i / 20f
     t to Color(
         red = (248f + (168f - 248f) * t) / 255f,
         green = (247f + (159f - 247f) * t) / 255f,
         blue = (255f + (244f - 255f) * t) / 255f,
-        alpha = 0.79f * (1f - t).pow(0.8f) + 0.01f, // 0.8 = 직선(1.0)과 급감 곡선 사이 절충 — 진하기↓, 카드 근처 가시성 유지
+        alpha = 0.8f + (0.01f - 0.8f) * t,
     )
 }
 
@@ -236,7 +231,7 @@ private fun MissionDetailContent(
                     contentAlignment = Alignment.Center,
                 ) {
                     Icon(
-                        imageVector = Icons.AutoMirrored.Filled.KeyboardArrowLeft,
+                        painter = painterResource(R.drawable.ic_back_chevron),
                         contentDescription = "뒤로가기",
                         tint = Gray500, // 기본 프레임 기준 (변형 프레임은 Gray800 — 목록과 통일해 Gray500, 합의됨)
                     )
@@ -250,25 +245,33 @@ private fun MissionDetailContent(
             }
 
             // 헤더(92) → 중앙 블록(top 139) (CSS 47). 큰 화면의 여분 공간은 히어로 위아래로만 나눔.
-            if (compact) Spacer(Modifier.height(47.dp * shrink)) else Spacer(Modifier.weight(1f))
+            // weight 47:45 = CSS의 위 47 / 아래 45 비율 그대로 → 기준 화면(852)에서 정확히 139/437.
+            if (compact) Spacer(Modifier.height(47.dp * shrink)) else Spacer(Modifier.weight(47f))
 
             // 중앙 블록 (CSS Frame 435): 다트 과녁 → 제목 → 칩 3개, 모두 가운데 정렬
             Column(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
-                // 다트 과녁 일러스트 (CSS: 117x123.68 + -7도 기울임 → 기울인 크기 131x137)
-                // PNG = 피그마 자르기(안쪽 회전) 반영본에 디자이너 회전 -7도까지 구운 최종본.
-                // (내보내기 export본은 자르기 전 원본이 나와서, fill의 이미지 이름 클릭으로 받은 파일 사용)
-                Image(
-                    painter = painterResource(R.drawable.img_mission_target),
-                    contentDescription = null,
-                    // 원래 크기 확정(확대 안 함 — 사용자 결정). 작은 화면에선 비율 축소만.
+                // 다트 과녁 일러스트 (CSS: 노드 117x123.68 + -7도 회전 → 회전 후 바깥 경계 131x137)
+                // PNG(876x928) = 노드 틀(117x123.68)의 7.5배 캔버스에 회전만 구운 것 — 기준 틀은 회전 전 노드.
+                // → 117x123.68로 그려야 피그마와 같은 배율. 131x137로 그리면 10.5% 확대됨
+                //   (2026-07-20 확정: "다트 커 보임" 제보 → 배율 재계산. 이전 "1% 일치" 결론은 피그마 쪽에
+                //    회전 확장을 이중 적용한 오계산이었음). 레이아웃 자리는 CSS 틀 131x137을 박스로 유지.
+                Box(
                     modifier = Modifier.size(width = 131.dp * shrink, height = 137.dp * shrink),
-                )
-                // 이미지 → 제목: CSS 수치는 2지만 그건 이미지 틀 안 투명 여백 포함 기준(우리 PNG는 잘라냄).
-                // 이 간격은 CSS에 숫자로 안 드러나 목업과 눈 대조로 맞춘 값(16). 작은 화면에선 비율 축소.
-                Spacer(Modifier.height(16.dp * shrink))
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Image(
+                        painter = painterResource(R.drawable.img_mission_target),
+                        contentDescription = null,
+                        modifier = Modifier.size(width = 117.dp * shrink, height = 123.68.dp * shrink),
+                    )
+                }
+                // 이미지 → 제목: CSS Frame 435 gap 2. PNG(876x928) 알파 실측 결과 투명 여백이
+                // 피그마 틀과 같은 비율로 그대로 있음(상8.5%/하4.7%) → 틀 기준이 동일하므로 CSS 값 2를 그대로 쓴다.
+                // (구 주석 "PNG는 잘라냄→눈대조 16"은 오판이었음 — 16이면 제목·칩이 6px 내려감, 2026-07-19 전수검증)
+                Spacer(Modifier.height(2.dp * shrink))
                 Text(
                     // 서버 가변 제목: 어절 보호 + 한 글자 어절 고아 방지 + 줄 균형 (홈과 동일 규칙)
                     text = detail.title.glueShortWords().keepWordsIntact(),
@@ -286,8 +289,8 @@ private fun MissionDetailContent(
                 }
             }
 
-            // 중앙 블록(392) → 카드(top 437) (CSS 45)
-            if (compact) Spacer(Modifier.height(45.dp * shrink)) else Spacer(Modifier.weight(1f))
+            // 중앙 블록(392) → 카드(top 437) (CSS 45) — weight 비율은 위 47과 쌍 (47:45)
+            if (compact) Spacer(Modifier.height(45.dp * shrink)) else Spacer(Modifier.weight(45f))
 
             // 효과·보상 카드 (CSS Frame 441: 좌우 17, 카드 간격 12)
             Column(
@@ -309,7 +312,10 @@ private fun MissionDetailContent(
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 24.dp), // 좌우 24 (CSS) — 하단 여백은 아래 알약 스페이서가 처리
+                    // CSS Frame 366은 padding 0 24 + gap 12 + 버튼 295 고정인데 합이 399라 393을 6 넘침.
+                    // 피그마 실렌더는 좌 24에서 시작해 375에서 끝나므로 실제 우측 여백은 18.
+                    // 좌24/우18로 두면 393에서 버튼이 정확히 295가 되고(피그마 일치), 다른 폭에선 버튼이 늘고 준다.
+                    .padding(start = 24.dp, end = 18.dp), // 하단 여백은 아래 알약 스페이서가 처리
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(12.dp), // 북마크 ↔ 버튼 (CSS gap)
             ) {
@@ -334,7 +340,7 @@ private fun MissionDetailContent(
                 TqButton(
                     text = "다음",
                     onClick = { onNextClick(detail.id) },
-                    modifier = Modifier.weight(1f), // CSS 295 고정폭 대신 남는 폭 전부 (화면 크기 대응)
+                    modifier = Modifier.weight(1f), // 393에선 정확히 295(피그마 일치), 그 외 폭에선 유동
                     size = TqButtonSize.Large, // 52 / radius 16 = CSS 버튼L과 동일
                 )
             }
@@ -398,7 +404,7 @@ private fun BenefitsCard(benefits: List<String>) {
                 horizontalArrangement = Arrangement.spacedBy(4.dp), // 체크 ↔ 문구 (CSS gap)
             ) {
                 Icon(
-                    imageVector = Icons.Default.Check, // CSS 체크와 근사(머티리얼) — 어긋나면 SVG로 교체
+                    painter = painterResource(R.drawable.ic_benefit_check), // CSS check-01 수치 그대로(글리프 9.6x7.2+stroke2)
                     contentDescription = null,
                     tint = Primary600,
                     modifier = Modifier.size(24.dp),
@@ -422,13 +428,20 @@ private fun RewardCard(rewardXp: Int) {
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(15.dp), // 이미지 ↔ 문구 (CSS gap)
     ) {
+        // PNG(165x165) = 피그마 55x55 노드의 정확한 3x export(여백 포함) → 55로 그리면 1:1.
+        // (구 에셋 134x144는 이 export에서 투명 여백이 잘린 버전이라 선물이 ~20% 크게 보였음 — 2026-07-20 교체)
         Image(
             painter = painterResource(R.drawable.img_mission_gift),
             contentDescription = null,
             modifier = Modifier.size(55.dp),
         )
         Column {
-            Text(text = "미션 보상", style = TqType.BodyM.figma(), color = Gray700)
+            Text(
+                text = "미션 보상",
+                style = TqType.BodyM.figma(),
+                color = Gray700,
+                modifier = Modifier.padding(start = 2.dp), // CSS Frame 439 padding 0 2 — 라벨만 2 들여쓰기
+            )
             Text(text = "+${rewardXp} XP", style = TqType.TitleL.figma(), color = Primary600)
         }
     }

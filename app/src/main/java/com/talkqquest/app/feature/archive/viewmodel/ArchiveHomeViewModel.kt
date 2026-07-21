@@ -12,9 +12,6 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
-// 🚨 주의: 만약 다른 ViewModel(ex: ArchiveSearchViewModel) 파일에
-// ActivityType과 RecentActivity가 이미 선언되어 있다면 중복 에러가 발생할 수 있습니다.
-// 그럴 경우 여기 있는 선언은 지우고 기존 파일을 import 해서 사용해 주세요!
 enum class ActivityType {
     MISSION, CONVERSATION, SENTENCE, REPORT
 }
@@ -50,26 +47,23 @@ class ArchiveHomeViewModel @Inject constructor(
     val uiState: StateFlow<ArchiveHomeUiState> = _uiState.asStateFlow()
 
     init {
-        loadArchiveHomeData()
+        refreshData()
     }
 
-    private fun loadArchiveHomeData() {
+    fun refreshData() {
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true, errorMessage = null) }
 
             when (val result = archiveRepository.getArchiveSummary()) {
                 is ApiResult.Success -> {
                     val summary = result.data
-
-                    // 💡 핵심: Repository에서 전체 미션 원본 데이터를 가져옵니다.
                     val allMissions = archiveRepository.getArchiveMissions()
 
                     val uiActivities = summary.recentActivities.map { dto ->
                         val isMission = dto.type.uppercase() == "MISSION"
-
-                        // 💡 타입이 '미션'일 경우에만 ID를 비교하여 원본 부가 데이터를 찾아옵니다.
                         val matchedMission = if (isMission) {
-                            allMissions.find { it.id.toString() == dto.id }
+                            // 💡 이미 String 타입이므로 toString() 제거
+                            allMissions.find { it.id == dto.id }
                         } else null
 
                         RecentActivity(
@@ -78,7 +72,6 @@ class ArchiveHomeViewModel @Inject constructor(
                             title = dto.title,
                             status = dto.status,
                             date = dto.date,
-                            // 매칭된 미션 데이터가 있다면 그 값을, 없다면 null을 안전하게 주입합니다.
                             difficulty = matchedMission?.difficulty,
                             category = matchedMission?.category,
                             estimatedMinutes = matchedMission?.duration,

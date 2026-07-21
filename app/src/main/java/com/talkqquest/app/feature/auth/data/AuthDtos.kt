@@ -50,8 +50,6 @@ data class EmailSignupRequest(
     val email: String,
     val password: String,
     val name: String,
-    val birthDate: String,
-    val schoolOrJob: String,
     val termsAgreedAt: String,
 )
 
@@ -60,4 +58,17 @@ data class EmailSignupData(
     val userId: String,
     val accessToken: String,
     val refreshToken: String,
+)
+
+@Serializable
+data class EmailLoginRequest(
+    val email: String,
+    val password: String,
+)
+
+@Serializable
+data class EmailLoginData(
+    val accessToken: String,
+    val refreshToken: String,
+    val tokenType: String = "Bearer",
 )

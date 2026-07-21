@@ -53,7 +53,7 @@ class ArchiveHomeViewModel @Inject constructor(
         loadArchiveHomeData()
     }
 
-    private fun loadArchiveHomeData() {
+    fun loadArchiveHomeData() {
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true, errorMessage = null) }
 

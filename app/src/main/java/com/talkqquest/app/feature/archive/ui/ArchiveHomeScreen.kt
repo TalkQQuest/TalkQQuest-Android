@@ -1,6 +1,5 @@
 package com.talkqquest.app.feature.archive.ui
 
-import android.widget.Toast
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -27,11 +26,11 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
@@ -70,13 +69,14 @@ fun ArchiveHomeScreen(
     viewModel: ArchiveHomeViewModel = hiltViewModel(),
     onNavigateToSearch: () -> Unit = {},
     onNavigateToList: (tabIndex: Int) -> Unit = {},
-    onNavigateToDetail: (activityId: String) -> Unit = {}
+    onNavigateToDetail: (activityId: String, type: ActivityType) -> Unit = { _: String, _: ActivityType -> }
 ) {
-    // ViewModel의 상태를 생명주기에 안전하게 수집
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
-    val context = LocalContext.current
 
-    // 순수 UI 컴포넌트로 상태와 이벤트 람다를 전달 (State Hoisting 패턴)
+    LaunchedEffect(Unit) {
+        viewModel.loadArchiveHomeData()
+    }
+
     ArchiveHomeScreen(
         uiState = uiState,
         onSearchClick = {
@@ -88,9 +88,8 @@ fun ArchiveHomeScreen(
         onCategoryClick = { tabIndex ->
             onNavigateToList(tabIndex)
         },
-        onActivityClick = { activityId ->
-            Toast.makeText(context, "최근 활동 상세: 준비 중인 기능입니다.", Toast.LENGTH_SHORT).show()
-            onNavigateToDetail(activityId)
+        onActivityClick = { activityId, type ->
+            onNavigateToDetail(activityId, type)
         }
     )
 }
@@ -104,7 +103,7 @@ private fun ArchiveHomeScreen(
     onSearchClick: () -> Unit,
     onArchiveBoxClick: () -> Unit,
     onCategoryClick: (Int) -> Unit,
-    onActivityClick: (String) -> Unit
+    onActivityClick: (String, ActivityType) -> Unit
 ) = FitDesign {
     BoxWithConstraints(
         modifier = Modifier
@@ -138,7 +137,6 @@ private fun ArchiveHomeScreen(
                             .fillMaxWidth()
                             .padding(horizontal = 16.dp)
                     ) {
-                        // "보관함" 텍스트와 꺾쇠
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
                             modifier = Modifier
@@ -157,7 +155,6 @@ private fun ArchiveHomeScreen(
                                     .size(width = 32.dp, height = 30.dp),
                                 contentAlignment = Alignment.Center
                             ) {
-                                // 💡 [수정됨] 커스텀 우측 꺾쇠 아이콘으로 변경
                                 Icon(
                                     painter = painterResource(id = R.drawable.ic_forward_chevron),
                                     contentDescription = "보관함 전체 보기",
@@ -233,10 +230,11 @@ private fun ArchiveHomeScreen(
 
                 item { Spacer(modifier = Modifier.height(16.dp)) }
 
+                // 💡 다시 RecentActivityCard 단일 사용으로 원복
                 items(uiState.recentActivities) { activity ->
                     RecentActivityCard(
                         activity = activity,
-                        onClick = { onActivityClick(activity.id) },
+                        onClick = { onActivityClick(activity.id, activity.type) },
                         modifier = Modifier.padding(horizontal = 16.dp)
                     )
                     Spacer(modifier = Modifier.height(16.dp))
@@ -328,7 +326,7 @@ private fun ArchiveHomeScreenPreview() {
             onSearchClick = {},
             onArchiveBoxClick = {},
             onCategoryClick = {},
-            onActivityClick = {}
+            onActivityClick = { _: String, _: ActivityType -> }
         )
     }
 }

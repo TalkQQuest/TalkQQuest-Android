@@ -357,6 +357,10 @@ fun NavGraph(
             ArchiveListScreen(
                 initialTabIndex = tabIndex,
                 onBackClick = { navController.popBackStack() },
+                // 💡 [수정] 보관함 리스트 화면의 미션 카드 클릭 시, 미션 상세 화면으로 이동하도록 연결 완료!
+                onMissionClick = { missionId: String ->
+                    navController.navigate("mission_detail/$missionId")
+                },
                 // 💡 C담당: 람다 파라미터 타입 명시 유지
                 onConversationClick = { conversationId: String ->
                     navController.navigate("archive_conversation_detail/$conversationId")

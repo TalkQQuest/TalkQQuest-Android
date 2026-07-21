@@ -54,9 +54,6 @@ private fun tabRouteOf(route: String?): String? = when (route) {
     Screen.CONVERSATION_PREP -> Screen.HOME
     Screen.CONVERSATION -> Screen.HOME
     Screen.REPORT -> Screen.HOME // 홈 플로우(피드백 → 상세 리포트)로 진입 — 홈 유지 (사용자 결정)
-    // 저장 목록: 진입은 홈 플로우(저장 시트)지만 UI v4 CSS가 아카이브 아이콘만 Purple600으로
-    // 칠해뒀음 → 디자인 그대로 아카이브 탭 하이라이트. (v4에서 이 화면 = 아카이브 "보관함(미션)"과 동일)
-    Screen.SAVED_MISSIONS -> Screen.ARCHIVE_HOME
     else -> route
 }
 

@@ -74,7 +74,8 @@ data class ArchiveSearchUiState(
             fun getItemId(item: Any): Long {
                 return try {
                     when (item) {
-                        is ArchiveMissionItem -> item.id
+                        // 💡 미션 ID도 이제 String이므로 toLongOrNull() 사용
+                        is ArchiveMissionItem -> item.id.toLongOrNull() ?: 0L
                         is RecentActivity -> item.id.toLongOrNull() ?: 0L
                         is SearchBookmarkWrapper -> item.item.id.toLongOrNull() ?: 0L
                         else -> 0L
@@ -110,7 +111,6 @@ data class ArchiveSearchUiState(
             }
             if (showSentence) {
                 results.addAll(allSentences.filter { sentence ->
-                    // 💡 [수정] 문장 내용 검사뿐만 아니라, 원본 대화의 제목도 함께 검사합니다.
                     val matchSentenceTitle = sentence.title.lowercase().contains(query)
                     val relatedConv = allConversations.find { it.id == sentence.relatedConversationId }
                     val matchConvTitle = relatedConv?.title?.lowercase()?.contains(query) == true
@@ -225,7 +225,8 @@ class ArchiveSearchViewModel @Inject constructor(
         _uiState.update { it.copy(selectedCategoryTab = "전체", isCategoryChipVisible = false) }
     }
 
-    fun toggleMissionBookmark(missionId: Long) {
+    // 💡 Long 타입 파라미터를 String으로 변경
+    fun toggleMissionBookmark(missionId: String) {
         val isCurrentlySaved = _uiState.value.allMissions.find { it.id == missionId }?.isSaved == true
 
         repository.toggleMissionBookmark(missionId)

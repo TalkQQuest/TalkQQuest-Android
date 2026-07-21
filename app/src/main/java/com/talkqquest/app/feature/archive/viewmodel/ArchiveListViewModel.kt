@@ -42,8 +42,8 @@ class ArchiveViewModel @Inject constructor(
         _uiState.update { it.copy(selectedFilter = filter) }
     }
 
-    // 💡 개별 화면 갱신이 아닌 Repository 원본 갱신 후 새로고침으로 변경
-    fun toggleMissionSave(id: Long) {
+    // 💡 Long -> String으로 타입 변경
+    fun toggleMissionSave(id: String) {
         repository.toggleMissionBookmark(id)
         refreshData()
     }
@@ -58,7 +58,6 @@ class ArchiveViewModel @Inject constructor(
         refreshData()
     }
 
-    // 💡 다른 화면에서 돌아왔을 때 최신 상태를 반영할 수 있게 노출된 새로고침 함수
     fun refreshData() {
         _uiState.update { state ->
             state.copy(

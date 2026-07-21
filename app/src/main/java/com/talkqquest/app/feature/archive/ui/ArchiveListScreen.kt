@@ -68,14 +68,13 @@ fun ArchiveListScreen(
     initialTabIndex: Int = 0,
     viewModel: ArchiveViewModel = hiltViewModel(),
     onBackClick: () -> Unit = {},
-    onMissionClick: (Long) -> Unit = {},
+    onMissionClick: (String) -> Unit = {}, // 💡 Long -> String 으로 변경
     onConversationClick: (String) -> Unit = {},
     onSentenceClick: (String) -> Unit = {},
     onReportClick: (String) -> Unit = {}
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
-    // 💡 상세 화면에서 돌아왔을 때 최신 북마크 상태를 다시 불러오도록 반영
     LaunchedEffect(Unit) {
         viewModel.refreshData()
     }
@@ -101,8 +100,8 @@ private fun ArchiveListScreenContent(
     uiState: ArchiveUiState,
     onBackClick: () -> Unit,
     onFilterSelect: (String) -> Unit,
-    onMissionClick: (Long) -> Unit,
-    onToggleMissionSave: (Long) -> Unit,
+    onMissionClick: (String) -> Unit, // 💡 Long -> String 으로 변경
+    onToggleMissionSave: (String) -> Unit, // 💡 Long -> String 으로 변경
     onConversationClick: (String) -> Unit,
     onSentenceClick: (String) -> Unit,
     onToggleSentenceSave: (String) -> Unit,
@@ -329,8 +328,9 @@ private fun FilterChip(text: String, isSelected: Boolean, onClick: () -> Unit) {
 private val previewUiState = ArchiveUiState(
     selectedFilter = "전체",
     missions = listOf(
-        ArchiveMissionItem(1, "처음 보는 사람에게 짧게 인사하기", "짧은 대화", "쉬움", 2, 20, isCompleted = true, isSaved = true),
-        ArchiveMissionItem(2, "최근 본 영화 이야기하기", "짧은 대화", "쉬움", 5, 20, isCompleted = false, isSaved = true)
+        // 💡 미리보기 데이터의 ID도 Int(1, 2)에서 String("1", "2")로 변경
+        ArchiveMissionItem("1", "처음 보는 사람에게 짧게 인사하기", "짧은 대화", "쉬움", 2, 20, isCompleted = true, isSaved = true),
+        ArchiveMissionItem("2", "최근 본 영화 이야기하기", "짧은 대화", "쉬움", 5, 20, isCompleted = false, isSaved = true)
     ),
     conversations = listOf(
         RecentActivity(id = "1", title = "처음 보는 사람에게 짧게 인사하기", type = ActivityType.CONVERSATION, status = "대화 완료", date = "2026.08.20")

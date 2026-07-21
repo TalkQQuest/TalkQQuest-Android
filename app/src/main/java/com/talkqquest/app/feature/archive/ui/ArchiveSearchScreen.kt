@@ -84,7 +84,6 @@ fun ArchiveSearchScreen(
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
-    // 💡 상세 화면에서 뒤로가기하여 이 화면이 다시 보일 때마다 Repository 최신 상태 동기화!
     LaunchedEffect(Unit) {
         viewModel.refreshData()
     }
@@ -128,7 +127,7 @@ private fun ArchiveSearchScreenContent(
     onClearSearch: () -> Unit,
     onClearDateFilter: () -> Unit,
     onClearCategoryFilter: () -> Unit,
-    onToggleMissionBookmark: (Long) -> Unit,
+    onToggleMissionBookmark: (String) -> Unit, // 💡 Long -> String 변경
     onToggleSentenceBookmark: (String) -> Unit,
     onToggleReportBookmark: (String) -> Unit,
     onSortSelected: (ArchiveSortType) -> Unit,
@@ -565,7 +564,8 @@ private val previewUiState = ArchiveSearchUiState(
     isCategoryChipVisible = true,
     sortType = ArchiveSortType.LATEST,
     allMissions = listOf(
-        ArchiveMissionItem(1L, "처음 보는 사람에게 짧게 인사하기", "짧은 대화", "쉬움", 2, 20, isCompleted = true, isSaved = true, completedDate = "2026.07.16")
+        // 💡 1L -> "1" 로 타입 변경
+        ArchiveMissionItem("1", "처음 보는 사람에게 짧게 인사하기", "짧은 대화", "쉬움", 2, 20, isCompleted = true, isSaved = true, completedDate = "2026.07.16")
     ),
     allConversations = listOf(
         RecentActivity(

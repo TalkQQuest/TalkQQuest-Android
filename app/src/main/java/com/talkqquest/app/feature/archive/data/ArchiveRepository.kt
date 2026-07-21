@@ -20,10 +20,11 @@ import javax.inject.Singleton
 @Singleton
 class ArchiveRepository @Inject constructor() {
 
+    // 💡 1L, 2L, 3L 로 되어있던 Long 타입을 "1", "2", "3" (String)으로 변경
     private val stubMissions = mutableListOf(
-        ArchiveMissionItem(1L, "처음 보는 사람에게 짧게 인사하기", "짧은 대화", "쉬움", 2, 20, isCompleted = true, isSaved = true, completedDate = "2026.07.16"),
-        ArchiveMissionItem(2L, "최근 본 영화 이야기하기", "짧은 대화", "쉬움", 5, 20, isCompleted = false, isSaved = true, completedDate = "2026.07.15"),
-        ArchiveMissionItem(3L, "학교 생활 꿀팁 나누기", "일상 대화", "보통", 8, 30, isCompleted = true, isSaved = true, completedDate = "2026.07.14")
+        ArchiveMissionItem("1", "처음 보는 사람에게 짧게 인사하기", "짧은 대화", "쉬움", 2, 20, isCompleted = true, isSaved = true, completedDate = "2026.07.16"),
+        ArchiveMissionItem("2", "최근 본 영화 이야기하기", "짧은 대화", "쉬움", 5, 20, isCompleted = false, isSaved = true, completedDate = "2026.07.15"),
+        ArchiveMissionItem("3", "학교 생활 꿀팁 나누기", "일상 대화", "보통", 8, 30, isCompleted = true, isSaved = true, completedDate = "2026.07.14")
     )
 
     private val stubConversations = mutableListOf(
@@ -234,7 +235,7 @@ class ArchiveRepository @Inject constructor() {
         )
     )
 
-    fun toggleMissionBookmark(id: Long) {
+    fun toggleMissionBookmark(id: String) {
         val index = stubMissions.indexOfFirst { it.id == id }
         if (index != -1) {
             stubMissions[index] = stubMissions[index].copy(isSaved = !stubMissions[index].isSaved)
@@ -279,9 +280,9 @@ class ArchiveRepository @Inject constructor() {
     suspend fun getArchiveSummary(): ApiResult<ArchiveSummary> {
         val allMockActivities = mutableListOf<ArchiveRecentActivity>()
 
-        // 💡 최근 활동 리스트에도 저장(isSaved)된 항목만 노출하도록 변경
         stubMissions.filter { it.isCompleted && it.isSaved }.forEach {
-            allMockActivities.add(ArchiveRecentActivity(it.id.toString(), "MISSION", it.title, "미션 완료", it.completedDate))
+            // 💡 it.id가 이미 String이므로 toString() 제거
+            allMockActivities.add(ArchiveRecentActivity(it.id, "MISSION", it.title, "미션 완료", it.completedDate))
         }
         stubConversations.forEach {
             allMockActivities.add(ArchiveRecentActivity(it.id, "CONVERSATION", it.title, it.status, it.date))
@@ -297,7 +298,6 @@ class ArchiveRepository @Inject constructor() {
             .sortedByDescending { it.date }
             .take(4)
 
-        // 💡 모든 카테고리 숫자가 isSaved(저장 여부)를 기준으로 실시간 카운트되도록 수정
         val summary = ArchiveSummary(
             completedMissionCount = stubMissions.count { it.isSaved },
             conversationCount = stubConversations.size,

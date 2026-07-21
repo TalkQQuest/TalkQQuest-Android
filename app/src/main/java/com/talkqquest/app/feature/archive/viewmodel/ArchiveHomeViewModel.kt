@@ -50,7 +50,6 @@ class ArchiveHomeViewModel @Inject constructor(
         refreshData()
     }
 
-    // 💡 화면 진입 시 최신 상태를 반영할 수 있도록 public 함수로 노출
     fun refreshData() {
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true, errorMessage = null) }
@@ -63,7 +62,8 @@ class ArchiveHomeViewModel @Inject constructor(
                     val uiActivities = summary.recentActivities.map { dto ->
                         val isMission = dto.type.uppercase() == "MISSION"
                         val matchedMission = if (isMission) {
-                            allMissions.find { it.id.toString() == dto.id }
+                            // 💡 이미 String 타입이므로 toString() 제거
+                            allMissions.find { it.id == dto.id }
                         } else null
 
                         RecentActivity(

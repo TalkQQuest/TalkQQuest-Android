@@ -162,7 +162,6 @@ class ArchiveRepository @Inject constructor() {
         )
     )
 
-    // 💡 [수정됨] 누락되었던 2번, 3번 대화 상세 데이터를 복구했습니다!
     private val stubConversationDetails = listOf(
         ConversationDetailMock(
             id = "1",
@@ -256,17 +255,33 @@ class ArchiveRepository @Inject constructor() {
     }
 
     suspend fun getArchiveSummary(): ApiResult<ArchiveSummary> {
+        // 💡 1. 4개의 목업 데이터를 하나의 리스트로 통합
+        val allMockActivities = mutableListOf<ArchiveRecentActivity>()
+
+        stubMissions.filter { it.isCompleted }.forEach {
+            allMockActivities.add(ArchiveRecentActivity(it.id.toString(), "MISSION", it.title, "미션 완료", it.completedDate))
+        }
+        stubConversations.forEach {
+            allMockActivities.add(ArchiveRecentActivity(it.id, "CONVERSATION", it.title, it.status, it.date))
+        }
+        stubSentences.forEach {
+            allMockActivities.add(ArchiveRecentActivity(it.id, "SENTENCE", it.title, it.status, it.date))
+        }
+        stubReports.forEach {
+            allMockActivities.add(ArchiveRecentActivity(it.id, "REPORT", it.title, it.status, it.date))
+        }
+
+        // 💡 2. 통합된 리스트를 날짜(최신순)로 내림차순 정렬 후 상위 4개만 가져옴
+        val top4RecentActivities = allMockActivities
+            .sortedByDescending { it.date }
+            .take(4)
+
         val summary = ArchiveSummary(
             completedMissionCount = stubMissions.count { it.isCompleted },
             conversationCount = stubConversations.size,
             savedSentenceCount = stubSentences.count { it.isSaved },
             reportCount = stubReports.size,
-            recentActivities = listOf(
-                ArchiveRecentActivity("1", "MISSION", stubMissions[0].title, "미션 완료", stubMissions[0].completedDate),
-                ArchiveRecentActivity("2", "CONVERSATION", stubConversations[0].title, stubConversations[0].status, stubConversations[0].date),
-                ArchiveRecentActivity("3", "SENTENCE", stubSentences[0].title, stubSentences[0].status, stubSentences[0].date),
-                ArchiveRecentActivity("4", "REPORT", stubReports[0].title, stubReports[0].status, stubReports[0].date)
-            )
+            recentActivities = top4RecentActivities
         )
         return ApiResult.Success(summary)
     }

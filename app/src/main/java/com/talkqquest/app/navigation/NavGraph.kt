@@ -45,7 +45,8 @@ import com.talkqquest.app.feature.archive.ui.ArchiveListScreen
 import com.talkqquest.app.feature.archive.ui.ArchiveSearchScreen
 import com.talkqquest.app.feature.archive.ui.ArchiveConversationDetailScreen
 import com.talkqquest.app.feature.archive.ui.ArchiveSavedPhraseScreen
-import com.talkqquest.app.feature.archive.ui.ArchiveReportScreen // 💡 [추가] 보관함 리포트 상세 화면 import
+import com.talkqquest.app.feature.archive.ui.ArchiveReportScreen
+import com.talkqquest.app.feature.archive.viewmodel.ActivityType
 import com.talkqquest.app.navigation.Screen
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -270,8 +271,14 @@ fun NavGraph(
                 onNavigateToList = { tabIndex ->
                     navController.navigate("${Screen.ARCHIVE_LIST}/$tabIndex")
                 },
-                onNavigateToDetail = { activityId ->
-                    Toast.makeText(context, "최근 활동 상세: 준비 중인 기능입니다.", Toast.LENGTH_SHORT).show()
+                // 💡 [수정됨] id와 Type을 함께 넘겨받아 상세 화면으로 연결
+                onNavigateToDetail = { activityId, type ->
+                    when (type) {
+                        ActivityType.CONVERSATION -> navController.navigate("archive_conversation_detail/$activityId")
+                        ActivityType.SENTENCE -> navController.navigate("archive_saved_phrase/$activityId")
+                        ActivityType.REPORT -> navController.navigate("archive_report/$activityId")
+                        ActivityType.MISSION -> navController.navigate("mission_detail/$activityId")
+                    }
                 }
             )
         }

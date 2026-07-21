@@ -41,6 +41,7 @@ import com.talkqquest.app.core.designsystem.Success
 import com.talkqquest.app.core.designsystem.TqType
 import com.talkqquest.app.core.designsystem.White
 import com.talkqquest.app.core.designsystem.softShadow
+import com.talkqquest.app.feature.mission.ui.figma
 
 // 🚨 feature.mission 참조 완벽 제거!
 

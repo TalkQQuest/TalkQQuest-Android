@@ -168,10 +168,10 @@ fun NavGraph(
                     }
                 },
                 onFindIdClick = {
-                    Toast.makeText(context, "아이디 찾기는 준비 중입니다.", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(context, "\uC544\uC774\uB514 \uCC3E\uAE30\uB294 \uC900\uBE44 \uC911\uC785\uB2C8\uB2E4.", Toast.LENGTH_SHORT).show()
                 },
                 onFindPasswordClick = {
-                    Toast.makeText(context, "비밀번호 찾기는 준비 중입니다.", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(context, "\uBE44\uBC00\uBC88\uD638 \uCC3E\uAE30\uB294 \uC900\uBE44 \uC911\uC785\uB2C8\uB2E4.", Toast.LENGTH_SHORT).show()
                 },
                 errorMessage = authUiState.errorMessage,
             )

@@ -42,7 +42,6 @@ import com.talkqquest.app.feature.mission.ui.FeedbackScreen
 import com.talkqquest.app.feature.mission.ui.MissionCompleteScreen
 import com.talkqquest.app.feature.mission.ui.MissionDetailScreen
 import com.talkqquest.app.feature.mission.ui.MissionListScreen
-import com.talkqquest.app.feature.mission.ui.SavedMissionsScreen
 import com.talkqquest.app.feature.report.ui.ReportScreen
 import com.talkqquest.app.feature.archive.ui.ArchiveHomeScreen
 import com.talkqquest.app.feature.archive.ui.ArchiveListScreen
@@ -424,14 +423,6 @@ fun NavGraph(
                 onMissionClick = { missionId -> navController.navigate("mission_detail/$missionId") },
                 onSheetTopChange = onOverlaySheetTop,
                 onSavedListClick = { navController.navigate("${Screen.ARCHIVE_LIST}/0") },
-            )
-        }
-        // B담당: 저장 목록 (저장 시트 "저장 목록 >"에서 진입). 카드 클릭 → 미션 상세.
-        // 현재 통합 보관함으로 이동하도록 처리되어 더 이상 진입점은 없으나, 혹시 모를 사이드이펙트 방지를 위해 남겨둠
-        composable(Screen.SAVED_MISSIONS) {
-            SavedMissionsScreen(
-                onBack = { navController.popBackStack() },
-                onMissionClick = { missionId -> navController.navigate("mission_detail/$missionId") },
             )
         }
         // B담당: 대화 준비(미션 진입). "미션 시작하기" → 대화 화면(아직 없어서 임시, 다음 작업에서 교체).

@@ -46,7 +46,7 @@ class MissionCompleteViewModel @Inject constructor(
     fun loadResult() {
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true, errorMessage = null) }
-            when (val result = missionRepository.completeMission(missionId)) {
+            when (val result = missionRepository.completeMission(missionId, durationSec)) {
                 is ApiResult.Success -> _uiState.update {
                     it.copy(isLoading = false, result = result.data)
                 }

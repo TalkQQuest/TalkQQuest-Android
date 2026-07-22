@@ -128,8 +128,9 @@ class ConversationViewModel @Inject constructor(
             )
         }
         viewModelScope.launch {
-            delay(1200) // 상대가 입력하는 듯한 간격 (stub. 서버 연동 시 실제 응답 대기로 대체)
-            when (val reply = missionRepository.getAiReply(turnIndex)) {
+            // 서버(LLM) 응답 대기가 실제 간격이 됨. 오프라인 stub 폴백일 때만 즉답이라 최소 간격 유지.
+            delay(600)
+            when (val reply = missionRepository.sendUserMessage(text, turnIndex)) {
                 is ApiResult.Success -> _uiState.update {
                     it.copy(
                         messages = it.messages +

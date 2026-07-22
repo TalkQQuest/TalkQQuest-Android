@@ -1,21 +1,29 @@
 package com.talkqquest.app.feature.auth.ui
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -32,112 +40,199 @@ import androidx.compose.ui.unit.dp
 import com.talkqquest.app.core.designsystem.FitDesign
 import com.talkqquest.app.core.designsystem.Gray200
 import com.talkqquest.app.core.designsystem.Gray300
+import com.talkqquest.app.core.designsystem.Gray400
+import com.talkqquest.app.core.designsystem.Gray50
 import com.talkqquest.app.core.designsystem.Gray500
+import com.talkqquest.app.core.designsystem.Gray700
 import com.talkqquest.app.core.designsystem.Gray800
-import com.talkqquest.app.core.designsystem.Primary600
+import com.talkqquest.app.core.designsystem.Primary500
 import com.talkqquest.app.core.designsystem.TalkQQuestTheme
 import com.talkqquest.app.core.designsystem.TqType
 import com.talkqquest.app.core.designsystem.White
+import kotlinx.coroutines.delay
+
+private val VerificationCodeError = Color(0xFFF76161)
+private const val EmailVerificationDurationSeconds = 5 * 60
 
 @Composable
 fun SignupVerifyScreen(
     email: String = "Talkqquest1234@gmail.com",
+    isCodeError: Boolean = false,
     onBack: () -> Unit = {},
     onVerifyCode: (String) -> Unit = {},
+    onCodeChange: () -> Unit = {},
     onResendClick: () -> Unit = {},
-) {
+) = FitDesign(compensateStatusBar = false) {
     var code by remember { mutableStateOf("") }
-    val isComplete = code.length == 6
-    val codeColor = if (isComplete) Gray800 else Gray300
+    var remainingSeconds by remember { mutableStateOf(EmailVerificationDurationSeconds) }
+    val timerText = "${remainingSeconds / 60}:${(remainingSeconds % 60).toString().padStart(2, '0')}"
 
-    Box(modifier = Modifier.fillMaxSize()) {
-        FitDesign {
-            AuthScreenFrame(title = "회원가입", onBack = onBack) {
-                Column(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(horizontal = 16.dp),
-                ) {
-                    Spacer(Modifier.height(113.dp))
-                    AuthHeadline(text = "이메일을\n입력해주세요", modifier = Modifier.padding(start = 7.dp))
-                    Spacer(Modifier.height(20.dp))
-                    AuthInputCard(
-                        label = "이메일",
-                        value = email,
-                        placeholder = "",
-                        onValueChange = {},
-                        actionText = "인증",
-                        onActionClick = { if (isComplete) onVerifyCode(code) },
-                        modifier = Modifier.fillMaxWidth(),
-                    )
-                }
-            }
+    LaunchedEffect(remainingSeconds) {
+        if (remainingSeconds > 0) {
+            delay(1_000L)
+            remainingSeconds -= 1
         }
-        Box(modifier = Modifier.fillMaxSize().background(Color(0x990F172A)))
-        FitDesign {
-            Column(
+    }
+    val codeColor = when {
+        code.isBlank() -> Gray300
+        isCodeError -> VerificationCodeError
+        else -> Gray700
+    }
+
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Gray50),
+    ) {
+        IconButton(
+            onClick = onBack,
+            modifier = Modifier
+                .offset(x = 0.dp, y = 48.dp)
+                .size(44.dp),
+        ) {
+            Icon(
+                imageVector = Icons.AutoMirrored.Filled.KeyboardArrowLeft,
+                contentDescription = "\uB4A4\uB85C\uAC00\uAE30",
+                tint = Gray500,
+                modifier = Modifier.size(width = 30.dp, height = 32.dp),
+            )
+        }
+        Text(
+            text = "\uD68C\uC6D0\uAC00\uC785",
+            style = TqType.BodyM,
+            color = Gray700,
+            modifier = Modifier
+                .fillMaxWidth()
+                .offset(y = 59.dp),
+            textAlign = TextAlign.Center,
+        )
+        Text(
+            text = "\uC774\uBA54\uC77C\uC744\n\uC785\uB825\uD574\uC8FC\uC138\uC694",
+            style = TqType.HeadingL,
+            color = Gray800,
+            modifier = Modifier.offset(x = 23.dp, y = 122.dp),
+        )
+        AuthInputCard(
+            label = "\uC774\uBA54\uC77C",
+            value = email,
+            placeholder = "",
+            onValueChange = {},
+            actionText = "\uC778\uC99D",
+            onActionClick = { if (code.length == 6) onVerifyCode(code) },
+            actionCornerRadius = 12.dp,
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp)
+                .offset(y = 206.dp)
+                .height(88.dp),
+        )
+
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(Color(0xFF334155).copy(alpha = 0.23f)),
+        )
+
+        Box(
+            modifier = Modifier
+                .offset(y = 424.dp)
+                .fillMaxWidth()
+                .height(428.dp)
+                .clip(RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp))
+                .background(White),
+        ) {
+            Row(
                 modifier = Modifier
-                    .align(Alignment.BottomCenter)
                     .fillMaxWidth()
-                    .clip(RoundedCornerShape(topStart = 18.dp, topEnd = 18.dp))
-                    .background(White)
-                    .padding(start = 32.dp, end = 32.dp, top = 17.dp, bottom = 40.dp),
+                    .padding(horizontal = 32.dp)
+                    .offset(y = 17.dp)
+                    .height(37.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
             ) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically,
+                Text(
+                    text = "6\uC790\uB9AC \uC804\uC1A1\uB428",
+                    style = TqType.BodyM,
+                    color = Gray400,
+                    modifier = Modifier.width(73.dp).height(22.dp),
+                )
+                Box(
+                    modifier = Modifier
+                        .width(120.dp)
+                        .height(37.dp)
+                        .border(width = 1.dp, color = Gray200)
+                        .clickable {
+                            remainingSeconds = EmailVerificationDurationSeconds
+                            onResendClick()
+                        },
                 ) {
-                    Text(text = "6자리 전송됨", style = TqType.LabelM, color = Gray300)
                     Row(
                         modifier = Modifier
-                            .height(36.dp)
-                            .background(White)
-                            .padding(horizontal = 14.dp),
+                            .offset(x = 8.dp, y = 0.dp)
+                            .width(105.dp)
+                            .height(44.dp),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
                         verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(16.dp),
                     ) {
-                        Text(text = "1:32", style = TqType.LabelL, color = Primary600)
-                        Box(Modifier.height(18.dp).background(Gray200).padding(horizontal = 0.5.dp))
-                        Text(
-                            text = "재요청",
-                            style = TqType.LabelL,
-                            color = Gray500,
+                        Box(
                             modifier = Modifier
-                                .padding(start = 1.dp)
-                                .clickable(onClick = onResendClick),
+                                .width(44.dp)
+                                .height(44.dp),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            Text(text = timerText, style = TqType.BodyM, color = Primary500)
+                        }
+                        Box(
+                            modifier = Modifier
+                                .width(1.dp)
+                                .height(16.dp)
+                                .background(Gray200),
                         )
+                        Box(
+                            modifier = Modifier
+                                .width(44.dp)
+                                .height(44.dp),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            Text(text = "\uC7AC\uC694\uCCAD", style = TqType.BodyM, color = Gray500)
+                        }
                     }
                 }
-                Spacer(Modifier.height(18.dp))
-                BasicTextField(
-                    value = code,
-                    onValueChange = { input ->
-                        val digits = input.filter { it.isDigit() }.take(6)
-                        code = digits
-                        if (digits.length == 6) onVerifyCode(digits)
-                    },
-                    singleLine = true,
-                    textStyle = TqType.HeadingXL.copy(
-                        color = codeColor,
-                        fontWeight = FontWeight.Bold,
-                        textAlign = TextAlign.Start,
-                    ),
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword),
-                    decorationBox = { innerTextField ->
-                        Box(modifier = Modifier.fillMaxWidth()) {
-                            if (code.isBlank()) {
-                                Text(
-                                    text = "인증번호 입력",
-                                    style = TqType.HeadingXL.copy(fontWeight = FontWeight.Bold),
-                                    color = Gray300,
-                                )
-                            }
-                            innerTextField()
-                        }
-                    },
-                )
             }
+
+            BasicTextField(
+                value = code,
+                onValueChange = { input ->
+                    val digits = input.filter { it.isDigit() }.take(6)
+                    if (digits != code) onCodeChange()
+                    code = digits
+                    if (digits.length == 6) onVerifyCode(digits)
+                },
+                singleLine = true,
+                textStyle = TqType.HeadingXL.copy(
+                    color = codeColor,
+                    fontWeight = FontWeight.Bold,
+                    textAlign = TextAlign.Start,
+                ),
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 32.dp)
+                    .offset(y = 69.dp)
+                    .height(40.dp),
+                decorationBox = { innerTextField ->
+                    Box(modifier = Modifier.fillMaxSize()) {
+                        if (code.isBlank()) {
+                            Text(
+                                text = "\uC778\uC99D\uBC88\uD638 \uC785\uB825",
+                                style = TqType.HeadingXL.copy(fontWeight = FontWeight.Bold),
+                                color = Gray300,
+                            )
+                        }
+                        innerTextField()
+                    }
+                },
+            )
         }
     }
 }

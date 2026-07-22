@@ -11,9 +11,11 @@ import okhttp3.RequestBody.Companion.toRequestBody
 import org.json.JSONObject
 
 // ── 개발용 자동 로그인 (임시) ──
-// 로그인 화면(A담당)이 아직 없어 토큰을 얻을 방법이 없으므로, 토큰이 비어 있으면
-// 팀 테스트 계정으로 로그인해 TokenDataStore를 채운다. AuthInterceptor가 사용.
-// TODO(A/로그인): 로그인 화면 연동되면 이 파일 삭제 + AuthInterceptor에서 참조 제거.
+// 로그인 화면(A담당)이 앱 시작점이 되기 전까지, 토큰이 비어 있으면 팀 테스트 계정으로
+// 로그인해 TokenDataStore를 채운다. AuthInterceptor가 사용 — 토큰이 1시간 만료돼도
+// AuthInterceptor의 401 분기가 이걸 다시 불러 자동 복구되므로, 개발 중엔 만료를 느낄 일이 없음.
+// (단, 화면에서 실제 로그인한 세션은 여기로 복구하지 않음 — 이유는 AuthInterceptor 주석 참고)
+// TODO(A/로그인): 로그인 화면이 시작점으로 연결되면 이 파일 삭제 + AuthInterceptor에서 참조 제거.
 @Singleton
 class DevTokenProvider @Inject constructor(
     private val tokenDataStore: TokenDataStore,

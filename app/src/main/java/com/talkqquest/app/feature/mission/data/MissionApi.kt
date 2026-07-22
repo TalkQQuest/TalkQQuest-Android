@@ -1,6 +1,11 @@
 package com.talkqquest.app.feature.mission.data
 
 import com.talkqquest.app.core.network.ApiResponse
+import com.talkqquest.app.feature.mission.data.model.ConversationCreateRequest
+import com.talkqquest.app.feature.mission.data.model.ConversationCreateResponse
+import com.talkqquest.app.feature.mission.data.model.ConversationMessageRequest
+import com.talkqquest.app.feature.mission.data.model.ConversationMessageResponse
+import com.talkqquest.app.feature.mission.data.model.ConversationSuggestionsResponse
 import com.talkqquest.app.feature.mission.data.model.MissionCompleteRequest
 import com.talkqquest.app.feature.mission.data.model.MissionCompleteResponse
 import com.talkqquest.app.feature.mission.data.model.MissionDetail
@@ -8,6 +13,7 @@ import com.talkqquest.app.feature.mission.data.model.MissionListItem
 import com.talkqquest.app.feature.mission.data.model.MissionListResponse
 import com.talkqquest.app.feature.mission.data.model.MissionPrepResponse
 import com.talkqquest.app.feature.mission.data.model.MissionSaveResponse
+import com.talkqquest.app.feature.mission.data.model.XpSummary
 import retrofit2.http.Body
 import retrofit2.http.DELETE
 import retrofit2.http.GET
@@ -57,14 +63,38 @@ interface MissionApi {
         @Path("missionId") missionId: String,
     ): ApiResponse<MissionSaveResponse>
 
-    // 미션 완료 처리.
-    // ★경로 주의: 기능명세서엔 /missions/{missionId}/complete로 적혀 있으나,
-    //   실서버는 대화(conversations) 밑에 conversationId 기준으로 구현돼 있음(스웨거 확인).
-    //   같은 미션을 여러 번 할 수 있어 "어느 시도인지"는 conversationId만 식별 가능.
-    //   body에도 conversationId가 또 들어감(서버 규격 그대로).
-    @POST("api/v1/conversations/{conversationId}/complete")
+    // 미션 완료 처리 — 명세서 경로 그대로 서버 구현됨(2026-07-22 스웨거·실호출 확인).
+    // body의 conversationId로 "어느 시도"인지 식별. XP 지급까지 서버가 처리(xpEarned 응답).
+    // ★순서 주의: /conversations/{id}/finish를 먼저 부르면 이 호출이 거부됨("이미 종료 처리된 대화")
+    //   — 성공 완료는 이 API 하나로 종료+완료가 같이 처리됨 (실측 확인).
+    @POST("api/v1/missions/{missionId}/complete")
     suspend fun completeMission(
-        @Path("conversationId") conversationId: String,
+        @Path("missionId") missionId: String,
         @Body body: MissionCompleteRequest,
     ): ApiResponse<MissionCompleteResponse>
+
+    // ── 대화(Conversation) — 2026-07-22 서버 배포 확인, 응답 실측 기준 ──
+
+    // 대화 세션 생성. 인사말(첫 AI 발화)은 안 줌 — 화면 인트로는 로컬 문구 유지.
+    @POST("api/v1/conversations")
+    suspend fun createConversation(
+        @Body body: ConversationCreateRequest,
+    ): ApiResponse<ConversationCreateResponse>
+
+    // 사용자 메시지 저장 + AI(guide) 응답 생성. 응답 = { userMessage, guideMessage }.
+    @POST("api/v1/conversations/{conversationId}/messages")
+    suspend fun sendConversationMessage(
+        @Path("conversationId") conversationId: String,
+        @Body body: ConversationMessageRequest,
+    ): ApiResponse<ConversationMessageResponse>
+
+    // 추천 답변(톡깨의 추천 답변 카드) 조회.
+    @GET("api/v1/conversations/{conversationId}/suggestions")
+    suspend fun getConversationSuggestions(
+        @Path("conversationId") conversationId: String,
+    ): ApiResponse<ConversationSuggestionsResponse>
+
+    // XP/레벨 요약 — 완료 화면의 레벨업 연출용 (완료 전·후 조회).
+    @GET("api/v1/xp/summary")
+    suspend fun getXpSummary(): ApiResponse<XpSummary>
 }

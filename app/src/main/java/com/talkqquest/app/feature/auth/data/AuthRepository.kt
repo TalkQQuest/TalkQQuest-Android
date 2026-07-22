@@ -51,6 +51,16 @@ class AuthRepository @Inject constructor(
     suspend fun verifyEmailCode(email: String, code: String): ApiResult<Unit> =
         callUnitApi { authApi.verifyEmailCode(EmailVerifyRequest(email = email, code = code)) }
 
+    suspend fun refreshAccessToken(refreshToken: String): ApiResult<TokenRefreshData> {
+        val result = safeApiCall {
+            authApi.refreshAccessToken(TokenRefreshRequest(refreshToken = refreshToken))
+        }
+        if (result is ApiResult.Success) {
+            tokenDataStore.saveAccessToken(result.data.accessToken)
+        }
+        return result
+    }
+
     suspend fun signupWithEmail(request: EmailSignupRequest): ApiResult<EmailSignupData> {
         val result = safeApiCall { authApi.signupWithEmail(request) }
         if (result is ApiResult.Success) {

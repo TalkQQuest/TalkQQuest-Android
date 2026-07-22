@@ -72,3 +72,13 @@ data class EmailLoginData(
     val refreshToken: String,
     val tokenType: String = "Bearer",
 )
+
+@Serializable
+data class TokenRefreshRequest(
+    val refreshToken: String,
+)
+
+@Serializable
+data class TokenRefreshData(
+    val accessToken: String,
+)

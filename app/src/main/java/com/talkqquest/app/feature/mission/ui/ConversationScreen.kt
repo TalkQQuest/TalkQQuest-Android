@@ -696,8 +696,8 @@ private fun ChatBubbleRow(
                 .widthIn(max = if (message.isFromUser) 260.dp else 230.dp) // CSS max-width (패딩 포함)
                 .let {
                     if (message.isFromUser) it
-                    else it.softShadow( // AI 말풍선만 그림자 (CSS 0 2 6 8%)
-                        color = Color.Black.copy(alpha = 0.08f),
+                    else it.softShadow( // AI 말풍선만 그림자 (CSS 0 2 6, 8%→3% 디자이너 변경 2026-07-22)
+                        color = Color.Black.copy(alpha = 0.03f),
                         offsetY = 2.dp,
                         blur = 6.dp,
                         cornerRadius = 24.dp,

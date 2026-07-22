@@ -7,6 +7,7 @@ import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -32,6 +33,7 @@ import com.talkqquest.app.feature.auth.ui.SignupPasswordScreen
 import com.talkqquest.app.feature.auth.ui.SignupNicknameScreen
 import com.talkqquest.app.feature.auth.ui.SignupStartScreen
 import com.talkqquest.app.feature.auth.ui.SignupVerifyScreen
+import com.talkqquest.app.feature.auth.ui.SplashScreen
 import com.talkqquest.app.feature.auth.viewmodel.AuthViewModel
 import com.talkqquest.app.feature.home.ui.HomeScreen
 import com.talkqquest.app.feature.onboarding.ui.OnboardingDifficultyScreen
@@ -85,7 +87,7 @@ fun NavGraph(
     val slideSpec = tween<IntOffset>(300)
     NavHost(
         navController = navController,
-        startDestination = Screen.LOGIN,
+        startDestination = Screen.HOME,
         modifier = modifier,
         enterTransition = {
             if (isTabSwitch()) fadeIn(tween(300))
@@ -104,6 +106,16 @@ fun NavGraph(
             else slideOutOfContainer(AnimatedContentTransitionScope.SlideDirection.Right, slideSpec)
         },
     ) {
+        composable(Screen.SPLASH) {
+            LaunchedEffect(Unit) {
+                delay(1500)
+                navController.navigate(Screen.LOGIN) {
+                    popUpTo(Screen.SPLASH) { inclusive = true }
+                    launchSingleTop = true
+                }
+            }
+            SplashScreen()
+        }
         composable(Screen.LOGIN) {
             val context = LocalContext.current
             val scope = rememberCoroutineScope()
@@ -678,6 +690,7 @@ fun NavGraph(
         }
     }
 }
+
 
 
 

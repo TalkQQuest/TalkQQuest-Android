@@ -187,12 +187,10 @@ private fun PhraseHighlightCard(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            // 💡 [수정됨] 고정 높이 72dp 대신 최소 높이로 지정하여 문장 길이에 따라 카드가 늘어나도록 변경
             .heightIn(min = 72.dp)
             .clip(RoundedCornerShape(20.dp))
             .background(White)
             .padding(start = 12.dp, top = 12.dp, bottom = 12.dp, end = 6.dp),
-        // 💡 [수정됨] 문장이 여러 줄일 때 아이콘들이 첫 줄에 맞춰 상단 정렬되도록 CSS flex-start(Top) 반영
         verticalAlignment = Alignment.Top,
         horizontalArrangement = Arrangement.SpaceBetween
     ) {
@@ -204,10 +202,17 @@ private fun PhraseHighlightCard(
             )
         }
 
-        // 💡 [수정됨] 최대 4줄까지 표기 가능하도록 늘리고, 수직 패딩(10.dp)을 주어 아이콘과 줄을 맞춤
         Text(
-            text = phraseText,
-            style = TqType.BodyL.copy(fontWeight = FontWeight.Medium).figma(),
+            // 💡 [핵심 수정] 글자 사이가 끊어지지 않도록 확장 함수 적용
+            text = phraseText.glueShortWords().keepWordsIntact(),
+            style = TqType.BodyL.copy(
+                fontWeight = FontWeight.Medium,
+                lineBreak = LineBreak(
+                    strategy = LineBreak.Strategy.Simple,
+                    strictness = LineBreak.Strictness.Normal,
+                    wordBreak = LineBreak.WordBreak.Phrase
+                )
+            ).figma(),
             color = Gray900,
             maxLines = 4,
             overflow = TextOverflow.Ellipsis,
@@ -226,7 +231,7 @@ private fun PhraseHighlightCard(
             Icon(
                 painter = painterResource(id = if (isBookmarked) R.drawable.ic_mission_bookmark_filled else R.drawable.ic_mission_bookmark),
                 contentDescription = "북마크",
-                tint = Color.Unspecified, // 원본 아이콘 색상 그대로 사용
+                tint = Color.Unspecified,
                 modifier = Modifier.size(24.dp)
             )
         }
@@ -268,7 +273,8 @@ private fun MemoSection(keywords: List<String>, memoText: String) {
         }
 
         Text(
-            text = memoText,
+            // 💡 [핵심 수정] 메모 내용도 단어가 쪼개지지 않도록 확장 함수 적용
+            text = memoText.glueShortWords().keepWordsIntact(),
             style = TqType.BodyM.copy(
                 lineHeight = 22.sp,
                 lineBreak = LineBreak(
@@ -374,10 +380,10 @@ private fun ArchiveSavedPhraseScreenPreview() {
     TalkQQuestTheme {
         ArchiveSavedPhraseContent(
             uiState = ArchiveSavedPhraseUiState(
-                phraseText = "“그렇군요! 저도 생각보다 편해서 많이 놀랐어요. 정말 길이가 아주 아주 긴 문장 테스트입니다. 세 줄 네 줄까지 넘어가는지 확인하기 위한 긴 텍스트를 입력하고 있습니다.”",
+                phraseText = "“네, 안녕하세요. 항상 아메리카노만 마셨는데, 오늘은 좀 달달한 걸 먹고 싶어요.”",
                 isBookmarked = true,
-                memoKeywords = listOf("자기 성장", "첫 만남", "스몰 토크"),
-                memoText = "상대방의 감정을 자연 스럽게 열어줄 수 있는 좋은 문장이에요.",
+                memoKeywords = listOf("상황극", "요청하기", "정중함"),
+                memoText = "자신의 평소 취향과 현재 원하는 바를 명확하고 정중하게 전달하는 표현입니다.",
                 relatedConversation = mockConversation
             ),
             onBackClick = {},

@@ -326,7 +326,7 @@ fun NavGraph(
                 onNavigateToList = { tabIndex: Int ->
                     navController.navigate("${Screen.ARCHIVE_LIST}/$tabIndex")
                 },
-                // ?뮕 C?대떦: ?뚮떎 ?뚮씪誘명꽣 ???紐낆떆 ?좎?
+                // 💡 C담당: 람다 파라미터 타입 명시 유지
                 onNavigateToDetail = { activityId: String, type: ActivityType ->
                     when (type) {
                         ActivityType.CONVERSATION -> navController.navigate("archive_conversation_detail/$activityId")
@@ -343,7 +343,7 @@ fun NavGraph(
                 onBackClick = {
                     navController.popBackStack()
                 },
-                // ?뮕 C?대떦: ?뚮떎 ?뚮씪誘명꽣 ???紐낆떆 ?좎?
+                // 💡 C담당: 람다 파라미터 타입 명시 유지
                 onNavigateToDetail = { activityId: String, type: ActivityType ->
                     when (type) {
                         ActivityType.CONVERSATION -> navController.navigate("archive_conversation_detail/$activityId")
@@ -364,11 +364,11 @@ fun NavGraph(
             ArchiveListScreen(
                 initialTabIndex = tabIndex,
                 onBackClick = { navController.popBackStack() },
-                // ?뮕 [?섏젙] 蹂닿???由ъ뒪???붾㈃??誘몄뀡 移대뱶 ?대┃ ?? 誘몄뀡 ?곸꽭 ?붾㈃?쇰줈 ?대룞?섎룄濡??곌껐 ?꾨즺!
+                // 💡 [수정] 보관함 리스트 화면의 미션 카드 클릭 시, 미션 상세 화면으로 이동하도록 연결 완료!
                 onMissionClick = { missionId: String ->
                     navController.navigate("mission_detail/$missionId")
                 },
-                // ?뮕 C?대떦: ?뚮떎 ?뚮씪誘명꽣 ???紐낆떆 ?좎?
+                // 💡 C담당: 람다 파라미터 타입 명시 유지
                 onConversationClick = { conversationId: String ->
                     navController.navigate("archive_conversation_detail/$conversationId")
                 },
@@ -404,7 +404,7 @@ fun NavGraph(
             )
         }
 
-        // C?대떦: 蹂닿???由ы룷???곸꽭 ?붾㈃
+        // C담당: 보관함 리포트 상세 화면
         composable(
             route = "archive_report/{reportId}",
             arguments = listOf(navArgument("reportId") { type = NavType.StringType })

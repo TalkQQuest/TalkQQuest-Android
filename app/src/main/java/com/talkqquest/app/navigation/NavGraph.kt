@@ -65,16 +65,16 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 // ?ㅻ퉬寃뚯씠??洹몃옒??
-// TODO(媛??대떦): composable(Screen.XXX) { XxxScreen(navController) } 濡??먭린 ?붾㈃ ?깅줉. route??Screen.kt 李멸퀬.
+// TODO(媛??대떦): composable(Screen.XXX) { XxxScreen(navController) } 濡??먭린 ?붾㈃ ?깅줉. route??Screen.kt 李멸퀬.
 @Composable
 fun NavGraph(
     navController: NavHostController,
     modifier: Modifier = Modifier,
-    onOverlaySheetTop: (Float?) -> Unit = {}, // ?붾㈃ ?ㅻ쾭?덉씠(諛뷀??쒗듃) ????y(px), null=?놁쓬 ???ㅻ퉬 媛由?泥섎━
+    onOverlaySheetTop: (Float?) -> Unit = {}, // ?붾㈃ ?ㅻ쾭?덉씠(諛뷀??쒗듃) ????y(px), null=?놁쓬 ???ㅻ퉬 媛€由?泥섎━
 ) {
-    // ?붾㈃ ?꾪솚 紐⑥뀡: ?덉そ?쇰줈 ?ㅼ뼱媛??????붾㈃???ㅻⅨ履쎌뿉??諛???ㅼ뼱?ㅺ퀬,
-    // ?ㅻ줈 媛????꾩옱 ?붾㈃???ㅻⅨ履쎌쑝濡?諛???섍컧 (?쒓컙?대룞泥섎읆 ??諛붾뚯? ?딄쾶).
-    // ?? ?섎떒 ??겮由??ㅺ???嫄???諛??꾧퀎媛 ?꾨땲??蹂묐젹 ?대룞?대씪 ?섏씠?쒕줈 援먯껜.
+    // ?붾㈃ ?꾪솚 紐⑥뀡: ?덉そ?쇰줈 ?ㅼ뼱媛??????붾㈃???ㅻⅨ履쎌뿉??諛€???ㅼ뼱?ㅺ퀬,
+    // ?ㅻ줈 媛????꾩옱 ?붾㈃???ㅻⅨ履쎌쑝濡?諛€???섍컧 (?쒓컙?대룞泥섎읆 ??諛붾€뚯? ?딄쾶).
+    // ?? ?섎떒 ??겮由??ㅺ???嫄???諛??꾧퀎媛€ ?꾨땲??蹂묐젹 ?대룞?대씪 ?섏씠?쒕줈 援먯껜.
     val tabRoutes = BottomNavItem.entries.map { it.route }.toSet()
     fun AnimatedContentTransitionScope<NavBackStackEntry>.isTabSwitch() =
         initialState.destination.route in tabRoutes && targetState.destination.route in tabRoutes
@@ -232,7 +232,7 @@ fun NavGraph(
                 },
                 onResendClick = {
                     authViewModel.requestEmailCode(email) {
-                        Toast.makeText(context, "?몄쬆 肄붾뱶媛 ?щ컻?〓릺?덉뒿?덈떎.", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(context, "?몄쬆 肄붾뱶媛€ ?щ컻?〓릺?덉뒿?덈떎.", Toast.LENGTH_SHORT).show()
                     }
                 },
             )
@@ -296,13 +296,13 @@ fun NavGraph(
             )
         }
         // ?섎떒 ?ㅻ퉬 4??(?꾩떆 ???ㅼ젣 ?붾㈃?쇰줈 援먯껜)
-        // ?덉? ?붾㈃?붾뜲?댄꽣 ?곌껐 ?덉떆濡??ㅼ젣 援ы쁽??feature/home 李멸퀬). ?섎㉧吏??媛??대떦??援먯껜.
+        // ?덉? ?붾㈃?붾뜲?댄꽣 ?곌껐 ?덉떆濡??ㅼ젣 援ы쁽??feature/home 李멸퀬). ?섎㉧吏€??媛??대떦??援먯껜.
         composable(Screen.HOME) {
             val homeScope = rememberCoroutineScope()
             HomeScreen(
                 onStartMissionClick = { missionId -> navController.navigate("mission_detail/$missionId") },
                 onOtherMissionsClick = { navController.navigate(Screen.MISSION_LIST) },
-                // 臾쇨껐(由ы뵆)??癒쇱? 蹂댁씤 ???꾪솚?섎룄濡??댁쭩 吏????利됱떆 navigate ????臾쇨껐????蹂댁엫
+                // 臾쇨껐(由ы뵆)??癒쇱? 蹂댁씤 ???꾪솚?섎룄濡??댁쭩 吏€????利됱떆 navigate ????臾쇨껐????蹂댁엫
                 onNotificationClick = {
                     homeScope.launch {
                         delay(140)
@@ -311,11 +311,11 @@ fun NavGraph(
                 },
             )
         }
-        // ?뚮┝李?(??踰???吏꾩엯). ?붿옄??誘몄셿?깆씠??鍮??곹깭 placeholder.
+        // ?뚮┝李?(??踰???吏꾩엯). ?붿옄??誘몄셿?깆씠??鍮??곹깭 placeholder.
         composable(Screen.NOTIFICATION) {
             NotificationScreen(onBack = { navController.popBackStack() })
         }
-        // C?대떦: ?꾩뭅?대툕 ???붾㈃
+        // C담당: 아카이브 홈 화면
         composable(Screen.ARCHIVE_HOME) {
             val context = LocalContext.current
 
@@ -337,7 +337,7 @@ fun NavGraph(
                 }
             )
         }
-        // C?대떦: ?꾩뭅?대툕 寃???붾㈃
+        // C담당: 아카이브 검색 화면
         composable(Screen.ARCHIVE_SEARCH) {
             ArchiveSearchScreen(
                 onBackClick = {
@@ -355,7 +355,7 @@ fun NavGraph(
             )
         }
 
-        // C?대떦: ?꾩뭅?대툕 ??紐⑸줉 ?붾㈃ (誘몄뀡/???臾몄옣/由ы룷??
+        // C담당: 아카이브 탭 목록 화면 (미션/대화/문장/리포트)
         composable(
             route = "${Screen.ARCHIVE_LIST}/{tabIndex}",
             arguments = listOf(navArgument("tabIndex") { type = NavType.IntType; defaultValue = 0 })
@@ -381,7 +381,7 @@ fun NavGraph(
             )
         }
 
-        // C?대떦: 蹂닿??????湲곕줉(?곸꽭) ?붾㈃
+        // C담당: 보관함 대화 기록(상세) 화면
         composable(
             route = "archive_conversation_detail/{conversationId}",
             arguments = listOf(navArgument("conversationId") { type = NavType.StringType })
@@ -391,7 +391,7 @@ fun NavGraph(
             )
         }
 
-        // C?대떦: 蹂닿???踰좎뒪??臾몄옣 ?곸꽭 ?붾㈃
+        // C담당: 보관함 베스트 문장 상세 화면
         composable(
             route = "archive_saved_phrase/{phraseId}",
             arguments = listOf(navArgument("phraseId") { type = NavType.StringType })
@@ -414,16 +414,16 @@ fun NavGraph(
             )
         }
 
-        // B?대떦: 誘몄뀡 紐⑸줉 (?????ㅻⅨ 誘몄뀡 蹂닿린). 移대뱶 ?대┃ ??誘몄뀡 ?곸꽭({missionId}???ㅼ젣 媛믪쑝濡?移섑솚).
+        // B?대떦: 誘몄뀡 紐⑸줉 (?????ㅻⅨ 誘몄뀡 蹂닿린). 移대뱶 ?대┃ ??誘몄뀡 ?곸꽭({missionId}???ㅼ젣 媛믪쑝濡?移섑솚).
         composable(Screen.MISSION_LIST) {
             MissionListScreen(
                 onBack = { navController.popBackStack() },
                 onMissionClick = { missionId -> navController.navigate("mission_detail/$missionId") },
-                onSheetTopChange = onOverlaySheetTop, // ????쒗듃媛 ?섎떒 ?ㅻ퉬瑜???뒗 ?숈븞 ?ㅻ퉬 媛由?
+                onSheetTopChange = onOverlaySheetTop, // ?€???쒗듃媛€ ?섎떒 ?ㅻ퉬瑜???뒗 ?숈븞 ?ㅻ퉬 媛€由?
                 onSavedListClick = { navController.navigate("${Screen.ARCHIVE_LIST}/0") },
             )
         }
-        // B?대떦: 誘몄뀡 ?곸꽭. "?ㅼ쓬" ?????以鍮??꾩쭅 ?놁뼱???꾩떆 ?붾㈃, ?ㅼ쓬 ?묒뾽?먯꽌 援먯껜).
+        // B?대떦: 誘몄뀡 ?곸꽭. "?ㅼ쓬" ???€??以€鍮??꾩쭅 ?놁뼱???꾩떆 ?붾㈃, ?ㅼ쓬 ?묒뾽?먯꽌 援먯껜).
         composable(
             route = Screen.MISSION_DETAIL,
             arguments = listOf(navArgument("missionId") { type = NavType.StringType }),
@@ -436,7 +436,7 @@ fun NavGraph(
                 onSavedListClick = { navController.navigate("${Screen.ARCHIVE_LIST}/0") },
             )
         }
-        // B?대떦: ???以鍮?誘몄뀡 吏꾩엯). "誘몄뀡 ?쒖옉?섍린" ??????붾㈃(?꾩쭅 ?놁뼱???꾩떆, ?ㅼ쓬 ?묒뾽?먯꽌 援먯껜).
+        // B?대떦: ?€??以€鍮?誘몄뀡 吏꾩엯). "誘몄뀡 ?쒖옉?섍린" ???€???붾㈃(?꾩쭅 ?놁뼱???꾩떆, ?ㅼ쓬 ?묒뾽?먯꽌 援먯껜).
         composable(
             route = Screen.CONVERSATION_PREP,
             arguments = listOf(navArgument("missionId") { type = NavType.StringType }),
@@ -447,7 +447,7 @@ fun NavGraph(
                 onStartClick = { navController.navigate("conversation/$missionId") },
             )
         }
-        // B?대떦: ???吏꾪뻾. 醫낅즺?섍린 ??誘몄뀡 ?꾨즺&XP (????쒓컙???몄옄濡??꾨떖).
+        // B?대떦: ?€??吏꾪뻾. 醫낅즺?섍린 ??誘몄뀡 ?꾨즺&XP (?€???쒓컙???몄옄濡??꾨떖).
         composable(
             route = Screen.CONVERSATION,
             arguments = listOf(navArgument("conversationId") { type = NavType.StringType }),
@@ -455,7 +455,7 @@ fun NavGraph(
             val missionId = backStackEntry.arguments?.getString("conversationId").orEmpty()
             ConversationScreen(
                 onExitConfirm = { durationSec ->
-                    // ?앸궃 ???諛?以鍮꽷룹긽??濡??ㅻ줈 紐??뚯븘媛寃????꾨? ?뺣━?섍퀬 ?꾨즺 ?붾㈃?쇰줈.
+                    // ?앸궃 ?€??諛?以€鍮꽷룹긽??濡??ㅻ줈 紐??뚯븘媛€寃????꾨? ?뺣━?섍퀬 ?꾨즺 ?붾㈃?쇰줈.
                     navController.navigate("mission_complete/$missionId?durationSec=$durationSec") {
                         popUpTo(Screen.HOME)
                     }
@@ -472,7 +472,7 @@ fun NavGraph(
         ) { backStackEntry ->
             val missionId = backStackEntry.arguments?.getString("missionId").orEmpty()
             MissionCompleteScreen(
-                // stub? missionId瑜?feedbackId濡?洹몃?濡?? ???쒕쾭 ?곕룞 ???꾨즺 ?묐떟??feedbackId濡?援먯껜.
+                // stub?€ missionId瑜?feedbackId濡?洹몃?濡??€ ???쒕쾭 ?곕룞 ???꾨즺 ?묐떟??feedbackId濡?援먯껜.
                 onContinue = { navController.navigate("feedback/$missionId") },
             )
         }
@@ -486,7 +486,7 @@ fun NavGraph(
             FeedbackScreen(
                 onBack = { navController.popBackStack() },
                 onItemClick = { index -> navController.navigate("feedback_detail/$feedbackId?item=$index") },
-                // 由ы룷?멸? ?대뒓 誘몄뀡 寃껋씤吏 ?④퍡 ?섍? ??????쒗듃 移대뱶 ?쒕ぉ??洹?誘몄뀡紐낆씠 ??
+                // 由ы룷?멸? ?대뒓 誘몄뀡 寃껋씤吏€ ?④퍡 ?섍? ???€???쒗듃 移대뱶 ?쒕ぉ??洹?誘몄뀡紐낆씠 ??
                 // ?쒓??대씪 route???ㅼ쑝?ㅻ㈃ ?몄퐫???꾩슂.
                 onDetailReport = { missionTitle ->
                     navController.navigate("report?missionTitle=${Uri.encode(missionTitle)}")
@@ -494,7 +494,7 @@ fun NavGraph(
                 onHome = { navController.popBackStack(Screen.HOME, inclusive = false) },
             )
         }
-        // B?대떦: 由ы룷??(?깆옣/二쇨컙 鍮꾧탳 ???듯빀). ?쇰뱶諛??붿빟 "?곸꽭 由ы룷???먯꽌 吏꾩엯.
+        // B?대떦: 由ы룷??(?깆옣/二쇨컙 鍮꾧탳 ???듯빀). ?쇰뱶諛??붿빟 "?곸꽭 由ы룷???먯꽌 吏꾩엯.
         composable(
             route = Screen.REPORT,
             arguments = listOf(
@@ -503,15 +503,15 @@ fun NavGraph(
         ) {
             ReportScreen(
                 onBack = { navController.popBackStack() },
-                onSheetTopChange = onOverlaySheetTop, // 由ы룷??????쒗듃媛 ?섎떒 ?ㅻ퉬瑜???뒗 ?숈븞 ?ㅻ퉬 媛由?
+                onSheetTopChange = onOverlaySheetTop, // 由ы룷???€???쒗듃媛€ ?섎떒 ?ㅻ퉬瑜???뒗 ?숈븞 ?ㅻ퉬 媛€由?
                 onArchiveClick = { navController.navigate("${Screen.ARCHIVE_LIST}/3") },
-                // ?뮕 [?섏젙] 蹂닿???由ы룷???곸꽭濡??대룞 ?곕룞 ?꾨즺
+                // 💡 [수정] 보관함 리포트 상세로 이동 연동 완료
                 onReportClick = { reportId ->
                     navController.navigate("archive_report/$reportId")
                 },
             )
         }
-        // B?대떦: AI ?쇰뱶諛??곸꽭. "?ㅻⅨ 誘몄뀡 蹂대윭媛湲? ???뺤궛 ?먮쫫(?꾨즺쨌?쇰뱶諛????뺣━?섍퀬 誘몄뀡 紐⑸줉?쇰줈.
+        // B?대떦: AI ?쇰뱶諛??곸꽭. "?ㅻⅨ 誘몄뀡 蹂대윭媛€湲? ???뺤궛 ?먮쫫(?꾨즺쨌?쇰뱶諛????뺣━?섍퀬 誘몄뀡 紐⑸줉?쇰줈.
         composable(
             route = "${Screen.FEEDBACK_DETAIL}?item={item}",
             arguments = listOf(
@@ -528,7 +528,7 @@ fun NavGraph(
                 onPhraseClick = { phraseId -> navController.navigate("archive_saved_phrase/$phraseId") },
             )
         }
-        composable(Screen.COMMUNITY_LIST) { PlaceholderScreen("紐⑥엫") }
+        composable(Screen.COMMUNITY_LIST) { PlaceholderScreen("紐⑥엫") }
         composable(Screen.PROFILE) {
             ProfileScreen(
                 onSettingsClick = { navController.navigate(Screen.PROFILE_SETTINGS) },

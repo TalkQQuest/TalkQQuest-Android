@@ -1,10 +1,11 @@
-package com.talkqquest.app.feature.auth.viewmodel
+﻿package com.talkqquest.app.feature.auth.viewmodel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.talkqquest.app.core.network.ApiResult
 import com.talkqquest.app.feature.auth.data.AuthRepository
 import com.talkqquest.app.feature.auth.data.EmailSignupRequest
+import com.talkqquest.app.feature.auth.data.OnboardingStepSaveRequest
 import com.talkqquest.app.feature.auth.data.SocialLoginData
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -128,6 +129,52 @@ class AuthViewModel @Inject constructor(
         }
     }
 
+
+    fun saveOnboardingStep(
+        request: OnboardingStepSaveRequest,
+        onSuccess: () -> Unit,
+    ) {
+        viewModelScope.launch {
+            _uiState.update { it.copy(isLoading = true, errorMessage = null) }
+            when (val result = authRepository.saveOnboardingStep(request)) {
+                is ApiResult.Success -> {
+                    _uiState.update { it.copy(isLoading = false) }
+                    onSuccess()
+                }
+                is ApiResult.Error -> _uiState.update {
+                    it.copy(isLoading = false, errorMessage = result.message ?: "\uC628\uBCF4\uB529 \uC800\uC7A5\uC5D0 \uC2E4\uD328\uD588\uC5B4\uC694.")
+                }
+                is ApiResult.Exception -> _uiState.update {
+                    it.copy(isLoading = false, errorMessage = "\uB124\uD2B8\uC6CC\uD06C \uC5F0\uACB0\uC744 \uD655\uC778\uD574\uC8FC\uC138\uC694.")
+                }
+            }
+        }
+    }
+
+    fun completeOnboarding(onSuccess: () -> Unit) {
+        viewModelScope.launch {
+            _uiState.update { it.copy(isLoading = true, errorMessage = null) }
+            when (val result = authRepository.completeOnboarding()) {
+                is ApiResult.Success -> {
+                    _uiState.update { it.copy(isLoading = false) }
+                    onSuccess()
+                }
+                is ApiResult.Error -> {
+                    _uiState.update { it.copy(isLoading = false) }
+                    if (result.code == 409) {
+                        onSuccess()
+                    } else {
+                        _uiState.update {
+                            it.copy(errorMessage = result.message ?: "\uC628\uBCF4\uB529 \uC644\uB8CC \uCC98\uB9AC\uC5D0 \uC2E4\uD328\uD588\uC5B4\uC694.")
+                        }
+                    }
+                }
+                is ApiResult.Exception -> _uiState.update {
+                    it.copy(isLoading = false, errorMessage = "\uB124\uD2B8\uC6CC\uD06C \uC5F0\uACB0\uC744 \uD655\uC778\uD574\uC8FC\uC138\uC694.")
+                }
+            }
+        }
+    }
     fun clearError() {
         _uiState.update { it.copy(errorMessage = null) }
     }
@@ -181,3 +228,4 @@ class AuthViewModel @Inject constructor(
         }
     }
 }
+

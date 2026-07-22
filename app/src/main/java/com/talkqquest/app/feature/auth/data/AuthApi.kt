@@ -1,7 +1,8 @@
-package com.talkqquest.app.feature.auth.data
+﻿package com.talkqquest.app.feature.auth.data
 
 import com.talkqquest.app.core.network.ApiResponse
 import retrofit2.http.Body
+import retrofit2.http.PATCH
 import retrofit2.http.POST
 
 interface AuthApi {
@@ -39,4 +40,14 @@ interface AuthApi {
     suspend fun refreshAccessToken(
         @Body request: TokenRefreshRequest,
     ): ApiResponse<TokenRefreshData>
+
+    @PATCH("api/v1/users/me/onboarding")
+    suspend fun saveOnboardingStep(
+        @Body request: OnboardingStepSaveRequest,
+    ): ApiResponse<OnboardingStepSaveData>
+
+    @POST("api/v1/users/me/onboarding/complete")
+    suspend fun completeOnboarding(): ApiResponse<OnboardingCompleteData>
 }
+
+

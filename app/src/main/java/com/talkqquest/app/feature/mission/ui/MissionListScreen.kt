@@ -150,10 +150,14 @@ private fun MissionListScreen(
                             onToggleSave = onToggleSave,
                             onMissionClick = onMissionClick,
                         )
-                        // 스크롤 유도 마스크 (CSS): 목록 하단이 배경색으로 서서히 사라짐 (높이 68, 투명→Gray50)
+                        // 스크롤 유도 마스크 (CSS "스크롤 유도 마스크"): left 16 · 폭 360 · top 670 · 높이 68
+                        // = 하단 네비 알약 위에서 목록이 배경색으로 사라짐 (투명→Gray50).
+                        // ★재대조(2026-07-22): 예전엔 화면 맨 밑(852)에 전체폭으로 붙여 알약 뒤에 가려
+                        //   사실상 안 보였음 → CSS 좌표 그대로 아래에서 114(=852-738) 띄움.
                         Box(
                             modifier = Modifier
                                 .align(Alignment.BottomCenter)
+                                .padding(start = 16.dp, end = 17.dp, bottom = 114.dp)
                                 .fillMaxWidth()
                                 .height(68.dp)
                                 .background(Brush.verticalGradient(listOf(Gray50.copy(alpha = 0f), Gray50))),

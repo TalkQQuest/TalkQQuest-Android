@@ -32,6 +32,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.ime
 import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
@@ -45,6 +46,9 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowUp
@@ -66,6 +70,11 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.key.key
+import androidx.compose.ui.input.key.onPreviewKeyEvent
+import androidx.compose.ui.input.key.type
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.onSizeChanged
@@ -423,18 +432,27 @@ private fun ConversationContent(
         // 옛 메시지가 카드에 닿기 전에 배경색으로 녹아 사라지게 함. 그 아래(하단부 높이만큼)는
         // 단색 — 카드 좌우 16 여백으로 메시지가 비쳐 지나가는 것도 같이 가림.
         // 하단부보다 먼저 그려 카드·입력창 뒤에 깔림 (CSS 레이어 순서와 동일).
+        // ★위치 재조사(2026-07-22): CSS "스크롤 마스크"는 y605~717(높이 112) — 카드(502~699)·
+        //   입력창(672~716) "뒤"에 겹치는 밴드고, 카드 위 메시지 영역엔 마스크가 없음.
+        //   예전 구현은 이 밴드를 카드 위(88dp)에 얹어 마스크 시작이 디자인보다 ~190px 높았고,
+        //   방금 온 메시지가 카드 위에서 옅게 씻겨 보였음 → 아래끝을 입력창 바닥에 정렬해 수정.
         Column(modifier = Modifier.align(Alignment.BottomCenter).fillMaxWidth()) {
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(88.dp)
+                    .height(112.dp) // CSS 마스크 높이 그대로 (그라데이션 정의역도 112 기준)
                     .background(scrollMaskBrush(topDown = false)),
             )
+            // 입력창 아래(네비 알약 존)로 스크롤돼 내려간 옛 메시지 가림 — CSS엔 이 구간 정의가
+            // 없어(목업 리스트가 717에서 끝남) 그라데이션 끝 알파(0.8)를 그대로 이어 채움.
+            val navBarInset = with(LocalDensity.current) { WindowInsets.navigationBars.getBottom(this).toDp() }
+            val navGap = if (WindowInsets.ime.getBottom(LocalDensity.current) > 0) 8.dp
+            else 88.dp / LocalDesignScale.current
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(bottomSectionHeight)
-                    .background(Gray50.copy(alpha = 0.8f)), // 그라데이션 끝 알파와 이어짐
+                    .height(navGap + navBarInset)
+                    .background(Gray50.copy(alpha = 0.8f)),
             )
         }
 
@@ -829,8 +847,25 @@ private fun MessageInputRow(
                 value = text,
                 onValueChange = onTextChange,
                 textStyle = TqType.BodyM.figma().copy(color = Gray800),
-                maxLines = 1,
-                modifier = Modifier.fillMaxWidth(),
+                // 엔터 = 전송. singleLine이 없으면 엔터가 줄바꿈으로 들어가
+                // 글자가 위로 밀려 "입력이 사라진 것처럼" 보였음(실측) → 전송 액션으로 연결.
+                singleLine = true,
+                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Send),
+                keyboardActions = KeyboardActions(onSend = { if (canSend) onSend() }),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    // 한글 조합 중이면 첫 엔터를 IME가 "조합 확정"에 써버려 엔터를 두 번 눌러야
+                    // 전송됐음(실측) → IME보다 먼저 엔터를 가로채 한 번에 전송.
+                    // (조합 중인 글자도 value에 이미 들어 있어 그대로 보내도 안전.
+                    //  전송 후 입력창이 비워지며 조합도 함께 끊김. 이벤트 소비(true)로 이중 전송 방지)
+                    .onPreviewKeyEvent { event ->
+                        if (event.key == Key.Enter && event.type == KeyEventType.KeyDown) {
+                            if (canSend) onSend()
+                            true
+                        } else {
+                            false
+                        }
+                    },
             )
             if (text.isEmpty()) {
                 Text(text = "메세지를 입력하세요...", style = TqType.BodyM.figma(), color = Gray300)

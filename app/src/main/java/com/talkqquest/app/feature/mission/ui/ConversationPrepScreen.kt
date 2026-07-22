@@ -1,12 +1,8 @@
 package com.talkqquest.app.feature.mission.ui
 
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -30,17 +26,10 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.AnnotatedString
@@ -50,7 +39,6 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import kotlinx.coroutines.delay
 import com.talkqquest.app.R
 import com.talkqquest.app.core.designsystem.Error
 import com.talkqquest.app.core.designsystem.FitDesign
@@ -144,16 +132,6 @@ private fun ConversationPrepContent(
         val shrink = 1f
         val compact = LocalDesignScale.current <= 0.5f
 
-        // 복사 토스트: 복사할 때마다 2초 노출 (연타 시 타이머 리셋). 시스템 Toast는 커스텀 불가라 인앱 오버레이로.
-        var copyTick by remember { mutableIntStateOf(0) }
-        var copyToastVisible by remember { mutableStateOf(false) }
-        LaunchedEffect(copyTick) {
-            if (copyTick > 0) {
-                copyToastVisible = true
-                delay(2000)
-                copyToastVisible = false
-            }
-        }
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -268,7 +246,7 @@ private fun ConversationPrepContent(
                 // 첫 마디 카드들 (서버 개수 가변, 각 복사 가능) — CSS Frame 398 gap 12 (UI 7차, v4는 8)
                 Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                     prep.openers.forEach { opener ->
-                        OpenerCard(text = opener, onCopied = { copyTick++ })
+                        OpenerCard(text = opener)
                     }
                 }
             }
@@ -290,41 +268,6 @@ private fun ConversationPrepContent(
                 .fillMaxWidth(),
         )
 
-        // 복사 토스트 (CSS Frame 427321356: (16,669) 361x66 · pad 13x26 · gap 16 · r36 · 회색 그라데이션 0.7→0.8).
-        // 토스트 끝 y 735 → 아래 여백 = 852 - 735 - 시스템네비(48) = 69.
-        AnimatedVisibility(
-            visible = copyToastVisible,
-            enter = fadeIn(),
-            exit = fadeOut(),
-            modifier = Modifier.align(Alignment.BottomCenter),
-        ) {
-            Row(
-                modifier = Modifier
-                    .navigationBarsPadding()
-                    .padding(start = 16.dp, end = 16.dp, bottom = 69.dp)
-                    .fillMaxWidth()
-                    .height(66.dp)
-                    .clip(RoundedCornerShape(36.dp))
-                    .background(
-                        // CSS linear-gradient(95.78deg, rgba(111,116,123,.7) → .8) — 거의 수평이라 horizontal로
-                        Brush.horizontalGradient(listOf(Color(0xB36F747B), Color(0xCC6F747B))),
-                    )
-                    .padding(horizontal = 26.dp, vertical = 13.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(16.dp),
-            ) {
-                Image(
-                    painter = painterResource(R.drawable.ic_toast_check),
-                    contentDescription = null,
-                    modifier = Modifier.size(26.dp),
-                )
-                Text(
-                    text = "클립보드에 복사했어요.\n원하는 곳에 붙여넣어 사용해보세요.",
-                    style = TqType.LabelL.figma(), // Label/L 14/20 (CSS)
-                    color = Gray50,
-                )
-            }
-        }
     }
 }
 
@@ -353,7 +296,7 @@ private fun TopicChips(topics: List<String>, modifier: Modifier = Modifier) {
 
 // 첫 마디 카드 (CSS Frame 395~397): 흰 배경 radius 8, 높이 44, 왼쪽 pad 12, 오른쪽 복사 버튼.
 @Composable
-private fun OpenerCard(text: String, onCopied: () -> Unit = {}) {
+private fun OpenerCard(text: String) {
     val clipboard = LocalClipboardManager.current
     Row(
         modifier = Modifier
@@ -371,14 +314,13 @@ private fun OpenerCard(text: String, onCopied: () -> Unit = {}) {
                 .weight(1f)
                 .padding(start = 12.dp),
         )
-        // 복사: 누르면 원형 리플(가운데서 퍼지는 반투명 효과) + 클립보드 복사 + 토스트.
+        // 복사: 누르면 원형 리플(가운데서 퍼지는 반투명 효과) + 클립보드 복사. (복사 알림은 디자인에서 제거됨)
         Box(
             modifier = Modifier
                 .size(44.dp)
                 .clip(CircleShape) // 리플이 동그랗게 퍼지도록
                 .clickable {
                     clipboard.setText(AnnotatedString(text))
-                    onCopied() // 디자인 토스트는 화면 레벨 오버레이가 띄움 (시스템 Toast → 커스텀 교체, UI 7차)
                 },
             contentAlignment = Alignment.Center,
         ) {

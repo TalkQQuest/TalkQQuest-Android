@@ -9,16 +9,22 @@ import javax.inject.Inject
 
 // 모든 요청 헤더에 토큰 자동 첨부 (서버 인증: "Authorization: Bearer <accessToken>").
 //
-// 로그인 화면(A담당)이 시작점이 되기 전까지, 토큰이 없으면 테스트 계정으로 자동 로그인한다.
-// 서버 accessToken은 1시간 만료라 401 복구가 필요한데, 이때 "누구의 토큰인지" 반드시 구분한다:
+// [개발용 임시 장치 안내 — 로그인 담당자분 참고용으로 남겨둡니다]
+// 로그인 화면이 앱 시작점이 되기 전까지, 토큰이 없으면 팀 테스트 계정으로 자동 로그인해서
+// (DevTokenProvider) 홈·미션 등 API가 로그인 없이도 동작하게 해둔 상태입니다.
+// 서버 accessToken이 1시간 만료라 401 복구가 필요한데, 이때 "누구의 토큰인지"를 구분합니다:
 //
-//   refreshToken 있음 = 실제 로그인한 사용자 → 절대 건드리지 않는다.
-//        (테스트 계정으로 재로그인하면 남의 세션을 덮어써 다른 사람으로 바뀜)
-//   refreshToken 없음 = DevTokenProvider가 넣은 개발용 토큰 → 만료 시 재로그인해 복구.
+//   refreshToken 있음 = 화면에서 실제 로그인한 사용자 → 건드리지 않습니다.
+//        (여기서 테스트 계정으로 재로그인하면 사용자 세션이 테스트 계정으로 바뀌는 사고가 나서요)
+//        참고: 현재 실사용자 토큰은 만료 시 복구 로직이 아직 없어 401이 나요(홈이 "다민" 폴백).
+//        로그인 흐름 마무리하실 때 /auth/refresh 재발급으로 복구해주시면 될 것 같아요.
+//        서버 엔드포인트(POST /api/v1/auth/refresh)는 배포돼 있는 것 확인했습니다(2026-07-22).
+//   refreshToken 없음 = DevTokenProvider가 넣은 개발용 토큰 → 만료 시 자동 재로그인해 복구합니다.
+//        (테스트 계정 경로가 며칠 켜둬도 만료를 못 느끼는 건 이것 때문 — 개발 편의용 의도된 동작입니다)
 //
-// (DevTokenProvider는 saveAccessToken만, 실제 로그인은 saveTokens로 refreshToken까지 저장 — 이 차이로 판별)
-// TODO(A/로그인): 로그인 흐름이 완성되면 DevTokenProvider와 아래 분기를 통째로 삭제.
-//   실제 사용자의 401 만료 복구는 refreshToken으로 재발급하는 로직이 대신한다.
+// (판별 근거: DevTokenProvider는 saveAccessToken만 저장, 실제 로그인은 saveTokens로 refreshToken까지 저장)
+// TODO(로그인 연동 시): ①DevTokenProvider와 아래 개발용 분기 삭제,
+//   ②실사용자 401 복구를 refreshToken 재발급(POST /api/v1/auth/refresh)으로 대체.
 class AuthInterceptor @Inject constructor(
     private val tokenDataStore: TokenDataStore,
     private val devTokenProvider: DevTokenProvider,

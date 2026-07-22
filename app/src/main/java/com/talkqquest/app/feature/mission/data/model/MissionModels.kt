@@ -94,10 +94,12 @@ data class MissionSaveResponse(
 
 // POST /api/v1/missions/{missionId}/complete 요청 body — 백엔드 CompleteConversationRequestDto.
 // result: success | failure | avoidance
+// ★result에 기본값 금지: Json encodeDefaults=false라 기본값 필드는 요청에서 빠짐
+//   (대화 mode/role이 이걸로 서버 500 났던 것과 같은 함정 — 2026-07-22 실측).
 @Serializable
 data class MissionCompleteRequest(
     val conversationId: String,
-    val result: String = "success",
+    val result: String, // 호출부에서 항상 명시
     val memo: String? = null,
     val durationMinutes: Int,
     val emotion: String? = null,

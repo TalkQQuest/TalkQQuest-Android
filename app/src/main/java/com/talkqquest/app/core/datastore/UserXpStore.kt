@@ -30,6 +30,15 @@ class UserXpStore @Inject constructor() {
         currentXp = serverXp
     }
 
+    // 서버 완료 처리 후 /xp/summary 값으로 강제 동기화 — 홈 카드가 서버와 같은 숫자를 보게.
+    // (seed와 달리 매번 덮어씀. 서버가 XP의 단일 진실이 된 실연동 경로에서 사용)
+    fun syncFromServer(serverLevel: Int, serverXp: Int, serverNextLevelXp: Int) {
+        seeded = true
+        level = serverLevel
+        currentXp = serverXp
+        nextLevelXp = serverNextLevelXp
+    }
+
     // 미션 완료 보상 반영. 실제 레벨업 규칙(필요 XP 증가 등)은 서버 정책이지만,
     // stub도 100을 넘으면 초과분 이월+레벨업 해서 데모에서 숫자가 깨지지 않게 함(110/100 방지).
     fun addXp(gained: Int) {

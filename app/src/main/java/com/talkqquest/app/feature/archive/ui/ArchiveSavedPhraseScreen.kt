@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
@@ -31,7 +32,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.LineBreak
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -187,11 +187,11 @@ private fun PhraseHighlightCard(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .height(72.dp)
+            .heightIn(min = 72.dp)
             .clip(RoundedCornerShape(20.dp))
             .background(White)
             .padding(start = 12.dp, top = 12.dp, bottom = 12.dp, end = 6.dp),
-        verticalAlignment = Alignment.CenterVertically,
+        verticalAlignment = Alignment.Top,
         horizontalArrangement = Arrangement.SpaceBetween
     ) {
         Box(modifier = Modifier.size(48.dp), contentAlignment = Alignment.Center) {
@@ -202,15 +202,23 @@ private fun PhraseHighlightCard(
             )
         }
 
-        // 💡 [수정됨] 텍스트가 길어질 경우 한 줄(maxLines = 1)로 제한하고 말줄임표(Ellipsis) 처리
         Text(
-            text = phraseText,
-            style = TqType.BodyL.copy(fontWeight = FontWeight.Medium).figma(),
+            // 💡 [핵심 수정] 글자 사이가 끊어지지 않도록 확장 함수 적용
+            text = phraseText.glueShortWords().keepWordsIntact(),
+            style = TqType.BodyL.copy(
+                fontWeight = FontWeight.Medium,
+                lineBreak = LineBreak(
+                    strategy = LineBreak.Strategy.Simple,
+                    strictness = LineBreak.Strictness.Normal,
+                    wordBreak = LineBreak.WordBreak.Phrase
+                )
+            ).figma(),
             color = Gray900,
-            textAlign = TextAlign.Center,
-            maxLines = 1,
+            maxLines = 4,
             overflow = TextOverflow.Ellipsis,
-            modifier = Modifier.weight(1f).padding(horizontal = 4.dp)
+            modifier = Modifier
+                .weight(1f)
+                .padding(horizontal = 4.dp, vertical = 10.dp)
         )
 
         Box(
@@ -223,7 +231,7 @@ private fun PhraseHighlightCard(
             Icon(
                 painter = painterResource(id = if (isBookmarked) R.drawable.ic_mission_bookmark_filled else R.drawable.ic_mission_bookmark),
                 contentDescription = "북마크",
-                tint = Color.Unspecified, // 원본 아이콘 색상 그대로 사용
+                tint = Color.Unspecified,
                 modifier = Modifier.size(24.dp)
             )
         }
@@ -265,7 +273,8 @@ private fun MemoSection(keywords: List<String>, memoText: String) {
         }
 
         Text(
-            text = memoText,
+            // 💡 [핵심 수정] 메모 내용도 단어가 쪼개지지 않도록 확장 함수 적용
+            text = memoText.glueShortWords().keepWordsIntact(),
             style = TqType.BodyM.copy(
                 lineHeight = 22.sp,
                 lineBreak = LineBreak(
@@ -371,10 +380,10 @@ private fun ArchiveSavedPhraseScreenPreview() {
     TalkQQuestTheme {
         ArchiveSavedPhraseContent(
             uiState = ArchiveSavedPhraseUiState(
-                phraseText = "“그렇군요! 저도 생각보다 편해서 많이 놀랐어요. 정말 길이가 아주 아주 긴 문장 테스트입니다.”",
+                phraseText = "“네, 안녕하세요. 항상 아메리카노만 마셨는데, 오늘은 좀 달달한 걸 먹고 싶어요.”",
                 isBookmarked = true,
-                memoKeywords = listOf("자기 성장", "첫 만남", "스몰 토크"),
-                memoText = "상대방의 감정을 자연 스럽게 열어줄 수 있는 좋은 문장이에요.",
+                memoKeywords = listOf("상황극", "요청하기", "정중함"),
+                memoText = "자신의 평소 취향과 현재 원하는 바를 명확하고 정중하게 전달하는 표현입니다.",
                 relatedConversation = mockConversation
             ),
             onBackClick = {},

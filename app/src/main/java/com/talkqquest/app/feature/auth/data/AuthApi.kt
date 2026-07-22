@@ -34,4 +34,9 @@ interface AuthApi {
     suspend fun signupWithEmail(
         @Body request: EmailSignupRequest,
     ): ApiResponse<EmailSignupData>
+
+    @POST("api/v1/auth/refresh")
+    suspend fun refreshAccessToken(
+        @Body request: TokenRefreshRequest,
+    ): ApiResponse<TokenRefreshData>
 }

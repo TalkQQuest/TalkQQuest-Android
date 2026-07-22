@@ -1,6 +1,5 @@
 package com.talkqquest.app.feature.archive.ui
 
-import android.widget.Toast
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -27,6 +26,7 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -54,29 +54,26 @@ import com.talkqquest.app.feature.archive.viewmodel.ArchiveHomeUiState
 import com.talkqquest.app.feature.archive.viewmodel.ArchiveHomeViewModel
 import com.talkqquest.app.feature.archive.viewmodel.RecentActivity
 
-// ── 아카이브 화면 로컬 텍스트 도구 ──
 private val FullLeading = LineHeightStyle(
     alignment = LineHeightStyle.Alignment.Center,
     trim = LineHeightStyle.Trim.None,
 )
 internal fun TextStyle.figma(): TextStyle = copy(lineHeightStyle = FullLeading)
 
-/**
- * 1. 화면 진입점 (Stateful)
- * ViewModel과 연동하여 상태(State)를 구독하고, 네비게이션 이벤트를 처리합니다.
- */
 @Composable
 fun ArchiveHomeScreen(
     viewModel: ArchiveHomeViewModel = hiltViewModel(),
     onNavigateToSearch: () -> Unit = {},
     onNavigateToList: (tabIndex: Int) -> Unit = {},
-    onNavigateToDetail: (activityId: String) -> Unit = {}
+    onNavigateToDetail: (activityId: String, type: ActivityType) -> Unit = { _: String, _: ActivityType -> }
 ) {
-    // ViewModel의 상태를 생명주기에 안전하게 수집
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
-    val context = LocalContext.current
 
-    // 순수 UI 컴포넌트로 상태와 이벤트 람다를 전달 (State Hoisting 패턴)
+    // 💡 화면으로 돌아올 때마다(예: 상세 페이지에서 해제하고 백 버튼) 최신 카운트를 갱신합니다!
+    LaunchedEffect(Unit) {
+        viewModel.refreshData()
+    }
+
     ArchiveHomeScreen(
         uiState = uiState,
         onSearchClick = {
@@ -88,23 +85,19 @@ fun ArchiveHomeScreen(
         onCategoryClick = { tabIndex ->
             onNavigateToList(tabIndex)
         },
-        onActivityClick = { activityId ->
-            Toast.makeText(context, "최근 활동 상세: 준비 중인 기능입니다.", Toast.LENGTH_SHORT).show()
-            onNavigateToDetail(activityId)
+        onActivityClick = { activityId, type ->
+            onNavigateToDetail(activityId, type)
         }
     )
 }
 
-/**
- * 2. 순수 UI 컴포넌트 (Stateless)
- */
 @Composable
 private fun ArchiveHomeScreen(
     uiState: ArchiveHomeUiState,
     onSearchClick: () -> Unit,
     onArchiveBoxClick: () -> Unit,
     onCategoryClick: (Int) -> Unit,
-    onActivityClick: (String) -> Unit
+    onActivityClick: (String, ActivityType) -> Unit
 ) = FitDesign {
     BoxWithConstraints(
         modifier = Modifier
@@ -112,13 +105,11 @@ private fun ArchiveHomeScreen(
             .background(Gray50),
         contentAlignment = Alignment.TopStart
     ) {
-        // API 데이터를 불러오는 동안 로딩 스피너 노출
         if (uiState.isLoading) {
             Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                 CircularProgressIndicator(color = Primary600)
             }
         } else {
-            // 메인 스크롤 콘텐츠
             LazyColumn(
                 modifier = Modifier
                     .fillMaxSize()
@@ -129,16 +120,13 @@ private fun ArchiveHomeScreen(
                     bottom = 32.dp
                 )
             ) {
-                // ==========================================
                 // [헤더 영역] 보관함 타이틀
-                // ==========================================
                 item {
                     Column(
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(horizontal = 16.dp)
                     ) {
-                        // "보관함" 텍스트와 꺾쇠
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
                             modifier = Modifier
@@ -157,7 +145,6 @@ private fun ArchiveHomeScreen(
                                     .size(width = 32.dp, height = 30.dp),
                                 contentAlignment = Alignment.Center
                             ) {
-                                // 💡 [수정됨] 커스텀 우측 꺾쇠 아이콘으로 변경
                                 Icon(
                                     painter = painterResource(id = R.drawable.ic_forward_chevron),
                                     contentDescription = "보관함 전체 보기",
@@ -177,9 +164,7 @@ private fun ArchiveHomeScreen(
 
                 item { Spacer(modifier = Modifier.height(24.dp)) }
 
-                // ==========================================
-                // [카테고리 영역] 미션 / 대화 / 문장 / 리포트
-                // ==========================================
+                // [카테고리 영역]
                 item {
                     Row(
                         modifier = Modifier
@@ -217,9 +202,7 @@ private fun ArchiveHomeScreen(
 
                 item { Spacer(modifier = Modifier.height(24.dp)) }
 
-                // ==========================================
                 // [최근 활동 리스트 영역]
-                // ==========================================
                 item {
                     Text(
                         text = "최근 활동",
@@ -236,16 +219,14 @@ private fun ArchiveHomeScreen(
                 items(uiState.recentActivities) { activity ->
                     RecentActivityCard(
                         activity = activity,
-                        onClick = { onActivityClick(activity.id) },
+                        onClick = { onActivityClick(activity.id, activity.type) },
                         modifier = Modifier.padding(horizontal = 16.dp)
                     )
                     Spacer(modifier = Modifier.height(16.dp))
                 }
             }
 
-            // ==========================================
             // [검색 아이콘]
-            // ==========================================
             Box(
                 modifier = Modifier
                     .align(Alignment.TopEnd)
@@ -266,9 +247,6 @@ private fun ArchiveHomeScreen(
     }
 }
 
-/**
- * 3. 카테고리 개별 아이템 컴포넌트
- */
 @Composable
 private fun ArchiveCategoryItem(
     modifier: Modifier = Modifier,
@@ -312,7 +290,6 @@ private fun ArchiveCategoryItem(
     }
 }
 
-// ── Preview ──
 @Preview(name = "보관함 메인 (393dp)", showSystemUi = true, device = "spec:width=393dp,height=852dp")
 @Composable
 private fun ArchiveHomeScreenPreview() {
@@ -328,7 +305,7 @@ private fun ArchiveHomeScreenPreview() {
             onSearchClick = {},
             onArchiveBoxClick = {},
             onCategoryClick = {},
-            onActivityClick = {}
+            onActivityClick = { _: String, _: ActivityType -> }
         )
     }
 }

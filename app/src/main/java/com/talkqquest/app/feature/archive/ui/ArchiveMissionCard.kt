@@ -41,13 +41,14 @@ import com.talkqquest.app.core.designsystem.Success
 import com.talkqquest.app.core.designsystem.TqType
 import com.talkqquest.app.core.designsystem.White
 import com.talkqquest.app.core.designsystem.softShadow
+import com.talkqquest.app.feature.mission.ui.figma
 
 // 🚨 feature.mission 참조 완벽 제거!
 
 // 💡 보관함 전용 독립 데이터 모델 생성
 // 기존 ArchiveMissionItem 데이터 클래스 맨 끝에 날짜 속성 추가!
 data class ArchiveMissionItem(
-    val id: Long,
+    val id: String,
     val title: String,
     val category: String,
     val difficulty: String,

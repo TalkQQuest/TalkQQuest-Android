@@ -32,6 +32,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.ime
 import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
@@ -45,6 +46,9 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowUp
@@ -55,6 +59,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
@@ -65,11 +70,17 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.key.key
+import androidx.compose.ui.input.key.onPreviewKeyEvent
+import androidx.compose.ui.input.key.type
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.layout.positionInRoot
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.IntOffset
@@ -84,7 +95,6 @@ import com.talkqquest.app.core.designsystem.Gray100
 import com.talkqquest.app.core.designsystem.Gray1000
 import com.talkqquest.app.core.designsystem.Gray200
 import com.talkqquest.app.core.designsystem.Gray300
-import com.talkqquest.app.core.designsystem.Gray400
 import com.talkqquest.app.core.designsystem.Gray50
 import com.talkqquest.app.core.designsystem.Gray500
 import com.talkqquest.app.core.designsystem.Gray600
@@ -96,6 +106,7 @@ import com.talkqquest.app.core.designsystem.Primary500
 import com.talkqquest.app.core.designsystem.Primary600
 import com.talkqquest.app.core.designsystem.TalkQQuestTheme
 import com.talkqquest.app.core.designsystem.TqType
+import com.talkqquest.app.core.designsystem.White
 import com.talkqquest.app.core.designsystem.component.TqButton
 import com.talkqquest.app.core.designsystem.component.TqButtonSize
 import com.talkqquest.app.core.designsystem.softShadow
@@ -194,14 +205,12 @@ private fun ConversationScreen(
             )
         }
 
-        // 나가기 팝업 (CSS "미션 종료 팝업" — 배경을 어둡게 하는 층은 디자인에 없음.
-        // 뒤 화면 오작동만 막게 투명 층으로 터치를 흡수하고, 카드만 화면 중앙에 띄움)
-        // FitDesign: 카드가 고정폭(332)이라 320dp 같은 작은 화면에선 통째 비율 축소
+        // 대화 종료 팝업 (CSS "탈퇴 모달" 프레임 — 최종 확정 2026-07-21).
+        // ★ 별도 FitDesign으로 감싸지 않는다: 이미 이 화면 전체가 바깥 FitDesign(171줄) 안이라
+        //   여기서 또 감싸면 팝업만 다른 좌표계가 돼 위치가 어긋남(살짝 아래로 밀렸던 원인).
+        //   메인 콘텐츠와 같은 프레임에 두면 CSS top 313이 다른 요소들과 동일 규칙으로 맞음.
         if (uiState.showExitDialog) {
-            // 바깥 FitDesign이 이미 상태바 보정을 했으니 중첩에선 끔 (팝업이 중앙에서 밀리지 않게)
-            FitDesign(compensateStatusBar = false) {
-                ExitDialog(onContinue = onExitDismiss, onExit = onExitConfirm)
-            }
+            ExitDialog(onContinue = onExitDismiss, onExit = onExitConfirm)
         }
     }
 }
@@ -286,26 +295,34 @@ private fun ConversationContent(
             )
         }
 
-        // ── 메시지 영역 ──
+        // ── 메시지 영역 + 하단부(추천 답변·입력창) 겹침 ──
+        // 목록이 하단부 뒤까지 깔리고, 그 경계에서 배경색으로 녹아 사라짐(CSS 하단 스크롤 마스크).
+        // 목록을 하단부 위에서 끊으면 옛 메시지가 카드 경계에서 뚝 잘려 마스크를 쓸 수 없음.
         val listState = rememberLazyListState()
         val scrollScope = rememberCoroutineScope()
+        val density = LocalDensity.current
+        // 하단부(카드+입력창+네비 여백) 실측 높이 — 목록 아래 여백·마스크 크기가 이 값을 따라감
+        var bottomSectionHeight by remember { mutableStateOf(0.dp) }
+        Box(modifier = Modifier.fillMaxWidth().weight(1f)) {
         Box(
             modifier = Modifier
-                .fillMaxWidth()
-                .weight(1f)
-                // 영역 높이가 변하는 동안(추천 카드 펼침/접힘 애니, 키보드) 매 프레임
+                .fillMaxSize()
+                // 영역 높이가 변하는 동안(키보드) 매 프레임
                 // 맨 아래로 붙잡아 마지막 메시지가 가려지지 않게 함. (reverseLayout이라 0 = 최신)
                 .onSizeChanged {
                     if (uiState.messages.isNotEmpty()) {
                         scrollScope.launch { listState.scrollToItem(0) }
                     }
-                }
-                // 비행 도착점(리스트 바닥) 실측
-                .onGloballyPositioned { listBottomGlobalY = it.positionInRoot().y + it.size.height },
+                },
         ) {
             // 위로 스크롤해 옛 메시지를 보다가 새 메시지가 오면 바닥으로 복귀
             LaunchedEffect(uiState.messages.size) {
                 if (uiState.messages.isNotEmpty()) listState.animateScrollToItem(0)
+            }
+            // 카드 펼침/접힘으로 아래 여백이 변하는 동안에도 최신 메시지를 바닥에 붙잡음
+            // (예전엔 영역 높이 변화로 감지했지만, 이제 영역은 고정이고 여백만 변함)
+            LaunchedEffect(bottomSectionHeight) {
+                if (uiState.messages.isNotEmpty()) listState.scrollToItem(0)
             }
             // 메시지별 등장 애니메이션을 "처음 나타날 때 한 번만" 돌리기 위한 기록
             val animatedMessageIds = remember { mutableSetOf<String>() }
@@ -320,8 +337,10 @@ private fun ConversationContent(
                 // (목업 "대화 시작"의 위 정렬 유지)
                 verticalArrangement = Arrangement.Bottom,
                 // top 88 = 아바타(104~174)를 지나 메시지 시작(top 180) - 헤더 끝(92) (CSS)
+                // bottom = 하단부 높이 + 16 → 평소엔 최신 메시지가 카드 바로 위에 놓이고,
+                // 위로 스크롤하면 옛 메시지가 그 여백(=카드 뒤)으로 내려가며 마스크에 녹아 사라짐
                 contentPadding = androidx.compose.foundation.layout.PaddingValues(
-                    start = 16.dp, end = 16.dp, top = 88.dp, bottom = 16.dp,
+                    start = 16.dp, end = 16.dp, top = 88.dp, bottom = bottomSectionHeight + 16.dp,
                 ),
             ) {
                 items(count = uiState.messages.size, key = { uiState.messages[uiState.messages.size - 1 - it].id }) { reversedIndex ->
@@ -386,8 +405,6 @@ private fun ConversationContent(
                     .height(65.dp)
                     .background(scrollMaskBrush(topDown = true)),
             )
-            // (피그마의 하단 마스크는 절대좌표에서 메시지가 카드 밑으로 지나가는 구간용 —
-            //  우리 구조는 메시지/카드가 분리돼 있어 최신 메시지만 흐려져서 뺌, 사용자 결정)
             // 봇 아바타 (CSS Frame 427320975): 70 원 + 보라 그림자, 이미지(70x81)가 원을 위아래로 살짝 벗어남
             Box(
                 modifier = Modifier
@@ -411,10 +428,44 @@ private fun ConversationContent(
             }
         }
 
+        // 아래 스크롤 마스크 (CSS Frame 427320988): 하단부 위 88을 그라데이션으로 덮어
+        // 옛 메시지가 카드에 닿기 전에 배경색으로 녹아 사라지게 함. 그 아래(하단부 높이만큼)는
+        // 단색 — 카드 좌우 16 여백으로 메시지가 비쳐 지나가는 것도 같이 가림.
+        // 하단부보다 먼저 그려 카드·입력창 뒤에 깔림 (CSS 레이어 순서와 동일).
+        // ★위치 재조사(2026-07-22): CSS "스크롤 마스크"는 y605~717(높이 112) — 카드(502~699)·
+        //   입력창(672~716) "뒤"에 겹치는 밴드고, 카드 위 메시지 영역엔 마스크가 없음.
+        //   예전 구현은 이 밴드를 카드 위(88dp)에 얹어 마스크 시작이 디자인보다 ~190px 높았고,
+        //   방금 온 메시지가 카드 위에서 옅게 씻겨 보였음 → 아래끝을 입력창 바닥에 정렬해 수정.
+        Column(modifier = Modifier.align(Alignment.BottomCenter).fillMaxWidth()) {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(112.dp) // CSS 마스크 높이 그대로 (그라데이션 정의역도 112 기준)
+                    .background(scrollMaskBrush(topDown = false)),
+            )
+            // 입력창 아래(네비 알약 존)로 스크롤돼 내려간 옛 메시지 가림 — CSS엔 이 구간 정의가
+            // 없어(목업 리스트가 717에서 끝남) 그라데이션 끝 알파(0.8)를 그대로 이어 채움.
+            val navBarInset = with(LocalDensity.current) { WindowInsets.navigationBars.getBottom(this).toDp() }
+            val navGap = if (WindowInsets.ime.getBottom(LocalDensity.current) > 0) 8.dp
+            else 88.dp / LocalDesignScale.current
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(navGap + navBarInset)
+                    .background(Gray50.copy(alpha = 0.8f)),
+            )
+        }
+
         // ── 하단: 추천 답변 + 입력창 (하단 네비 알약 위 88 = CSS 입력창 바닥 716 → 네비존 804) ──
         Column(
             modifier = Modifier
+                .align(Alignment.BottomCenter)
                 .fillMaxWidth()
+                // 실측: 목록 아래 여백·마스크 크기 기준 + 비행 도착점(=하단부 위 끝, 예전 리스트 바닥과 동일)
+                .onGloballyPositioned {
+                    listBottomGlobalY = it.positionInRoot().y
+                    bottomSectionHeight = with(density) { it.size.height.toDp() }
+                }
                 .padding(horizontal = 16.dp)
                 .navigationBarsPadding()
                 // 하단 네비 알약 몫 88은 축소 대상 밖(MainScreen)이라 비율로 되돌려 실제 크기 유지.
@@ -484,6 +535,7 @@ private fun ConversationContent(
                 )
             }
         }
+        } // 메시지+하단부 겹침 Box
     }
     // 비행 중인 말풍선 오버레이 (입력창·네비 위에 그려짐)
     flightMessage?.let { flying ->
@@ -644,8 +696,8 @@ private fun ChatBubbleRow(
                 .widthIn(max = if (message.isFromUser) 260.dp else 230.dp) // CSS max-width (패딩 포함)
                 .let {
                     if (message.isFromUser) it
-                    else it.softShadow( // AI 말풍선만 그림자 (CSS 0 2 6 8%)
-                        color = Color.Black.copy(alpha = 0.08f),
+                    else it.softShadow( // AI 말풍선만 그림자 (CSS 0 2 6, 8%→3% 디자이너 변경 2026-07-22)
+                        color = Color.Black.copy(alpha = 0.03f),
                         offsetY = 2.dp,
                         blur = 6.dp,
                         cornerRadius = 24.dp,
@@ -795,8 +847,25 @@ private fun MessageInputRow(
                 value = text,
                 onValueChange = onTextChange,
                 textStyle = TqType.BodyM.figma().copy(color = Gray800),
-                maxLines = 1,
-                modifier = Modifier.fillMaxWidth(),
+                // 엔터 = 전송. singleLine이 없으면 엔터가 줄바꿈으로 들어가
+                // 글자가 위로 밀려 "입력이 사라진 것처럼" 보였음(실측) → 전송 액션으로 연결.
+                singleLine = true,
+                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Send),
+                keyboardActions = KeyboardActions(onSend = { if (canSend) onSend() }),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    // 한글 조합 중이면 첫 엔터를 IME가 "조합 확정"에 써버려 엔터를 두 번 눌러야
+                    // 전송됐음(실측) → IME보다 먼저 엔터를 가로채 한 번에 전송.
+                    // (조합 중인 글자도 value에 이미 들어 있어 그대로 보내도 안전.
+                    //  전송 후 입력창이 비워지며 조합도 함께 끊김. 이벤트 소비(true)로 이중 전송 방지)
+                    .onPreviewKeyEvent { event ->
+                        if (event.key == Key.Enter && event.type == KeyEventType.KeyDown) {
+                            if (canSend) onSend()
+                            true
+                        } else {
+                            false
+                        }
+                    },
             )
             if (text.isEmpty()) {
                 Text(text = "메세지를 입력하세요...", style = TqType.BodyM.figma(), color = Gray300)
@@ -821,62 +890,68 @@ private fun MessageInputRow(
     }
 }
 
-// 나가기 팝업 (CSS "미션 종료 팝업" Frame 427321198): 카드 332, r24, Gray50 + 카드그림자.
-// 디자인에 어두운 배경 층이 없어 투명 층으로 뒤 터치만 막음.
+// 나가기 팝업 (CSS "미션 종료 팝업" Frame 427321198): 카드 332x180, r24, Gray50 + 카드그림자.
+// 대화 종료 확인 팝업 (CSS "탈퇴 모달" 프레임 — 최종 확정 2026-07-21, 보류 마커 해제).
+// 오버레이 = Gray700 23% 딤 / 모달 = 흰 배경 radius16 / 종료하기 = Primary600(빨강 아님, 확정).
 @Composable
 private fun ExitDialog(onContinue: () -> Unit, onExit: () -> Unit) {
     Box(
         modifier = Modifier
             .fillMaxSize()
+            .background(Gray700.copy(alpha = 0.23f)) // CSS op bg #334155 opacity 0.23
             .clickable(
                 interactionSource = remember { MutableInteractionSource() },
                 indication = null,
                 onClick = onContinue, // 카드 밖 터치 = 계속하기와 동일(닫기)
             ),
-        contentAlignment = Alignment.Center,
+        contentAlignment = Alignment.TopCenter, // CSS는 화면 top 기준 절대 위치 → 위에서부터 정렬
     ) {
         Column(
             modifier = Modifier
-                .widthIn(max = 332.dp)
-                .softShadow(color = Gray1000.copy(alpha = 0.01f), offsetY = 8.dp, blur = 24.dp, cornerRadius = 24.dp)
-                .clip(RoundedCornerShape(24.dp))
-                .background(Gray50)
+                // 화면 콘텐츠와 동일한 상단 기준(상태바 아래 = 디자인 y40)에 맞춤 — 안 맞추면
+                // FitDesign 상태바 보정분만큼 팝업만 아래로 밀림(살짝 내려앉던 원인).
+                .statusBarsPadding()
+                .offset(y = 273.dp) // CSS top 313 − 상태바 밴드 40 (그 40은 statusBarsPadding이 담당)
+                .width(336.dp) // CSS 고정폭
+                .clip(RoundedCornerShape(16.dp))
+                .background(White) // CSS #FFFFFF (그림자 없음)
                 .clickable(
                     interactionSource = remember { MutableInteractionSource() },
                     indication = null,
                     onClick = {}, // 카드 자체 터치는 흡수
                 )
-                .padding(vertical = 24.dp, horizontal = 12.dp),
+                .padding(start = 24.dp, end = 24.dp, top = 24.dp, bottom = 20.dp), // CSS padding 24 24 20
             horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(24.dp), // 문구↔버튼 gap 24 (CSS)
+            verticalArrangement = Arrangement.spacedBy(16.dp), // 문구↔버튼 gap 16 (CSS)
         ) {
             Column(
                 horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy(8.dp), // 제목↔설명 gap 8 (CSS)
+                verticalArrangement = Arrangement.spacedBy(4.dp), // 제목↔설명 gap 4 (CSS)
             ) {
-                Text(text = "대화를 종료하시겠어요?", style = TqType.TitleL.figma(), color = Gray900)
+                Text(text = "대화를 종료하시겠어요?", style = TqType.HeadingM.figma(), color = Gray900) // CSS Heading/M 20
                 Text(
-                    text = "대화를 종료하면 현재 미션이 완료됩니다",
-                    style = TqType.BodyL.figma().copy(fontWeight = androidx.compose.ui.text.font.FontWeight.Medium),
+                    text = "대화를 종료하면 현재 미션이 완료됩니다.",
+                    style = TqType.BodyM.figma(), // CSS Body/M 14 regular
                     color = Gray600,
+                    textAlign = TextAlign.Center,
                 )
             }
-            Row(horizontalArrangement = Arrangement.spacedBy(25.dp)) { // 버튼 간격 25 (CSS)
+            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) { // 버튼 간격 12 (CSS)
                 Box(
                     modifier = Modifier
-                        .size(width = 124.dp, height = 52.dp)
-                        .clip(RoundedCornerShape(12.dp))
-                        .background(Gray200)
+                        .size(width = 138.dp, height = 48.dp)
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(Gray200) // CSS Gray/200 #E2E8F0
                         .clickable(onClick = onContinue),
                     contentAlignment = Alignment.Center,
                 ) {
-                    Text(text = "계속하기", style = TqType.TitleL.figma(), color = Gray400)
+                    Text(text = "계속하기", style = TqType.TitleL.figma(), color = Gray500) // CSS Gray/500
                 }
                 Box(
                     modifier = Modifier
-                        .size(width = 124.dp, height = 52.dp)
-                        .clip(RoundedCornerShape(12.dp))
-                        .background(Error) // RED #F14444
+                        .size(width = 138.dp, height = 48.dp)
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(Primary600) // CSS Purple/600 #6353F0
                         .clickable(onClick = onExit),
                     contentAlignment = Alignment.Center,
                 ) {

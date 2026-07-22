@@ -18,6 +18,11 @@ val PretendardFamily: FontFamily = FontFamily(
     Font(R.font.pretendard_bold, FontWeight.Bold),
 )
 
+// 로고("톡깨") 전용 폰트. 로그인·스플래시의 로고 워드마크에서만 사용 (디자인 스펙: font-family 'A2Z', weight 700).
+val A2ZFamily: FontFamily = FontFamily(
+    Font(R.font.a2z_bold, FontWeight.Bold),
+)
+
 // 이름으로 직접 쓰는 스케일 (또는 MaterialTheme.typography.* 로도 사용 가능)
 object TqType {
     val Display = TextStyle(fontFamily = PretendardFamily, fontWeight = FontWeight.Bold, fontSize = 32.sp, lineHeight = 44.sp, letterSpacing = (-0.02).em)

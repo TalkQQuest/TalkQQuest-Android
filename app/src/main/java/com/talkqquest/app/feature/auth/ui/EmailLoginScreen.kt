@@ -3,16 +3,13 @@ package com.talkqquest.app.feature.auth.ui
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardOptions
@@ -49,14 +46,13 @@ import com.talkqquest.app.core.designsystem.component.TqButton
 fun EmailLoginScreen(
     onBack: () -> Unit = {},
     onLoginClick: (String, String) -> Unit = { _, _ -> },
-    onFindIdClick: () -> Unit = {},
     onFindPasswordClick: () -> Unit = {},
     errorMessage: String? = null,
 ) = FitDesign {
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
 
-    AuthScreenFrame(title = "로그인", onBack = onBack) {
+    AuthScreenFrame(title = "\uB85C\uADF8\uC778", onBack = onBack) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -64,7 +60,7 @@ fun EmailLoginScreen(
         ) {
             Spacer(Modifier.height(113.dp))
             Text(
-                text = "이메일로 로그인",
+                text = "\uC774\uBA54\uC77C\uB85C \uB85C\uADF8\uC778",
                 style = TqType.HeadingL,
                 color = Gray800,
                 modifier = Modifier.padding(start = 7.dp),
@@ -72,14 +68,14 @@ fun EmailLoginScreen(
             Spacer(Modifier.height(26.dp))
             LoginTextField(
                 value = email,
-                placeholder = "이메일 주소",
+                placeholder = "\uC774\uBA54\uC77C \uC8FC\uC18C",
                 onValueChange = { email = it },
                 keyboardType = KeyboardType.Email,
             )
             Spacer(Modifier.height(12.dp))
             LoginTextField(
                 value = password,
-                placeholder = "비밀번호(영문+숫자, 8-16자)",
+                placeholder = "\uBE44\uBC00\uBC88\uD638(\uC601\uBB38+\uC22B\uC790, 8-16\uC790)",
                 onValueChange = { password = it.take(16) },
                 keyboardType = KeyboardType.Password,
                 visualTransformation = PasswordVisualTransformation(),
@@ -95,30 +91,19 @@ fun EmailLoginScreen(
             }
             Spacer(Modifier.height(if (errorMessage == null) 49.dp else 16.dp))
             TqButton(
-                text = "로그인",
+                text = "\uB85C\uADF8\uC778",
                 onClick = { onLoginClick(email, password) },
                 modifier = Modifier.fillMaxWidth(),
             )
             Spacer(Modifier.height(14.dp))
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.Center,
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Text(
-                    text = "아이디 찾기",
-                    style = TqType.LabelL,
-                    color = Gray500,
-                    modifier = Modifier.clickable(onClick = onFindIdClick),
-                )
-                Spacer(Modifier.width(24.dp))
-                Text(
-                    text = "비밀번호 찾기",
-                    style = TqType.LabelL,
-                    color = Gray500,
-                    modifier = Modifier.clickable(onClick = onFindPasswordClick),
-                )
-            }
+            Text(
+                text = "\uBE44\uBC00\uBC88\uD638 \uCC3E\uAE30",
+                style = TqType.LabelL,
+                color = Gray500,
+                modifier = Modifier
+                    .padding(start = 7.dp)
+                    .clickable(onClick = onFindPasswordClick),
+            )
         }
     }
 }
@@ -135,7 +120,7 @@ private fun LoginTextField(
         value = value,
         onValueChange = onValueChange,
         singleLine = true,
-        textStyle = TqType.TitleL.copy(color = Gray900),
+        textStyle = TqType.TitleL.copy(color = Gray900, fontWeight = FontWeight.SemiBold),
         cursorBrush = SolidColor(Primary600),
         keyboardOptions = KeyboardOptions(keyboardType = keyboardType),
         visualTransformation = visualTransformation,
@@ -176,7 +161,7 @@ private fun EmailLoginEmptyPreview() {
 private fun EmailLoginErrorPreview() {
     TalkQQuestTheme {
         EmailLoginScreen(
-            errorMessage = "이메일 또는 비밀번호를 확인해주세요.",
+            errorMessage = "\uC774\uBA54\uC77C \uB610\uB294 \uBE44\uBC00\uBC88\uD638\uB97C \uD655\uC778\uD574\uC8FC\uC138\uC694.",
         )
     }
 }

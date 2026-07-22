@@ -1,4 +1,4 @@
-package com.talkqquest.app.navigation
+﻿package com.talkqquest.app.navigation
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -22,8 +22,8 @@ import com.talkqquest.app.core.designsystem.Gray50
 import dev.chrisbanes.haze.HazeState
 import dev.chrisbanes.haze.hazeSource
 
-// 앱 셸. 하단 네비(떠 있는 유리 알약)가 화면 위에 겹쳐 뜬다.
-// hazeState: 뒤 콘텐츠(NavGraph)를 유리(하단 네비)가 흐리게 비추도록 연결하는 상태.
+// ???? ?섎떒 ?ㅻ퉬(???덈뒗 ?좊━ ?뚯빟)媛 ?붾㈃ ?꾩뿉 寃뱀퀜 ?щ떎.
+// hazeState: ??肄섑뀗痢?NavGraph)瑜??좊━(?섎떒 ?ㅻ퉬)媛 ?먮━寃?鍮꾩텛?꾨줉 ?곌껐?섎뒗 ?곹깭.
 @Composable
 fun MainScreen() {
     val navController = rememberNavController()
@@ -31,34 +31,34 @@ fun MainScreen() {
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route
 
-    // 하단바 표시 route: 탭 4개 + 디자인상 하단바가 있는 화면(미션 목록). 그 외 자동 숨김.
-    // currentRoute == null = 첫 프레임(시작 화면 세팅 전) → 숨겼다 늦게 뜨지 않게 바로 표시.
-    // ※ CONVERSATION_PREP(미션 진입)은 제외 — UI 7차 "미션 진입" 프레임에 하단 네비게이션이 없음(2026-07-19 CSS 확인).
+    // ?섎떒諛??쒖떆 route: ??4媛?+ ?붿옄?몄긽 ?섎떒諛붽? ?덈뒗 ?붾㈃(誘몄뀡 紐⑸줉). 洹????먮룞 ?④?.
+    // currentRoute == null = 泥??꾨젅???쒖옉 ?붾㈃ ?명똿 ?? ???④꼈????쾶 ?⑥? ?딄쾶 諛붾줈 ?쒖떆.
+    // ??CONVERSATION_PREP(誘몄뀡 吏꾩엯)? ?쒖쇅 ??UI 7李?"誘몄뀡 吏꾩엯" ?꾨젅?꾩뿉 ?섎떒 ?ㅻ퉬寃뚯씠?섏씠 ?놁쓬(2026-07-19 CSS ?뺤씤).
     val bottomBarRoutes = BottomNavItem.entries.map { it.route } +
         Screen.MISSION_LIST + Screen.MISSION_DETAIL + Screen.CONVERSATION +
-        Screen.REPORT
+        Screen.REPORT + Screen.PROFILE_BADGES + Screen.PROFILE_RECENT_MISSION
 
     val hazeState = remember { HazeState() }
 
-    // 앱 페이지 배경(Gray50 = 디자인시스템 '페이지 배경'). 탭 화면들이 같은 톤을 공유하도록 루트에서 한 번 깖.
+    // ???섏씠吏 諛곌꼍(Gray50 = ?붿옄?몄떆?ㅽ뀥 '?섏씠吏 諛곌꼍'). ???붾㈃?ㅼ씠 媛숈? ?ㅼ쓣 怨듭쑀?섎룄濡?猷⑦듃?먯꽌 ??踰?源?
     BoxWithConstraints(modifier = Modifier.fillMaxSize().background(Gray50)) {
         val density = LocalDensity.current
-        // 하단 네비 묶음(알약 64 + 위아래 여백 12x2 + 시스템 네비 인셋)의 위 끝 y(px)
+        // ?섎떒 ?ㅻ퉬 臾띠쓬(?뚯빟 64 + ?꾩븘???щ갚 12x2 + ?쒖뒪???ㅻ퉬 ?몄뀑)??????y(px)
         val navTopPx = with(density) { maxHeight.toPx() - 88.dp.toPx() } -
             WindowInsets.navigationBars.getBottom(density)
 
-        // 화면 오버레이(저장 바텀시트)의 위 끝 y(px). null = 시트 없음.
-        // 네비는 시트보다 위 레이어라 그냥 두면 시트 위에 겹쳐 보임 → 시트 위 끝 "선"보다
-        // 아래쪽은 그리지 않아, 시트가 내려가는 만큼 네비가 뒤에 있던 것처럼 위에서부터 드러난다.
+        // ?붾㈃ ?ㅻ쾭?덉씠(???諛뷀??쒗듃)??????y(px). null = ?쒗듃 ?놁쓬.
+        // ?ㅻ퉬???쒗듃蹂대떎 ???덉씠?대씪 洹몃깷 ?먮㈃ ?쒗듃 ?꾩뿉 寃뱀퀜 蹂댁엫 ???쒗듃 ????"??蹂대떎
+        // ?꾨옒履쎌? 洹몃━吏 ?딆븘, ?쒗듃媛 ?대젮媛??留뚰겮 ?ㅻ퉬媛 ?ㅼ뿉 ?덈뜕 寃껋쿂???꾩뿉?쒕????쒕윭?쒕떎.
         var overlaySheetTop by remember { mutableStateOf<Float?>(null) }
 
-        // 시트가 네비 영역을 완전히 덮는 동안엔 네비를 아예 빼서(그림+터치 모두) 시트 조작을 안 막음.
+        // ?쒗듃媛 ?ㅻ퉬 ?곸뿭???꾩쟾????뒗 ?숈븞???ㅻ퉬瑜??꾩삁 鍮쇱꽌(洹몃┝+?곗튂 紐⑤몢) ?쒗듃 議곗옉????留됱쓬.
         val showBottomBar = (currentRoute == null || currentRoute in bottomBarRoutes) &&
             (overlaySheetTop?.let { it > navTopPx } ?: true)
 
         NavGraph(
             navController = navController,
-            // hazeSource: 이 영역(화면 콘텐츠)이 유리에 흐리게 비칠 '원본'.
+            // hazeSource: ???곸뿭(?붾㈃ 肄섑뀗痢????좊━???먮━寃?鍮꾩튌 '?먮낯'.
             modifier = Modifier
                 .fillMaxSize()
                 .hazeSource(state = hazeState),
@@ -75,7 +75,7 @@ fun MainScreen() {
                         if (sheetTop == null) {
                             drawContent()
                         } else {
-                            // 시트에 안 덮인 부분(시트 위 끝 선 위쪽)만 그림
+                            // ?쒗듃??????씤 遺遺??쒗듃 ???????꾩そ)留?洹몃┝
                             clipRect(bottom = (sheetTop - navTopPx).coerceAtMost(size.height)) {
                                 this@drawWithContent.drawContent()
                             }

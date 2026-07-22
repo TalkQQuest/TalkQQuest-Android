@@ -2,6 +2,7 @@ package com.talkqquest.app.feature.mission.ui
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -27,10 +28,12 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -170,10 +173,32 @@ private fun MissionListContent(
     onToggleSave: (String) -> Unit,
     onMissionClick: (String) -> Unit,
 ) {
+    // 화면 좌우 스와이프로도 필터 전환 (칩 탭 선택은 그대로 유지). FlowRow가 칩을 missionFilters
+    // 순서(왼→오, 위→아래)로 깔므로 인덱스 ±1 = 읽기 순서 이동 — 줄 오른쪽 끝이면 다음 줄 왼쪽으로 순환.
+    // 가로 드래그만 감지해 세로 스크롤과 충돌 안 함.
+    val currentFilter by rememberUpdatedState(uiState.selectedFilter)
     LazyColumn(
         modifier = Modifier
             .fillMaxSize()
-            .statusBarsPadding(),
+            .statusBarsPadding()
+            .pointerInput(Unit) {
+                var accum = 0f
+                val threshold = 48.dp.toPx()
+                detectHorizontalDragGestures(
+                    onDragStart = { accum = 0f },
+                    onHorizontalDrag = { _, delta -> accum += delta },
+                    onDragEnd = {
+                        val idx = missionFilters.indexOf(currentFilter)
+                        if (idx >= 0) {
+                            val n = missionFilters.size
+                            when {
+                                accum <= -threshold -> onFilterSelect(missionFilters[(idx + 1) % n]) // 왼쪽으로 밀기 → 다음 칩
+                                accum >= threshold -> onFilterSelect(missionFilters[(idx - 1 + n) % n]) // 오른쪽으로 밀기 → 이전 칩
+                            }
+                        }
+                    },
+                )
+            },
         verticalArrangement = Arrangement.spacedBy(14.dp), // 카드 간격 14 (CSS Frame 360 gap)
     ) {
         item {

@@ -1,4 +1,4 @@
-﻿package com.talkqquest.app.navigation
+package com.talkqquest.app.navigation
 
 import android.net.Uri
 import android.widget.Toast
@@ -9,7 +9,10 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.IntOffset
@@ -64,24 +67,23 @@ import com.talkqquest.app.navigation.Screen
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
-// ?ㅻ퉬寃뚯씠??洹몃옒??
-// TODO(媛??대떦): composable(Screen.XXX) { XxxScreen(navController) } 濡??먭린 ?붾㈃ ?깅줉. route??Screen.kt 李멸퀬.
+// 네비게이션 그래프
+// TODO(각 담당): Screen.kt에 route를 정의한 뒤, 이곳에 composable을 등록합니다.
 @Composable
 fun NavGraph(
     navController: NavHostController,
     modifier: Modifier = Modifier,
-    onOverlaySheetTop: (Float?) -> Unit = {}, // ?붾㈃ ?ㅻ쾭?덉씠(諛뷀??쒗듃) ????y(px), null=?놁쓬 ???ㅻ퉬 媛由?泥섎━
+    onOverlaySheetTop: (Float?) -> Unit = {}, // 화면 위에 겹치는 바텀시트의 top y(px), null이면 없음
 ) {
-    // ?붾㈃ ?꾪솚 紐⑥뀡: ?덉そ?쇰줈 ?ㅼ뼱媛??????붾㈃???ㅻⅨ履쎌뿉??諛???ㅼ뼱?ㅺ퀬,
-    // ?ㅻ줈 媛????꾩옱 ?붾㈃???ㅻⅨ履쎌쑝濡?諛???섍컧 (?쒓컙?대룞泥섎읆 ??諛붾뚯? ?딄쾶).
-    // ?? ?섎떒 ??겮由??ㅺ???嫄???諛??꾧퀎媛 ?꾨땲??蹂묐젹 ?대룞?대씪 ?섏씠?쒕줈 援먯껜.
+    // 화면 전환 모션: 탭 전환은 fade, 일반 push/pop은 좌우 slide를 사용합니다.
+    // 하단 탭끼리 이동할 때는 같은 레벨 이동처럼 보이도록 방향 이동 대신 fade로 처리합니다.
     val tabRoutes = BottomNavItem.entries.map { it.route }.toSet()
     fun AnimatedContentTransitionScope<NavBackStackEntry>.isTabSwitch() =
         initialState.destination.route in tabRoutes && targetState.destination.route in tabRoutes
     val slideSpec = tween<IntOffset>(300)
     NavHost(
         navController = navController,
-        startDestination = Screen.HOME,
+        startDestination = Screen.LOGIN,
         modifier = modifier,
         enterTransition = {
             if (isTabSwitch()) fadeIn(tween(300))
@@ -213,16 +215,22 @@ fun NavGraph(
                 ?.savedStateHandle
                 ?.get<String>("signup_email")
                 .orEmpty()
+            var hasSubmittedVerification by remember { mutableStateOf(false) }
+            var isVerificationCodeError by remember { mutableStateOf(false) }
 
             authUiState.errorMessage?.let { message ->
+                if (hasSubmittedVerification) isVerificationCodeError = true
                 Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
                 authViewModel.clearError()
             }
 
             SignupVerifyScreen(
                 email = email.ifBlank { "Talkqquest1234@gmail.com" },
+                isCodeError = isVerificationCodeError,
                 onBack = { navController.popBackStack() },
                 onVerifyCode = { code ->
+                    hasSubmittedVerification = true
+                    isVerificationCodeError = false
                     authViewModel.verifyEmailCode(email, code) {
                         navController.currentBackStackEntry
                             ?.savedStateHandle
@@ -230,9 +238,14 @@ fun NavGraph(
                         navController.navigate(Screen.SIGNUP_PASSWORD)
                     }
                 },
+                onCodeChange = {
+                    isVerificationCodeError = false
+                },
                 onResendClick = {
+                    hasSubmittedVerification = false
+                    isVerificationCodeError = false
                     authViewModel.requestEmailCode(email) {
-                        Toast.makeText(context, "?몄쬆 肄붾뱶媛 ?щ컻?〓릺?덉뒿?덈떎.", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(context, "인증 코드가 재발송되었습니다.", Toast.LENGTH_SHORT).show()
                     }
                 },
             )
@@ -295,14 +308,14 @@ fun NavGraph(
                 onCompleteClick = { navController.navigate(Screen.HOME) },
             )
         }
-        // ?섎떒 ?ㅻ퉬 4??(?꾩떆 ???ㅼ젣 ?붾㈃?쇰줈 援먯껜)
-        // ?덉? ?붾㈃?붾뜲?댄꽣 ?곌껐 ?덉떆濡??ㅼ젣 援ы쁽??feature/home 李멸퀬). ?섎㉧吏??媛??대떦??援먯껜.
+        // 하단 네비게이션 4개 진입 화면입니다.
+        // HOME 이후의 미션/아카이브/리포트 상세 route는 각 담당 화면 구현에 맞춰 연결합니다.
         composable(Screen.HOME) {
             val homeScope = rememberCoroutineScope()
             HomeScreen(
                 onStartMissionClick = { missionId -> navController.navigate("mission_detail/$missionId") },
                 onOtherMissionsClick = { navController.navigate(Screen.MISSION_LIST) },
-                // 臾쇨껐(由ы뵆)??癒쇱? 蹂댁씤 ???꾪솚?섎룄濡??댁쭩 吏????利됱떆 navigate ????臾쇨껐????蹂댁엫
+                // 알림 아이콘 ripple이 먼저 보인 뒤 화면이 전환되도록 짧게 지연합니다.
                 onNotificationClick = {
                     homeScope.launch {
                         delay(140)
@@ -580,3 +593,6 @@ fun NavGraph(
         }
     }
 }
+
+
+

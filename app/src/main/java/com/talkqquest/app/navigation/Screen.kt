@@ -1,35 +1,35 @@
 ﻿package com.talkqquest.app.navigation
 
 /**
- * ?붾㈃ route ?곸닔 ?뺤쓽.
+ * 화면 route 상수 정의.
  *
- * - ?ㅼ씠諛?洹쒖튃(?뚮Ц???ㅻ꽕?댄겕耳?댁뒪)? CONVENTIONS.md 6踰?李멸퀬.
- * - 媛??곸닔??NAVIGATION.md??"?ㅽ겕由?ID"? 1:1濡???묐맗?덈떎.
- * - {id} ?뺥깭??寃쎈줈 ?몄옄???덉떆?낅땲?? ?ㅼ젣 ?몄옄 ?대쫫/?좊Т???대떦?먭? ?붾㈃ 留뚮뱾 ??議곗젙?섏꽭??
- * - ?앹뾽(?댄깉/寃뚯떆?꾨즺/?덊눜 ??? ?붾㈃???꾨땲???ㅼ씠?쇰줈洹몃씪 route媛 ?놁뒿?덈떎.
+ * - route 이름은 CONVENTIONS.md의 화면 네이밍 규칙을 따른다.
+ * - 화면 추가 시 Screen.kt에 route를 먼저 정의하고 NavGraph.kt에 composable을 등록한다.
+ * - {id} 형태는 Navigation argument가 필요한 상세 화면 route에 사용한다.
+ * - 팝업/바텀시트처럼 화면 단위가 아닌 UI는 별도 route를 만들지 않는다.
  */
 object Screen {
 
-    // ?? A?대떦 (吏???꾩???: 吏꾩엯 쨌 ?꾨줈????
-    // ???꾩뭅?대툕 route(ARCHIVE_*)????븷 ?ъ“??2026-07)?쇰줈 C?대떦?쇰줈 ?섏뼱媛붿뒿?덈떎. ?곸닔 ?꾩튂留??ш린 ?⑥쓬.
+    // A 담당: 진입/auth/onboarding/profile route
+    // archive route 상수는 기존 위치를 유지하지만, 실제 화면 구현은 C 담당 영역입니다.
     const val SPLASH = "splash"                                   // SplashScreen
-    const val LOGIN = "login"                                     // LoginScreen (怨꾩젙 ?곕룞 ?앹뾽 ?곹깭 ?ы븿)
+    const val LOGIN = "login"                                     // LoginScreen
     const val EMAIL_LOGIN = "email_login"                         // EmailLoginScreen
     const val SIGNUP_EMAIL = "signup_email"                       // SignupEmailScreen
     const val SIGNUP_VERIFY = "signup_verify"                     // SignupVerifyScreen
     const val SIGNUP_PASSWORD = "signup_password"                 // SignupPasswordScreen
     const val SIGNUP_NICKNAME = "signup_nickname"                 // SignupNicknameScreen
-    const val ONBOARDING_WELCOME = "onboarding_welcome"           // OnboardingWelcomeScreen (媛???꾨즺 ?좊땲硫붿씠??
+    const val ONBOARDING_WELCOME = "onboarding_welcome"           // OnboardingWelcomeScreen
     const val ONBOARDING_PERSONALITY = "onboarding_personality"   // OnboardingPersonalityScreen
     const val ONBOARDING_DIFFICULTY = "onboarding_difficulty"     // OnboardingDifficultyScreen
     const val ONBOARDING_GOAL = "onboarding_goal"                 // OnboardingGoalScreen
-    const val ONBOARDING_COMPLETE = "onboarding_complete"         // OnboardingCompleteScreen (?꾨즺 ?좊땲硫붿씠??
+    const val ONBOARDING_COMPLETE = "onboarding_complete"         // OnboardingCompleteScreen
     const val ARCHIVE_HOME = "archive_home"                       // ArchiveHomeScreen
     const val ARCHIVE_SEARCH = "archive_search"                   // ArchiveSearchScreen
-    const val ARCHIVE_LIST = "archive_list"                       // ArchiveListScreen (誘몄뀡/???臾몄옣/由ы룷??4??
+    const val ARCHIVE_LIST = "archive_list"                       // ArchiveListScreen
     const val ARCHIVE_CONVERSATION_DETAIL = "archive_conversation_detail/{conversationId}" // ArchiveConversationDetailScreen
     const val ARCHIVE_SAVED_PHRASE = "archive_saved_phrase/{phraseId}"                     // ArchiveSavedPhraseScreen
-    const val PROFILE = "profile"                                 // ProfileScreen (?섎떒 ??'?꾨줈??)
+    const val PROFILE = "profile"                                 // ProfileScreen
     const val PROFILE_BADGES = "profile_badges"                   // ProfileBadgesScreen
     const val PROFILE_RECENT_MISSION = "profile_recent_mission"     // ProfileRecentMissionScreen
     const val PROFILE_SETTINGS = "profile_settings"                 // ProfileSettingsScreen
@@ -63,3 +63,5 @@ object Screen {
     // missionTitle = ??由ы룷?멸? ?섏삩 誘몄뀡 ?쒕ぉ (????쒗듃 移대뱶 ?쒕ぉ???곗엫). ?놁쑝硫?鍮?媛?
     const val REPORT = "report?missionTitle={missionTitle}"
 }
+
+

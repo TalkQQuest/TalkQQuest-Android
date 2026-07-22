@@ -23,6 +23,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -48,8 +49,10 @@ import com.talkqquest.app.core.designsystem.Primary500
 import com.talkqquest.app.core.designsystem.TalkQQuestTheme
 import com.talkqquest.app.core.designsystem.TqType
 import com.talkqquest.app.core.designsystem.White
+import kotlinx.coroutines.delay
 
 private val VerificationCodeError = Color(0xFFF76161)
+private const val EmailVerificationDurationSeconds = 5 * 60
 
 @Composable
 fun SignupVerifyScreen(
@@ -61,6 +64,15 @@ fun SignupVerifyScreen(
     onResendClick: () -> Unit = {},
 ) = FitDesign(compensateStatusBar = false) {
     var code by remember { mutableStateOf("") }
+    var remainingSeconds by remember { mutableStateOf(EmailVerificationDurationSeconds) }
+    val timerText = "${remainingSeconds / 60}:${(remainingSeconds % 60).toString().padStart(2, '0')}"
+
+    LaunchedEffect(remainingSeconds) {
+        if (remainingSeconds > 0) {
+            delay(1_000L)
+            remainingSeconds -= 1
+        }
+    }
     val codeColor = when {
         code.isBlank() -> Gray300
         isCodeError -> VerificationCodeError
@@ -149,11 +161,14 @@ fun SignupVerifyScreen(
                         .width(120.dp)
                         .height(37.dp)
                         .border(width = 1.dp, color = Gray200)
-                        .clickable(onClick = onResendClick),
+                        .clickable {
+                            remainingSeconds = EmailVerificationDurationSeconds
+                            onResendClick()
+                        },
                 ) {
                     Row(
                         modifier = Modifier
-                            .offset(x = 8.dp, y = (-4).dp)
+                            .offset(x = 8.dp, y = 0.dp)
                             .width(105.dp)
                             .height(44.dp),
                         horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -165,7 +180,7 @@ fun SignupVerifyScreen(
                                 .height(44.dp),
                             contentAlignment = Alignment.Center,
                         ) {
-                            Text(text = "1:32", style = TqType.BodyM, color = Primary500)
+                            Text(text = timerText, style = TqType.BodyM, color = Primary500)
                         }
                         Box(
                             modifier = Modifier

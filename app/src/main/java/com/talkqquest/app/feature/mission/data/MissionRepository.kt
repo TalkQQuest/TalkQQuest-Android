@@ -3,14 +3,21 @@ package com.talkqquest.app.feature.mission.data
 import com.talkqquest.app.core.datastore.UserXpStore
 import com.talkqquest.app.core.network.ApiResult
 import com.talkqquest.app.core.network.safeApiCall
+import com.talkqquest.app.feature.mission.data.model.ConversationCreateRequest
+import com.talkqquest.app.feature.mission.data.model.ConversationMessageRequest
 import com.talkqquest.app.feature.mission.data.model.ConversationPrep
 import com.talkqquest.app.feature.mission.data.model.FeedbackItemText
 import com.talkqquest.app.feature.mission.data.model.FeedbackResult
+import com.talkqquest.app.feature.mission.data.model.MissionCompleteRequest
 import com.talkqquest.app.feature.mission.data.model.MissionCompleteResult
 import com.talkqquest.app.feature.mission.data.model.MissionDetail
 import com.talkqquest.app.feature.mission.data.model.MissionListItem
 import javax.inject.Inject
 import javax.inject.Singleton
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.launch
 
 // 미션 Repository. ViewModel과 API 사이 계층 (홈 패턴과 동일).
 // @Singleton: 앱에 1개만 만들어 모든 화면이 같은 인스턴스를 씀 — 북마크 상태 공유의 전제.
@@ -20,20 +27,36 @@ class MissionRepository @Inject constructor(
     private val missionApi: MissionApi,
     private val userXpStore: UserXpStore, // 서버 전 임시: 완료 XP를 홈과 공유
 ) {
-    // ── 서버 연동 전 임시: 북마크 상태 공유 ──
-    // 화면(ViewModel)마다 stub을 복사해 들면 토글이 서로 안 보임(목록에서 저장해도 저장 목록에 안 뜸)
-    // → 토글 결과를 여기 한 곳에 모아 모든 화면이 같은 상태를 봄.
-    // TODO(서버 연동): 이 map 지우고 toggleSave를 missionApi.saveMission/unsaveMission 호출로 교체.
+    // 북마크 낙관 토글 공유 — 모든 화면이 같은 상태를 봄 (서버 반영 전/오프라인에도 UI 일관).
     private val savedOverrides = mutableMapOf<String, Boolean>()
 
-    // 완료 처리 공유 (북마크와 같은 이유) — 완료한 미션이 목록/저장 목록의 상태 필터에도 반영되게.
-    // TODO(서버 연동): 완료 API가 상태를 저장하면 이 map 삭제.
+    // 서버 목록에서 마지막으로 확인한 저장 상태 캐시 (토글의 현재값 판단 기준).
+    private val serverSaved = mutableMapOf<String, Boolean>()
+
+    // 완료 처리 공유 — 서버 목록 응답엔 진행 상태 필드가 없어(실측) 완료 표시는 로컬 유지.
     private val statusOverrides = mutableMapOf<String, String>()
 
+    // 현재 진행 중인 서버 대화 세션. 화면 route는 missionId를 쓰므로 세션 id는 여기 보관.
+    private var activeConversationId: String? = null
+
+    // toggleSave가 non-suspend(클릭 즉시 UI 반영)라 서버 반영은 백그라운드로.
+    private val ioScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+
+    // 북마크 토글: 로컬 즉시 반영(낙관) + 서버 POST/DELETE /missions/{id}/save 백그라운드 반영.
+    // 실패해도 UI는 유지(다음 목록 조회 때 서버 값으로 자연 정정) — 데모가 안 죽게.
     fun toggleSave(missionId: String): Boolean {
-        val base = stubMissions.firstOrNull { it.id == missionId }?.isSaved ?: false
-        val now = !(savedOverrides[missionId] ?: base)
+        val current = savedOverrides[missionId]
+            ?: serverSaved[missionId]
+            ?: stubMissions.firstOrNull { it.id == missionId }?.isSaved
+            ?: false
+        val now = !current
         savedOverrides[missionId] = now
+        ioScope.launch {
+            val r = safeApiCall {
+                if (now) missionApi.saveMission(missionId) else missionApi.unsaveMission(missionId)
+            }
+            if (r is ApiResult.Success) serverSaved[missionId] = r.data.isSaved
+        }
         return now
     }
 
@@ -44,59 +67,152 @@ class MissionRepository @Inject constructor(
         return item
     }
 
-    // TODO(서버 연동 전 임시): 토큰(로그인) 준비되면 stub 리턴 지우고 아래 한 줄로 복구.
-    //     safeApiCall { missionApi.getMissions() }.map { it.missions } 형태 — 서버 미션 데이터 시드 확인 필요.
+    // 미션 목록 — 실서버 GET /missions (2026-07-22 실측: data.missions[] + pageInfo).
+    // 서버 실패(오프라인 등) 시 stub 폴백 — 데모가 안 죽게.
     suspend fun getMissions(): ApiResult<List<MissionListItem>> =
-        ApiResult.Success(stubMissions.map { it.applySaved() })
+        when (val r = safeApiCall { missionApi.getMissions() }) {
+            is ApiResult.Success -> {
+                r.data.missions.forEach { serverSaved[it.id] = it.isSaved }
+                ApiResult.Success(r.data.missions.map { it.applySaved() })
+            }
+            else -> ApiResult.Success(stubMissions.map { it.applySaved() })
+        }
 
-    // TODO(서버 연동 전 임시): 붙으면 return safeApiCall { missionApi.getMissionDetail(missionId) } 로 복구.
+    // 미션 상세 — 실서버 GET /missions/{id} (실측: description·preparationTip·caution 포함).
+    // benefits(효과 문구)는 서버 응답에 없어 기본 문구로 채움. 실패 시 stub 폴백.
     suspend fun getMissionDetail(missionId: String): ApiResult<MissionDetail> {
-        val item = stubMissions.firstOrNull { it.id == missionId }
-            ?: return ApiResult.Error(code = 404, message = "미션을 찾을 수 없어요.")
-        return ApiResult.Success(
-            MissionDetail(
-                id = item.id,
-                title = item.title,
-                category = item.category,
-                difficulty = item.difficulty,
-                estimatedMinutes = item.estimatedMinutes,
-                rewardXp = item.rewardXp,
-                isSaved = item.applySaved().isSaved,
-                benefits = stubBenefits[item.id] ?: defaultBenefits,
-            ),
-        )
+        when (val r = safeApiCall { missionApi.getMissionDetail(missionId) }) {
+            is ApiResult.Success -> {
+                serverSaved[r.data.id] = r.data.isSaved
+                return ApiResult.Success(
+                    r.data.copy(
+                        isSaved = savedOverrides[r.data.id] ?: r.data.isSaved,
+                        benefits = r.data.benefits.ifEmpty { defaultBenefits },
+                    ),
+                )
+            }
+            else -> {
+                val item = stubMissions.firstOrNull { it.id == missionId }
+                    ?: return ApiResult.Error(code = 404, message = "미션을 찾을 수 없어요.")
+                return ApiResult.Success(
+                    MissionDetail(
+                        id = item.id,
+                        title = item.title,
+                        category = item.category,
+                        difficulty = item.difficulty,
+                        estimatedMinutes = item.estimatedMinutes,
+                        rewardXp = item.rewardXp,
+                        isSaved = item.applySaved().isSaved,
+                        benefits = stubBenefits[item.id] ?: defaultBenefits,
+                    ),
+                )
+            }
+        }
     }
 
-    // TODO(서버 연동 전 임시): 붙으면 safeApiCall { missionApi.getMissionPrep(missionId) } 후
-    //     .toConversationPrep() 매핑으로 복구 (question→주제, starter→첫 마디).
-    // 새로고침(refresh=true) 시 서버는 새 문장을 주지만, stub은 문장 묶음을 번갈아 돌려 "바뀌는" 느낌만 재현.
+    // 대화 준비 문장 — 실서버 GET /missions/{id}/prep.
+    // ★실측(2026-07-22): 전 미션 items가 빈 배열(서버 시드 없음) → 비어 있으면 stub 폴백.
+    //   서버가 문장을 채우면 자동으로 실데이터가 뜨는 구조. refreshIndex는 stub 순환 전용.
     suspend fun getConversationPrep(missionId: String, refreshIndex: Int = 0): ApiResult<ConversationPrep> {
+        val r = safeApiCall { missionApi.getMissionPrep(missionId) }
+        if (r is ApiResult.Success && r.data.items.isNotEmpty()) {
+            val prep = r.data.toConversationPrep()
+            if (prep.topics.isNotEmpty() || prep.openers.isNotEmpty()) return ApiResult.Success(prep)
+        }
         val opener = stubOpenerSets[refreshIndex % stubOpenerSets.size]
         return ApiResult.Success(ConversationPrep(topics = stubTopics, openers = opener))
     }
 
-    // ── 대화 진행 stub (목업 대사 그대로 시나리오) ──
-    // TODO(서버 연동): AI 대화 API로 교체 — 시작/응답/추천 답변 각각 서버가 줌.
-    suspend fun getConversationIntro(missionId: String): ApiResult<List<String>> =
-        ApiResult.Success(listOf("안녕하세요! 처음 뵙네요 🙂", "오늘 여기 처음 오셨어요?"))
+    // ── 대화 진행 — 실서버 연동 (2026-07-22 실측 규격) + 오프라인 stub 폴백 ──
 
-    suspend fun getAiReply(turnIndex: Int): ApiResult<String> =
-        ApiResult.Success(stubAiReplies[turnIndex % stubAiReplies.size])
+    // 대화 시작: 서버에 대화 세션 생성(POST /conversations, selectedTopic 옵션 — 없이 생성 확인).
+    // 서버는 첫 인사말(AI 발화)을 안 주므로 인트로 문구는 로컬 유지(목업 그대로).
+    // 세션 생성 실패(오프라인 등) 시에도 인트로는 그대로 진행 — 이후 응답이 stub으로 폴백됨.
+    suspend fun getConversationIntro(missionId: String): ApiResult<List<String>> {
+        activeConversationId = null
+        val r = safeApiCall {
+            missionApi.createConversation(ConversationCreateRequest(missionId = missionId, mode = "text"))
+        }
+        if (r is ApiResult.Success) activeConversationId = r.data.conversationId
+        return ApiResult.Success(listOf("안녕하세요! 처음 뵙네요 🙂", "오늘 여기 처음 오셨어요?"))
+    }
 
-    suspend fun getRecommendedReplies(turnIndex: Int): ApiResult<List<String>> =
-        ApiResult.Success(stubRecommendationSets[turnIndex % stubRecommendationSets.size])
+    // 사용자 발화 전송 → AI 응답. 서버 POST /conversations/{id}/messages
+    // (응답의 guideMessage.content = AI 말풍선. 서버 role명은 "guide").
+    // 세션 없음/호출 실패 시 stub 대사 순환 폴백 — 대화가 끊기지 않게.
+    suspend fun sendUserMessage(text: String, turnIndex: Int): ApiResult<String> {
+        val cid = activeConversationId
+        if (cid != null) {
+            val r = safeApiCall {
+                missionApi.sendConversationMessage(cid, ConversationMessageRequest(role = "user", content = text))
+            }
+            if (r is ApiResult.Success) {
+                r.data.guideMessage?.content?.takeIf { it.isNotBlank() }
+                    ?.let { return ApiResult.Success(it) }
+            }
+        }
+        return ApiResult.Success(stubAiReplies[turnIndex % stubAiReplies.size])
+    }
 
-    // 미션 완료 처리 + 결과(체크리스트·XP·레벨) 조회.
-    // TODO(서버 연동 전 임시): 붙으면 missionApi.completeMission(missionId,
-    //     MissionCompleteRequest(conversationId, "success", durationMinutes = ...)) 호출로 교체.
-    //     서버는 xpEarned만 주므로(레벨 없음) 레벨 계산은 UserXpStore 유지.
-    suspend fun completeMission(missionId: String): ApiResult<MissionCompleteResult> {
-        val gained = stubMissions.firstOrNull { it.id == missionId }?.rewardXp ?: 20
+    // 추천 답변 — 서버 GET /conversations/{id}/suggestions. 비거나 실패면 stub 묶음 순환.
+    suspend fun getRecommendedReplies(turnIndex: Int): ApiResult<List<String>> {
+        val cid = activeConversationId
+        if (cid != null) {
+            val r = safeApiCall { missionApi.getConversationSuggestions(cid) }
+            if (r is ApiResult.Success && r.data.suggestions.isNotEmpty()) {
+                return ApiResult.Success(r.data.suggestions)
+            }
+        }
+        return ApiResult.Success(stubRecommendationSets[turnIndex % stubRecommendationSets.size])
+    }
+
+    // 미션 완료 — 실서버 POST /missions/{missionId}/complete (2026-07-22 실호출 검증).
+    // 서버가 XP 지급·대화 종료까지 처리(xpEarned 응답, /xp/summary 실제 증가 확인).
+    // 레벨업 연출용 before/after는 완료 전·후 /xp/summary 두 번 조회로 구성.
+    // 체크리스트는 서버 미제공 — 로컬 문구 유지. 세션 없음/실패 시 기존 로컬 XP 경로 폴백.
+    suspend fun completeMission(missionId: String, durationSec: Long = 0): ApiResult<MissionCompleteResult> {
         statusOverrides[missionId] = "완료" // 목록·저장 목록의 상태 필터에 바로 반영
+        val cid = activeConversationId
+        if (cid != null) {
+            val before = safeApiCall { missionApi.getXpSummary() }
+            val done = safeApiCall {
+                missionApi.completeMission(
+                    missionId,
+                    MissionCompleteRequest(
+                        conversationId = cid,
+                        result = "success",
+                        durationMinutes = ((durationSec + 59) / 60).toInt().coerceAtLeast(1),
+                    ),
+                )
+            }
+            if (done is ApiResult.Success) {
+                activeConversationId = null // complete가 대화 종료를 겸함(실측: 이후 finish 불가)
+                val after = safeApiCall { missionApi.getXpSummary() }
+                val beforeLevel = (before as? ApiResult.Success)?.data?.level ?: userXpStore.level
+                val beforeXp = (before as? ApiResult.Success)?.data?.currentXp ?: userXpStore.currentXp
+                val afterLevel = (after as? ApiResult.Success)?.data?.level ?: beforeLevel
+                val afterXp = (after as? ApiResult.Success)?.data?.currentXp
+                    ?: (beforeXp + done.data.xpEarned)
+                val nextXp = (after as? ApiResult.Success)?.data?.nextLevelXp ?: userXpStore.nextLevelXp
+                // 홈 카드도 서버와 같은 숫자를 보게 로컬 스토어 동기화
+                userXpStore.syncFromServer(afterLevel, afterXp, nextXp)
+                return ApiResult.Success(
+                    MissionCompleteResult(
+                        checklist = stubCompleteChecklist,
+                        gainedXp = done.data.xpEarned,
+                        levelBefore = beforeLevel,
+                        levelAfter = afterLevel,
+                        xpBefore = beforeXp,
+                        xpAfter = afterXp,
+                        nextLevelXp = nextXp,
+                    ),
+                )
+            }
+        }
+        // ── 폴백: 서버 세션 없음(오프라인 진입 등) — 기존 로컬 XP 경로 ──
+        val gained = stubMissions.firstOrNull { it.id == missionId }?.rewardXp ?: 20
         val beforeXp = userXpStore.currentXp
         val beforeLevel = userXpStore.level
-        // 재완료도 매번 지급 — 기능명세서 기준(대화 종료 = MissionRecord+XpHistory+XP 증가 트랜잭션,
-        // 재완료 제한 규칙 없음). 제한할지는 기획 확인거리.
         userXpStore.addXp(gained)
         return ApiResult.Success(
             MissionCompleteResult(

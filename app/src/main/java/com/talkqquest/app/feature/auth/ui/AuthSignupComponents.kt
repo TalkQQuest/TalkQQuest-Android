@@ -33,6 +33,7 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.VisualTransformation
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.talkqquest.app.core.designsystem.Error
 import com.talkqquest.app.core.designsystem.Gray300
@@ -108,6 +109,7 @@ internal fun AuthInputCard(
     keyboardType: KeyboardType = KeyboardType.Text,
     visualTransformation: VisualTransformation = VisualTransformation.None,
     trailing: (@Composable () -> Unit)? = null,
+    actionCornerRadius: Dp = 24.dp,
     modifier: Modifier = Modifier,
 ) {
     Row(
@@ -120,7 +122,7 @@ internal fun AuthInputCard(
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Column(modifier = Modifier.weight(1f)) {
-            Text(text = label, style = TqType.LabelM, color = Gray500)
+            Text(text = label, style = TqType.Caption, color = Gray500)
             Spacer(Modifier.height(10.dp))
             BasicTextField(
                 value = value,
@@ -144,24 +146,23 @@ internal fun AuthInputCard(
             )
         }
         if (actionText != null && onActionClick != null) {
-            SmallAuthButton(text = actionText, onClick = onActionClick)
+            SmallAuthButton(text = actionText, onClick = onActionClick, cornerRadius = actionCornerRadius)
         }
         trailing?.invoke()
     }
 }
 
 @Composable
-internal fun SmallAuthButton(text: String, onClick: () -> Unit, modifier: Modifier = Modifier) {
+internal fun SmallAuthButton(text: String, onClick: () -> Unit, modifier: Modifier = Modifier, cornerRadius: Dp = 24.dp) {
     Box(
         modifier = modifier
-            .height(30.dp)
-            .clip(RoundedCornerShape(15.dp))
+            .size(width = 50.dp, height = 28.dp)
+            .clip(RoundedCornerShape(cornerRadius))
             .background(Primary600)
-            .clickable(onClick = onClick)
-            .padding(horizontal = 16.dp),
+            .clickable(onClick = onClick),
         contentAlignment = Alignment.Center,
     ) {
-        Text(text = text, style = TqType.LabelL.copy(fontWeight = FontWeight.SemiBold), color = White)
+        Text(text = text, style = TqType.LabelL, color = Gray50)
     }
 }
 
@@ -235,3 +236,5 @@ private fun RequirementIcon(satisfied: Boolean) {
         }
     }
 }
+
+

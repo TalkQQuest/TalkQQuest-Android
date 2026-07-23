@@ -194,7 +194,7 @@ fun NavGraph(
                     }
                 },
                 onFindPasswordClick = {
-                    Toast.makeText(context, "\uBE44\uBC00\uBC88\uD638 \uCC3E\uAE30\uB294 \uC900\uBE44 \uC911\uC785\uB2C8\uB2E4.", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(context, "비밀번호 찾기는 준비 중입니다.", Toast.LENGTH_SHORT).show()
                 },
                 errorMessage = authUiState.errorMessage,
             )
@@ -412,7 +412,7 @@ fun NavGraph(
             HomeScreen(
                 onStartMissionClick = { missionId -> navController.navigate("mission_detail/$missionId") },
                 onOtherMissionsClick = { navController.navigate(Screen.MISSION_LIST) },
-                // ?뚮┝ ?꾩씠肄?ripple??癒쇱? 蹂댁씤 ???붾㈃???꾪솚?섎룄濡?吏㏐쾶 吏?고빀?덈떎.
+                // 알림 아이콘 ripple이 먼저 보인 후 화면이 전환되도록 짧게 지연합니다.
                 onNotificationClick = {
                     homeScope.launch {
                         delay(140)
@@ -421,7 +421,7 @@ fun NavGraph(
                 },
             )
         }
-        // ?뚮┝李?(??踰???吏꾩엯). ?붿옄??誘몄셿?깆씠??鍮??곹깭 placeholder.
+        // 알림창(종 모양 진입). 디자인 미완성이므로 빈 상태 placeholder.
         composable(Screen.NOTIFICATION) {
             NotificationScreen(onBack = { navController.popBackStack() })
         }
@@ -436,7 +436,7 @@ fun NavGraph(
                 onNavigateToList = { tabIndex: Int ->
                     navController.navigate("${Screen.ARCHIVE_LIST}/$tabIndex")
                 },
-                // ?뮕 C?대떦: ?뚮떎 ?뚮씪誘명꽣 ???紐낆떆 ?좎?
+                // 💡 C담당: 전달 파라미터 타입 명시 유지
                 onNavigateToDetail = { activityId: String, type: ActivityType ->
                     when (type) {
                         ActivityType.CONVERSATION -> navController.navigate("archive_conversation_detail/$activityId")
@@ -453,7 +453,7 @@ fun NavGraph(
                 onBackClick = {
                     navController.popBackStack()
                 },
-                // ?뮕 C?대떦: ?뚮떎 ?뚮씪誘명꽣 ???紐낆떆 ?좎?
+                // 💡 C담당: 전달 파라미터 타입 명시 유지
                 onNavigateToDetail = { activityId: String, type: ActivityType ->
                     when (type) {
                         ActivityType.CONVERSATION -> navController.navigate("archive_conversation_detail/$activityId")
@@ -474,11 +474,11 @@ fun NavGraph(
             ArchiveListScreen(
                 initialTabIndex = tabIndex,
                 onBackClick = { navController.popBackStack() },
-                // ?뮕 [?섏젙] 蹂닿???由ъ뒪???붾㈃??誘몄뀡 移대뱶 ?대┃ ?? 誘몄뀡 ?곸꽭 ?붾㈃?쇰줈 ?대룞?섎룄濡??곌껐 ?꾨즺!
+                // 💡 [수정] 보관함 리스트 화면에서 미션 카드 클릭 시 미션 상세 화면으로 이동하도록 연결 완료!
                 onMissionClick = { missionId: String ->
                     navController.navigate("mission_detail/$missionId")
                 },
-                // ?뮕 C?대떦: ?뚮떎 ?뚮씪誘명꽣 ???紐낆떆 ?좎?
+                // 💡 C담당: 전달 파라미터 타입 명시 유지
                 onConversationClick = { conversationId: String ->
                     navController.navigate("archive_conversation_detail/$conversationId")
                 },
@@ -514,7 +514,7 @@ fun NavGraph(
             )
         }
 
-        // C?대떦: 蹂닿???由ы룷???곸꽭 ?붾㈃
+        // C담당: 보관함 리포트 상세 화면
         composable(
             route = "archive_report/{reportId}",
             arguments = listOf(navArgument("reportId") { type = NavType.StringType })
@@ -524,16 +524,16 @@ fun NavGraph(
             )
         }
 
-        // B???? 沃섎챷??筌뤴뫖以?(??????삘뀲 沃섎챷??癰귣떯由?. 燁삳?諭???????沃섎챷???怨멸쉭({missionId}????쇱젫 揶쏅??앮에?燁살꼹??.
+        // B담당: 미션 리스트 (다른 사람의 미션 둘러보기). 클릭 시 해당 미션의 상세({missionId})로 이동합니다.
         composable(Screen.MISSION_LIST) {
             MissionListScreen(
                 onBack = { navController.popBackStack() },
                 onMissionClick = { missionId -> navController.navigate("mission_detail/$missionId") },
-                onSheetTopChange = onOverlaySheetTop, // ??????쀫뱜揶쎛 ??롫뼊 ??삵돩????????덈툧 ??삵돩 揶쎛??
+                onSheetTopChange = onOverlaySheetTop, // 바텀시트가 올라올 때 오버레이 처리를 위한 콜백
                 onSavedListClick = { navController.navigate("${Screen.ARCHIVE_LIST}/0") },
             )
         }
-        // B???? 沃섎챷???怨멸쉭. "??쇱벉" ??????餓Β???袁⑹춦 ??곷선???袁⑸뻻 ?遺얇늺, ??쇱벉 ?臾믩씜?癒?퐣 ?대Ŋ猿?.
+        // B담당: 미션 상세 화면. "시작" 버튼 클릭 시 대화 준비 화면으로, "저장" 클릭 시 보관함으로 이동.
         composable(
             route = Screen.MISSION_DETAIL,
             arguments = listOf(navArgument("missionId") { type = NavType.StringType }),
@@ -546,7 +546,7 @@ fun NavGraph(
                 onSavedListClick = { navController.navigate("${Screen.ARCHIVE_LIST}/0") },
             )
         }
-        // B???? ????餓Β??沃섎챷??筌욊쑴??. "沃섎챷????뽰삂??띾┛" ???????遺얇늺(?袁⑹춦 ??곷선???袁⑸뻻, ??쇱벉 ?臾믩씜?癒?퐣 ?대Ŋ猿?.
+        // B담당: 대화 준비 화면. "대화 시작하기" 버튼 클릭 시 대화(진행) 화면으로 이동.
         composable(
             route = Screen.CONVERSATION_PREP,
             arguments = listOf(navArgument("missionId") { type = NavType.StringType }),
@@ -557,7 +557,7 @@ fun NavGraph(
                 onStartClick = { navController.navigate("conversation/$missionId") },
             )
         }
-        // B???? ????筌욊쑵六? ?ル굝利??띾┛ ??沃섎챷???袁⑥┷&XP (??????볦퍢???紐꾩쁽嚥??袁⑤뼎).
+        // B담당: 대화 진행 화면. 종료 시 미션 완료&XP 화면으로 넘어감.
         composable(
             route = Screen.CONVERSATION,
             arguments = listOf(navArgument("conversationId") { type = NavType.StringType }),
@@ -565,14 +565,14 @@ fun NavGraph(
             val missionId = backStackEntry.arguments?.getString("conversationId").orEmpty()
             ConversationScreen(
                 onExitConfirm = { durationSec ->
-                    // ??멸텆 ????獄?餓Β??슘猷밴맒??嚥???살쨮 筌????툡揶쎛野????袁? ?類ｂ봺??랁??袁⑥┷ ?遺얇늺??곗쨮.
+                    // 대화 종료 시 소요 시간 등을 파라미터로 넘겨 미션 완료 화면으로 전달.
                     navController.navigate("mission_complete/$missionId?durationSec=$durationSec") {
                         popUpTo(Screen.HOME)
                     }
                 },
             )
         }
-        // B???? 沃섎챷???袁⑥┷&XP. ????AI ??곕굡獄?(NAVIGATION.md: 沃섎챷???袁⑥┷ ????쇱벉 ????곕굡獄??遺용튋).
+        // B담당: 미션 완료&XP. 이후 AI 피드백 화면으로 진입 (NAVIGATION.md 기준).
         composable(
             route = "${Screen.MISSION_COMPLETE}?durationSec={durationSec}",
             arguments = listOf(
@@ -582,12 +582,12 @@ fun NavGraph(
         ) { backStackEntry ->
             val missionId = backStackEntry.arguments?.getString("missionId").orEmpty()
             MissionCompleteScreen(
-                // stub?? missionId??feedbackId嚥?域밸챶?嚥??? ????뺤쒔 ?怨뺣짗 ???袁⑥┷ ?臾먮뼗??feedbackId嚥??대Ŋ猿?
+                // stub의 missionId를 feedbackId로 임시 사용. 실제 연동 시 응답받은 feedbackId로 이동
                 onContinue = { navController.navigate("feedback/$missionId") },
             )
         }
-        // B???? AI ??곕굡獄??遺용튋. ??????????域?????獄쏄퀡瑗ユ에???곕굡獄??怨멸쉭 (NAVIGATION.md).
-        // "?怨멸쉭 ?귐뗫７?? ???귐뗫７???遺얇늺. "??됱몵嚥? ????癰귣벀?.
+        // B담당: AI 피드백 화면. 항목 클릭 시 피드백 상세 보기 (NAVIGATION.md).
+        // "상세 리포트" 버튼 클릭 시 리포트 화면으로 이동. "홈으로" 클릭 시 홈으로 복귀.
         composable(
             route = Screen.FEEDBACK,
             arguments = listOf(navArgument("feedbackId") { type = NavType.StringType }),
@@ -596,15 +596,15 @@ fun NavGraph(
             FeedbackScreen(
                 onBack = { navController.popBackStack() },
                 onItemClick = { index -> navController.navigate("feedback_detail/$feedbackId?item=$index") },
-                // ?귐뗫７?硫? ????沃섎챷??野껉퍔?ㅿ쭪? ??ｍ뜞 ??? ????????쀫뱜 燁삳?諭???뺛걠??域?沃섎챷?∽쭗?놁뵠 ??
-                // ???????route????쇱몵??삠늺 ?紐꾪맜???袁⑹뒄.
+                // 피드백 진입 시 기존 뷰모델 스택 유지를 위해 홈 팝업 처리 고려
+                // URI 인코딩 처리를 통해 파라미터 전달.
                 onDetailReport = { missionTitle ->
                     navController.navigate("report?missionTitle=${Uri.encode(missionTitle)}")
                 },
                 onHome = { navController.popBackStack(Screen.HOME, inclusive = false) },
             )
         }
-        // B???? ?귐뗫７??(?源놁삢/雅뚯눊而???쑨????????). ??곕굡獄??遺용튋 "?怨멸쉭 ?귐뗫７???癒?퐣 筌욊쑴??
+        // B담당: 리포트(성장/주간 등). 피드백 화면에서 상세 리포트 클릭 시 진입.
         composable(
             route = Screen.REPORT,
             arguments = listOf(
@@ -613,7 +613,7 @@ fun NavGraph(
         ) {
             ReportScreen(
                 onBack = { navController.popBackStack() },
-                onSheetTopChange = onOverlaySheetTop, // 由ы룷???€???쒗듃媛€ ?섎떒 ?ㅻ퉬瑜???뒗 ?숈븞 ?ㅻ퉬 媛€由?
+                onSheetTopChange = onOverlaySheetTop, // 리포트 바텀시트가 하단 탭을 덮는 동안 탭 가림
                 onArchiveClick = { navController.navigate("${Screen.ARCHIVE_LIST}/3") },
                 // 💡 [수정] 보관함 리포트 상세로 이동 연동 완료
                 onReportClick = { reportId ->
@@ -621,7 +621,7 @@ fun NavGraph(
                 },
             )
         }
-        // B???? AI ??곕굡獄??怨멸쉭. "??삘뀲 沃섎챷??癰귣???첎?疫? ???類ㅺ텦 ?癒?カ(?袁⑥┷夷??곕굡獄????類ｂ봺??랁?沃섎챷??筌뤴뫖以??곗쨮.
+        // B담당: AI 피드백 상세 화면. "다른 미션 둘러보기" 클릭 시 미션 목록으로, "보관함" 클릭 시 보관함으로 이동.
         composable(
             route = "${Screen.FEEDBACK_DETAIL}?item={item}",
             arguments = listOf(
@@ -638,7 +638,7 @@ fun NavGraph(
                 onPhraseClick = { phraseId -> navController.navigate("archive_saved_phrase/$phraseId") },
             )
         }
-        composable(Screen.COMMUNITY_LIST) { PlaceholderScreen("紐⑥엫") }
+        composable(Screen.COMMUNITY_LIST) { PlaceholderScreen("모임") }
         composable(Screen.PROFILE) {
             ProfileScreen(
                 onSettingsClick = { navController.navigate(Screen.PROFILE_SETTINGS) },
@@ -670,14 +670,14 @@ fun NavGraph(
         }
         composable(Screen.PROFILE_SERVICE_TERMS) {
             ProfileTermsDetailScreen(
-                title = "?댁슜?쎄?",
+                title = "이용약관",
                 sections = ServiceTermsSections,
                 onBack = { navController.popBackStack() },
             )
         }
         composable(Screen.PROFILE_PRIVACY_POLICY) {
             ProfileTermsDetailScreen(
-                title = "媛쒖씤?뺣낫 泥섎━ 諛⑹묠",
+                title = "개인정보 처리 방침",
                 sections = PrivacyPolicySections,
                 onBack = { navController.popBackStack() },
             )
@@ -690,14 +690,3 @@ fun NavGraph(
         }
     }
 }
-
-
-
-
-
-
-
-
-
-
-

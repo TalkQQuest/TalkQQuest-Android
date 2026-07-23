@@ -1,4 +1,4 @@
-package com.talkqquest.app.feature.auth.data
+﻿package com.talkqquest.app.feature.auth.data
 
 import kotlinx.serialization.Serializable
 
@@ -72,3 +72,32 @@ data class EmailLoginData(
     val refreshToken: String,
     val tokenType: String = "Bearer",
 )
+
+@Serializable
+data class TokenRefreshRequest(
+    val refreshToken: String,
+)
+
+@Serializable
+data class TokenRefreshData(
+    val accessToken: String,
+)
+@Serializable
+data class OnboardingStepSaveRequest(
+    val step: Int,
+    val personalityType: String? = null,
+    val difficultSituations: List<String>? = null,
+    val purpose: List<String>? = null,
+)
+
+@Serializable
+data class OnboardingStepSaveData(
+    val step: Int,
+    val onboardingCompleted: Boolean,
+)
+
+@Serializable
+data class OnboardingCompleteData(
+    val onboardingCompleted: Boolean,
+)
+

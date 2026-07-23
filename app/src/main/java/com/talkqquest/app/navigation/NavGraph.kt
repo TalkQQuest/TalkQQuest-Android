@@ -664,6 +664,7 @@ fun NavGraph(
         composable(Screen.COMMUNITY_LIST) { PlaceholderScreen("모임") }
         composable(Screen.PROFILE) {
             ProfileScreen(
+                onEditProfileClick = { navController.navigate(Screen.PROFILE_INFO) },
                 onSettingsClick = { navController.navigate(Screen.PROFILE_SETTINGS) },
                 onBadgesClick = { navController.navigate(Screen.PROFILE_BADGES) },
                 onRecentMissionClick = { navController.navigate(Screen.PROFILE_RECENT_MISSION) },
@@ -683,7 +684,8 @@ fun NavGraph(
                 onTermsClick = { navController.navigate(Screen.PROFILE_TERMS) },
                 onSupportClick = { navController.navigate(Screen.PROFILE_SUPPORT) },
                 onWithdrawClick = { navController.navigate(Screen.PROFILE_WITHDRAW) },
-            )
+            )
+
         }
         composable(Screen.PROFILE_INFO) {
             ProfileInfoScreen(

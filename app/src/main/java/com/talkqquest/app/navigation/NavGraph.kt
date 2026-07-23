@@ -421,11 +421,11 @@ fun NavGraph(
                 },
             )
         }
-        // ???뵝筌?(??甕???筌욊쑴??. ?遺우쁽??沃섎챷??源놁뵠?????怨밴묶 placeholder.
+        // ?뚮┝李?(??踰???吏꾩엯). ?붿옄??誘몄셿?깆씠??鍮??곹깭 placeholder.
         composable(Screen.NOTIFICATION) {
             NotificationScreen(onBack = { navController.popBackStack() })
         }
-        // C???? ?袁⑸춦???????遺얇늺
+        // C담당: 아카이브 홈 화면
         composable(Screen.ARCHIVE_HOME) {
             val context = LocalContext.current
 
@@ -447,7 +447,7 @@ fun NavGraph(
                 }
             )
         }
-        // C???? ?袁⑸춦????野꺜???遺얇늺
+        // C담당: 아카이브 검색 화면
         composable(Screen.ARCHIVE_SEARCH) {
             ArchiveSearchScreen(
                 onBackClick = {
@@ -465,7 +465,7 @@ fun NavGraph(
             )
         }
 
-        // C???? ?袁⑸춦??????筌뤴뫖以??遺얇늺 (沃섎챷???????얜챷???귐뗫７??
+        // C담당: 아카이브 탭 목록 화면 (미션/대화/문장/리포트)
         composable(
             route = "${Screen.ARCHIVE_LIST}/{tabIndex}",
             arguments = listOf(navArgument("tabIndex") { type = NavType.IntType; defaultValue = 0 })
@@ -491,7 +491,7 @@ fun NavGraph(
             )
         }
 
-        // C???? 癰귣떯???????疫꿸퀡以??怨멸쉭) ?遺얇늺
+        // C담당: 보관함 대화 기록(상세) 화면
         composable(
             route = "archive_conversation_detail/{conversationId}",
             arguments = listOf(navArgument("conversationId") { type = NavType.StringType })
@@ -501,7 +501,7 @@ fun NavGraph(
             )
         }
 
-        // C???? 癰귣떯???甕곗쥙????얜챷???怨멸쉭 ?遺얇늺
+        // C담당: 보관함 베스트 문장 상세 화면
         composable(
             route = "archive_saved_phrase/{phraseId}",
             arguments = listOf(navArgument("phraseId") { type = NavType.StringType })
@@ -613,9 +613,9 @@ fun NavGraph(
         ) {
             ReportScreen(
                 onBack = { navController.popBackStack() },
-                onSheetTopChange = onOverlaySheetTop, // ?귐뗫７????????쀫뱜揶쎛 ??롫뼊 ??삵돩????????덈툧 ??삵돩 揶쎛??
+                onSheetTopChange = onOverlaySheetTop, // 由ы룷???€???쒗듃媛€ ?섎떒 ?ㅻ퉬瑜???뒗 ?숈븞 ?ㅻ퉬 媛€由?
                 onArchiveClick = { navController.navigate("${Screen.ARCHIVE_LIST}/3") },
-                // ?裕?[??륁젟] 癰귣떯????귐뗫７???怨멸쉭嚥???猷??怨뺣짗 ?袁⑥┷
+                // 💡 [수정] 보관함 리포트 상세로 이동 연동 완료
                 onReportClick = { reportId ->
                     navController.navigate("archive_report/$reportId")
                 },
@@ -638,7 +638,7 @@ fun NavGraph(
                 onPhraseClick = { phraseId -> navController.navigate("archive_saved_phrase/$phraseId") },
             )
         }
-        composable(Screen.COMMUNITY_LIST) { PlaceholderScreen("Community") }
+        composable(Screen.COMMUNITY_LIST) { PlaceholderScreen("紐⑥엫") }
         composable(Screen.PROFILE) {
             ProfileScreen(
                 onSettingsClick = { navController.navigate(Screen.PROFILE_SETTINGS) },

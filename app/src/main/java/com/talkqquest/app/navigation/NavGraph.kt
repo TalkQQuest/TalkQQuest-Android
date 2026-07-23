@@ -43,6 +43,10 @@ import com.talkqquest.app.feature.onboarding.ui.OnboardingWelcomeScreen
 import com.talkqquest.app.feature.onboarding.ui.OnboardingCompleteScreen
 import com.talkqquest.app.feature.notification.ui.NotificationScreen
 import com.talkqquest.app.feature.profile.ui.ProfileBadgesScreen
+import com.talkqquest.app.feature.profile.ui.ProfileConnectedAccountScreen
+import com.talkqquest.app.feature.profile.ui.ProfileConcernScreen
+import com.talkqquest.app.feature.profile.ui.ProfileInfoScreen
+import com.talkqquest.app.feature.profile.ui.ProfileNicknameEditScreen
 import com.talkqquest.app.feature.profile.ui.ProfileRecentMissionScreen
 import com.talkqquest.app.feature.profile.ui.ProfileSettingsScreen
 import com.talkqquest.app.feature.profile.ui.ProfileSupportScreen
@@ -303,10 +307,15 @@ fun NavGraph(
             val context = LocalContext.current
             val authViewModel: AuthViewModel = hiltViewModel()
             val authUiState by authViewModel.uiState.collectAsState()
-            val nickname = navController.currentBackStackEntry
-                ?.savedStateHandle
-                ?.get<String>("onboarding_nickname")
-                .orEmpty()
+            val isConcernEditMode = navController.previousBackStackEntry?.destination?.route == Screen.PROFILE_CONCERN
+            val nickname = if (isConcernEditMode) {
+                "소다123"
+            } else {
+                navController.currentBackStackEntry
+                    ?.savedStateHandle
+                    ?.get<String>("onboarding_nickname")
+                    .orEmpty()
+            }
 
             authUiState.errorMessage?.let { message ->
                 Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
@@ -323,12 +332,17 @@ fun NavGraph(
                             personalityType = personalityType,
                         ),
                     ) {
-                        navController.navigate(Screen.ONBOARDING_DIFFICULTY)
+                        if (isConcernEditMode) {
+                            navController.popBackStack(Screen.PROFILE_CONCERN, inclusive = false)
+                        } else {
+                            navController.navigate(Screen.ONBOARDING_DIFFICULTY)
+                        }
                     }
                 },
             )
         }
         composable(Screen.ONBOARDING_DIFFICULTY) {
+            val isConcernEditMode = navController.previousBackStackEntry?.destination?.route == Screen.PROFILE_CONCERN
             val context = LocalContext.current
             val authViewModel: AuthViewModel = hiltViewModel()
             val authUiState by authViewModel.uiState.collectAsState()
@@ -350,13 +364,18 @@ fun NavGraph(
                                 difficultSituations = difficultSituations,
                             ),
                         ) {
-                            navController.navigate(Screen.ONBOARDING_GOAL)
+                            if (isConcernEditMode) {
+                                navController.popBackStack(Screen.PROFILE_CONCERN, inclusive = false)
+                            } else {
+                                navController.navigate(Screen.ONBOARDING_GOAL)
+                            }
                         }
                     }
                 },
             )
         }
         composable(Screen.ONBOARDING_GOAL) {
+            val isConcernEditMode = navController.previousBackStackEntry?.destination?.route == Screen.PROFILE_CONCERN
             val context = LocalContext.current
             val authViewModel: AuthViewModel = hiltViewModel()
             val authUiState by authViewModel.uiState.collectAsState()
@@ -378,7 +397,11 @@ fun NavGraph(
                                 purpose = purpose,
                             ),
                         ) {
-                            navController.navigate(Screen.ONBOARDING_COMPLETE)
+                            if (isConcernEditMode) {
+                                navController.popBackStack(Screen.PROFILE_CONCERN, inclusive = false)
+                            } else {
+                                navController.navigate(Screen.ONBOARDING_COMPLETE)
+                            }
                         }
                     }
                 },
@@ -656,9 +679,35 @@ fun NavGraph(
         composable(Screen.PROFILE_SETTINGS) {
             ProfileSettingsScreen(
                 onBack = { navController.popBackStack() },
+                onEditProfileClick = { navController.navigate(Screen.PROFILE_INFO) },
                 onTermsClick = { navController.navigate(Screen.PROFILE_TERMS) },
                 onSupportClick = { navController.navigate(Screen.PROFILE_SUPPORT) },
                 onWithdrawClick = { navController.navigate(Screen.PROFILE_WITHDRAW) },
+            )
+        }
+        composable(Screen.PROFILE_INFO) {
+            ProfileInfoScreen(
+                onBack = { navController.popBackStack() },
+                onNicknameClick = { navController.navigate(Screen.PROFILE_NICKNAME_EDIT) },
+                onConnectedAccountClick = { navController.navigate(Screen.PROFILE_CONNECTED_ACCOUNT) },
+                onConcernClick = { navController.navigate(Screen.PROFILE_CONCERN) },
+            )
+        }
+        composable(Screen.PROFILE_NICKNAME_EDIT) {
+            ProfileNicknameEditScreen(
+                onBack = { navController.popBackStack() },
+                onSaveClick = { navController.popBackStack() },
+            )
+        }
+        composable(Screen.PROFILE_CONNECTED_ACCOUNT) {
+            ProfileConnectedAccountScreen(onBack = { navController.popBackStack() })
+        }
+        composable(Screen.PROFILE_CONCERN) {
+            ProfileConcernScreen(
+                onBack = { navController.popBackStack() },
+                onPersonalityClick = { navController.navigate(Screen.ONBOARDING_PERSONALITY) },
+                onDifficultyClick = { navController.navigate(Screen.ONBOARDING_DIFFICULTY) },
+                onGoalClick = { navController.navigate(Screen.ONBOARDING_GOAL) },
             )
         }
         composable(Screen.PROFILE_TERMS) {
@@ -690,3 +739,13 @@ fun NavGraph(
         }
     }
 }
+
+
+
+
+
+
+
+
+
+

@@ -2,18 +2,16 @@
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.layout.offset
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.KeyboardArrowRight
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -38,62 +36,71 @@ import com.talkqquest.app.core.designsystem.softShadow
 fun ProfileSupportScreen(
     onBack: () -> Unit = {},
 ) = FitDesign {
-    Column(
+    Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(Gray50)
-            .verticalScroll(rememberScrollState())
-            .padding(horizontal = 16.dp),
+            .background(Gray50),
     ) {
         ProfileSimpleTopBar(title = "문의하기", onBack = onBack)
-        Spacer(Modifier.height(24.dp))
         Text(
             text = "무엇을 도와드릴까요?",
-            style = TqType.TitleL.copy(fontWeight = FontWeight.Bold),
-            color = Gray800,
-        )
-        Spacer(Modifier.height(22.dp))
-        Column(
+            style = TqType.TitleL.copy(fontWeight = FontWeight.SemiBold),
+            color = Color(0xFF1E293B),
             modifier = Modifier
-                .fillMaxWidth()
+                .offset(x = 20.dp, y = 111.dp)
+                .size(width = 152.dp, height = 28.dp),
+        )
+        Box(
+            modifier = Modifier
+                .offset(x = 16.dp, y = 155.dp)
+                .size(width = 362.dp, height = 143.dp)
                 .softShadow(
-                    color = Color.Black.copy(alpha = 0.025f),
+                    color = Color(0xFF0F172A).copy(alpha = 0.01f),
                     offsetY = 8.dp,
                     blur = 24.dp,
-                    cornerRadius = 14.dp,
+                    cornerRadius = 16.dp,
                 )
-                .clip(RoundedCornerShape(14.dp))
-                .background(White)
-                .padding(horizontal = 16.dp, vertical = 18.dp),
+                .clip(RoundedCornerShape(16.dp))
+                .background(White),
         ) {
-            Text("고객 지원", style = TqType.BodyM, color = Gray500)
-            Spacer(Modifier.height(26.dp))
-            SupportRow(title = "자주 묻는 질문")
-            Spacer(Modifier.height(25.dp))
-            SupportRow(title = "이메일 문의", trailing = "talkqquest@naver.com")
+            Text(
+                text = "고객 지원",
+                style = TqType.BodyM,
+                color = Gray500,
+                modifier = Modifier
+                    .offset(x = 16.dp, y = 12.dp)
+                    .size(width = 330.dp, height = 22.dp),
+            )
+            Column(
+                modifier = Modifier
+                    .offset(x = 16.dp, y = 46.dp)
+                    .size(width = 330.dp, height = 88.dp),
+            ) {
+                SupportRow(title = "자주 묻는 질문")
+                SupportRow(title = "이메일 문의", trailing = "talkqquest@naver.com")
+            }
         }
     }
 }
-
 @Composable
 private fun SupportRow(title: String, trailing: String? = null) {
     Row(
         modifier = Modifier
-            .fillMaxWidth()
+            .size(width = 330.dp, height = 44.dp)
             .clickable { },
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Text(
             text = title,
-            style = TqType.BodyL.copy(fontWeight = FontWeight.Medium),
+            style = TqType.BodyL,
             color = Gray800,
             modifier = Modifier.weight(1f),
         )
         if (trailing != null) {
             Text(text = trailing, style = TqType.BodyM, color = Gray500)
-            Spacer(Modifier.padding(horizontal = 6.dp))
+            Spacer(Modifier.size(width = 10.dp, height = 1.dp))
         }
-        Icon(imageVector = Icons.Default.KeyboardArrowRight, contentDescription = null, tint = Gray700)
+        Icon(imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = null, tint = Gray700)
     }
 }
 
@@ -104,3 +111,7 @@ private fun ProfileSupportScreenPreview() {
         ProfileSupportScreen()
     }
 }
+
+
+
+

@@ -2,7 +2,7 @@ package com.talkqquest.app.feature.home.data
 
 import com.talkqquest.app.core.datastore.UserXpStore
 import com.talkqquest.app.core.network.ApiResult
-import com.talkqquest.app.core.network.safeApiCall
+import com.talkqquest.app.core.network.serverCall
 import com.talkqquest.app.feature.home.data.model.HomeSummary
 import com.talkqquest.app.feature.home.data.model.TodayMission
 import com.talkqquest.app.feature.mission.data.MissionApi
@@ -20,7 +20,7 @@ class HomeRepository @Inject constructor(
     // 프로필(닉네임·레벨·XP)= /users/me 실데이터, 오늘의 미션 = /missions/today 실데이터(폴백 있음),
     // 카운트·오늘의 질문 = 서버 미구현이라 stub 유지. 서버 실패(오프라인 등) 시 전부 stub 폴백 — 데모가 안 죽게.
     suspend fun getHomeSummary(): ApiResult<HomeSummary> {
-        when (val me = safeApiCall { homeApi.getMe() }) {
+        when (val me = serverCall { homeApi.getMe() }) {
             is ApiResult.Success -> {
                 // 서버 레벨·XP로 1회 초기화 — 이후엔 미션 완료가 /xp/summary 값으로 sync해줌
                 userXpStore.seedFromServer(me.data.level, me.data.xp)
@@ -49,14 +49,14 @@ class HomeRepository @Inject constructor(
     //   → 미션 목록 첫 항목으로 폴백(실서버 UUID 유지 — 카드를 눌러도 실제 상세로 이어짐).
     //   카드 부제(description)는 목록 응답에 없어 상세 조회로 채움(실패 시 생략).
     private suspend fun fetchTodayMission(): TodayMission? {
-        val item = when (val today = safeApiCall { missionApi.getTodayMission() }) {
+        val item = when (val today = serverCall { missionApi.getTodayMission() }) {
             is ApiResult.Success -> today.data
             else -> {
-                val list = safeApiCall { missionApi.getMissions() }
+                val list = serverCall { missionApi.getMissions() }
                 (list as? ApiResult.Success)?.data?.missions?.firstOrNull() ?: return null
             }
         }
-        val description = (safeApiCall { missionApi.getMissionDetail(item.id) } as? ApiResult.Success)
+        val description = (serverCall { missionApi.getMissionDetail(item.id) } as? ApiResult.Success)
             ?.data?.description?.takeIf { it.isNotBlank() }
         return TodayMission(
             id = item.id,

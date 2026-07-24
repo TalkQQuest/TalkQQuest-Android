@@ -564,7 +564,7 @@ private fun OtherMissionsCard(onClick: () -> Unit) {
 
 // ── Preview: 서버 없이 상태별로 확인. 배경 = 실제 앱 배경 Gray50(#F8FAFC). ──
 private val previewSummary = HomeSummary(
-    nickname = "다민",
+    nickname = "소다123",
     level = 2,
     currentXp = 30,
     nextLevelXp = 100,

@@ -1,5 +1,6 @@
 package com.talkqquest.app.core.network
 
+import com.talkqquest.app.core.DemoConfig
 import retrofit2.HttpException
 import java.io.IOException
 
@@ -25,3 +26,9 @@ suspend fun <T> safeApiCall(call: suspend () -> ApiResponse<T>): ApiResult<T> =
     } catch (e: Exception) {
         ApiResult.Exception(e)
     }
+
+// 데모 목업 스위치용 래퍼. DemoConfig.USE_MOCK이면 서버 호출을 건너뛰고 실패로 처리해
+// Repository의 stub 폴백 경로를 타게 한다(= 서버 대신 목업 표시). false면 safeApiCall과 동일.
+// 서버 연동 코드는 그대로 두고 스위치 하나로 목업↔서버를 전환하기 위함.
+suspend fun <T> serverCall(call: suspend () -> ApiResponse<T>): ApiResult<T> =
+    if (DemoConfig.USE_MOCK) ApiResult.Error(code = null, message = "mock mode") else safeApiCall(call)

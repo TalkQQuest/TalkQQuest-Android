@@ -238,7 +238,7 @@ class MissionRepository @Inject constructor(
                 // (서버 연동 시엔 피드백 응답에 담겨 오는 미션 제목으로 교체)
                 missionTitle = stubMissions.firstOrNull { it.id == feedbackId }?.title
                     ?: stubMissions.first().title,
-                nickname = "다민", // TODO(서버 연동): 유저 프로필 닉네임으로 교체
+                nickname = "소다123", // TODO(서버 연동): 유저 프로필 닉네임으로 교체
                 kindnessScore = 92,
                 initiativeScore = 88,
                 empathyScore = 85,

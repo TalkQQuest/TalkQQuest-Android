@@ -71,7 +71,7 @@ class HomeRepository @Inject constructor(
 
 // 서버 없이 에뮬에서 홈 화면 확인용 임시 데이터. 서버 연동 시 이 값째로 삭제.
 private val stubHomeSummary = HomeSummary(
-    nickname = "다민",
+    nickname = "소다123",
     level = 2,
     currentXp = 30,
     nextLevelXp = 100,

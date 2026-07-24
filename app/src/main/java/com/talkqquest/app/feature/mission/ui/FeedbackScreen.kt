@@ -406,7 +406,7 @@ private fun FeedbackBandPreview(k: Int, i: Int, e: Int, q: Int) {
             FeedbackContent(
                 result = FeedbackResult(
                     missionTitle = "처음 보는 사람에게 짧게 인사하기",
-                    nickname = "다민",
+                    nickname = "소다123",
                     kindnessScore = k,
                     initiativeScore = i,
                     empathyScore = e,

@@ -84,7 +84,7 @@ import kotlinx.coroutines.launch
 
 @Composable
 fun MissionCompleteScreen(
-    onContinue: () -> Unit = {},
+    onContinue: (String?) -> Unit = {},
     viewModel: MissionCompleteViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -98,7 +98,7 @@ fun MissionCompleteScreen(
 @Composable
 private fun MissionCompleteScreen(
     uiState: MissionCompleteUiState,
-    onContinue: () -> Unit = {},
+    onContinue: (String?) -> Unit = {},
     onRetry: () -> Unit = {},
 ) = FitDesign { // 작은 화면에선 디자인(393x852) 통째 축소 — 스크롤 없이 한 화면에
     Box(
@@ -138,7 +138,7 @@ private const val SKIP_ADVANCE_HOLD_MS = 300L
 private fun MissionCompleteContent(
     result: MissionCompleteResult,
     durationText: String,
-    onContinue: () -> Unit,
+    onContinue: (String?) -> Unit,
     initialStage: Int = 0, // 프리뷰용: 3이면 연출 끝 상태로 그림
 ) {
     // 등장 단계: 0=컨페티+문구 → 1=대화 시간 카드 → 2=체크리스트 → 3=XP 카드(바 카운트업)
@@ -149,7 +149,7 @@ private fun MissionCompleteContent(
     val advance = {
         if (!advanced) {
             advanced = true
-            onContinue()
+            onContinue(result.feedbackId)
         }
     }
     // 레벨 칩에 표시할 레벨 — 레벨업 연출에선 바가 가득 차는 순간 바뀜

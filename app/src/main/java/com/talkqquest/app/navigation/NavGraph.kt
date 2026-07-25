@@ -605,8 +605,8 @@ fun NavGraph(
         ) { backStackEntry ->
             val missionId = backStackEntry.arguments?.getString("missionId").orEmpty()
             MissionCompleteScreen(
-                // stub의 missionId를 feedbackId로 임시 사용. 실제 연동 시 응답받은 feedbackId로 이동
-                onContinue = { navController.navigate("feedback/$missionId") },
+                // 완료 시 생성된 feedbackId로 이동(POST /feedback). 미생성(데모/실패)이면 missionId 폴백(stub 경로).
+                onContinue = { feedbackId -> navController.navigate("feedback/${feedbackId ?: missionId}") },
             )
         }
         // B담당: AI 피드백 화면. 항목 클릭 시 피드백 상세 보기 (NAVIGATION.md).

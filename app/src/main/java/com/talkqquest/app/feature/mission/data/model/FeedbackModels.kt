@@ -44,6 +44,17 @@ fun FeedbackResult.scoreItems(): List<Pair<String, Int>> = listOf(
     "질문 연결성" to questionLinkScore,
 )
 
+// POST /api/v1/feedback (피드백 생성) — dev CreateFeedbackRequestDto/FeedbackResponseDto 대조(2026-07-25).
+// 대화 종료 후 이 대화에 대한 피드백 생성을 트리거. 생성은 비동기(status pending → ready).
+@Serializable
+data class CreateFeedbackRequest(val conversationId: String)
+
+@Serializable
+data class CreateFeedbackResponse(
+    val feedbackId: String = "",
+    val status: String = "",   // pending | ready | failed
+)
+
 // ── 서버 DTO — GET /api/v1/feedback/{feedbackId} (dev FeedbackDetailResponseDto 대조, 2026-07-25) ──
 // metrics는 항상 4개(kindness/initiative/empathy/questionLink 순서 고정), 각 지표에 점수+잘한점+개선점+베스트문장.
 @Serializable

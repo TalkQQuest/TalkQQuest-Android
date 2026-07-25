@@ -1,5 +1,6 @@
-﻿package com.talkqquest.app.navigation
+package com.talkqquest.app.navigation
 
+import android.content.Context
 import android.net.Uri
 import android.widget.Toast
 import androidx.compose.animation.AnimatedContentTransitionScope
@@ -43,14 +44,18 @@ import com.talkqquest.app.feature.onboarding.ui.OnboardingWelcomeScreen
 import com.talkqquest.app.feature.onboarding.ui.OnboardingCompleteScreen
 import com.talkqquest.app.feature.notification.ui.NotificationScreen
 import com.talkqquest.app.feature.profile.ui.ProfileBadgesScreen
+import com.talkqquest.app.feature.profile.ui.ProfileBadgeUi
 import com.talkqquest.app.feature.profile.ui.ProfileConnectedAccountScreen
 import com.talkqquest.app.feature.profile.ui.ProfileConcernScreen
 import com.talkqquest.app.feature.profile.ui.ProfileInfoScreen
 import com.talkqquest.app.feature.profile.ui.ProfileNicknameEditScreen
+import com.talkqquest.app.feature.profile.ui.ProfileNewPasswordScreen
+import com.talkqquest.app.feature.profile.ui.ProfilePasswordChangeScreen
 import com.talkqquest.app.feature.profile.ui.ProfileRecentMissionScreen
 import com.talkqquest.app.feature.profile.ui.ProfileSettingsScreen
 import com.talkqquest.app.feature.profile.ui.ProfileSupportScreen
 import com.talkqquest.app.feature.profile.ui.ProfileWithdrawScreen
+import com.talkqquest.app.feature.profile.viewmodel.ProfileViewModel
 import com.talkqquest.app.feature.profile.ui.PrivacyPolicySections
 import com.talkqquest.app.feature.profile.ui.ProfileTermsDetailScreen
 import com.talkqquest.app.feature.profile.ui.ProfileTermsScreen
@@ -74,6 +79,9 @@ import com.talkqquest.app.feature.archive.viewmodel.ActivityType
 import com.talkqquest.app.navigation.Screen
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import okhttp3.MediaType.Companion.toMediaTypeOrNull
+import okhttp3.MultipartBody
+import okhttp3.RequestBody.Companion.toRequestBody
 
 // 네비게이션 그래프.
 // TODO(각 담당): Screen.kt에 route를 정의한 뒤 NavGraph.kt에 composable을 등록합니다.
@@ -663,7 +671,36 @@ fun NavGraph(
         }
         composable(Screen.COMMUNITY_LIST) { PlaceholderScreen("모임") }
         composable(Screen.PROFILE) {
+            val context = LocalContext.current
+            val profileViewModel: ProfileViewModel = hiltViewModel()
+            val profileUiState by profileViewModel.uiState.collectAsState()
+            val dashboard = profileUiState.dashboard
+            val profile = profileUiState.profile
+            val nickname = dashboard?.nickname?.takeIf { it.isNotBlank() }
+                ?: profile?.nickname
+                ?: profile?.name
+                ?: "\uB2E4\uBBFC"
+            val earnedBadgeCount = dashboard?.badges?.size
+                ?: profileUiState.badges.count { it.isEarned }.takeIf { it > 0 }
+                ?: 5
+            val weeklyMissionStatus = dashboard?.weeklyMissionStatus
+
+            LaunchedEffect(Unit) {
+                profileViewModel.loadDashboard()
+            }
+
+            profileUiState.errorMessage?.let { message ->
+                Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
+                profileViewModel.clearError()
+            }
+
             ProfileScreen(
+                nickname = nickname,
+                level = dashboard?.level ?: profile?.level ?: 2,
+                xp = dashboard?.xp ?: profile?.xp ?: 30,
+                earnedBadgeCount = earnedBadgeCount,
+                weeklyCompletedCount = weeklyMissionStatus?.completed ?: 5,
+                weeklyTotalCount = weeklyMissionStatus?.total ?: 7,
                 onEditProfileClick = { navController.navigate(Screen.PROFILE_INFO) },
                 onSettingsClick = { navController.navigate(Screen.PROFILE_SETTINGS) },
                 onBadgesClick = { navController.navigate(Screen.PROFILE_BADGES) },
@@ -672,13 +709,58 @@ fun NavGraph(
             )
         }
         composable(Screen.PROFILE_BADGES) {
-            ProfileBadgesScreen(onBack = { navController.popBackStack() })
+            val context = LocalContext.current
+            val profileViewModel: ProfileViewModel = hiltViewModel()
+            val profileUiState by profileViewModel.uiState.collectAsState()
+            val badges = profileUiState.badges.map { badge ->
+                ProfileBadgeUi(
+                    id = badge.id,
+                    name = badge.name,
+                    description = badge.description,
+                    isEarned = badge.isEarned,
+                    earnedAt = badge.earnedAt,
+                    current = badge.progress?.current,
+                    target = badge.progress?.target,
+                )
+            }
+
+            LaunchedEffect(Unit) {
+                profileViewModel.loadBadges()
+            }
+
+            profileUiState.errorMessage?.let { message ->
+                Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
+                profileViewModel.clearError()
+            }
+
+            ProfileBadgesScreen(
+                badges = badges,
+                onBack = { navController.popBackStack() },
+            )
         }
         composable(Screen.PROFILE_RECENT_MISSION) {
             ProfileRecentMissionScreen(onBack = { navController.popBackStack() })
         }
         composable(Screen.PROFILE_SETTINGS) {
+            val context = LocalContext.current
+            val profileViewModel: ProfileViewModel = hiltViewModel()
+            val profileUiState by profileViewModel.uiState.collectAsState()
+            val settings = profileUiState.settings
+
+            LaunchedEffect(Unit) {
+                profileViewModel.loadSettings()
+            }
+
+            profileUiState.errorMessage?.let { message ->
+                Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
+                profileViewModel.clearError()
+            }
+
             ProfileSettingsScreen(
+                initialPushEnabled = settings?.let { it.communityApproved || it.reportReady || it.marketing } ?: true,
+                initialReminderEnabled = settings?.missionReminder ?: false,
+                onPushEnabledChange = profileViewModel::updatePushNotifications,
+                onReminderEnabledChange = profileViewModel::updateMissionReminder,
                 onBack = { navController.popBackStack() },
                 onEditProfileClick = { navController.navigate(Screen.PROFILE_INFO) },
                 onTermsClick = { navController.navigate(Screen.PROFILE_TERMS) },
@@ -688,21 +770,132 @@ fun NavGraph(
 
         }
         composable(Screen.PROFILE_INFO) {
+            val context = LocalContext.current
+            val profileViewModel: ProfileViewModel = hiltViewModel()
+            val profileUiState by profileViewModel.uiState.collectAsState()
+            val profile = profileUiState.profile
+            val nickname = profile?.nickname ?: profile?.name ?: "\uB2E4\uBBFC"
+            val connectedAccount = profile?.name?.takeIf { it.contains("@") } ?: "talkqquest@naver.com"
+
+            profileUiState.errorMessage?.let { message ->
+                Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
+                profileViewModel.clearError()
+            }
+
             ProfileInfoScreen(
+                nickname = nickname,
+                connectedAccount = connectedAccount,
                 onBack = { navController.popBackStack() },
                 onNicknameClick = { navController.navigate(Screen.PROFILE_NICKNAME_EDIT) },
+                onAvatarClick = { uri ->
+                    val imagePart = uri.toProfileImagePart(context)
+                    if (imagePart == null) {
+                        Toast.makeText(context, "\uC774\uBBF8\uC9C0\uB97C \uBD88\uB7EC\uC624\uC9C0 \uBABB\uD588\uC5B4\uC694.", Toast.LENGTH_SHORT).show()
+                    } else {
+                        profileViewModel.uploadProfileImage(imagePart)
+                    }
+                },
+                onPasswordClick = { navController.navigate(Screen.PROFILE_PASSWORD_CHANGE) },
                 onConnectedAccountClick = { navController.navigate(Screen.PROFILE_CONNECTED_ACCOUNT) },
                 onConcernClick = { navController.navigate(Screen.PROFILE_CONCERN) },
             )
         }
         composable(Screen.PROFILE_NICKNAME_EDIT) {
+            val context = LocalContext.current
+            val profileViewModel: ProfileViewModel = hiltViewModel()
+            val profileUiState by profileViewModel.uiState.collectAsState()
+            val currentNickname = profileUiState.profile?.nickname ?: profileUiState.profile?.name ?: "\uC18C\uB2E4123"
+
+            profileUiState.errorMessage?.let { message ->
+                Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
+                profileViewModel.clearError()
+            }
+
             ProfileNicknameEditScreen(
+                initialNickname = currentNickname,
                 onBack = { navController.popBackStack() },
-                onSaveClick = { navController.popBackStack() },
+                onSaveClick = { nickname ->
+                    profileViewModel.updateNickname(nickname.trim()) {
+                        navController.popBackStack()
+                    }
+                },
+            )
+        }
+        composable(Screen.PROFILE_PASSWORD_CHANGE) {
+            val context = LocalContext.current
+            val profileViewModel: ProfileViewModel = hiltViewModel()
+            val profileUiState by profileViewModel.uiState.collectAsState()
+            var currentPasswordError by remember { mutableStateOf(false) }
+
+            profileUiState.errorMessage?.let { message ->
+                Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
+                profileViewModel.clearError()
+            }
+
+            ProfilePasswordChangeScreen(
+                currentPasswordError = currentPasswordError,
+                onBack = { navController.popBackStack() },
+                onNextClick = { currentPassword ->
+                    currentPasswordError = false
+                    profileViewModel.verifyCurrentPassword(
+                        currentPassword = currentPassword,
+                        onSuccess = { navController.navigate(Screen.PROFILE_NEW_PASSWORD) },
+                        onInvalidPassword = { currentPasswordError = true },
+                    )
+                },
+            )
+        }
+        composable(Screen.PROFILE_NEW_PASSWORD) {
+            val context = LocalContext.current
+            val profileViewModel: ProfileViewModel = hiltViewModel()
+            val profileUiState by profileViewModel.uiState.collectAsState()
+            var showPasswordChangedDialog by remember { mutableStateOf(false) }
+
+            profileUiState.errorMessage?.let { message ->
+                Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
+                profileViewModel.clearError()
+            }
+
+            ProfileNewPasswordScreen(
+                onBack = { navController.popBackStack() },
+                onConfirmClick = { newPassword ->
+                    profileViewModel.changePassword(newPassword) {
+                        showPasswordChangedDialog = true
+                    }
+                },
+                showCompletionDialog = showPasswordChangedDialog,
+                onCompletionConfirm = {
+                    showPasswordChangedDialog = false
+                    navController.popBackStack(Screen.PROFILE_INFO, inclusive = false)
+                },
             )
         }
         composable(Screen.PROFILE_CONNECTED_ACCOUNT) {
-            ProfileConnectedAccountScreen(onBack = { navController.popBackStack() })
+            val context = LocalContext.current
+            val authViewModel: AuthViewModel = hiltViewModel()
+            val authUiState by authViewModel.uiState.collectAsState()
+
+            authUiState.errorMessage?.let { message ->
+                Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
+                authViewModel.clearError()
+            }
+
+            val profileViewModel: ProfileViewModel = hiltViewModel()
+            val profileUiState by profileViewModel.uiState.collectAsState()
+            val connectedAccount = profileUiState.profile?.name?.takeIf { it.contains("@") } ?: "talkqquest@naver.com"
+
+            ProfileConnectedAccountScreen(
+                connectedAccount = connectedAccount,
+                onBack = { navController.popBackStack() },
+                onLogoutClick = {
+                    authViewModel.logout {
+                        navController.navigate(Screen.LOGIN) {
+                            popUpTo(Screen.HOME) { inclusive = true }
+                            launchSingleTop = true
+                        }
+                    }
+                },
+            )
         }
         composable(Screen.PROFILE_CONCERN) {
             ProfileConcernScreen(
@@ -720,16 +913,44 @@ fun NavGraph(
             )
         }
         composable(Screen.PROFILE_SERVICE_TERMS) {
+            val context = LocalContext.current
+            val profileViewModel: ProfileViewModel = hiltViewModel()
+            val profileUiState by profileViewModel.uiState.collectAsState()
+
+            LaunchedEffect(Unit) {
+                profileViewModel.loadServiceTerms()
+            }
+
+            profileUiState.errorMessage?.let { message ->
+                Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
+                profileViewModel.clearError()
+            }
+
             ProfileTermsDetailScreen(
-                title = "이용약관",
+                title = "\uC774\uC6A9\uC57D\uAD00",
                 sections = ServiceTermsSections,
+                content = profileUiState.serviceTerms?.content,
                 onBack = { navController.popBackStack() },
             )
         }
         composable(Screen.PROFILE_PRIVACY_POLICY) {
+            val context = LocalContext.current
+            val profileViewModel: ProfileViewModel = hiltViewModel()
+            val profileUiState by profileViewModel.uiState.collectAsState()
+
+            LaunchedEffect(Unit) {
+                profileViewModel.loadPrivacyPolicy()
+            }
+
+            profileUiState.errorMessage?.let { message ->
+                Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
+                profileViewModel.clearError()
+            }
+
             ProfileTermsDetailScreen(
-                title = "개인정보 처리 방침",
+                title = "\uAC1C\uC778\uC815\uBCF4 \uCC98\uB9AC \uBC29\uCE68",
                 sections = PrivacyPolicySections,
+                content = profileUiState.privacyPolicy?.content,
                 onBack = { navController.popBackStack() },
             )
         }
@@ -737,7 +958,26 @@ fun NavGraph(
             ProfileSupportScreen(onBack = { navController.popBackStack() })
         }
         composable(Screen.PROFILE_WITHDRAW) {
-            ProfileWithdrawScreen(onBack = { navController.popBackStack() })
+            val context = LocalContext.current
+            val authViewModel: AuthViewModel = hiltViewModel()
+            val authUiState by authViewModel.uiState.collectAsState()
+
+            authUiState.errorMessage?.let { message ->
+                Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
+                authViewModel.clearError()
+            }
+
+            ProfileWithdrawScreen(
+                onBack = { navController.popBackStack() },
+                onWithdrawConfirm = {
+                    authViewModel.withdraw {
+                        navController.navigate(Screen.LOGIN) {
+                            popUpTo(Screen.HOME) { inclusive = true }
+                            launchSingleTop = true
+                        }
+                    }
+                },
+            )
         }
     }
 }
@@ -751,3 +991,16 @@ fun NavGraph(
 
 
 
+
+
+
+
+
+private fun Uri.toProfileImagePart(context: Context): MultipartBody.Part? {
+    val resolver = context.contentResolver
+    val mimeType = resolver.getType(this)?.takeIf { it == "image/jpeg" || it == "image/png" } ?: return null
+    val bytes = resolver.openInputStream(this)?.use { it.readBytes() } ?: return null
+    val extension = if (mimeType == "image/png") "png" else "jpg"
+    val requestBody = bytes.toRequestBody(mimeType.toMediaTypeOrNull())
+    return MultipartBody.Part.createFormData("image", "profile_image.$extension", requestBody)
+}

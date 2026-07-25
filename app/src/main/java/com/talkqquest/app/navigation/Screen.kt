@@ -35,6 +35,8 @@ object Screen {
     const val PROFILE_SETTINGS = "profile_settings"                 // ProfileSettingsScreen
     const val PROFILE_INFO = "profile_info"                         // ProfileInfoScreen
     const val PROFILE_NICKNAME_EDIT = "profile_nickname_edit"     // ProfileNicknameEditScreen
+    const val PROFILE_PASSWORD_CHANGE = "profile_password_change" // ProfilePasswordChangeScreen
+    const val PROFILE_NEW_PASSWORD = "profile_new_password"       // ProfileNewPasswordScreen
     const val PROFILE_CONNECTED_ACCOUNT = "profile_connected_account" // ProfileConnectedAccountScreen
     const val PROFILE_CONCERN = "profile_concern"                 // ProfileConcernScreen
     const val PROFILE_TERMS = "profile_terms"                       // ProfileTermsScreen

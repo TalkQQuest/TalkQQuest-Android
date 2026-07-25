@@ -30,6 +30,7 @@ import com.talkqquest.app.core.designsystem.White
 
 @Composable
 fun ProfileConnectedAccountScreen(
+    connectedAccount: String = "talkqquest@naver.com",
     onBack: () -> Unit = {},
     onLogoutClick: () -> Unit = {},
 ) = FitDesign {
@@ -60,7 +61,7 @@ fun ProfileConnectedAccountScreen(
                 contentAlignment = Alignment.CenterEnd,
             ) {
                 Text(
-                    text = "talkqquest@naver.com",
+                    text = connectedAccount,
                     style = TqType.BodyL,
                     color = Gray500,
                     modifier = Modifier.size(width = 163.dp, height = 24.dp),
@@ -107,6 +108,7 @@ private fun ProfileConnectedAccountScreenPreview() {
         ProfileConnectedAccountScreen()
     }
 }
+
 
 
 

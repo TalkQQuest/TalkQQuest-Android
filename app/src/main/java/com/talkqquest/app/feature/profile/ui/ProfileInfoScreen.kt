@@ -1,5 +1,9 @@
 ﻿package com.talkqquest.app.feature.profile.ui
 
+import android.net.Uri
+
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -22,6 +26,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import coil3.compose.AsyncImage
 import com.talkqquest.app.R
 import com.talkqquest.app.core.designsystem.FitDesign
 import com.talkqquest.app.core.designsystem.Gray50
@@ -34,12 +39,23 @@ import com.talkqquest.app.core.designsystem.TqType
 
 @Composable
 fun ProfileInfoScreen(
+    nickname: String = "소다123",
+    avatarUrl: String? = null,
+    connectedAccount: String = "talkqquest@naver.com",
     onBack: () -> Unit = {},
     onNicknameClick: () -> Unit = {},
+    onAvatarClick: (Uri) -> Unit = {},
+    onPasswordClick: () -> Unit = {},
     onConnectedAccountClick: () -> Unit = {},
     onConcernClick: () -> Unit = {},
     isEmailMember: Boolean = true,
 ) = FitDesign {
+    val imagePickerLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetContent(),
+    ) { uri ->
+        if (uri != null) onAvatarClick(uri)
+    }
+
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -64,7 +80,7 @@ fun ProfileInfoScreen(
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Text(
-                    text = "소다123 님",
+                    text = "$nickname 님",
                     style = TqType.HeadingM.copy(fontWeight = FontWeight.SemiBold),
                     color = Color(0xFF1E293B),
                     modifier = Modifier.size(width = 90.dp, height = 30.dp),
@@ -85,7 +101,7 @@ fun ProfileInfoScreen(
         ) {
             ProfileInfoRow(
                 title = "연결된 계정",
-                trailing = "talkqquest@naver.com",
+                trailing = connectedAccount,
                 modifier = Modifier
                     .offset(y = 0.dp)
                     .size(width = 371.dp, height = 44.dp),
@@ -97,15 +113,16 @@ fun ProfileInfoScreen(
                     modifier = Modifier
                         .offset(y = 46.dp)
                         .size(width = 371.dp, height = 44.dp),
+                    onClick = onPasswordClick,
                 )
             }
             ProfileInfoRow(
-                title = "소다123님의 대화 고민",
+                title = "${nickname}님의 대화 고민",
                 titleWidth = 145,
                 modifier = Modifier
                     .offset(y = if (isEmailMember) 92.dp else 46.dp)
                     .size(width = 371.dp, height = 44.dp),
-            onClick = onConcernClick,
+                onClick = onConcernClick,
             )
         }
     }
@@ -167,6 +184,7 @@ private fun ProfileInfoSocialMemberScreenPreview() {
         ProfileInfoScreen(isEmailMember = false)
     }
 }
+
 
 
 

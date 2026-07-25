@@ -41,6 +41,16 @@ interface AuthApi {
         @Body request: TokenRefreshRequest,
     ): ApiResponse<TokenRefreshData>
 
+    
+    @POST("api/v1/auth/logout")
+    suspend fun logout(
+        @Body request: LogoutRequest,
+    ): ApiResponse<Unit>
+
+    
+    @POST("api/v1/users/me")
+    suspend fun withdraw(): ApiResponse<Unit>
+
     @PATCH("api/v1/users/me/onboarding")
     suspend fun saveOnboardingStep(
         @Body request: OnboardingStepSaveRequest,
@@ -49,5 +59,9 @@ interface AuthApi {
     @POST("api/v1/users/me/onboarding/complete")
     suspend fun completeOnboarding(): ApiResponse<OnboardingCompleteData>
 }
+
+
+
+
 
 

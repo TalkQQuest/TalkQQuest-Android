@@ -1,4 +1,4 @@
-﻿package com.talkqquest.app.feature.profile.ui
+package com.talkqquest.app.feature.profile.ui
 
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
@@ -97,6 +97,13 @@ private val LabelMediumStyle = TextStyle(
 
 @Composable
 fun ProfileScreen(
+    nickname: String = "다민",
+    level: Int = 2,
+    xp: Int = 30,
+    nextLevelXp: Int = 100,
+    earnedBadgeCount: Int = 5,
+    weeklyCompletedCount: Int = 5,
+    weeklyTotalCount: Int = 7,
     onSettingsClick: () -> Unit = {},
     onEditProfileClick: () -> Unit = {},
     onBadgesClick: () -> Unit = {},
@@ -132,6 +139,7 @@ fun ProfileScreen(
         }
 
         ProfileHeader(
+            nickname = nickname,
             onEditProfileClick = onEditProfileClick,
             modifier = Modifier
                 .offset(x = 150.5.dp, y = 126.dp)
@@ -139,19 +147,24 @@ fun ProfileScreen(
         )
 
         LevelCard(
+            level = level,
+            xp = xp,
+            nextLevelXp = nextLevelXp,
             modifier = Modifier
                 .offset(x = 16.dp, y = 322.dp)
                 .size(width = 362.dp, height = 89.dp),
         )
 
         WeeklyMissionCard(
+            completedCount = weeklyCompletedCount,
+            totalCount = weeklyTotalCount,
             modifier = Modifier
                 .offset(x = 16.dp, y = 427.dp)
                 .size(width = 362.dp, height = 121.dp),
         )
 
         ProfileMenuCard(
-            badgeCount = 5,
+            badgeCount = earnedBadgeCount,
             onBadgesClick = onBadgesClick,
             onRecentMissionClick = onRecentMissionClick,
             onArchiveClick = onArchiveClick,
@@ -164,13 +177,14 @@ fun ProfileScreen(
 
 @Composable
 private fun ProfileHeader(
+    nickname: String,
     onEditProfileClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Box(modifier = modifier) {
         AvatarImage(modifier = Modifier.size(93.dp))
         Text(
-            text = "다민 님",
+            text = "$nickname 님",
             style = HeadingStyle,
             color = Gray900,
             textAlign = TextAlign.Center,
@@ -226,7 +240,12 @@ private fun ProfileCard(
 }
 
 @Composable
-private fun LevelCard(modifier: Modifier = Modifier) {
+private fun LevelCard(
+    level: Int,
+    xp: Int,
+    nextLevelXp: Int,
+    modifier: Modifier = Modifier,
+) {
     ProfileCard(modifier = modifier) {
         Text(
             text = "대화 진행 레벨",
@@ -237,7 +256,7 @@ private fun LevelCard(modifier: Modifier = Modifier) {
                 .size(width = 110.dp, height = 24.dp),
         )
         Text(
-            text = "Lv.2",
+            text = "Lv.$level",
             style = LabelMediumStyle,
             color = Primary600,
             textAlign = TextAlign.Center,
@@ -246,7 +265,7 @@ private fun LevelCard(modifier: Modifier = Modifier) {
                 .size(width = 23.dp, height = 22.dp),
         )
         Text(
-            text = "30 /100XP",
+            text = "$xp /${nextLevelXp}XP",
             style = LabelMediumStyle,
             color = Gray400,
             modifier = Modifier
@@ -260,10 +279,11 @@ private fun LevelCard(modifier: Modifier = Modifier) {
                 .clip(RoundedCornerShape(8.dp))
                 .background(Primary100),
         )
+        val progressWidth = (327f * xp / nextLevelXp.coerceAtLeast(1)).coerceIn(0f, 327f)
         Box(
             modifier = Modifier
                 .offset(x = 16.dp, y = 67.dp)
-                .size(width = 111.dp, height = 10.dp)
+                .size(width = progressWidth.dp, height = 10.dp)
                 .clip(RoundedCornerShape(8.dp))
                 .background(Primary600),
         )
@@ -271,7 +291,11 @@ private fun LevelCard(modifier: Modifier = Modifier) {
 }
 
 @Composable
-private fun WeeklyMissionCard(modifier: Modifier = Modifier) {
+private fun WeeklyMissionCard(
+    completedCount: Int,
+    totalCount: Int,
+    modifier: Modifier = Modifier,
+) {
     ProfileCard(modifier = modifier) {
         Row(
             modifier = Modifier
@@ -293,11 +317,11 @@ private fun WeeklyMissionCard(modifier: Modifier = Modifier) {
         }
 
         val days = listOf("일", "월", "화", "수", "목", "금", "토")
-        val completed = setOf(0, 1, 2, 5, 6)
+        val safeCompletedCount = completedCount.coerceIn(0, totalCount.coerceAtLeast(0)).coerceAtMost(days.size)
         days.forEachIndexed { index, day ->
             MissionDay(
                 day = day,
-                completed = index in completed,
+                completed = index < safeCompletedCount,
                 modifier = Modifier
                     .offset(x = (16 + index * 50).dp, y = 53.dp)
                     .size(width = 26.dp, height = 56.dp),
@@ -447,6 +471,10 @@ private fun ProfileScreenPreview() {
         ProfileScreen()
     }
 }
+
+
+
+
 
 
 

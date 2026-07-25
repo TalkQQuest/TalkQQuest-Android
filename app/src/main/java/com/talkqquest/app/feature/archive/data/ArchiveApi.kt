@@ -7,9 +7,12 @@ import com.talkqquest.app.feature.archive.data.model.ArchiveReportDetailResponse
 import com.talkqquest.app.feature.archive.data.model.ArchiveSearchResponse
 import com.talkqquest.app.feature.archive.data.model.ArchiveSummary
 import com.talkqquest.app.feature.archive.data.model.DeletePhraseResponse
+import com.talkqquest.app.feature.archive.data.model.DeleteReportResponse
 import com.talkqquest.app.feature.archive.data.model.MissionSaveResponse
 import com.talkqquest.app.feature.archive.data.model.SavePhraseRequest
 import com.talkqquest.app.feature.archive.data.model.SavePhraseResponse
+import com.talkqquest.app.feature.archive.data.model.SaveReportRequest
+import com.talkqquest.app.feature.archive.data.model.SaveReportResponse
 import retrofit2.http.Body
 import retrofit2.http.DELETE
 import retrofit2.http.GET
@@ -34,7 +37,6 @@ interface ArchiveApi {
         @Query("size") size: Int? = null
     ): ApiResponse<ArchiveSearchResponse>
 
-    // 💡 대화 기록 상세 조회 API
     @GET("api/v1/archives/conversations/{conversationId}")
     suspend fun getConversationDetail(
         @Path("conversationId") conversationId: String
@@ -69,4 +71,15 @@ interface ArchiveApi {
     suspend fun deletePhraseArchive(
         @Path("phraseId") phraseId: String
     ): ApiResponse<DeletePhraseResponse>
+
+    // 💡 추가됨: 리포트 저장 및 해제
+    @POST("api/v1/reports")
+    suspend fun saveReportArchive(
+        @Body request: SaveReportRequest
+    ): ApiResponse<SaveReportResponse>
+
+    @DELETE("api/v1/reports/{reportId}")
+    suspend fun deleteReportArchive(
+        @Path("reportId") reportId: String
+    ): ApiResponse<DeleteReportResponse>
 }

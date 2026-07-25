@@ -14,6 +14,7 @@ import com.talkqquest.app.feature.archive.data.model.MissionSaveResponse
 import com.talkqquest.app.feature.archive.data.model.PageInfo
 import com.talkqquest.app.feature.archive.data.model.ReviewChatMessage
 import com.talkqquest.app.feature.archive.data.model.SavePhraseRequest
+import com.talkqquest.app.feature.archive.data.model.SaveReportRequest
 import com.talkqquest.app.feature.archive.ui.ArchiveMissionItem
 import com.talkqquest.app.feature.archive.ui.BookmarkArchiveItem
 import com.talkqquest.app.feature.archive.viewmodel.ActivityType
@@ -25,6 +26,7 @@ import com.talkqquest.app.feature.report.data.model.MetricChange
 import com.talkqquest.app.feature.report.data.model.WeeklyCompareReport
 import javax.inject.Inject
 import javax.inject.Singleton
+import kotlin.math.roundToInt
 
 @Singleton
 class ArchiveRepository @Inject constructor(
@@ -34,46 +36,29 @@ class ArchiveRepository @Inject constructor(
 
     private val stubMissions = mutableListOf(
         ArchiveMissionItem("1", "처음 보는 사람에게 짧게 인사하기", "짧은 대화", "쉬움", 2, 20, isCompleted = true, isSaved = true, completedDate = "2026.07.16"),
-        ArchiveMissionItem("2", "최근 본 영화 이야기하기", "짧은 대화", "쉬움", 5, 20, isCompleted = false, isSaved = true, completedDate = "2026.07.15"),
-        ArchiveMissionItem("3", "학교 생활 꿀팁 나누기", "일상 대화", "보통", 8, 30, isCompleted = true, isSaved = true, completedDate = "2026.07.14")
+        ArchiveMissionItem("2", "최근 본 영화 이야기하기", "짧은 대화", "쉬움", 5, 20, isCompleted = false, isSaved = true, completedDate = "2026.07.15")
     )
-
     private val stubConversations = mutableListOf(
-        RecentActivity(id = "1", title = "처음 보는 사람에게 짧게 인사하기", type = ActivityType.CONVERSATION, status = "대화 완료", date = "2026.07.16"),
-        RecentActivity(id = "2", title = "주말에 다녀온 맛집 후기 공유하기", type = ActivityType.CONVERSATION, status = "대화 완료", date = "2026.07.15"),
-        RecentActivity(id = "3", title = "단골 카페에서 메뉴 추천받기", type = ActivityType.CONVERSATION, status = "대화 완료", date = "2026.07.14")
+        RecentActivity(id = "1", title = "처음 보는 사람에게 짧게 인사하기", type = ActivityType.CONVERSATION, status = "대화 완료", date = "2026.07.16")
     )
-
     private val stubSentences = mutableListOf(
-        BookmarkArchiveItem(id = "1", title = "\"그렇군요! 저도 편해서 놀랐어요\"", status = "문장 저장", date = "2026.07.16", isSaved = true, memoKeywords = listOf("자기 성장", "첫 만남", "스몰 토크"), memoText = "상대방의 감정을 자연스럽게 열어줄 수 있는 좋은 문장이에요.", relatedConversationId = "1"),
-        BookmarkArchiveItem(id = "2", title = "\"완전 좋아하지! 다음에 나도 한번 가봐야겠다. 추천 고마워!\"", status = "문장 저장", date = "2026.07.15", isSaved = true, memoKeywords = listOf("일상 대화", "취향 공유", "리액션"), memoText = "긍정적으로 호응하며 기분을 좋게 만드는 완벽한 리액션입니다.", relatedConversationId = "2"),
-        BookmarkArchiveItem(id = "3", title = "\"네, 안녕하세요. 항상 아메리카노만 마셨는데, 오늘은 좀 달달한 걸 먹고 싶어요.\"", status = "문장 저장", date = "2026.07.14", isSaved = true, memoKeywords = listOf("상황극", "요청하기", "정중함"), memoText = "현재 원하는 바를 명확하고 정중하게 전달하는 표현입니다.", relatedConversationId = "3")
+        BookmarkArchiveItem(id = "1", title = "\"그렇군요! 저도 편해서 놀랐어요\"", status = "문장 저장", date = "2026.07.16", isSaved = true, memoKeywords = listOf("자기 성장", "첫 만남"), memoText = "좋은 문장", relatedConversationId = "1")
     )
-
     private val stubReports = mutableListOf(
-        BookmarkArchiveItem(id = "4", title = "처음 보는 사람에게 짧게 인사하기", status = "리포트 열람", date = "2026.07.16", isSaved = true),
-        BookmarkArchiveItem(id = "5", title = "동아리 첫 모임에서 자기소개하기", status = "리포트 열람", date = "2026.07.15", isSaved = true)
+        BookmarkArchiveItem(id = "4", title = "처음 보는 사람에게 짧게 인사하기", status = "리포트 열람", date = "2026.07.16", isSaved = true)
     )
-
     private val stubReportDetails = mapOf(
         "4" to Pair(
-            GrowthReport(prevLevel = 1, currentLevel = 2, growthPercent = 18, weekLabels = listOf("7월 4주", "8월 1주", "8월 2주", "8월 3주"), categoryRanks = listOf(CategoryRank("여행", 10), CategoryRank("음식", 9), CategoryRank("일상", 7), CategoryRank("인사", 4)), completedMissions = 26, totalMissions = 100),
-            WeeklyCompareReport(metrics = listOf(MetricChange("친절한 태도", 88, 92), MetricChange("대화 주도", 86, 88), MetricChange("공감 표현", 82, 85), MetricChange("질문 연결성", 74, 78)), highlights = listOf(HighlightItem("전체 점수", "가 78점에서 86점으로 상승했어요"), HighlightItem("친절한 태도", "가 가장 많이 상승되었어요"), HighlightItem("질문 연결성", "을 꾸준히 개선하고 있어요")))
-        ),
-        "5" to Pair(
-            GrowthReport(prevLevel = 2, currentLevel = 3, growthPercent = 24, weekLabels = listOf("7월 3주", "7월 4주", "8월 1주", "8월 2주"), categoryRanks = listOf(CategoryRank("학교", 12), CategoryRank("일상", 8), CategoryRank("모임", 6), CategoryRank("음식", 3)), completedMissions = 32, totalMissions = 100),
-            WeeklyCompareReport(metrics = listOf(MetricChange("친절한 태도", 90, 94), MetricChange("대화 주도", 78, 84), MetricChange("공감 표현", 80, 86), MetricChange("질문 연결성", 82, 88)), highlights = listOf(HighlightItem("대화 주도", "가 눈에 띄게 좋아졌어요"), HighlightItem("질문 연결성", "이 크게 향상되었어요"), HighlightItem("공감 표현", "도 자연스럽게 늘고 있어요")))
+            GrowthReport(prevLevel = 1, currentLevel = 2, growthPercent = 18, weekLabels = listOf("7월 4주"), categoryRanks = listOf(CategoryRank("여행", 10)), completedMissions = 26, totalMissions = 100),
+            WeeklyCompareReport(metrics = listOf(MetricChange("친절한 태도", 88, 92)), highlights = listOf(HighlightItem("전체 점수", "가 상승했어요")))
         )
     )
-
     private val stubConversationDetails = listOf(
         ConversationDetailMock(
-            id = "1", title = "처음 보는 사람에게 짧게 인사하기", date = "2026.07.16", duration = "5분 30초", summaryKeywords = listOf("자기 성장", "첫 만남", "스몰 토크"),
-            summaryText = "카페에서 처음 만난 사람에게 자연스럽게 인사를 건네고, 간단한 질문을 이어가며 어색하지 않게 대화를 시작하는 연습을 진행했습니다.", mainContentText = "먼저 인사를 건네며 대화를 시작했어요. \"자주는 오시나요?\"와 같은 질문으로 대화를 이어갔어요. 상대의 답변에 반응하고 공감하며 대화를 마무리했어요.",
-            feedbacks = listOf("친절한 태도" to 92, "대화 주도" to 88, "공감 능력" to 85, "질문 연결성" to 78),
-            messages = listOf(
-                ReviewChatMessage("1", "안녕하세요! 처음 뵙네요 \uD83D\uDE42", false, "9:20"), ReviewChatMessage("2", "오늘 여기 처음 오셨어요?", false, "9:20"), ReviewChatMessage("3", "분위기가 좋아보여서요!", true, "9:21")
-            )
+            id = "1", title = "처음 보는 사람에게 짧게 인사하기", date = "2026.07.16", duration = "5분 30초", summaryKeywords = listOf("자기 성장"),
+            summaryText = "대화를 시작하는 연습을 진행했습니다.", mainContentText = "먼저 인사를 건네며 대화를 시작했어요.",
+            feedbacks = listOf("친절한 태도" to 92),
+            messages = listOf(ReviewChatMessage("1", "안녕하세요!", false, "9:20"))
         )
     )
 
@@ -124,9 +109,25 @@ class ArchiveRepository @Inject constructor(
         }
     }
 
-    fun toggleReportBookmark(id: String) {
-        val index = stubReports.indexOfFirst { it.id == id }
-        if (index != -1) stubReports[index] = stubReports[index].copy(isSaved = !stubReports[index].isSaved)
+    // 💡 수정됨: 아카이브에서는 리포트 재저장이 불가하므로 삭제만 허용
+    suspend fun toggleReportBookmark(id: String, isCurrentlySaved: Boolean): ApiResult<Any> {
+        if (isMockMode) {
+            val index = stubReports.indexOfFirst { it.id == id }
+            if (index != -1) stubReports[index] = stubReports[index].copy(isSaved = !stubReports[index].isSaved)
+            return ApiResult.Success(Unit)
+        } else {
+            return try {
+                if (isCurrentlySaved) {
+                    val response = archiveApi.deleteReportArchive(id)
+                    if (response.data != null) ApiResult.Success(response.data) else ApiResult.Error(null, response.message ?: "해제 실패")
+                } else {
+                    // 리포트 재저장은 새 리포트 발급을 의미하므로 아카이브에서는 차단
+                    ApiResult.Error(null, "리포트는 해제만 가능합니다.")
+                }
+            } catch (e: Exception) {
+                ApiResult.Exception(e)
+            }
+        }
     }
 
     fun getArchiveMissions(): List<ArchiveMissionItem> = stubMissions.toList()
@@ -139,10 +140,7 @@ class ArchiveRepository @Inject constructor(
             val sentence = stubSentences.find { it.id == id }
             if (sentence != null) {
                 val relatedConversation = stubConversations.find { it.id == sentence.relatedConversationId }
-                val mockResponse = ArchivePhraseDetailResponse(
-                    id = sentence.id, content = sentence.title, memo = sentence.memoText, missionTitle = relatedConversation?.title,
-                    conversationId = sentence.relatedConversationId, folderId = null, createdAt = sentence.date
-                )
+                val mockResponse = ArchivePhraseDetailResponse(id = sentence.id, content = sentence.title, memo = sentence.memoText, missionTitle = relatedConversation?.title, conversationId = sentence.relatedConversationId, folderId = null, summaryChips = sentence.memoKeywords, createdAt = sentence.date)
                 return ApiResult.Success(mockResponse)
             } else return ApiResult.Error(null, "문장을 찾을 수 없습니다.")
         } else {
@@ -167,24 +165,27 @@ class ArchiveRepository @Inject constructor(
                 val response = archiveApi.getReportDetail(id)
                 val data = response.data
                 if (data != null) {
+                    // 💡 ReportModels.kt 의 매핑 방식과 동일하게 적용[cite: 26]
                     val growth = GrowthReport(
                         prevLevel = data.growth.levelBefore,
                         currentLevel = data.growth.levelAfter,
-                        growthPercent = data.growth.trendChangeRate,
+                        growthPercent = data.growth.trendChangeRate.roundToInt(), // 소수점 반올림 처리
                         weekLabels = data.growth.weeklyTrend.map { it.week },
-                        categoryRanks = data.growth.topCategories.map { CategoryRank(it.category, it.count) },
+                        categoryRanks = data.growth.topCategories.map { CategoryRank(name = it.category, count = it.count) }, // name 매핑
                         completedMissions = data.growth.missionProgress.completed,
                         totalMissions = data.growth.missionProgress.total
                     )
 
-                    val weekly = WeeklyCompareReport(
-                        metrics = data.weeklyCompare.metricChanges.map {
-                            MetricChange(it.label, it.from, it.to)
-                        },
-                        highlights = data.weeklyCompare.highlights.map {
-                            HighlightItem(it, "")
-                        }
-                    )
+                    val weekly = data.weeklyCompare?.let { wc ->
+                        WeeklyCompareReport(
+                            metrics = wc.metricChanges.map {
+                                MetricChange(name = it.label.ifBlank { it.key }, lastWeek = it.from, thisWeek = it.to) // name, lastWeek, thisWeek 매핑
+                            },
+                            highlights = wc.highlights.map {
+                                HighlightItem(emphasis = "", rest = it) // 통문장 처리
+                            }
+                        )
+                    } ?: WeeklyCompareReport(metrics = emptyList(), highlights = emptyList()) // 💡 비교 데이터 없을 때(신규/데이터 부족 리포트) 빈 값 처리
 
                     ApiResult.Success(Triple(data.period, growth, weekly))
                 } else {
@@ -200,13 +201,12 @@ class ArchiveRepository @Inject constructor(
         if (isMockMode) {
             val mockDetail = stubConversationDetails.find { it.id == id }
             if (mockDetail != null) {
-                // 💡 Mock 응답 생성 시 새로 추가한 durationMinutes와 summaryKeywords 연동
                 val mappedResponse = ArchiveConversationDetailResponse(
                     conversationId = mockDetail.id,
                     missionTitle = mockDetail.title,
                     summary = mockDetail.summaryText,
-                    durationMinutes = 5, // mock 데이터
-                    summaryKeywords = mockDetail.summaryKeywords, // mock 데이터
+                    durationMinutes = 5,
+                    summaryChips = mockDetail.summaryKeywords,
                     messages = mockDetail.messages.map { ArchiveConversationMessageDto(sender = if (it.isFromUser) "USER" else "BOT", content = it.text, sentAt = it.time) },
                     feedback = ArchiveConversationFeedbackDto(feedbackId = "mock_feedback", kindnessScore = mockDetail.feedbacks.find { it.first == "친절한 태도" }?.second ?: 0, initiativeScore = mockDetail.feedbacks.find { it.first == "대화 주도" }?.second ?: 0, empathyScore = mockDetail.feedbacks.find { it.first == "공감 능력" }?.second ?: 0, questionLinkScore = mockDetail.feedbacks.find { it.first == "질문 연결성" }?.second ?: 0)
                 )

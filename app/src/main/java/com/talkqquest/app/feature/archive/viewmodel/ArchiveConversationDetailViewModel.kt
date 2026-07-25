@@ -87,7 +87,6 @@ class ArchiveConversationDetailViewModel @Inject constructor(
                         } ?: ""
                     } catch (e: Exception) { "" }
 
-                    // 💡 추가됨: 서버에서 받은 분(Int) 단위를 "n분" 형식으로 가공
                     val parsedDuration = data.durationMinutes?.let { "${it}분" } ?: ""
 
                     _uiState.update {
@@ -95,8 +94,8 @@ class ArchiveConversationDetailViewModel @Inject constructor(
                             isLoading = false,
                             title = data.missionTitle ?: "대화 상세",
                             date = parsedDate,
-                            duration = parsedDuration, // 💡 새로 연동됨
-                            summaryKeywords = data.summaryKeywords, // 💡 새로 연동됨
+                            duration = parsedDuration,
+                            summaryKeywords = data.summaryChips, // 💡 API 명세에 맞게 DTO에서 summaryChips 추출
                             summaryText = data.summary ?: "",
                             mainContentText = data.summary ?: "",
                             feedbacks = mappedFeedbacks,

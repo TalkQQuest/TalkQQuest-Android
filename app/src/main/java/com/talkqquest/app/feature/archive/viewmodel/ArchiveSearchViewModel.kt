@@ -13,6 +13,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.time.LocalDate
+import java.time.ZonedDateTime
 import java.time.format.DateTimeFormatter
 import javax.inject.Inject
 
@@ -202,14 +203,34 @@ class ArchiveSearchViewModel @Inject constructor(
     }
 
     fun toggleReportBookmark(reportId: String) {
-        val isCurrentlySaved = _uiState.value.allReports.find { it.id == reportId }?.isSaved == true
-        repository.toggleReportBookmark(reportId)
-        refreshData()
-        _uiState.update { state ->
-            val key = "bookmark_false_$reportId"
-            val updatedTimestamps = state.savedTimestamps.toMutableMap()
-            if (!isCurrentlySaved) updatedTimestamps[key] = System.currentTimeMillis()
-            state.copy(savedTimestamps = updatedTimestamps)
+        val target = _uiState.value.allReports.find { it.id == reportId } ?: return
+
+        if (target.isSaved) {
+            _uiState.update { state ->
+                state.copy(allReports = state.allReports.filter { it.id != reportId })
+            }
+            viewModelScope.launch {
+                when (val result = repository.toggleReportBookmark(reportId, true)) {
+                    is ApiResult.Success -> {
+                        _uiState.update { state ->
+                            val key = "bookmark_false_$reportId"
+                            val updatedTimestamps = state.savedTimestamps.toMutableMap()
+                            updatedTimestamps[key] = System.currentTimeMillis()
+                            state.copy(savedTimestamps = updatedTimestamps)
+                        }
+                    }
+                    else -> refreshData()
+                }
+            }
+        }
+    }
+
+    private fun formatIsoDate(isoString: String): String {
+        return try {
+            val zdt = ZonedDateTime.parse(isoString)
+            zdt.format(DateTimeFormatter.ofPattern("yyyy.MM.dd"))
+        } catch (e: Exception) {
+            isoString.substringBefore("T").replace("-", ".")
         }
     }
 
@@ -220,7 +241,7 @@ class ArchiveSearchViewModel @Inject constructor(
                     val items = result.data.items
                     val allMissions = items.filter { it.type.lowercase() == "mission" }.map {
                         ArchiveMissionItem(
-                            id = it.missionId ?: it.id, // 💡 핵심: 저장/취소 API를 위해 missionId 최우선 사용!
+                            id = it.missionId ?: it.id,
                             title = it.title,
                             category = it.category ?: "",
                             difficulty = it.difficulty ?: "",
@@ -228,18 +249,45 @@ class ArchiveSearchViewModel @Inject constructor(
                             xp = it.rewardXp ?: 0,
                             isCompleted = it.missionStatus == "completed",
                             isSaved = it.isBookmarked,
-                            completedDate = it.createdAt
+                            completedDate = formatIsoDate(it.createdAt)
                         )
                     }
+
+                    // 💡 변경됨: 대화, 문장, 리포트 모두 원본 ID(`referenceId`)를 우선 매핑
                     val allConversations = items.filter { it.type.lowercase() == "conversation" }.map {
-                        RecentActivity(id = it.id, type = ActivityType.CONVERSATION, title = it.title, status = "대화 완료", date = it.createdAt)
+                        RecentActivity(
+                            id = it.referenceId ?: it.id,
+                            type = ActivityType.CONVERSATION,
+                            title = it.title,
+                            status = "대화 완료",
+                            date = formatIsoDate(it.createdAt)
+                        )
                     }
                     val allSentences = items.filter { it.type.lowercase() == "phrase" || it.type.lowercase() == "sentence" }.map {
-                        BookmarkArchiveItem(id = it.id, title = it.title, status = "문장 저장", date = it.createdAt, isSaved = it.isBookmarked, memoKeywords = it.tags, memoText = "", relatedConversationId = "")
+                        BookmarkArchiveItem(
+                            id = it.referenceId ?: it.id,
+                            title = it.title,
+                            status = "문장 저장",
+                            date = formatIsoDate(it.createdAt),
+                            isSaved = it.isBookmarked,
+                            memoKeywords = it.tags,
+                            memoText = "",
+                            relatedConversationId = ""
+                        )
                     }
                     val allReports = items.filter { it.type.lowercase() == "report" }.map {
-                        BookmarkArchiveItem(id = it.id, title = it.title, status = "리포트 열람", date = it.createdAt, isSaved = it.isBookmarked, memoKeywords = it.tags, memoText = "", relatedConversationId = "")
+                        BookmarkArchiveItem(
+                            id = it.referenceId ?: it.id,
+                            title = it.title,
+                            status = "리포트 열람",
+                            date = formatIsoDate(it.createdAt),
+                            isSaved = it.isBookmarked,
+                            memoKeywords = it.tags,
+                            memoText = "",
+                            relatedConversationId = ""
+                        )
                     }
+
                     _uiState.update { state -> state.copy(allMissions = allMissions, allConversations = allConversations, allSentences = allSentences, allReports = allReports) }
                 }
                 is ApiResult.Error -> {}

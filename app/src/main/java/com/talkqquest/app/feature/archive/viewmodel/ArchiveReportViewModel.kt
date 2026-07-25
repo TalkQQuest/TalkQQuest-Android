@@ -43,9 +43,6 @@ class ArchiveReportViewModel @Inject constructor(
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true, reportId = reportId, errorMessage = null) }
 
-            // 💡 저장소에서 리포트의 최신 북마크 상태를 가져옴 (기존 검색 목록 기준)
-            val isBookmarked = repository.getArchiveReports().find { it.id == reportId }?.isSaved ?: false
-
             when (val result = repository.getArchiveReportDetail(reportId)) {
                 is ApiResult.Success -> {
                     val (title, growth, weekly) = result.data
@@ -53,7 +50,7 @@ class ArchiveReportViewModel @Inject constructor(
                         it.copy(
                             isLoading = false,
                             title = title,
-                            isBookmarked = isBookmarked,
+                            isBookmarked = true,
                             growth = growth,
                             weekly = weekly
                         )
@@ -73,12 +70,32 @@ class ArchiveReportViewModel @Inject constructor(
         }
     }
 
+    // 💡 변경됨: 상세 페이지에서도 오직 "해제"만 서버 통신을 수행하도록 강제
     fun toggleBookmark() {
         val id = _uiState.value.reportId
-        if (id.isNotEmpty()) {
-            // 현재 리포트 북마크 취소/저장은 아직 백엔드 API가 연동되지 않았으므로 로컬 목업만 사용
-            repository.toggleReportBookmark(id)
-            _uiState.update { it.copy(isBookmarked = !it.isBookmarked) }
+        if (id.isEmpty()) return
+
+        val isCurrentlySaved = _uiState.value.isBookmarked
+
+        if (isCurrentlySaved) {
+            // 낙관적 UI 반영: 북마크 끄기
+            _uiState.update { it.copy(isBookmarked = false) }
+
+            viewModelScope.launch {
+                when (val result = repository.toggleReportBookmark(id, true)) {
+                    is ApiResult.Success -> {
+                        // 성공 시 아무것도 안 함 (UI 유지)
+                    }
+                    else -> {
+                        // 실패 시 롤백
+                        android.util.Log.e("ArchiveTest", "리포트 해제 에러")
+                        _uiState.update { it.copy(isBookmarked = true) }
+                    }
+                }
+            }
+        } else {
+            // 이미 해제된 상태에서 하트를 다시 눌렀을 때는 서버 POST를 치지 않음
+            // (보관함에서는 삭제된 리포트의 재발급을 금지)
         }
     }
 }

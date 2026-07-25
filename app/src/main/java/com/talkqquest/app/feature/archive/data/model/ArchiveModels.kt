@@ -2,14 +2,14 @@ package com.talkqquest.app.feature.archive.data.model
 
 import kotlinx.serialization.Serializable
 
-// --- 💡 수정됨: 대화 상세 조회 DTO (필수 데이터 추가) ---
+// --- 대화 상세 조회 DTO ---
 @Serializable
 data class ArchiveConversationDetailResponse(
     val conversationId: String,
     val missionTitle: String? = null,
     val summary: String? = null,
-    val durationMinutes: Int? = null, // 💡 추가됨: 소요 시간(분)
-    val summaryKeywords: List<String> = emptyList(), // 💡 추가됨: 요약 키워드 배열
+    val durationMinutes: Int? = null,
+    val summaryChips: List<String> = emptyList(),
     val messages: List<ArchiveConversationMessageDto> = emptyList(),
     val feedback: ArchiveConversationFeedbackDto? = null
 )
@@ -39,6 +39,7 @@ data class ArchivePhraseDetailResponse(
     val missionTitle: String? = null,
     val conversationId: String? = null,
     val folderId: String? = null,
+    val summaryChips: List<String> = emptyList(),
     val createdAt: String
 )
 
@@ -49,7 +50,7 @@ data class ArchiveReportDetailResponse(
     val type: String,
     val period: String,
     val growth: ReportGrowthDto,
-    val weeklyCompare: ReportWeeklyCompareDto,
+    val weeklyCompare: ReportWeeklyCompareDto? = null, // 💡 수정됨: 비교 데이터가 없을 때 서버가 null을 내려줌
     val createdAt: String
 )
 
@@ -58,7 +59,7 @@ data class ReportGrowthDto(
     val levelBefore: Int,
     val levelAfter: Int,
     val weeklyTrend: List<ReportWeeklyTrendDto>,
-    val trendChangeRate: Int,
+    val trendChangeRate: Double, // 💡 ReportModels에 맞춰 Double로 변경
     val topCategories: List<ReportTopCategoryDto>,
     val missionProgress: ReportMissionProgressDto
 )
@@ -85,7 +86,7 @@ data class ReportMissionProgressDto(
 data class ReportWeeklyCompareDto(
     val thisWeek: ReportWeeklyDataDto,
     val lastWeek: ReportWeeklyDataDto,
-    val xpChangeRate: Int,
+    val xpChangeRate: Double, // 💡 ReportModels에 맞춰 Double로 변경[cite: 26]
     val overallScoreChange: ReportScoreChangeDto,
     val metricChanges: List<ReportMetricChangeDto>,
     val highlights: List<String>
@@ -213,6 +214,26 @@ data class SavePhraseResponse(
 @Serializable
 data class DeletePhraseResponse(
     val itemId: String,
+    val deleted: Boolean
+)
+
+// --- 리포트 저장/해제 관련 DTO ---
+@Serializable
+data class SaveReportRequest(
+    val type: String = "growth"
+)
+
+@Serializable
+data class SaveReportResponse(
+    val reportId: String,
+    val type: String,
+    val period: String,
+    val createdAt: String
+)
+
+@Serializable
+data class DeleteReportResponse(
+    val reportId: String,
     val deleted: Boolean
 )
 

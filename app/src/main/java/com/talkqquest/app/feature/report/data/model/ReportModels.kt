@@ -112,6 +112,21 @@ data class SaveReportResponse(
     val createdAt: String = "",
 )
 
+// GET /api/v1/reports (저장한 리포트 목록) — 시트 "최근 저장한 리포트"용.
+@Serializable
+data class ReportListResponse(
+    val reports: List<ReportListItem> = emptyList(),
+)
+
+@Serializable
+data class ReportListItem(
+    val id: String = "",
+    val type: String = "", // growth | weekly_compare — 재저장 시 같은 종류로 다시 저장하려고 씀
+    val period: String = "",
+    val title: String = "",
+    val createdAt: String = "",
+)
+
 // DELETE /api/v1/reports/{reportId} (저장 해제)
 @Serializable
 data class DeleteReportResponse(

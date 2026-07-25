@@ -1,9 +1,9 @@
 package com.talkqquest.app.feature.report.data
 
 import com.talkqquest.app.core.network.ApiResponse
-import com.talkqquest.app.core.network.ArchiveListResponse
 import com.talkqquest.app.feature.report.data.model.DeleteReportResponse
 import com.talkqquest.app.feature.report.data.model.GrowthReportResponse
+import com.talkqquest.app.feature.report.data.model.ReportListResponse
 import com.talkqquest.app.feature.report.data.model.SaveReportRequest
 import com.talkqquest.app.feature.report.data.model.SaveReportResponse
 import com.talkqquest.app.feature.report.data.model.WeeklyCompareResponse
@@ -12,7 +12,6 @@ import retrofit2.http.DELETE
 import retrofit2.http.GET
 import retrofit2.http.POST
 import retrofit2.http.Path
-import retrofit2.http.Query
 
 // 리포트 API — dev 백엔드 실계약(report.controller.ts) 대조(2026-07-25). Bearer 필수(AuthInterceptor 자동).
 // 목록/상세(GET /reports, /reports/{id})는 아카이브(보관함 리포트) 흐름 = C 담당이라 여기 없음.
@@ -39,12 +38,9 @@ interface ReportApi {
         @Path("reportId") reportId: String,
     ): ApiResponse<DeleteReportResponse>
 
-    // 저장한 리포트 목록 — GET /api/v1/archives?type=report. 리포트 저장 시트의 "최근 저장한 리포트"에 표시.
-    // 아카이브 목록 API지만 호출은 리포트 화면(B)에서 하므로 여기 둔다(C의 ArchiveApi는 건드리지 않음).
-    @GET("api/v1/archives")
-    suspend fun getSavedReports(
-        @Query("type") type: String = "report",
-        @Query("sort") sort: String = "latest",
-        @Query("size") size: Int = 5,
-    ): ApiResponse<ArchiveListResponse>
+    // 저장한 리포트 목록 — GET /api/v1/reports. 리포트 저장 시트의 "최근 저장한 리포트"에 표시.
+    // 보관함 목록(GET /archives?type=report)과 달리 항목마다 type(growth|weekly_compare)이 와서,
+    // 북마크를 껐다 다시 켤 때 같은 종류로 정확히 재저장할 수 있다.
+    @GET("api/v1/reports")
+    suspend fun getSavedReports(): ApiResponse<ReportListResponse>
 }

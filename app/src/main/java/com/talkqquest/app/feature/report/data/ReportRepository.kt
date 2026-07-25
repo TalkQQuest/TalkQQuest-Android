@@ -47,19 +47,23 @@ class ReportRepository @Inject constructor(
     suspend fun deleteReport(reportId: String): ApiResult<DeleteReportResponse> =
         serverCall { reportApi.deleteReport(reportId) }
 
-    // 저장한 리포트 목록 (리포트 저장 시트의 "최근 저장한 리포트") — GET /archives?type=report.
+    // 저장한 리포트 목록 (리포트 저장 시트의 "최근 저장한 리포트") — GET /api/v1/reports.
+    // 서버가 페이지 파라미터를 안 받아 최신 size개만 잘라 쓴다(응답은 최신순 가정 — 아니어도 날짜로 정렬).
     // 실패/데모(USE_MOCK)면 Error를 그대로 돌려줘 호출부가 기존 목업을 유지하게 한다.
     suspend fun getSavedReports(size: Int = 5): ApiResult<List<SavedReportItem>> =
-        when (val r = serverCall { reportApi.getSavedReports(size = size) }) {
+        when (val r = serverCall { reportApi.getSavedReports() }) {
             is ApiResult.Success -> ApiResult.Success(
-                r.data.items.map {
-                    SavedReportItem(
-                        id = it.referenceId ?: it.id,
-                        title = it.title,
-                        savedDate = it.createdAt.toSavedDate(),
-                        isSaved = it.isBookmarked,
-                    )
-                },
+                r.data.reports
+                    .sortedByDescending { it.createdAt }
+                    .take(size)
+                    .map {
+                        SavedReportItem(
+                            id = it.id,
+                            title = it.title,
+                            savedDate = it.createdAt.toSavedDate(),
+                            type = it.type,
+                        )
+                    },
             )
             is ApiResult.Error -> r
             is ApiResult.Exception -> r

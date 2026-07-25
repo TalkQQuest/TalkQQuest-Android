@@ -4,7 +4,7 @@ import kotlinx.serialization.Serializable
 
 @Serializable
 data class HomeSummary(
-    val nickname: String,
+    val nickname: String = "", // 서버가 null 가능(닉네임 미설정 계정 실측) → coerce로 ""가 됨. 표시는 Repository가 폴백.
     val level: Int,
     val currentXp: Int,
     val nextLevelXp: Int,

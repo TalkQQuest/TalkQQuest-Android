@@ -4,6 +4,7 @@ import com.talkqquest.app.core.network.ApiResult
 import com.talkqquest.app.core.network.serverCall
 import com.talkqquest.app.core.util.toSavedDate
 import com.talkqquest.app.feature.report.data.model.CategoryRank
+import com.talkqquest.app.feature.report.data.model.DeleteReportResponse
 import com.talkqquest.app.feature.report.data.model.GrowthReport
 import com.talkqquest.app.feature.report.data.model.HighlightItem
 import com.talkqquest.app.feature.report.data.model.MetricChange
@@ -40,6 +41,11 @@ class ReportRepository @Inject constructor(
     // 리포트 저장 (리포트 저장 시트) — POST /api/v1/reports. type: "growth" | "weekly_compare".
     suspend fun saveReport(type: String): ApiResult<SaveReportResponse> =
         serverCall { reportApi.saveReport(SaveReportRequest(type = type)) }
+
+    // 리포트 저장 해제 — DELETE /api/v1/reports/{reportId}.
+    // 저장 응답에서 받은 서버 id로만 의미가 있고, 실패/데모면 조용히 무시(화면은 낙관적 표시 유지).
+    suspend fun deleteReport(reportId: String): ApiResult<DeleteReportResponse> =
+        serverCall { reportApi.deleteReport(reportId) }
 
     // 저장한 리포트 목록 (리포트 저장 시트의 "최근 저장한 리포트") — GET /archives?type=report.
     // 실패/데모(USE_MOCK)면 Error를 그대로 돌려줘 호출부가 기존 목업을 유지하게 한다.

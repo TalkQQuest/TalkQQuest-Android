@@ -30,6 +30,8 @@ class HomeRepository @Inject constructor(
                 userXpStore.seedFromServer(d.level, d.currentXp)
                 return ApiResult.Success(
                     d.copy(
+                        // 닉네임 미설정 계정(null→"") 폴백: /users/me의 nickname→name → 그래도 없으면 stub 문구
+                        nickname = d.nickname.ifBlank { fallbackNickname() },
                         level = userXpStore.level,
                         currentXp = userXpStore.currentXp,
                         nextLevelXp = userXpStore.nextLevelXp,
@@ -48,6 +50,14 @@ class HomeRepository @Inject constructor(
                 ),
             )
         }
+    }
+
+    // 닉네임 미설정 계정용 폴백 — GET /users/me의 nickname→name 순. 둘 다 없으면 stub 문구 유지.
+    private suspend fun fallbackNickname(): String {
+        val me = (serverCall { homeApi.getMe() } as? ApiResult.Success)?.data
+        return me?.nickname?.takeIf { it.isNotBlank() }
+            ?: me?.name?.takeIf { it.isNotBlank() }
+            ?: stubHomeSummary.nickname
     }
 
     // 벨 빨간 점 — 안읽음 알림이 하나라도 있는지 (GET /notifications?isRead=false&limit=1).

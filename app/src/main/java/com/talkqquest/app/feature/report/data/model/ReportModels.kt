@@ -112,6 +112,13 @@ data class SaveReportResponse(
     val createdAt: String = "",
 )
 
+// DELETE /api/v1/reports/{reportId} (저장 해제)
+@Serializable
+data class DeleteReportResponse(
+    val reportId: String = "",
+    val deleted: Boolean = false,
+)
+
 // ── 매퍼: 서버 → 화면 모델 ──
 fun GrowthReportResponse.toGrowthReport() = GrowthReport(
     prevLevel = levelBefore,

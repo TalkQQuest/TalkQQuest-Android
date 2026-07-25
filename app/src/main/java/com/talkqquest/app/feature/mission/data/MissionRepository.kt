@@ -11,6 +11,7 @@ import com.talkqquest.app.feature.mission.data.model.ConversationPrep
 import com.talkqquest.app.feature.mission.data.model.CreateFeedbackRequest
 import com.talkqquest.app.feature.mission.data.model.CreatePhraseRequest
 import com.talkqquest.app.feature.mission.data.model.CreatePhraseResponse
+import com.talkqquest.app.feature.mission.data.model.DeleteArchiveItemResponse
 import com.talkqquest.app.feature.mission.data.model.FeedbackItemText
 import com.talkqquest.app.feature.mission.data.model.FeedbackResult
 import com.talkqquest.app.feature.mission.data.model.toFeedbackResult
@@ -303,6 +304,11 @@ class MissionRepository @Inject constructor(
     // conversationId는 피드백 응답에서 온 값(서버 미연동/stub이면 호출부에서 걸러 여기까지 안 옴).
     suspend fun savePhrase(conversationId: String, content: String): ApiResult<CreatePhraseResponse> =
         serverCall { missionApi.savePhrase(CreatePhraseRequest(conversationId = conversationId, content = content)) }
+
+    // 문장 저장 해제 — DELETE /api/v1/archives/phrases/{phraseId}.
+    // 저장 응답에서 받은 서버 id로만 의미가 있고, 실패/데모면 조용히 무시(화면은 낙관적 표시 유지).
+    suspend fun deletePhrase(phraseId: String): ApiResult<DeleteArchiveItemResponse> =
+        serverCall { missionApi.deletePhrase(phraseId) }
 
     // 저장한 문장 목록 (문장 저장 시트의 "최근 저장한 문장") — GET /archives?type=phrase.
     // 실패/데모(USE_MOCK)면 Error를 그대로 돌려줘 호출부가 기존 목업을 유지하게 한다(미션 시트와 동일 방침).

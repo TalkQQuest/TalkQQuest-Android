@@ -21,3 +21,10 @@ data class CreatePhraseResponse(
     val memo: String? = null,
     val createdAt: String = "",
 )
+
+// DELETE /api/v1/archives/phrases/{phraseId} (저장 해제)
+@Serializable
+data class DeleteArchiveItemResponse(
+    val itemId: String = "",
+    val deleted: Boolean = false,
+)

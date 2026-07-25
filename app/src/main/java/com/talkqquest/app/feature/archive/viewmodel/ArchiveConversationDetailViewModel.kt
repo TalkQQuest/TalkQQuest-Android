@@ -3,13 +3,17 @@ package com.talkqquest.app.feature.archive.viewmodel
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.talkqquest.app.core.network.ApiResult
 import com.talkqquest.app.feature.archive.data.ArchiveRepository
-import com.talkqquest.app.feature.archive.data.model.ReviewChatMessage // 💡 [수정됨] 새롭게 이동한 경로로 올바르게 임포트!
+import com.talkqquest.app.feature.archive.data.model.ReviewChatMessage
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.launch
+import java.time.ZonedDateTime
+import java.time.format.DateTimeFormatter
 import javax.inject.Inject
 
 data class AiFeedbackItem(
@@ -26,7 +30,6 @@ data class ArchiveConversationDetailUiState(
     val summaryText: String = "",
     val mainContentText: String = "",
     val feedbacks: List<AiFeedbackItem> = emptyList(),
-    // 💡 뷰모델에서 이 타입(ReviewChatMessage)을 정확히 인식해야 UI에서 에러가 안 납니다!
     val messages: List<ReviewChatMessage> = emptyList(),
     val isReviewMode: Boolean = false,
     val errorMessage: String? = null
@@ -47,24 +50,69 @@ class ArchiveConversationDetailViewModel @Inject constructor(
     }
 
     private fun loadDetail(id: String) {
-        val detail = repository.getConversationDetail(id)
-        if (detail != null) {
-            _uiState.update {
-                it.copy(
-                    isLoading = false,
-                    title = detail.title,
-                    date = detail.date,
-                    duration = detail.duration,
-                    summaryKeywords = detail.summaryKeywords,
-                    summaryText = detail.summaryText,
-                    mainContentText = detail.mainContentText,
-                    feedbacks = detail.feedbacks.map { f -> AiFeedbackItem(f.first, f.second) },
-                    messages = detail.messages
-                )
-            }
-        } else {
-            _uiState.update {
-                it.copy(isLoading = false, errorMessage = "데이터를 불러올 수 없습니다.")
+        viewModelScope.launch {
+            _uiState.update { it.copy(isLoading = true, errorMessage = null) }
+
+            when (val result = repository.getConversationDetail(id)) {
+                is ApiResult.Success -> {
+                    val data = result.data
+
+                    val mappedFeedbacks = mutableListOf<AiFeedbackItem>()
+                    data.feedback?.let { fb ->
+                        mappedFeedbacks.add(AiFeedbackItem("친절한 태도", fb.kindnessScore))
+                        mappedFeedbacks.add(AiFeedbackItem("대화 주도", fb.initiativeScore))
+                        mappedFeedbacks.add(AiFeedbackItem("공감 표현", fb.empathyScore))
+                        mappedFeedbacks.add(AiFeedbackItem("질문 연결성", fb.questionLinkScore))
+                    }
+
+                    val mappedMessages = data.messages.mapIndexed { index, msg ->
+                        val parsedTime = try {
+                            val zdt = ZonedDateTime.parse(msg.sentAt)
+                            zdt.format(DateTimeFormatter.ofPattern("HH:mm"))
+                        } catch (e: Exception) {
+                            msg.sentAt.substringAfter("T").substringBeforeLast(":")
+                        }
+
+                        ReviewChatMessage(
+                            id = index.toString(),
+                            text = msg.content,
+                            isFromUser = msg.sender.uppercase() == "USER",
+                            time = parsedTime
+                        )
+                    }
+
+                    val parsedDate = try {
+                        data.messages.firstOrNull()?.sentAt?.let {
+                            ZonedDateTime.parse(it).format(DateTimeFormatter.ofPattern("yyyy.MM.dd"))
+                        } ?: ""
+                    } catch (e: Exception) { "" }
+
+                    val parsedDuration = data.durationMinutes?.let { "${it}분" } ?: ""
+
+                    _uiState.update {
+                        it.copy(
+                            isLoading = false,
+                            title = data.missionTitle ?: "대화 상세",
+                            date = parsedDate,
+                            duration = parsedDuration,
+                            summaryKeywords = data.summaryChips, // 💡 API 명세에 맞게 DTO에서 summaryChips 추출
+                            summaryText = data.summary ?: "",
+                            mainContentText = data.summary ?: "",
+                            feedbacks = mappedFeedbacks,
+                            messages = mappedMessages
+                        )
+                    }
+                }
+                is ApiResult.Error -> {
+                    _uiState.update {
+                        it.copy(isLoading = false, errorMessage = result.message)
+                    }
+                }
+                is ApiResult.Exception -> {
+                    _uiState.update {
+                        it.copy(isLoading = false, errorMessage = "네트워크 오류가 발생했습니다.")
+                    }
+                }
             }
         }
     }

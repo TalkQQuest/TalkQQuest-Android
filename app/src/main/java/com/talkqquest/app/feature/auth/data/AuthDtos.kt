@@ -78,6 +78,11 @@ data class TokenRefreshRequest(
     val refreshToken: String,
 )
 
+
+@Serializable
+data class LogoutRequest(
+    val refreshToken: String,
+)
 @Serializable
 data class TokenRefreshData(
     val accessToken: String,
@@ -100,4 +105,6 @@ data class OnboardingStepSaveData(
 data class OnboardingCompleteData(
     val onboardingCompleted: Boolean,
 )
+
+
 

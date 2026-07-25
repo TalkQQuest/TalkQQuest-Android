@@ -1,4 +1,4 @@
-﻿package com.talkqquest.app.feature.profile.ui
+package com.talkqquest.app.feature.profile.ui
 
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -6,11 +6,10 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.offset
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -27,9 +26,9 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.buildAnnotatedString
-import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.em
@@ -49,9 +48,29 @@ import com.talkqquest.app.core.designsystem.Primary600
 import com.talkqquest.app.core.designsystem.TalkQQuestTheme
 import com.talkqquest.app.core.designsystem.White
 
-private data class ProfileBadge(
+data class ProfileBadgeUi(
+    val id: String,
     val name: String,
-    val achieved: Boolean,
+    val description: String? = null,
+    val isEarned: Boolean,
+    val earnedAt: String? = null,
+    val current: Int? = null,
+    val target: Int? = null,
+)
+
+private val DefaultProfileBadges = listOf(
+    ProfileBadgeUi("badge-001", "\uC124\uB808\uB294 \uCCAB \uAC78\uC74C", "\uB300\uD654 \uBBF8\uC158\uC744 \uCC98\uC74C\uC73C\uB85C 1\uD68C \uC644\uB8CC", true, "2026.07.22"),
+    ProfileBadgeUi("badge-002", "\uB300\uD654 \uC0C8\uC2F9", "\uB300\uD654 \uBBF8\uC158\uC744 \uB204\uC801 5\uD68C \uC644\uB8CC", false, current = 0, target = 5),
+    ProfileBadgeUi("badge-003", "\uBA3C\uC800 \uAC74\uB128 \uC778\uC0AC", "\uB300\uD654 \uBBF8\uC158\uC744 \uCC98\uC74C\uC73C\uB85C 1\uD68C \uC644\uB8CC", true, "2026.07.22"),
+    ProfileBadgeUi("badge-004", "\uB300\uD654 \uD0D0\uD5D8\uAC00", "\uB300\uD654 \uBBF8\uC158\uC744 \uB204\uC801 15\uD68C \uC644\uB8CC", false, current = 9, target = 15),
+    ProfileBadgeUi("badge-005", "\uC0C8\uB85C\uC6B4 \uB3C4\uC804", "\uC0C8\uB85C\uC6B4 \uB300\uD654 \uC720\uD615\uC5D0 \uB3C4\uC804", true, "2026.07.22"),
+    ProfileBadgeUi("badge-006", "\uB300\uD654 \uB9C8\uC2A4\uD130", "\uB300\uD654 \uBBF8\uC158\uC744 \uB204\uC801 30\uD68C \uC644\uB8CC", false, current = 0, target = 30),
+    ProfileBadgeUi("badge-007", "\uAFB8\uC900\uD55C \uB300\uD654 \uC2B5\uAD00", "7\uC77C \uC5F0\uC18D \uBBF8\uC158 \uC644\uB8CC", true, "2026.07.22"),
+    ProfileBadgeUi("badge-008", "\uC77C\uC8FC\uC77C\uC758 \uBCC0\uD654", "\uC77C\uC8FC\uC77C \uB3D9\uC548 \uB300\uD654 \uC2B5\uAD00 \uC720\uC9C0", true, "2026.07.22"),
+    ProfileBadgeUi("badge-009", "\uCE5C\uC808\uD55C \uD55C\uB9C8\uB514", "\uCE5C\uC808\uD55C \uD45C\uD604 \uC5F0\uC2B5 \uC644\uB8CC", false, current = 0, target = 1),
+    ProfileBadgeUi("badge-010", "\uACF5\uAC10\uC758 \uADC0", "\uACF5\uAC10 \uD45C\uD604 \uBBF8\uC158 \uC9C4\uD589", false, current = 0, target = 1),
+    ProfileBadgeUi("badge-011", "\uB300\uD654\uC758 \uB9AC\uB354", "\uB300\uD654 \uC8FC\uB3C4 \uBBF8\uC158 \uC9C4\uD589", false, current = 0, target = 1),
+    ProfileBadgeUi("badge-012", "\uC9C8\uBB38\uC758 \uB2EC\uC778", "\uC9C8\uBB38\uD558\uAE30 \uBBF8\uC158 \uC9C4\uD589", false, current = 0, target = 1),
 )
 
 private val BadgeTitleStyle = TextStyle(
@@ -100,29 +119,14 @@ private val BadgeBodyMediumStyle = TextStyle(
 
 @Composable
 fun ProfileBadgesScreen(
+    badges: List<ProfileBadgeUi> = DefaultProfileBadges,
     onBack: () -> Unit = {},
 ) = FitDesign(compensateStatusBar = false) {
     var selectedTab by remember { mutableIntStateOf(0) }
-    var selectedBadge by remember { mutableStateOf<ProfileBadge?>(null) }
-    val badges = remember {
-        listOf(
-            ProfileBadge("설레는 첫 걸음", true),
-            ProfileBadge("대화 새싹", false),
-            ProfileBadge("먼저 건넨 인사", true),
-            ProfileBadge("대화 탐험가", false),
-            ProfileBadge("새로운 도전", true),
-            ProfileBadge("대화 마스터", false),
-            ProfileBadge("꾸준한 대화 습관", true),
-            ProfileBadge("일주일의 변화", true),
-            ProfileBadge("친절한 한마디", false),
-            ProfileBadge("공감의 귀", false),
-            ProfileBadge("대화의 리더", false),
-            ProfileBadge("질문의 달인", false),
-        )
-    }
+    var selectedBadge by remember { mutableStateOf<ProfileBadgeUi?>(null) }
     val visibleBadges = when (selectedTab) {
-        1 -> badges.filterNot { it.achieved }
-        2 -> badges.filter { it.achieved }
+        1 -> badges.filterNot { it.isEarned }
+        2 -> badges.filter { it.isEarned }
         else -> badges
     }
 
@@ -139,7 +143,7 @@ fun ProfileBadgesScreen(
                 selectedBadge = null
             },
         )
-        BadgeNotice()
+        BadgeNotice(earnedCount = badges.count { it.isEarned })
         BadgeGrid(
             badges = visibleBadges,
             onBadgeClick = { badge -> selectedBadge = badge },
@@ -169,7 +173,7 @@ private fun BadgesTopBar(onBack: () -> Unit) {
     ) {
         BadgeBackButton(onClick = onBack, modifier = Modifier.size(44.dp))
         Text(
-            text = "획득한 배지",
+            text = "\uD68D\uB4DD\uD55C \uBC30\uC9C0",
             style = BadgeTitleStyle,
             color = Gray800,
             modifier = Modifier
@@ -202,7 +206,7 @@ private fun BadgeTabs(
     selectedTab: Int,
     onSelectTab: (Int) -> Unit,
 ) {
-    val labels = listOf("전체", "진행중", "달성")
+    val labels = listOf("\uC804\uCCB4", "\uC9C4\uD589\uC911", "\uB2EC\uC131")
     val xPositions = listOf(52.dp, 173.dp, 310.dp)
     val widths = listOf(31.dp, 47.dp, 31.dp)
 
@@ -231,11 +235,14 @@ private fun BadgeTabs(
         )
         Box(
             modifier = Modifier
-                .offset(x = when (selectedTab) {
-                    1 -> 171.dp
-                    2 -> 300.dp
-                    else -> 43.dp
-                }, y = 36.dp)
+                .offset(
+                    x = when (selectedTab) {
+                        1 -> 171.dp
+                        2 -> 300.dp
+                        else -> 43.dp
+                    },
+                    y = 36.dp,
+                )
                 .size(width = 52.dp, height = 3.dp)
                 .clip(RoundedCornerShape(4.dp))
                 .background(Gray800),
@@ -244,7 +251,7 @@ private fun BadgeTabs(
 }
 
 @Composable
-private fun BadgeNotice() {
+private fun BadgeNotice(earnedCount: Int) {
     Box(
         modifier = Modifier
             .offset(x = 16.dp, y = 169.dp)
@@ -267,9 +274,11 @@ private fun BadgeNotice() {
         ) {
             Text(
                 text = buildAnnotatedString {
-                    append("축하해요! 벌써 배지 ")
-                    withStyle(SpanStyle(fontWeight = FontWeight.SemiBold, fontSize = 18.sp)) { append("5개") }
-                    append("를 획득했어요!")
+                    append("\uCD95\uD558\uD574\uC694! \uBC8C\uC368 \uBC30\uC9C0 ")
+                    withStyle(SpanStyle(fontWeight = FontWeight.SemiBold, fontSize = 18.sp)) {
+                        append("${earnedCount}\uAC1C")
+                    }
+                    append("\uB97C \uD68D\uB4DD\uD588\uC5B4\uC694!")
                 },
                 style = BadgeBodyLargeMediumStyle,
                 color = Gray700,
@@ -280,8 +289,8 @@ private fun BadgeNotice() {
 
 @Composable
 private fun BadgeGrid(
-    badges: List<ProfileBadge>,
-    onBadgeClick: (ProfileBadge) -> Unit,
+    badges: List<ProfileBadgeUi>,
+    onBadgeClick: (ProfileBadgeUi) -> Unit,
 ) {
     val rowCount = ((badges.size + 2) / 3).coerceAtLeast(1)
     val contentHeight = ((rowCount - 1) * 146 + 124).dp
@@ -310,14 +319,14 @@ private fun BadgeGrid(
 
 @Composable
 private fun BadgeItem(
-    badge: ProfileBadge,
+    badge: ProfileBadgeUi,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Box(modifier = modifier.clickable(onClick = onClick)) {
         Image(
             painter = painterResource(
-                if (badge.achieved) R.drawable.img_profile_badge_unlocked else R.drawable.img_profile_badge_locked,
+                if (badge.isEarned) R.drawable.img_profile_badge_unlocked else R.drawable.img_profile_badge_locked,
             ),
             contentDescription = null,
             modifier = Modifier.size(100.dp),
@@ -326,7 +335,7 @@ private fun BadgeItem(
         Text(
             text = badge.name,
             style = BadgeBodyLargeMediumStyle,
-            color = if (badge.achieved) Gray900 else Gray500,
+            color = if (badge.isEarned) Gray900 else Gray500,
             textAlign = TextAlign.Center,
             modifier = Modifier
                 .offset(x = ((100 - badge.labelWidthDp()) / 2f).dp, y = 100.dp)
@@ -337,10 +346,10 @@ private fun BadgeItem(
 
 @Composable
 private fun BadgeDetailDialog(
-    badge: ProfileBadge,
+    badge: ProfileBadgeUi,
     onClose: () -> Unit,
 ) {
-    val dialogHeight = if (badge.achieved) 446.dp else 401.dp
+    val dialogHeight = if (badge.isEarned) 446.dp else 401.dp
     Box(
         modifier = Modifier
             .offset(x = 55.dp, y = 240.dp)
@@ -358,13 +367,13 @@ private fun BadgeDetailDialog(
         ) {
             Image(
                 painter = painterResource(R.drawable.ic_profile_close),
-                contentDescription = "닫기",
+                contentDescription = "\uB2EB\uAE30",
                 modifier = Modifier.size(12.dp),
             )
         }
         Image(
             painter = painterResource(
-                if (badge.achieved) R.drawable.img_profile_badge_unlocked else R.drawable.img_profile_badge_locked,
+                if (badge.isEarned) R.drawable.img_profile_badge_unlocked else R.drawable.img_profile_badge_locked,
             ),
             contentDescription = null,
             modifier = Modifier
@@ -381,17 +390,21 @@ private fun BadgeDetailDialog(
                 .size(width = 120.dp, height = 30.dp),
         )
         Text(
-            text = if (badge.achieved) "대화 미션을 처음으로 1회 완료" else "대화 미션을 누적 15회 완료",
+            text = badge.description ?: if (badge.isEarned) {
+                "\uB300\uD654 \uBBF8\uC158\uC744 \uCC98\uC74C\uC73C\uB85C 1\uD68C \uC644\uB8CC"
+            } else {
+                "\uB300\uD654 \uBBF8\uC158\uC744 \uB204\uC801 15\uD68C \uC644\uB8CC"
+            },
             style = BadgeBodyLargeMediumStyle,
             color = Gray700,
             textAlign = TextAlign.Center,
             modifier = Modifier
-                .offset(x = if (badge.achieved) 47.5.dp else 56.5.dp, y = 286.dp)
-                .size(width = if (badge.achieved) 189.dp else 171.dp, height = 24.dp),
+                .offset(x = if (badge.isEarned) 47.5.dp else 56.5.dp, y = 286.dp)
+                .size(width = if (badge.isEarned) 189.dp else 171.dp, height = 24.dp),
         )
-        if (badge.achieved) {
+        if (badge.isEarned) {
             Text(
-                text = "2026.07.22",
+                text = badge.earnedAt?.substringBefore("T")?.replace("-", ".") ?: "2026.07.22",
                 style = BadgeBodyMediumStyle,
                 color = Gray500,
                 textAlign = TextAlign.Center,
@@ -408,7 +421,7 @@ private fun BadgeDetailDialog(
                 contentAlignment = Alignment.Center,
             ) {
                 Text(
-                    text = "공유하기",
+                    text = "\uACF5\uC720\uD558\uAE30",
                     style = BadgeTabStyle,
                     color = Gray50,
                     textAlign = TextAlign.Center,
@@ -417,7 +430,7 @@ private fun BadgeDetailDialog(
             }
         } else {
             Text(
-                text = "( 9 / 15 )",
+                text = "( ${badge.current ?: 0} / ${badge.target ?: 0} )",
                 style = BadgeBodyLargeStyle,
                 color = Gray500,
                 textAlign = TextAlign.Center,
@@ -437,16 +450,8 @@ private fun ProfileBadgesScreenPreview() {
     }
 }
 
-private fun ProfileBadge.labelWidthDp(): Int = when (name) {
-    "꾸준한 대화 습관" -> 105
-    "일주일의 변화" -> 87
+private fun ProfileBadgeUi.labelWidthDp(): Int = when (name) {
+    "\uAFB8\uC900\uD55C \uB300\uD654 \uC2B5\uAD00" -> 105
+    "\uC77C\uC8FC\uC77C\uC758 \uBCC0\uD654" -> 87
     else -> 100
 }
-
-
-
-
-
-
-
-

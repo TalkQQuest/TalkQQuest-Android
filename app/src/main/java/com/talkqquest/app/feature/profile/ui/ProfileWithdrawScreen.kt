@@ -45,6 +45,7 @@ import com.talkqquest.app.core.designsystem.White
 @Composable
 fun ProfileWithdrawScreen(
     onBack: () -> Unit = {},
+    onWithdrawConfirm: () -> Unit = {},
 ) = FitDesign {
     var agreed by remember { mutableStateOf(false) }
     var showConfirm by remember { mutableStateOf(false) }
@@ -143,7 +144,10 @@ fun ProfileWithdrawScreen(
             )
             WithdrawConfirmDialog(
                 onCancel = { showConfirm = false },
-                onConfirm = { showConfirm = false },
+                onConfirm = {
+                    showConfirm = false
+                    onWithdrawConfirm()
+                },
                 modifier = Modifier.offset(x = 28.dp, y = 313.dp),
             )
         }
@@ -242,6 +246,8 @@ private fun ProfileWithdrawScreenPreview() {
         ProfileWithdrawScreen()
     }
 }
+
+
 
 
 

@@ -88,14 +88,16 @@ private val SettingsBodySmallStyle = TextStyle(
 
 @Composable
 fun ProfileSettingsScreen(
+    initialPushEnabled: Boolean = true,
+    initialReminderEnabled: Boolean = false,
+    onPushEnabledChange: (Boolean) -> Unit = {},
+    onReminderEnabledChange: (Boolean) -> Unit = {},
     onBack: () -> Unit = {},
     onEditProfileClick: () -> Unit = {},
     onTermsClick: () -> Unit = {},
     onSupportClick: () -> Unit = {},
     onWithdrawClick: () -> Unit = {},
 ) = FitDesign {
-    var pushEnabled by remember { mutableStateOf(true) }
-    var reminderEnabled by remember { mutableStateOf(false) }
     var showTimePicker by remember { mutableStateOf(false) }
 
     Box(
@@ -128,8 +130,8 @@ fun ProfileSettingsScreen(
             )
             SettingsToggleRow(
                 title = "푸시 알림 받기",
-                checked = pushEnabled,
-                onCheckedChange = { pushEnabled = it },
+                checked = initialPushEnabled,
+                onCheckedChange = onPushEnabledChange,
                 modifier = Modifier
                     .offset(x = 16.dp, y = 46.dp)
                     .size(width = 329.dp, height = 44.dp),
@@ -137,8 +139,8 @@ fun ProfileSettingsScreen(
             SettingsToggleRow(
                 title = "미션 리마인드",
                 description = "매일 미션 추천 시간에 알림을 보내드려요",
-                checked = reminderEnabled,
-                onCheckedChange = { reminderEnabled = it },
+                checked = initialReminderEnabled,
+                onCheckedChange = onReminderEnabledChange,
                 modifier = Modifier
                     .offset(x = 16.dp, y = 102.dp)
                     .size(width = 330.dp, height = 44.dp),

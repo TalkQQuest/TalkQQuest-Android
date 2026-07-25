@@ -175,6 +175,42 @@ class AuthViewModel @Inject constructor(
             }
         }
     }
+
+    fun logout(onSuccess: () -> Unit) {
+        viewModelScope.launch {
+            _uiState.update { it.copy(isLoading = true, errorMessage = null) }
+            when (val result = authRepository.logout()) {
+                is ApiResult.Success -> {
+                    _uiState.update { it.copy(isLoading = false) }
+                    onSuccess()
+                }
+                is ApiResult.Error -> _uiState.update {
+                    it.copy(isLoading = false, errorMessage = result.message ?: "로그아웃에 실패했어요.")
+                }
+                is ApiResult.Exception -> _uiState.update {
+                    it.copy(isLoading = false, errorMessage = "네트워크 연결을 확인해주세요.")
+                }
+            }
+        }
+    }
+
+    fun withdraw(onSuccess: () -> Unit) {
+        viewModelScope.launch {
+            _uiState.update { it.copy(isLoading = true, errorMessage = null) }
+            when (val result = authRepository.withdraw()) {
+                is ApiResult.Success -> {
+                    _uiState.update { it.copy(isLoading = false) }
+                    onSuccess()
+                }
+                is ApiResult.Error -> _uiState.update {
+                    it.copy(isLoading = false, errorMessage = result.message ?: "회원 탈퇴에 실패했어요.")
+                }
+                is ApiResult.Exception -> _uiState.update {
+                    it.copy(isLoading = false, errorMessage = "네트워크 연결을 확인해주세요.")
+                }
+            }
+        }
+    }
     fun clearError() {
         _uiState.update { it.copy(errorMessage = null) }
     }
@@ -228,4 +264,7 @@ class AuthViewModel @Inject constructor(
         }
     }
 }
+
+
+
 

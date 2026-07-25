@@ -1,4 +1,4 @@
-﻿package com.talkqquest.app.feature.profile.ui
+package com.talkqquest.app.feature.profile.ui
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -118,6 +118,7 @@ private fun TermsMenuRow(
 fun ProfileTermsDetailScreen(
     title: String,
     sections: List<TermsSection>,
+    content: String? = null,
     onBack: () -> Unit = {},
 ) = FitDesign {
     Box(

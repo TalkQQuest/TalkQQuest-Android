@@ -4,6 +4,7 @@ import com.talkqquest.app.core.datastore.UserXpStore
 import com.talkqquest.app.core.network.ApiResult
 import com.talkqquest.app.core.network.serverCall
 import com.talkqquest.app.core.util.toSavedDate
+import com.talkqquest.app.feature.home.data.HomeApi
 import com.talkqquest.app.feature.mission.data.model.ConversationCreateRequest
 import com.talkqquest.app.feature.mission.data.model.ConversationMessageRequest
 import com.talkqquest.app.feature.mission.data.model.ConversationPrep
@@ -32,6 +33,7 @@ import kotlinx.coroutines.launch
 @Singleton
 class MissionRepository @Inject constructor(
     private val missionApi: MissionApi,
+    private val homeApi: HomeApi, // 피드백 화면 닉네임(GET /users/me) — 홈과 같은 API 재사용 (둘 다 B파트)
     private val userXpStore: UserXpStore, // 서버 전 임시: 완료 XP를 홈과 공유
 ) {
     // 북마크 낙관 토글 공유 — 모든 화면이 같은 상태를 봄 (서버 반영 전/오프라인에도 UI 일관).
@@ -253,7 +255,7 @@ class MissionRepository @Inject constructor(
                 return ApiResult.Success(
                     d.toFeedbackResult(
                         missionTitle = d.topic.orEmpty(), // 서버 피드백엔 미션 제목 없음 → topic 사용
-                        nickname = "소다123",               // TODO(프로필 연동): 유저 닉네임으로 교체
+                        nickname = userNickname(),         // GET /users/me — 실패 시 stub 닉네임 폴백
                     ),
                 )
             }
@@ -284,6 +286,16 @@ class MissionRepository @Inject constructor(
                 itemTexts = stubItemTexts,
             ),
         )
+    }
+
+    // 피드백 화면 "OO님을 위한 다른 미션 보러가기"의 닉네임 — GET /users/me.
+    // 세션 중 안 바뀌는 값이라 첫 성공 후 캐시. 실패/데모(USE_MOCK)면 stub 닉네임 폴백.
+    private var cachedNickname: String? = null
+    private suspend fun userNickname(): String {
+        cachedNickname?.let { return it }
+        val me = (serverCall { homeApi.getMe() } as? ApiResult.Success)?.data
+        val nick = me?.nickname?.takeIf { it.isNotBlank() } ?: me?.name?.takeIf { it.isNotBlank() }
+        return nick?.also { cachedNickname = it } ?: "소다123"
     }
 
     // 베스트 문장 저장 → 아카이브 '문장' (POST /api/v1/archives/phrases).

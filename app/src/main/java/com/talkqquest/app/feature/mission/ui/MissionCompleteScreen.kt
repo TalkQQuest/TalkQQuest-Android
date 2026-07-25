@@ -319,7 +319,8 @@ private fun DurationCard(durationText: String) {
         )
         Column {
             Text(text = "대화 시간", style = TqType.BodyM.figma(), color = Gray600)
-            Text(text = durationText, style = TqType.HeadingM.figma(), color = Gray600)
+            // 숫자 색 Gray600→Gray800 (디자이너 변경 2026-07-22, 최신 시안 확인)
+            Text(text = durationText, style = TqType.HeadingM.figma(), color = Gray800)
         }
     }
 }
@@ -348,7 +349,8 @@ private fun ChecklistCard(checklist: List<String>) {
                     tint = Primary600,
                     modifier = Modifier.size(24.dp),
                 )
-                Text(text = item, style = TqType.BodyM.figma(), color = Gray700)
+                // 체크리스트 문구 BodyM Gray700 → BodyL(16/24) Gray800 (최신 시안 변경 2026-07-22)
+                Text(text = item, style = TqType.BodyL.figma(), color = Gray800)
             }
         }
     }

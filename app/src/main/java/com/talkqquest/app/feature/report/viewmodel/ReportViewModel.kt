@@ -98,6 +98,7 @@ class ReportViewModel @Inject constructor(
                     // 미션명이 없는 경로(아카이브 등 직접 진입)로 들어온 경우만 화면 이름으로 대체
                     title = state.missionTitle.ifBlank { "성장 리포트" },
                     savedDate = LocalDate.now().format(DateTimeFormatter.ofPattern("yyyy.MM.dd")),
+                    type = reportType,
                 ),
                 savedReports = (kept?.let { listOf(it) } ?: emptyList()) + state.savedReports,
             )
@@ -114,9 +115,11 @@ class ReportViewModel @Inject constructor(
         if (wasSaved == true) {
             viewModelScope.launch { reportRepository.deleteReport(id) }
         } else if (wasSaved == false) {
-            // 재저장 종류: 이 세션에서 저장했던 종류를 기억해 쓰고, 모르면(서버 목록에서 온 카드)
-            // 마지막으로 저장한 종류를 씀 — 목록 응답엔 growth/weekly 구분이 없음.
-            val type = savedReportTypes[id] ?: lastSavedType
+            // 재저장 종류: 카드가 들고 있는 서버 type(GET /reports 응답) 우선, 없으면 이 세션에서
+            // 저장했던 종류 — 둘 다 없을 때만 마지막 저장 종류로 폴백.
+            val type = _uiState.value.savedReports.firstOrNull { it.id == id }?.type?.takeIf { it.isNotBlank() }
+                ?: savedReportTypes[id]
+                ?: lastSavedType
             viewModelScope.launch {
                 val saved = reportRepository.saveReport(type)
                 val serverId = (saved as? ApiResult.Success)?.data?.reportId?.takeIf { it.isNotBlank() }

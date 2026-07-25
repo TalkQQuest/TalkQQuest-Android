@@ -153,7 +153,6 @@ class ArchiveRepository @Inject constructor(
         }
     }
 
-    // 💡 변경됨: 리포트 상세 조회 서버 연동
     suspend fun getArchiveReportDetail(id: String): ApiResult<Triple<String, GrowthReport, WeeklyCompareReport>> {
         if (isMockMode) {
             val title = stubReports.find { it.id == id }?.title ?: "성장 리포트"
@@ -168,7 +167,6 @@ class ArchiveRepository @Inject constructor(
                 val response = archiveApi.getReportDetail(id)
                 val data = response.data
                 if (data != null) {
-                    // API 응답을 기존 UI 모델로 매핑
                     val growth = GrowthReport(
                         prevLevel = data.growth.levelBefore,
                         currentLevel = data.growth.levelAfter,
@@ -184,7 +182,7 @@ class ArchiveRepository @Inject constructor(
                             MetricChange(it.label, it.from, it.to)
                         },
                         highlights = data.weeklyCompare.highlights.map {
-                            HighlightItem(it, "") // 하이라이트 문자열을 UI 요구에 맞춰 매핑
+                            HighlightItem(it, "")
                         }
                     )
 
@@ -202,8 +200,13 @@ class ArchiveRepository @Inject constructor(
         if (isMockMode) {
             val mockDetail = stubConversationDetails.find { it.id == id }
             if (mockDetail != null) {
+                // 💡 Mock 응답 생성 시 새로 추가한 durationMinutes와 summaryKeywords 연동
                 val mappedResponse = ArchiveConversationDetailResponse(
-                    conversationId = mockDetail.id, missionTitle = mockDetail.title, summary = mockDetail.summaryText,
+                    conversationId = mockDetail.id,
+                    missionTitle = mockDetail.title,
+                    summary = mockDetail.summaryText,
+                    durationMinutes = 5, // mock 데이터
+                    summaryKeywords = mockDetail.summaryKeywords, // mock 데이터
                     messages = mockDetail.messages.map { ArchiveConversationMessageDto(sender = if (it.isFromUser) "USER" else "BOT", content = it.text, sentAt = it.time) },
                     feedback = ArchiveConversationFeedbackDto(feedbackId = "mock_feedback", kindnessScore = mockDetail.feedbacks.find { it.first == "친절한 태도" }?.second ?: 0, initiativeScore = mockDetail.feedbacks.find { it.first == "대화 주도" }?.second ?: 0, empathyScore = mockDetail.feedbacks.find { it.first == "공감 능력" }?.second ?: 0, questionLinkScore = mockDetail.feedbacks.find { it.first == "질문 연결성" }?.second ?: 0)
                 )

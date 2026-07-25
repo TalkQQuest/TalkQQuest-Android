@@ -2,12 +2,14 @@ package com.talkqquest.app.feature.archive.data.model
 
 import kotlinx.serialization.Serializable
 
-// --- 대화 상세 조회 DTO ---
+// --- 💡 수정됨: 대화 상세 조회 DTO (필수 데이터 추가) ---
 @Serializable
 data class ArchiveConversationDetailResponse(
     val conversationId: String,
     val missionTitle: String? = null,
     val summary: String? = null,
+    val durationMinutes: Int? = null, // 💡 추가됨: 소요 시간(분)
+    val summaryKeywords: List<String> = emptyList(), // 💡 추가됨: 요약 키워드 배열
     val messages: List<ArchiveConversationMessageDto> = emptyList(),
     val feedback: ArchiveConversationFeedbackDto? = null
 )
@@ -40,7 +42,7 @@ data class ArchivePhraseDetailResponse(
     val createdAt: String
 )
 
-// 💡 추가됨: 리포트 상세 조회 응답 DTO
+// --- 리포트 상세 조회 응답 DTO ---
 @Serializable
 data class ArchiveReportDetailResponse(
     val id: String,

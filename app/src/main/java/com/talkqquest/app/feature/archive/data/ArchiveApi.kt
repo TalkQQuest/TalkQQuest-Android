@@ -34,6 +34,7 @@ interface ArchiveApi {
         @Query("size") size: Int? = null
     ): ApiResponse<ArchiveSearchResponse>
 
+    // 💡 대화 기록 상세 조회 API
     @GET("api/v1/archives/conversations/{conversationId}")
     suspend fun getConversationDetail(
         @Path("conversationId") conversationId: String
@@ -44,7 +45,6 @@ interface ArchiveApi {
         @Path("phraseId") phraseId: String
     ): ApiResponse<ArchivePhraseDetailResponse>
 
-    // 💡 추가됨: 리포트 상세 조회
     @GET("api/v1/reports/{reportId}")
     suspend fun getReportDetail(
         @Path("reportId") reportId: String

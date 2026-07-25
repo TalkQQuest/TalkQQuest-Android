@@ -12,6 +12,8 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import java.time.ZonedDateTime
+import java.time.format.DateTimeFormatter
 import javax.inject.Inject
 
 data class AiFeedbackItem(
@@ -55,7 +57,6 @@ class ArchiveConversationDetailViewModel @Inject constructor(
                 is ApiResult.Success -> {
                     val data = result.data
 
-                    // 서버의 feedback DTO를 UI용 AiFeedbackItem 리스트로 변환
                     val mappedFeedbacks = mutableListOf<AiFeedbackItem>()
                     data.feedback?.let { fb ->
                         mappedFeedbacks.add(AiFeedbackItem("친절한 태도", fb.kindnessScore))
@@ -64,25 +65,40 @@ class ArchiveConversationDetailViewModel @Inject constructor(
                         mappedFeedbacks.add(AiFeedbackItem("질문 연결성", fb.questionLinkScore))
                     }
 
-                    // 서버의 messages DTO를 UI용 ReviewChatMessage 리스트로 변환
                     val mappedMessages = data.messages.mapIndexed { index, msg ->
+                        val parsedTime = try {
+                            val zdt = ZonedDateTime.parse(msg.sentAt)
+                            zdt.format(DateTimeFormatter.ofPattern("HH:mm"))
+                        } catch (e: Exception) {
+                            msg.sentAt.substringAfter("T").substringBeforeLast(":")
+                        }
+
                         ReviewChatMessage(
                             id = index.toString(),
                             text = msg.content,
-                            isFromUser = msg.sender.uppercase() == "USER", // "USER"일 경우 true 처리
-                            time = msg.sentAt
+                            isFromUser = msg.sender.uppercase() == "USER",
+                            time = parsedTime
                         )
                     }
+
+                    val parsedDate = try {
+                        data.messages.firstOrNull()?.sentAt?.let {
+                            ZonedDateTime.parse(it).format(DateTimeFormatter.ofPattern("yyyy.MM.dd"))
+                        } ?: ""
+                    } catch (e: Exception) { "" }
+
+                    // 💡 추가됨: 서버에서 받은 분(Int) 단위를 "n분" 형식으로 가공
+                    val parsedDuration = data.durationMinutes?.let { "${it}분" } ?: ""
 
                     _uiState.update {
                         it.copy(
                             isLoading = false,
                             title = data.missionTitle ?: "대화 상세",
-                            date = "", // 새로운 API 스펙에 누락된 필드 (필요시 백엔드 요청)
-                            duration = "", // 새로운 API 스펙에 누락된 필드 (필요시 백엔드 요청)
-                            summaryKeywords = emptyList(), // 새로운 API 스펙에 누락된 필드
+                            date = parsedDate,
+                            duration = parsedDuration, // 💡 새로 연동됨
+                            summaryKeywords = data.summaryKeywords, // 💡 새로 연동됨
                             summaryText = data.summary ?: "",
-                            mainContentText = data.summary ?: "", // summaryText와 함께 사용하도록 기본 할당
+                            mainContentText = data.summary ?: "",
                             feedbacks = mappedFeedbacks,
                             messages = mappedMessages
                         )

@@ -3,6 +3,7 @@ package com.talkqquest.app.feature.mission.data
 import com.talkqquest.app.core.datastore.UserXpStore
 import com.talkqquest.app.core.network.ApiResult
 import com.talkqquest.app.core.network.serverCall
+import com.talkqquest.app.core.util.toSavedDate
 import com.talkqquest.app.feature.mission.data.model.ConversationCreateRequest
 import com.talkqquest.app.feature.mission.data.model.ConversationMessageRequest
 import com.talkqquest.app.feature.mission.data.model.ConversationPrep
@@ -16,6 +17,7 @@ import com.talkqquest.app.feature.mission.data.model.MissionCompleteRequest
 import com.talkqquest.app.feature.mission.data.model.MissionCompleteResult
 import com.talkqquest.app.feature.mission.data.model.MissionDetail
 import com.talkqquest.app.feature.mission.data.model.MissionListItem
+import com.talkqquest.app.feature.mission.data.model.SavedPhraseItem
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlinx.coroutines.CoroutineScope
@@ -289,6 +291,24 @@ class MissionRepository @Inject constructor(
     // conversationId는 피드백 응답에서 온 값(서버 미연동/stub이면 호출부에서 걸러 여기까지 안 옴).
     suspend fun savePhrase(conversationId: String, content: String): ApiResult<CreatePhraseResponse> =
         serverCall { missionApi.savePhrase(CreatePhraseRequest(conversationId = conversationId, content = content)) }
+
+    // 저장한 문장 목록 (문장 저장 시트의 "최근 저장한 문장") — GET /archives?type=phrase.
+    // 실패/데모(USE_MOCK)면 Error를 그대로 돌려줘 호출부가 기존 목업을 유지하게 한다(미션 시트와 동일 방침).
+    suspend fun getSavedPhrases(size: Int = 5): ApiResult<List<SavedPhraseItem>> =
+        when (val r = serverCall { missionApi.getSavedPhrases(size = size) }) {
+            is ApiResult.Success -> ApiResult.Success(
+                r.data.items.map {
+                    SavedPhraseItem(
+                        id = it.referenceId ?: it.id,
+                        phrase = it.title,
+                        savedDate = it.createdAt.toSavedDate(),
+                        isSaved = it.isBookmarked,
+                    )
+                },
+            )
+            is ApiResult.Error -> r
+            is ApiResult.Exception -> r
+        }
 }
 
 // 항목별 피드백 문구 stub — 서버(AI)가 줄 값. 서버 연동 시 통째 삭제.

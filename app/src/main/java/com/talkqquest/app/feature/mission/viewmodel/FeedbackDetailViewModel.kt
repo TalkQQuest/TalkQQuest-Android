@@ -28,7 +28,8 @@ data class FeedbackDetailUiState(
     val errorMessage: String? = null,
     // 문장 저장 시트: 베스트 문장을 저장하면 saveSheetPhrase가 생기며 시트가 올라옴 (UI 5차)
     val saveSheetPhrase: SavedPhraseItem? = null,
-    // 보관함(저장된 문장) — TODO(서버 연동): 문장 아카이브 API로 교체. 지금은 목업 샘플
+    // 보관함(저장된 문장) — 진입 시 GET /archives?type=phrase로 교체됨.
+    // 아래 값은 조회 실패/데모(USE_MOCK) 시 쓰이는 폴백 샘플.
     val savedPhrases: List<SavedPhraseItem> = listOf(
         SavedPhraseItem("1", "그 말씀 들으니 저도 기분이 좋아지네요", "2026.08.19"),
         SavedPhraseItem("2", "혹시 그때 어떤 기분이셨어요?", "2026.08.18"),
@@ -61,6 +62,18 @@ class FeedbackDetailViewModel @Inject constructor(
 
     init {
         loadFeedback()
+        loadSavedPhrases()
+    }
+
+    // 시트에 뿌릴 "최근 저장한 문장"을 서버에서 채운다(GET /archives?type=phrase).
+    // 실패/데모(USE_MOCK)면 상태를 건드리지 않아 기본값(목업 샘플)이 그대로 남는다 — 데모가 안 죽게.
+    private fun loadSavedPhrases() {
+        viewModelScope.launch {
+            val result = missionRepository.getSavedPhrases()
+            if (result is ApiResult.Success) {
+                _uiState.update { it.copy(savedPhrases = result.data) }
+            }
+        }
     }
 
     fun loadFeedback() {

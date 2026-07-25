@@ -8,7 +8,7 @@ import retrofit2.http.GET
 // 홈 API. 각 기능은 이 패턴대로 자기 Api를 만들면 됩니다. 응답은 항상 ApiResponse<...> 로 감쌈.
 interface HomeApi {
 
-    // 홈 요약 — 백엔드에 이 엔드포인트는 아직 없음. 지금은 getMe(실데이터) + stub 조합으로 대체.
+    // 홈 요약 — GET /home/summary (dev 배포 기준 구현됨): 닉네임·레벨·XP·카운트·오늘의 질문을 한 번에 내려줌.
     @GET("api/v1/home/summary")
     suspend fun getHomeSummary(): ApiResponse<HomeSummary>
 

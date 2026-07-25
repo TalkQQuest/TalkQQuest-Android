@@ -17,24 +17,26 @@ class HomeRepository @Inject constructor(
     private val missionApi: MissionApi, // 오늘의 미션 카드 — 미션 API 재사용 (둘 다 B파트)
     private val userXpStore: UserXpStore, // 미션 완료 XP가 홈에도 보이게 공유 (서버 완료 후 sync됨)
 ) {
-    // 프로필(닉네임·레벨·XP)= /users/me 실데이터, 오늘의 미션 = /missions/today 실데이터(폴백 있음),
-    // 카운트·오늘의 질문 = 서버 미구현이라 stub 유지. 서버 실패(오프라인 등) 시 전부 stub 폴백 — 데모가 안 죽게.
+    // 홈 요약 — GET /api/v1/home/summary (dev 배포 기준 구현됨): 닉네임·레벨·XP·카운트·오늘의 질문을 한 번에.
+    // 오늘의 미션이 응답에 없거나 null이면 /missions/today로 폴백. XP는 완료 가산 보존 위해 1회만 seed하고 이후 로컬 유지.
+    // 서버 실패(오프라인·데모 USE_MOCK) 시 전부 stub 폴백 — 데모가 안 죽게.
     suspend fun getHomeSummary(): ApiResult<HomeSummary> {
-        when (val me = serverCall { homeApi.getMe() }) {
+        when (val res = serverCall { homeApi.getHomeSummary() }) {
             is ApiResult.Success -> {
-                // 서버 레벨·XP로 1회 초기화 — 이후엔 미션 완료가 /xp/summary 값으로 sync해줌
-                userXpStore.seedFromServer(me.data.level, me.data.xp)
+                val d = res.data
+                // 서버 레벨·XP로 1회 초기화 — 이후엔 미션 완료가 값을 이어감
+                userXpStore.seedFromServer(d.level, d.currentXp)
                 return ApiResult.Success(
-                    stubHomeSummary.copy(
-                        nickname = me.data.nickname ?: me.data.name, // 온보딩 전 nickname null → name
+                    d.copy(
                         level = userXpStore.level,
                         currentXp = userXpStore.currentXp,
                         nextLevelXp = userXpStore.nextLevelXp,
-                        todayMission = fetchTodayMission() ?: stubHomeSummary.todayMission,
+                        todayMission = d.todayMission ?: fetchTodayMission() ?: stubHomeSummary.todayMission,
+                        questionOfDay = d.questionOfDay ?: stubHomeSummary.questionOfDay,
                     ),
                 )
             }
-            else -> return ApiResult.Success( // 오프라인 폴백: 기존 stub 그대로
+            else -> return ApiResult.Success( // 오프라인/데모 폴백: 기존 stub 그대로
                 stubHomeSummary.copy(
                     level = userXpStore.level,
                     currentXp = userXpStore.currentXp,

@@ -1,8 +1,10 @@
 package com.talkqquest.app.feature.notification.data
 
 import com.talkqquest.app.core.network.ApiResponse
+import com.talkqquest.app.feature.notification.data.model.NotificationSettings
 import com.talkqquest.app.feature.notification.data.model.NotificationsResponse
 import kotlinx.serialization.Serializable
+import retrofit2.http.Body
 import retrofit2.http.GET
 import retrofit2.http.PATCH
 import retrofit2.http.Path
@@ -29,6 +31,17 @@ interface NotificationApi {
     // 전체 읽음 처리
     @PATCH("api/v1/notifications/all/read")
     suspend fun markAllRead(): ApiResponse<MarkReadResponse>
+
+    // 알림 설정 조회 — dev NotificationSettingsResponseDto.
+    // ※ 알림 설정 화면이 아직 디자인에 없어 UI 미연결 — API 계약만 확보(2026-07-25).
+    @GET("api/v1/notifications/settings")
+    suspend fun getSettings(): ApiResponse<NotificationSettings>
+
+    // 알림 설정 변경 (부분 업데이트)
+    @PATCH("api/v1/notifications/settings")
+    suspend fun updateSettings(
+        @Body body: NotificationSettings,
+    ): ApiResponse<NotificationSettings>
 }
 
 // 읽음 처리 응답 data — 서버 스키마 미문서라 최소 형태(전부 기본값)로 수용.

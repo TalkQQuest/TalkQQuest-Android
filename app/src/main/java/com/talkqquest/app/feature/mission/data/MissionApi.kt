@@ -1,7 +1,7 @@
 package com.talkqquest.app.feature.mission.data
 
 import com.talkqquest.app.core.network.ApiResponse
-import com.talkqquest.app.core.network.ArchiveListResponse
+import com.talkqquest.app.feature.mission.data.model.ArchiveListResponse
 import com.talkqquest.app.feature.mission.data.model.ConversationCreateRequest
 import com.talkqquest.app.feature.mission.data.model.ConversationCreateResponse
 import com.talkqquest.app.feature.mission.data.model.ConversationMessageRequest

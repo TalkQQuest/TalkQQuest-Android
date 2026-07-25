@@ -8,4 +8,6 @@ data class SavedReportItem(
     val title: String,
     val savedDate: String, // 저장 날짜 "2026.08.20" (서버 오면 저장 시각을 yyyy.MM.dd로)
     val isSaved: Boolean = true,
+    // growth | weekly_compare — 화면엔 안 쓰고, 북마크를 껐다 켤 때 같은 종류로 재저장하는 데 씀.
+    val type: String = "",
 )

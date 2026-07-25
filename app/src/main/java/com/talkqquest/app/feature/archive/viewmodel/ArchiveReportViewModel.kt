@@ -3,6 +3,7 @@ package com.talkqquest.app.feature.archive.viewmodel
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.talkqquest.app.core.network.ApiResult
 import com.talkqquest.app.feature.archive.data.ArchiveRepository
 import com.talkqquest.app.feature.report.data.model.GrowthReport
 import com.talkqquest.app.feature.report.data.model.WeeklyCompareReport
@@ -40,30 +41,33 @@ class ArchiveReportViewModel @Inject constructor(
 
     private fun loadReportData(reportId: String) {
         viewModelScope.launch {
-            _uiState.update { it.copy(isLoading = true, reportId = reportId) }
+            _uiState.update { it.copy(isLoading = true, reportId = reportId, errorMessage = null) }
 
-            val reportDetail = repository.getArchiveReportDetail(reportId)
-
-            // 💡 저장소에서 리포트의 최신 북마크 상태를 가져옴
+            // 💡 저장소에서 리포트의 최신 북마크 상태를 가져옴 (기존 검색 목록 기준)
             val isBookmarked = repository.getArchiveReports().find { it.id == reportId }?.isSaved ?: false
 
-            if (reportDetail != null) {
-                val (title, growth, weekly) = reportDetail
-                _uiState.update {
-                    it.copy(
-                        isLoading = false,
-                        title = title,
-                        isBookmarked = isBookmarked, // 💡 초기 북마크 상태 적용
-                        growth = growth,
-                        weekly = weekly
-                    )
+            when (val result = repository.getArchiveReportDetail(reportId)) {
+                is ApiResult.Success -> {
+                    val (title, growth, weekly) = result.data
+                    _uiState.update {
+                        it.copy(
+                            isLoading = false,
+                            title = title,
+                            isBookmarked = isBookmarked,
+                            growth = growth,
+                            weekly = weekly
+                        )
+                    }
                 }
-            } else {
-                _uiState.update {
-                    it.copy(
-                        isLoading = false,
-                        errorMessage = "리포트를 불러오지 못했어요."
-                    )
+                is ApiResult.Error -> {
+                    _uiState.update {
+                        it.copy(isLoading = false, errorMessage = result.message ?: "리포트를 불러오지 못했어요.")
+                    }
+                }
+                is ApiResult.Exception -> {
+                    _uiState.update {
+                        it.copy(isLoading = false, errorMessage = "네트워크 오류 발생")
+                    }
                 }
             }
         }
@@ -72,9 +76,8 @@ class ArchiveReportViewModel @Inject constructor(
     fun toggleBookmark() {
         val id = _uiState.value.reportId
         if (id.isNotEmpty()) {
-            // 💡 1. 공통 저장소 데이터 갱신
+            // 현재 리포트 북마크 취소/저장은 아직 백엔드 API가 연동되지 않았으므로 로컬 목업만 사용
             repository.toggleReportBookmark(id)
-            // 💡 2. 로컬 UI 상태 갱신
             _uiState.update { it.copy(isBookmarked = !it.isBookmarked) }
         }
     }

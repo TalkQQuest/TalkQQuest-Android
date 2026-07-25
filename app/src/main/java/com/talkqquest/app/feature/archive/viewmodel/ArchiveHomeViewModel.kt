@@ -57,33 +57,27 @@ class ArchiveHomeViewModel @Inject constructor(
             when (val result = archiveRepository.getArchiveSummary()) {
                 is ApiResult.Success -> {
                     val summary = result.data
-                    val allMissions = archiveRepository.getArchiveMissions()
 
-                    val uiActivities = summary.recentActivities.map { dto ->
-                        val isMission = dto.type.uppercase() == "MISSION"
-                        val matchedMission = if (isMission) {
-                            // 💡 이미 String 타입이므로 toString() 제거
-                            allMissions.find { it.id == dto.id }
-                        } else null
-
+                    // 서버에서 미션 상세 정보까지 모두 주므로, 더 이상 로컬 매칭이 필요 없습니다!
+                    val uiActivities = summary.recentItems.map { dto ->
                         RecentActivity(
                             id = dto.id,
                             type = mapToActivityType(dto.type),
                             title = dto.title,
-                            status = dto.status,
-                            date = dto.date,
-                            difficulty = matchedMission?.difficulty,
-                            category = matchedMission?.category,
-                            estimatedMinutes = matchedMission?.duration,
-                            rewardXp = matchedMission?.xp
+                            status = "", // 홈 화면 디자인에서는 상태 텍스트를 띄우지 않으므로 빈 값 처리
+                            date = dto.createdAt,
+                            difficulty = dto.difficulty,
+                            category = dto.category,
+                            estimatedMinutes = dto.estimatedMinutes,
+                            rewardXp = dto.rewardXp
                         )
                     }
 
                     _uiState.update {
                         it.copy(
-                            completedMissionCount = summary.completedMissionCount,
+                            completedMissionCount = summary.missionRecordCount,
                             conversationCount = summary.conversationCount,
-                            savedSentenceCount = summary.savedSentenceCount,
+                            savedSentenceCount = summary.phraseCount,
                             reportCount = summary.reportCount,
                             recentActivities = uiActivities,
                             isLoading = false
@@ -105,11 +99,11 @@ class ArchiveHomeViewModel @Inject constructor(
     }
 
     private fun mapToActivityType(typeString: String): ActivityType {
-        return when (typeString.uppercase()) {
-            "MISSION" -> ActivityType.MISSION
-            "CONVERSATION" -> ActivityType.CONVERSATION
-            "SENTENCE" -> ActivityType.SENTENCE
-            "REPORT" -> ActivityType.REPORT
+        return when (typeString.lowercase()) {
+            "mission" -> ActivityType.MISSION
+            "conversation" -> ActivityType.CONVERSATION
+            "phrase", "sentence" -> ActivityType.SENTENCE
+            "report" -> ActivityType.REPORT
             else -> ActivityType.MISSION
         }
     }

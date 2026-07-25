@@ -32,7 +32,7 @@ import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -41,6 +41,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
@@ -48,6 +49,8 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 
 import com.talkqquest.app.R
@@ -83,9 +86,20 @@ fun ArchiveSearchScreen(
     viewModel: ArchiveSearchViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val lifecycleOwner = LocalLifecycleOwner.current
 
-    LaunchedEffect(Unit) {
-        viewModel.refreshData()
+    // 💡 화면이 보여질 때(ON_RESUME)마다 최신 데이터를 갱신합니다.
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) {
+                viewModel.refreshData()
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+
+        onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
+        }
     }
 
     ArchiveSearchScreenContent(
@@ -127,7 +141,7 @@ private fun ArchiveSearchScreenContent(
     onClearSearch: () -> Unit,
     onClearDateFilter: () -> Unit,
     onClearCategoryFilter: () -> Unit,
-    onToggleMissionBookmark: (String) -> Unit, // 💡 Long -> String 변경
+    onToggleMissionBookmark: (String) -> Unit,
     onToggleSentenceBookmark: (String) -> Unit,
     onToggleReportBookmark: (String) -> Unit,
     onSortSelected: (ArchiveSortType) -> Unit,
@@ -564,7 +578,6 @@ private val previewUiState = ArchiveSearchUiState(
     isCategoryChipVisible = true,
     sortType = ArchiveSortType.LATEST,
     allMissions = listOf(
-        // 💡 1L -> "1" 로 타입 변경
         ArchiveMissionItem("1", "처음 보는 사람에게 짧게 인사하기", "짧은 대화", "쉬움", 2, 20, isCompleted = true, isSaved = true, completedDate = "2026.07.16")
     ),
     allConversations = listOf(

@@ -6,6 +6,7 @@ import com.talkqquest.app.core.network.serverCall
 import com.talkqquest.app.feature.mission.data.model.ConversationCreateRequest
 import com.talkqquest.app.feature.mission.data.model.ConversationMessageRequest
 import com.talkqquest.app.feature.mission.data.model.ConversationPrep
+import com.talkqquest.app.feature.mission.data.model.CreateFeedbackRequest
 import com.talkqquest.app.feature.mission.data.model.CreatePhraseRequest
 import com.talkqquest.app.feature.mission.data.model.CreatePhraseResponse
 import com.talkqquest.app.feature.mission.data.model.FeedbackItemText
@@ -20,6 +21,7 @@ import javax.inject.Singleton
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 // 미션 Repository. ViewModel과 API 사이 계층 (홈 패턴과 동일).
@@ -189,6 +191,9 @@ class MissionRepository @Inject constructor(
                 )
             }
             if (done is ApiResult.Success) {
+                // 피드백 생성(POST /feedback) — cid가 지워지기 전에 트리거. 실패해도 완료는 진행(feedbackId=null).
+                val feedbackId = (serverCall { missionApi.createFeedback(CreateFeedbackRequest(conversationId = cid)) }
+                    as? ApiResult.Success)?.data?.feedbackId
                 activeConversationId = null // complete가 대화 종료를 겸함(실측: 이후 finish 불가)
                 val after = serverCall { missionApi.getXpSummary() }
                 val beforeLevel = (before as? ApiResult.Success)?.data?.level ?: userXpStore.level
@@ -208,6 +213,7 @@ class MissionRepository @Inject constructor(
                         xpBefore = beforeXp,
                         xpAfter = afterXp,
                         nextLevelXp = nextXp,
+                        feedbackId = feedbackId,
                     ),
                 )
             }
@@ -235,16 +241,22 @@ class MissionRepository @Inject constructor(
     // TODO(서버 연동): 백엔드 피드백 API 미구현(이슈도 없음) — 이슈 생성 요청 상태.
     //     stub은 missionId를 feedbackId로 받음.
     suspend fun getFeedback(feedbackId: String): ApiResult<FeedbackResult> {
-        // 서버 우선(GET /feedback/{id}). ready + 지표 있음일 때만 실데이터 사용.
-        // pending/실패/미연동(데모 스위치)이면 아래 목업으로 폴백 — 화면 공백 방지.
-        val r = serverCall { missionApi.getFeedbackDetail(feedbackId) }
-        if (r is ApiResult.Success && r.data.status == "ready" && r.data.metrics.isNotEmpty()) {
-            return ApiResult.Success(
-                r.data.toFeedbackResult(
-                    missionTitle = r.data.topic.orEmpty(), // 서버 피드백엔 미션 제목 없음 → topic 사용
-                    nickname = "소다123",                    // TODO(프로필 연동): 유저 닉네임으로 교체
-                ),
-            )
+        // 서버 우선(GET /feedback/{id}). 피드백 생성이 비동기(pending)라 ready까지 폴링(최대 6회·1.5s).
+        // 데모 스위치/네트워크 오류·실패·타임아웃이면 아래 목업으로 폴백 — 화면 공백 방지.
+        for (attempt in 0 until 6) {
+            val r = serverCall { missionApi.getFeedbackDetail(feedbackId) }
+            if (r !is ApiResult.Success) break // 데모/네트워크 오류 → 목업 폴백
+            val d = r.data
+            if (d.status == "ready" && d.metrics.isNotEmpty()) {
+                return ApiResult.Success(
+                    d.toFeedbackResult(
+                        missionTitle = d.topic.orEmpty(), // 서버 피드백엔 미션 제목 없음 → topic 사용
+                        nickname = "소다123",               // TODO(프로필 연동): 유저 닉네임으로 교체
+                    ),
+                )
+            }
+            if (d.status != "pending") break // failed 등 → 목업 폴백
+            if (attempt < 5) delay(1500) // 생성 중 → 잠시 후 재시도
         }
         return ApiResult.Success(
             FeedbackResult(

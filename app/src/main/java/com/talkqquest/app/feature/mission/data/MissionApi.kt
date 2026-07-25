@@ -6,6 +6,8 @@ import com.talkqquest.app.feature.mission.data.model.ConversationCreateResponse
 import com.talkqquest.app.feature.mission.data.model.ConversationMessageRequest
 import com.talkqquest.app.feature.mission.data.model.ConversationMessageResponse
 import com.talkqquest.app.feature.mission.data.model.ConversationSuggestionsResponse
+import com.talkqquest.app.feature.mission.data.model.CreateFeedbackRequest
+import com.talkqquest.app.feature.mission.data.model.CreateFeedbackResponse
 import com.talkqquest.app.feature.mission.data.model.CreatePhraseRequest
 import com.talkqquest.app.feature.mission.data.model.CreatePhraseResponse
 import com.talkqquest.app.feature.mission.data.model.FeedbackDetailResponse
@@ -100,6 +102,13 @@ interface MissionApi {
     // XP/레벨 요약 — 완료 화면의 레벨업 연출용 (완료 전·후 조회).
     @GET("api/v1/xp/summary")
     suspend fun getXpSummary(): ApiResponse<XpSummary>
+
+    // AI 피드백 생성 — dev 실계약(POST /feedback) 대조(2026-07-25). 대화 종료 후 이 대화의 피드백 생성 트리거.
+    // 생성은 비동기(응답 status=pending) → 이후 getFeedbackDetail로 ready까지 폴링.
+    @POST("api/v1/feedback")
+    suspend fun createFeedback(
+        @Body body: CreateFeedbackRequest,
+    ): ApiResponse<CreateFeedbackResponse>
 
     // AI 피드백 상세 조회 — dev 실계약(GET /feedback/{feedbackId}) 대조(2026-07-25).
     // status=ready여야 점수/문구가 채워짐(pending이면 0/빈값). 응답에 미션 제목은 없음(topic만).

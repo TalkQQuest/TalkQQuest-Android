@@ -132,7 +132,7 @@ private fun ReportScreen(
     uiState: ReportUiState,
     onBack: () -> Unit = {},
     onRetry: () -> Unit = {},
-    onSaveReport: () -> Unit = {},
+    onSaveReport: (String) -> Unit = {}, // 인자 = 리포트 종류 growth | weekly_compare
     onToggleReportSave: (String) -> Unit = {},
     onDismissSaveSheet: () -> Unit = {},
     onSheetTopChange: (Float?) -> Unit = {},
@@ -184,7 +184,7 @@ private fun ReportContent(
     growth: GrowthReport,
     weekly: WeeklyCompareReport,
     onBack: () -> Unit,
-    onSaveClick: () -> Unit = {}, // 리포트 저장 → 시트 등장 (카드 제목은 이 리포트가 나온 미션명)
+    onSaveClick: (String) -> Unit = {}, // 인자 = 리포트 종류 growth | weekly_compare
     initialTab: Int = 0, // 기본 = 성장 리포트 (CSS 프레임·탭바 순서)
 ) {
     var tab by rememberSaveable { mutableIntStateOf(initialTab) }
@@ -233,7 +233,7 @@ private fun ReportContent(
             // "리포트 저장하기" 유지, 사용자 결정). TODO(서버 연동): 저장 API(E102) 호출로 교체.
             TqButton(
                 text = "리포트 저장하기",
-                onClick = onSaveClick,
+                onClick = { onSaveClick(if (tab == 0) "growth" else "weekly_compare") },
                 modifier = Modifier
                     .align(Alignment.TopCenter)
                     .padding(top = 558.dp)

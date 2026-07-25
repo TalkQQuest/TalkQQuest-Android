@@ -84,8 +84,10 @@ class FeedbackDetailViewModel @Inject constructor(
     private var nextSaveId = 100L
 
     // 베스트 문장 저장 토글. 저장하면 문장 저장 시트가 올라옴 (UI 5차 "문장 저장시 바텀 시트").
-    // TODO(서버 연동): 문장 저장 API(아카이브 '문장')로 교체 — 지금은 화면 상태만.
+    // 저장 시 서버(아카이브 '문장', POST /archives/phrases)에도 저장 — conversationId가 있을 때만.
+    // (서버 피드백 미연동/stub이면 conversationId=null이라 화면 표시만. 데모 스위치면 serverCall이 건너뜀.)
     fun togglePhraseSave() {
+        val willSave = !_uiState.value.isPhraseSaved
         _uiState.update { state ->
             val nowSaved = !state.isPhraseSaved
             if (!nowSaved) {
@@ -101,6 +103,15 @@ class FeedbackDetailViewModel @Inject constructor(
                         savedDate = LocalDate.now().format(DateTimeFormatter.ofPattern("yyyy.MM.dd")),
                     ),
                 )
+            }
+        }
+        // 새로 저장하는 경우에만 서버 저장 시도(낙관적 UI는 위에서 이미 반영, 결과는 조용히 처리).
+        if (willSave) {
+            val state = _uiState.value
+            val cid = state.result?.conversationId
+            val content = state.currentPhrase()
+            if (!cid.isNullOrBlank() && content.isNotBlank()) {
+                viewModelScope.launch { missionRepository.savePhrase(cid, content) }
             }
         }
     }

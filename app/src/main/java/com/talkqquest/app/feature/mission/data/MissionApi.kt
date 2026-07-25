@@ -6,6 +6,9 @@ import com.talkqquest.app.feature.mission.data.model.ConversationCreateResponse
 import com.talkqquest.app.feature.mission.data.model.ConversationMessageRequest
 import com.talkqquest.app.feature.mission.data.model.ConversationMessageResponse
 import com.talkqquest.app.feature.mission.data.model.ConversationSuggestionsResponse
+import com.talkqquest.app.feature.mission.data.model.CreatePhraseRequest
+import com.talkqquest.app.feature.mission.data.model.CreatePhraseResponse
+import com.talkqquest.app.feature.mission.data.model.FeedbackDetailResponse
 import com.talkqquest.app.feature.mission.data.model.MissionCompleteRequest
 import com.talkqquest.app.feature.mission.data.model.MissionCompleteResponse
 import com.talkqquest.app.feature.mission.data.model.MissionDetail
@@ -97,4 +100,18 @@ interface MissionApi {
     // XP/레벨 요약 — 완료 화면의 레벨업 연출용 (완료 전·후 조회).
     @GET("api/v1/xp/summary")
     suspend fun getXpSummary(): ApiResponse<XpSummary>
+
+    // AI 피드백 상세 조회 — dev 실계약(GET /feedback/{feedbackId}) 대조(2026-07-25).
+    // status=ready여야 점수/문구가 채워짐(pending이면 0/빈값). 응답에 미션 제목은 없음(topic만).
+    @GET("api/v1/feedback/{feedbackId}")
+    suspend fun getFeedbackDetail(
+        @Path("feedbackId") feedbackId: String,
+    ): ApiResponse<FeedbackDetailResponse>
+
+    // 문장(베스트 문장) 저장 — 아카이브 '문장'에 저장. dev 백엔드 실계약 대조(2026-07-25).
+    // 저장 항목 표시는 C(아카이브)지만, 저장 호출은 AI 피드백 상세(B)에서 발생.
+    @POST("api/v1/archives/phrases")
+    suspend fun savePhrase(
+        @Body body: CreatePhraseRequest,
+    ): ApiResponse<CreatePhraseResponse>
 }

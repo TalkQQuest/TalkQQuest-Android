@@ -6,8 +6,11 @@ import com.talkqquest.app.core.network.serverCall
 import com.talkqquest.app.feature.mission.data.model.ConversationCreateRequest
 import com.talkqquest.app.feature.mission.data.model.ConversationMessageRequest
 import com.talkqquest.app.feature.mission.data.model.ConversationPrep
+import com.talkqquest.app.feature.mission.data.model.CreatePhraseRequest
+import com.talkqquest.app.feature.mission.data.model.CreatePhraseResponse
 import com.talkqquest.app.feature.mission.data.model.FeedbackItemText
 import com.talkqquest.app.feature.mission.data.model.FeedbackResult
+import com.talkqquest.app.feature.mission.data.model.toFeedbackResult
 import com.talkqquest.app.feature.mission.data.model.MissionCompleteRequest
 import com.talkqquest.app.feature.mission.data.model.MissionCompleteResult
 import com.talkqquest.app.feature.mission.data.model.MissionDetail
@@ -232,6 +235,17 @@ class MissionRepository @Inject constructor(
     // TODO(서버 연동): 백엔드 피드백 API 미구현(이슈도 없음) — 이슈 생성 요청 상태.
     //     stub은 missionId를 feedbackId로 받음.
     suspend fun getFeedback(feedbackId: String): ApiResult<FeedbackResult> {
+        // 서버 우선(GET /feedback/{id}). ready + 지표 있음일 때만 실데이터 사용.
+        // pending/실패/미연동(데모 스위치)이면 아래 목업으로 폴백 — 화면 공백 방지.
+        val r = serverCall { missionApi.getFeedbackDetail(feedbackId) }
+        if (r is ApiResult.Success && r.data.status == "ready" && r.data.metrics.isNotEmpty()) {
+            return ApiResult.Success(
+                r.data.toFeedbackResult(
+                    missionTitle = r.data.topic.orEmpty(), // 서버 피드백엔 미션 제목 없음 → topic 사용
+                    nickname = "소다123",                    // TODO(프로필 연동): 유저 닉네임으로 교체
+                ),
+            )
+        }
         return ApiResult.Success(
             FeedbackResult(
                 // stub은 missionId를 feedbackId로 받으므로 그 미션의 제목을 그대로 씀.
@@ -257,6 +271,12 @@ class MissionRepository @Inject constructor(
             ),
         )
     }
+
+    // 베스트 문장 저장 → 아카이브 '문장' (POST /api/v1/archives/phrases).
+    // 데모(DemoConfig.USE_MOCK) 시 serverCall이 서버를 건너뛰어 Error 반환 → 화면은 낙관적 표시만 유지.
+    // conversationId는 피드백 응답에서 온 값(서버 미연동/stub이면 호출부에서 걸러 여기까지 안 옴).
+    suspend fun savePhrase(conversationId: String, content: String): ApiResult<CreatePhraseResponse> =
+        serverCall { missionApi.savePhrase(CreatePhraseRequest(conversationId = conversationId, content = content)) }
 }
 
 // 항목별 피드백 문구 stub — 서버(AI)가 줄 값. 서버 연동 시 통째 삭제.

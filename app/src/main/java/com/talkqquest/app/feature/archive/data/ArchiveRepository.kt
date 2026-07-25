@@ -32,7 +32,7 @@ import kotlin.math.roundToInt
 class ArchiveRepository @Inject constructor(
     private val archiveApi: ArchiveApi
 ) {
-    val isMockMode = false
+    val isMockMode = true
 
     private val stubMissions = mutableListOf(
         ArchiveMissionItem("1", "처음 보는 사람에게 짧게 인사하기", "짧은 대화", "쉬움", 2, 20, isCompleted = true, isSaved = true, completedDate = "2026.07.16"),

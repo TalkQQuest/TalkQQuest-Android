@@ -137,7 +137,8 @@ private fun ArchiveHomeScreen(
                     Column(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(horizontal = 16.dp)
+                            .padding(horizontal = 16.dp),
+                        verticalArrangement = Arrangement.spacedBy(2.dp) // 💡 디자이너 피드백: "보관함과 아래 '톡깨와~' 문장 사이 간격 0->2"
                     ) {
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
@@ -174,7 +175,7 @@ private fun ArchiveHomeScreen(
                     }
                 }
 
-                item { Spacer(modifier = Modifier.height(24.dp)) }
+                item { Spacer(modifier = Modifier.height(24.dp)) } // 💡 헤더(타이틀)와 카테고리 사이는 기존대로 24.dp 유지
 
                 // [카테고리 영역]
                 item {
@@ -212,7 +213,7 @@ private fun ArchiveHomeScreen(
                     }
                 }
 
-                item { Spacer(modifier = Modifier.height(24.dp)) }
+                item { Spacer(modifier = Modifier.height(36.dp)) } // 💡 디자이너 피드백: 카테고리 섹션과 최근 활동 섹션 사이 간격 36.dp로 변경
 
                 // [최근 활동 리스트 영역]
                 item {

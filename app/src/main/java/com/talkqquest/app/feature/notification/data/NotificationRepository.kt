@@ -33,7 +33,7 @@ class NotificationRepository @Inject constructor(
     private fun NotificationItemDto.toUiItem() = NotificationUiItem(
         id = id,
         category = title,
-        body = message,
+        body = body.orEmpty(), // dev 실계약 필드명 body (이전 추정 message에서 정정)
         timeText = relativeTime(createdAt),
         isUnread = !isRead,
     )

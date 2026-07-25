@@ -2,9 +2,8 @@ package com.talkqquest.app.feature.notification.data.model
 
 import kotlinx.serialization.Serializable
 
-// GET /api/v1/notifications 응답 data — { notifications: [...] } (2026-07-22 실측).
-// ⚠️항목 필드명은 추정: 서버가 아직 알림을 안 만들어 실응답이 항상 빈 배열이고
-//   스웨거에도 항목 스키마가 없음. 첫 실데이터가 오면 필드명 대조해 수정할 것.
+// GET /api/v1/notifications 응답 data — { notifications: [...] }.
+// dev 백엔드 실계약(notification.dto.ts NotificationItem) 대조 확정 — 2026-07-25.
 @Serializable
 data class NotificationsResponse(
     val notifications: List<NotificationItemDto> = emptyList(),
@@ -13,11 +12,21 @@ data class NotificationsResponse(
 @Serializable
 data class NotificationItemDto(
     val id: String = "",
-    val type: String = "",        // 추정: mission_reminder | report_ready | ... (알림 설정 필드명 기준)
-    val title: String = "",       // 추정: 카드 위 작은 줄 (예: "새로운 리포트가 도착했어요!")
-    val message: String = "",     // 추정: 카드 아래 굵은 줄 (예: "지금 바로 리포트를 보러갈 수 있어요.")
+    val type: String = "",         // mission_reminder | report_ready | ...
+    val title: String = "",        // 카드 위 작은 줄 (예: "새로운 리포트가 도착했어요!")
+    val body: String? = null,      // 카드 아래 줄 (nullable) — dev 실계약 필드명 (이전 추정 message에서 정정)
     val isRead: Boolean = false,
-    val createdAt: String = "",   // ISO (예: 2026-07-22T09:51:57.440Z)
+    val createdAt: String = "",    // ISO (예: 2026-07-22T09:51:57.440Z)
+)
+
+// GET/PATCH /api/v1/notifications/settings — dev NotificationSettingsResponseDto.
+// ※ 알림 설정 화면이 아직 디자인에 없어 UI 미연결. API 계약만 코드에 확보.
+@Serializable
+data class NotificationSettings(
+    val missionReminder: Boolean = false,
+    val communityApproved: Boolean = false,
+    val reportReady: Boolean = false,
+    val marketing: Boolean = false,
 )
 
 // 화면용 모델 — 알림 카드 1장 (디자인: 위 작은 회색 줄 + 아래 굵은 줄 + 시간 + 안읽음 점).

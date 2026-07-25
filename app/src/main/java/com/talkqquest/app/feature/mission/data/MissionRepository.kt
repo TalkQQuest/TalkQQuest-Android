@@ -2,12 +2,16 @@ package com.talkqquest.app.feature.mission.data
 
 import com.talkqquest.app.core.datastore.UserXpStore
 import com.talkqquest.app.core.network.ApiResult
-import com.talkqquest.app.core.network.safeApiCall
+import com.talkqquest.app.core.network.serverCall
 import com.talkqquest.app.feature.mission.data.model.ConversationCreateRequest
 import com.talkqquest.app.feature.mission.data.model.ConversationMessageRequest
 import com.talkqquest.app.feature.mission.data.model.ConversationPrep
+import com.talkqquest.app.feature.mission.data.model.CreateFeedbackRequest
+import com.talkqquest.app.feature.mission.data.model.CreatePhraseRequest
+import com.talkqquest.app.feature.mission.data.model.CreatePhraseResponse
 import com.talkqquest.app.feature.mission.data.model.FeedbackItemText
 import com.talkqquest.app.feature.mission.data.model.FeedbackResult
+import com.talkqquest.app.feature.mission.data.model.toFeedbackResult
 import com.talkqquest.app.feature.mission.data.model.MissionCompleteRequest
 import com.talkqquest.app.feature.mission.data.model.MissionCompleteResult
 import com.talkqquest.app.feature.mission.data.model.MissionDetail
@@ -17,6 +21,7 @@ import javax.inject.Singleton
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 // 미션 Repository. ViewModel과 API 사이 계층 (홈 패턴과 동일).
@@ -52,7 +57,7 @@ class MissionRepository @Inject constructor(
         val now = !current
         savedOverrides[missionId] = now
         ioScope.launch {
-            val r = safeApiCall {
+            val r = serverCall {
                 if (now) missionApi.saveMission(missionId) else missionApi.unsaveMission(missionId)
             }
             if (r is ApiResult.Success) serverSaved[missionId] = r.data.isSaved
@@ -70,7 +75,7 @@ class MissionRepository @Inject constructor(
     // 미션 목록 — 실서버 GET /missions (2026-07-22 실측: data.missions[] + pageInfo).
     // 서버 실패(오프라인 등) 시 stub 폴백 — 데모가 안 죽게.
     suspend fun getMissions(): ApiResult<List<MissionListItem>> =
-        when (val r = safeApiCall { missionApi.getMissions() }) {
+        when (val r = serverCall { missionApi.getMissions() }) {
             is ApiResult.Success -> {
                 r.data.missions.forEach { serverSaved[it.id] = it.isSaved }
                 ApiResult.Success(r.data.missions.map { it.applySaved() })
@@ -81,7 +86,7 @@ class MissionRepository @Inject constructor(
     // 미션 상세 — 실서버 GET /missions/{id} (실측: description·preparationTip·caution 포함).
     // benefits(효과 문구)는 서버 응답에 없어 기본 문구로 채움. 실패 시 stub 폴백.
     suspend fun getMissionDetail(missionId: String): ApiResult<MissionDetail> {
-        when (val r = safeApiCall { missionApi.getMissionDetail(missionId) }) {
+        when (val r = serverCall { missionApi.getMissionDetail(missionId) }) {
             is ApiResult.Success -> {
                 serverSaved[r.data.id] = r.data.isSaved
                 return ApiResult.Success(
@@ -114,7 +119,7 @@ class MissionRepository @Inject constructor(
     // ★실측(2026-07-22): 전 미션 items가 빈 배열(서버 시드 없음) → 비어 있으면 stub 폴백.
     //   서버가 문장을 채우면 자동으로 실데이터가 뜨는 구조. refreshIndex는 stub 순환 전용.
     suspend fun getConversationPrep(missionId: String, refreshIndex: Int = 0): ApiResult<ConversationPrep> {
-        val r = safeApiCall { missionApi.getMissionPrep(missionId) }
+        val r = serverCall { missionApi.getMissionPrep(missionId) }
         if (r is ApiResult.Success && r.data.items.isNotEmpty()) {
             val prep = r.data.toConversationPrep()
             if (prep.topics.isNotEmpty() || prep.openers.isNotEmpty()) return ApiResult.Success(prep)
@@ -130,7 +135,7 @@ class MissionRepository @Inject constructor(
     // 세션 생성 실패(오프라인 등) 시에도 인트로는 그대로 진행 — 이후 응답이 stub으로 폴백됨.
     suspend fun getConversationIntro(missionId: String): ApiResult<List<String>> {
         activeConversationId = null
-        val r = safeApiCall {
+        val r = serverCall {
             missionApi.createConversation(ConversationCreateRequest(missionId = missionId, mode = "text"))
         }
         if (r is ApiResult.Success) activeConversationId = r.data.conversationId
@@ -143,7 +148,7 @@ class MissionRepository @Inject constructor(
     suspend fun sendUserMessage(text: String, turnIndex: Int): ApiResult<String> {
         val cid = activeConversationId
         if (cid != null) {
-            val r = safeApiCall {
+            val r = serverCall {
                 missionApi.sendConversationMessage(cid, ConversationMessageRequest(role = "user", content = text))
             }
             if (r is ApiResult.Success) {
@@ -158,7 +163,7 @@ class MissionRepository @Inject constructor(
     suspend fun getRecommendedReplies(turnIndex: Int): ApiResult<List<String>> {
         val cid = activeConversationId
         if (cid != null) {
-            val r = safeApiCall { missionApi.getConversationSuggestions(cid) }
+            val r = serverCall { missionApi.getConversationSuggestions(cid) }
             if (r is ApiResult.Success && r.data.suggestions.isNotEmpty()) {
                 return ApiResult.Success(r.data.suggestions)
             }
@@ -174,8 +179,8 @@ class MissionRepository @Inject constructor(
         statusOverrides[missionId] = "완료" // 목록·저장 목록의 상태 필터에 바로 반영
         val cid = activeConversationId
         if (cid != null) {
-            val before = safeApiCall { missionApi.getXpSummary() }
-            val done = safeApiCall {
+            val before = serverCall { missionApi.getXpSummary() }
+            val done = serverCall {
                 missionApi.completeMission(
                     missionId,
                     MissionCompleteRequest(
@@ -186,8 +191,11 @@ class MissionRepository @Inject constructor(
                 )
             }
             if (done is ApiResult.Success) {
+                // 피드백 생성(POST /feedback) — cid가 지워지기 전에 트리거. 실패해도 완료는 진행(feedbackId=null).
+                val feedbackId = (serverCall { missionApi.createFeedback(CreateFeedbackRequest(conversationId = cid)) }
+                    as? ApiResult.Success)?.data?.feedbackId
                 activeConversationId = null // complete가 대화 종료를 겸함(실측: 이후 finish 불가)
-                val after = safeApiCall { missionApi.getXpSummary() }
+                val after = serverCall { missionApi.getXpSummary() }
                 val beforeLevel = (before as? ApiResult.Success)?.data?.level ?: userXpStore.level
                 val beforeXp = (before as? ApiResult.Success)?.data?.currentXp ?: userXpStore.currentXp
                 val afterLevel = (after as? ApiResult.Success)?.data?.level ?: beforeLevel
@@ -205,6 +213,7 @@ class MissionRepository @Inject constructor(
                         xpBefore = beforeXp,
                         xpAfter = afterXp,
                         nextLevelXp = nextXp,
+                        feedbackId = feedbackId,
                     ),
                 )
             }
@@ -232,13 +241,30 @@ class MissionRepository @Inject constructor(
     // TODO(서버 연동): 백엔드 피드백 API 미구현(이슈도 없음) — 이슈 생성 요청 상태.
     //     stub은 missionId를 feedbackId로 받음.
     suspend fun getFeedback(feedbackId: String): ApiResult<FeedbackResult> {
+        // 서버 우선(GET /feedback/{id}). 피드백 생성이 비동기(pending)라 ready까지 폴링(최대 6회·1.5s).
+        // 데모 스위치/네트워크 오류·실패·타임아웃이면 아래 목업으로 폴백 — 화면 공백 방지.
+        for (attempt in 0 until 6) {
+            val r = serverCall { missionApi.getFeedbackDetail(feedbackId) }
+            if (r !is ApiResult.Success) break // 데모/네트워크 오류 → 목업 폴백
+            val d = r.data
+            if (d.status == "ready" && d.metrics.isNotEmpty()) {
+                return ApiResult.Success(
+                    d.toFeedbackResult(
+                        missionTitle = d.topic.orEmpty(), // 서버 피드백엔 미션 제목 없음 → topic 사용
+                        nickname = "소다123",               // TODO(프로필 연동): 유저 닉네임으로 교체
+                    ),
+                )
+            }
+            if (d.status != "pending") break // failed 등 → 목업 폴백
+            if (attempt < 5) delay(1500) // 생성 중 → 잠시 후 재시도
+        }
         return ApiResult.Success(
             FeedbackResult(
                 // stub은 missionId를 feedbackId로 받으므로 그 미션의 제목을 그대로 씀.
                 // (서버 연동 시엔 피드백 응답에 담겨 오는 미션 제목으로 교체)
                 missionTitle = stubMissions.firstOrNull { it.id == feedbackId }?.title
                     ?: stubMissions.first().title,
-                nickname = "다민", // TODO(서버 연동): 유저 프로필 닉네임으로 교체
+                nickname = "소다123", // TODO(서버 연동): 유저 프로필 닉네임으로 교체
                 kindnessScore = 92,
                 initiativeScore = 88,
                 empathyScore = 85,
@@ -257,6 +283,12 @@ class MissionRepository @Inject constructor(
             ),
         )
     }
+
+    // 베스트 문장 저장 → 아카이브 '문장' (POST /api/v1/archives/phrases).
+    // 데모(DemoConfig.USE_MOCK) 시 serverCall이 서버를 건너뛰어 Error 반환 → 화면은 낙관적 표시만 유지.
+    // conversationId는 피드백 응답에서 온 값(서버 미연동/stub이면 호출부에서 걸러 여기까지 안 옴).
+    suspend fun savePhrase(conversationId: String, content: String): ApiResult<CreatePhraseResponse> =
+        serverCall { missionApi.savePhrase(CreatePhraseRequest(conversationId = conversationId, content = content)) }
 }
 
 // 항목별 피드백 문구 stub — 서버(AI)가 줄 값. 서버 연동 시 통째 삭제.

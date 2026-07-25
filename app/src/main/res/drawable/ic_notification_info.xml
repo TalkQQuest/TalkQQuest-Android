@@ -1,0 +1,26 @@
+<!-- 알림창 배너 information-circle 아이콘 (18x18, 색은 tint).
+     ⚠️근사: CSS export에 벡터 path가 없어(크기·색만 있음) 표준 info-circle 형태로 자체 작도.
+     피그마 원본 SVG를 받으면 교체할 것. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="18dp"
+    android:height="18dp"
+    android:viewportWidth="18"
+    android:viewportHeight="18">
+    <!-- 바깥 원 (stroke 1.5) -->
+    <path
+        android:fillColor="#00000000"
+        android:strokeColor="#000000"
+        android:strokeWidth="1.5"
+        android:pathData="M9 1.75 A7.25 7.25 0 1 1 8.999 1.75 Z" />
+    <!-- i 점 -->
+    <path
+        android:fillColor="#000000"
+        android:pathData="M9 4.9 A1 1 0 1 1 8.999 4.9 Z" />
+    <!-- i 몸통 -->
+    <path
+        android:fillColor="#000000"
+        android:strokeColor="#000000"
+        android:strokeWidth="1.5"
+        android:strokeLineCap="round"
+        android:pathData="M9 8.4 L9 12.6" />
+</vector>

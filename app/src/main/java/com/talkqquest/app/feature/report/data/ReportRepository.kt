@@ -1,24 +1,43 @@
 package com.talkqquest.app.feature.report.data
 
 import com.talkqquest.app.core.network.ApiResult
+import com.talkqquest.app.core.network.serverCall
 import com.talkqquest.app.feature.report.data.model.CategoryRank
 import com.talkqquest.app.feature.report.data.model.GrowthReport
 import com.talkqquest.app.feature.report.data.model.HighlightItem
 import com.talkqquest.app.feature.report.data.model.MetricChange
+import com.talkqquest.app.feature.report.data.model.SaveReportRequest
+import com.talkqquest.app.feature.report.data.model.SaveReportResponse
 import com.talkqquest.app.feature.report.data.model.WeeklyCompareReport
+import com.talkqquest.app.feature.report.data.model.toGrowthReport
+import com.talkqquest.app.feature.report.data.model.toWeeklyCompareReport
 import javax.inject.Inject
 import javax.inject.Singleton
 
 // 리포트 Repository (미션/홈 패턴과 동일한 계층).
+// 서버 우선(GET /reports/*) + 실패/데모(USE_MOCK)면 목업 폴백 (미션·알림과 동일 구조).
 @Singleton
-class ReportRepository @Inject constructor() {
+class ReportRepository @Inject constructor(
+    private val reportApi: ReportApi,
+) {
 
-    // TODO(서버 연동 전 임시): GET /api/v1/reports/monthly 붙으면 stub 지우고
-    //     return safeApiCall { reportApi.getMonthlyReport(month) } 로 교체.
-    suspend fun getGrowthReport(): ApiResult<GrowthReport> = ApiResult.Success(stubGrowth)
+    // 성장 리포트 — GET /api/v1/reports/growth (dev 실계약 대조 2026-07-25).
+    suspend fun getGrowthReport(): ApiResult<GrowthReport> {
+        val r = serverCall { reportApi.getGrowth() }
+        return if (r is ApiResult.Success) ApiResult.Success(r.data.toGrowthReport())
+        else ApiResult.Success(stubGrowth)
+    }
 
-    // TODO(서버 연동 전 임시): GET /api/v1/reports/weekly-compare 붙으면 위와 동일하게 교체.
-    suspend fun getWeeklyCompare(): ApiResult<WeeklyCompareReport> = ApiResult.Success(stubWeekly)
+    // 주간 비교 리포트 — GET /api/v1/reports/weekly-compare.
+    suspend fun getWeeklyCompare(): ApiResult<WeeklyCompareReport> {
+        val r = serverCall { reportApi.getWeeklyCompare() }
+        return if (r is ApiResult.Success) ApiResult.Success(r.data.toWeeklyCompareReport())
+        else ApiResult.Success(stubWeekly)
+    }
+
+    // 리포트 저장 (리포트 저장 시트) — POST /api/v1/reports. type: "growth" | "weekly_compare".
+    suspend fun saveReport(type: String): ApiResult<SaveReportResponse> =
+        serverCall { reportApi.saveReport(SaveReportRequest(type = type)) }
 
     // stub 값 = UI CSS 목업 그대로 (사용자 결정)
     private val stubGrowth = GrowthReport(

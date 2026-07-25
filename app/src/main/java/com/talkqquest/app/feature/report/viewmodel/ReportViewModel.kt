@@ -60,8 +60,10 @@ class ReportViewModel @Inject constructor(
     // "리포트 저장하기": 리포트를 저장하고 시트를 올림.
     // 카드 제목은 탭(성장/주간)과 무관하게 이 리포트가 나온 미션명 — 보관함에선 "어떤 미션의
     // 리포트인지"로 구분하고, 리포트 종류는 메타줄의 "리포트 열람"이 아니라 진입해서 확인한다(CSS).
-    // TODO(서버 연동): POST /api/v1/reports/{reportId}/archive (E102) 호출로 교체.
-    fun saveReport() {
+    // 저장 시 서버(POST /reports, type=growth|weekly_compare)에도 저장. 낙관적 UI는 그대로 유지,
+    // 데모/실패면 serverCall이 건너뛰어 화면 표시만(보관함 실반영은 실서버 모드에서).
+    fun saveReport(reportType: String) {
+        viewModelScope.launch { reportRepository.saveReport(reportType) }
         _uiState.update { state ->
             // 시트에 떠 있던 이전 저장분은 보관함 맨 앞으로 (연속 저장 데모가 말이 되게)
             val kept = state.saveSheetReport?.takeIf { it.isSaved }

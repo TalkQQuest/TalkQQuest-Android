@@ -398,7 +398,7 @@ private fun BestPhraseSection(
     }
 }
 
-// "다민님을 위한 다른 미션 보러가기" 버튼 (CSS Frame 427321060): 362x56 r16.
+// "소다123님을 위한 다른 미션 보러가기" 버튼 (CSS Frame 427321060): 362x56 r16.
 // 배경 = 메인 컬러 통일(디자이너 확정). 다트 이미지(66x70, 1.56도 기울임)가
 // 버튼 위로 삐져나오는 디자인이라 배경만 clip하고 내용은 안 자름.
 @Composable
@@ -454,7 +454,7 @@ private fun OtherMissionsButton(nickname: String, onClick: () -> Unit) {
 // ── Preview ──
 private val previewResult = FeedbackResult(
     missionTitle = "처음 보는 사람에게 짧게 인사하기",
-    nickname = "다민",
+    nickname = "소다123",
     kindnessScore = 92,
     initiativeScore = 88,
     empathyScore = 85,

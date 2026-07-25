@@ -98,8 +98,8 @@ import androidx.compose.ui.text.font.FontWeight
 // 공통: 뒤로가기(0,48) + 탭바(66,69 260x33) / 성장: 레벨 비교 → 성장 추이 카드 → 카테고리 TOP → 완료 미션
 // 주간: 헤더 배너(로봇) → 핵심 지표 변화 2x2 → 개선 하이라이트 3행
 // CSS와 다른 점(합의됨):
-//  - CSS의 하단 "다음" 버튼(362x52)은 행선지가 없어 제거 (홈 탭·뒤로가기로 충분 — 사용자 결정)
-//  - 하단 네비 있음 + 홈 탭 보라 유지(홈 플로우 하위 화면 관례) — MainScreen/TqBottomBar에 등록
+//  - CSS의 하단 "다음" 버튼(362x52)은 행선지가 없어 제거 (뒤로가기로 충분 — 사용자 결정)
+//  - 하단 네비 없음 (최신 시안 반영: 리포트는 뒤로가기 있는 단독 화면) — MainScreen 하단바 노출 목록에서 제외
 //  - 탭 전환 모션(세그먼트 슬라이드 + 콘텐츠 크로스페이드)은 디자인에 없어 자작
 //  - 레벨 사이 화살표는 CSS상 이중 셰브런 아이콘 2개지만 export본(연보라오른쪽화살표.svg)이
 //    셰브런 2개 한 묶음이라 export본 그대로 1개 배치 (디자이너 확인거리)
@@ -132,7 +132,7 @@ private fun ReportScreen(
     uiState: ReportUiState,
     onBack: () -> Unit = {},
     onRetry: () -> Unit = {},
-    onSaveReport: () -> Unit = {},
+    onSaveReport: (String) -> Unit = {}, // 인자 = 리포트 종류 growth | weekly_compare
     onToggleReportSave: (String) -> Unit = {},
     onDismissSaveSheet: () -> Unit = {},
     onSheetTopChange: (Float?) -> Unit = {},
@@ -184,7 +184,7 @@ private fun ReportContent(
     growth: GrowthReport,
     weekly: WeeklyCompareReport,
     onBack: () -> Unit,
-    onSaveClick: () -> Unit = {}, // 리포트 저장 → 시트 등장 (카드 제목은 이 리포트가 나온 미션명)
+    onSaveClick: (String) -> Unit = {}, // 인자 = 리포트 종류 growth | weekly_compare
     initialTab: Int = 0, // 기본 = 성장 리포트 (CSS 프레임·탭바 순서)
 ) {
     var tab by rememberSaveable { mutableIntStateOf(initialTab) }
@@ -233,7 +233,7 @@ private fun ReportContent(
             // "리포트 저장하기" 유지, 사용자 결정). TODO(서버 연동): 저장 API(E102) 호출로 교체.
             TqButton(
                 text = "리포트 저장하기",
-                onClick = onSaveClick,
+                onClick = { onSaveClick(if (tab == 0) "growth" else "weekly_compare") },
                 modifier = Modifier
                     .align(Alignment.TopCenter)
                     .padding(top = 558.dp)

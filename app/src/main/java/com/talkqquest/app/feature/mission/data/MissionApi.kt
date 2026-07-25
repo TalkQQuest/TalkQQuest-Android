@@ -1,6 +1,7 @@
 package com.talkqquest.app.feature.mission.data
 
 import com.talkqquest.app.core.network.ApiResponse
+import com.talkqquest.app.core.network.ArchiveListResponse
 import com.talkqquest.app.feature.mission.data.model.ConversationCreateRequest
 import com.talkqquest.app.feature.mission.data.model.ConversationCreateResponse
 import com.talkqquest.app.feature.mission.data.model.ConversationMessageRequest
@@ -123,4 +124,13 @@ interface MissionApi {
     suspend fun savePhrase(
         @Body body: CreatePhraseRequest,
     ): ApiResponse<CreatePhraseResponse>
+
+    // 저장한 문장 목록 — GET /api/v1/archives?type=phrase. 문장 저장 시트의 "최근 저장한 문장"에 표시.
+    // 저장(위 savePhrase)과 같은 도메인이라 여기 함께 둔다.
+    @GET("api/v1/archives")
+    suspend fun getSavedPhrases(
+        @Query("type") type: String = "phrase",
+        @Query("sort") sort: String = "latest",
+        @Query("size") size: Int = 5,
+    ): ApiResponse<ArchiveListResponse>
 }

@@ -2,12 +2,14 @@ package com.talkqquest.app.feature.report.data
 
 import com.talkqquest.app.core.network.ApiResult
 import com.talkqquest.app.core.network.serverCall
+import com.talkqquest.app.core.util.toSavedDate
 import com.talkqquest.app.feature.report.data.model.CategoryRank
 import com.talkqquest.app.feature.report.data.model.GrowthReport
 import com.talkqquest.app.feature.report.data.model.HighlightItem
 import com.talkqquest.app.feature.report.data.model.MetricChange
 import com.talkqquest.app.feature.report.data.model.SaveReportRequest
 import com.talkqquest.app.feature.report.data.model.SaveReportResponse
+import com.talkqquest.app.feature.report.data.model.SavedReportItem
 import com.talkqquest.app.feature.report.data.model.WeeklyCompareReport
 import com.talkqquest.app.feature.report.data.model.toGrowthReport
 import com.talkqquest.app.feature.report.data.model.toWeeklyCompareReport
@@ -38,6 +40,24 @@ class ReportRepository @Inject constructor(
     // 리포트 저장 (리포트 저장 시트) — POST /api/v1/reports. type: "growth" | "weekly_compare".
     suspend fun saveReport(type: String): ApiResult<SaveReportResponse> =
         serverCall { reportApi.saveReport(SaveReportRequest(type = type)) }
+
+    // 저장한 리포트 목록 (리포트 저장 시트의 "최근 저장한 리포트") — GET /archives?type=report.
+    // 실패/데모(USE_MOCK)면 Error를 그대로 돌려줘 호출부가 기존 목업을 유지하게 한다.
+    suspend fun getSavedReports(size: Int = 5): ApiResult<List<SavedReportItem>> =
+        when (val r = serverCall { reportApi.getSavedReports(size = size) }) {
+            is ApiResult.Success -> ApiResult.Success(
+                r.data.items.map {
+                    SavedReportItem(
+                        id = it.referenceId ?: it.id,
+                        title = it.title,
+                        savedDate = it.createdAt.toSavedDate(),
+                        isSaved = it.isBookmarked,
+                    )
+                },
+            )
+            is ApiResult.Error -> r
+            is ApiResult.Exception -> r
+        }
 
     // stub 값 = UI CSS 목업 그대로 (사용자 결정)
     private val stubGrowth = GrowthReport(

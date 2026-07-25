@@ -1,7 +1,7 @@
 package com.talkqquest.app.feature.report.data.model
 
 // 저장(북마크)된 리포트 한 건 — 리포트 저장 시트·보관함(리포트) 카드에 표시.
-// TODO(서버 연동): 리포트 아카이브 API(E102) 응답 모델로 교체. 서버 명세 확정 전 데모용.
+// GET /archives?type=report 응답(ArchiveListItem)을 Repository에서 이 모델로 변환해 채운다.
 data class SavedReportItem(
     val id: String, // 서버 리포트 id = UUID 문자열
 

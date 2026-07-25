@@ -29,7 +29,8 @@ data class ReportUiState(
     val missionTitle: String = "",
     // 리포트 저장 시트: "리포트 저장하기"를 누르면 saveSheetReport가 생기며 시트가 올라옴
     val saveSheetReport: SavedReportItem? = null,
-    // 보관함(저장된 리포트) — TODO(서버 연동): 리포트 아카이브 API(E102)로 교체. 지금은 CSS 샘플 목업
+    // 보관함(저장된 리포트) — 진입 시 GET /archives?type=report로 교체됨.
+    // 아래 값은 조회 실패/데모(USE_MOCK) 시 쓰이는 폴백 샘플.
     val savedReports: List<SavedReportItem> = listOf(
         SavedReportItem(id = "1", title = "최근 본 영화 이야기 하기", savedDate = "2026.08.20"),
         SavedReportItem(id = "2", title = "학교 생활 꿀팁 나누기", savedDate = "2026.08.19"),
@@ -125,6 +126,16 @@ class ReportViewModel @Inject constructor(
                     it.copy(isLoading = false, errorMessage = message ?: "리포트를 불러오지 못했어요.")
                 }
             }
+            loadSavedReports()
+        }
+    }
+
+    // 시트에 뿌릴 "최근 저장한 리포트"를 서버에서 채운다(GET /archives?type=report).
+    // 실패/데모(USE_MOCK)면 상태를 건드리지 않아 기본값(목업 샘플)이 그대로 남는다 — 데모가 안 죽게.
+    private suspend fun loadSavedReports() {
+        val result = reportRepository.getSavedReports()
+        if (result is ApiResult.Success) {
+            _uiState.update { it.copy(savedReports = result.data) }
         }
     }
 }

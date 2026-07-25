@@ -6,6 +6,7 @@ import com.talkqquest.app.core.network.serverCall
 import com.talkqquest.app.feature.home.data.model.HomeSummary
 import com.talkqquest.app.feature.home.data.model.TodayMission
 import com.talkqquest.app.feature.mission.data.MissionApi
+import com.talkqquest.app.feature.notification.data.NotificationApi
 import javax.inject.Inject
 
 // 홈 Repository (예시). ViewModel과 API 사이를 잇는 계층.
@@ -15,6 +16,7 @@ import javax.inject.Inject
 class HomeRepository @Inject constructor(
     private val homeApi: HomeApi,
     private val missionApi: MissionApi, // 오늘의 미션 카드 — 미션 API 재사용 (둘 다 B파트)
+    private val notificationApi: NotificationApi, // 벨 빨간 점 — 안읽음 알림 여부 (둘 다 B파트)
     private val userXpStore: UserXpStore, // 미션 완료 XP가 홈에도 보이게 공유 (서버 완료 후 sync됨)
 ) {
     // 홈 요약 — GET /api/v1/home/summary (dev 배포 기준 구현됨): 닉네임·레벨·XP·카운트·오늘의 질문을 한 번에.
@@ -33,6 +35,8 @@ class HomeRepository @Inject constructor(
                         nextLevelXp = userXpStore.nextLevelXp,
                         todayMission = d.todayMission ?: fetchTodayMission() ?: stubHomeSummary.todayMission,
                         questionOfDay = d.questionOfDay ?: stubHomeSummary.questionOfDay,
+                        // /home/summary엔 알림 필드가 없어(실측) 알림 API로 별도 계산
+                        hasNewNotification = hasUnreadNotification(),
                     ),
                 )
             }
@@ -45,6 +49,12 @@ class HomeRepository @Inject constructor(
             )
         }
     }
+
+    // 벨 빨간 점 — 안읽음 알림이 하나라도 있는지 (GET /notifications?isRead=false&limit=1).
+    // 실패/데모(USE_MOCK)면 false = 기본 벨 (알림창의 목업 폴백과 무관하게 점은 실데이터만 신뢰).
+    private suspend fun hasUnreadNotification(): Boolean =
+        (serverCall { notificationApi.getNotifications(isRead = false, limit = 1) } as? ApiResult.Success)
+            ?.data?.notifications?.isNotEmpty() == true
 
     // 오늘의 추천 미션 — 실서버 GET /missions/today.
     // ★실측(2026-07-22): 온보딩 미완료 계정은 MISSION_PROFILE_NOT_FOUND 에러

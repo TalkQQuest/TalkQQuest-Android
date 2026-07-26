@@ -18,6 +18,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.requiredSize
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
@@ -48,6 +49,11 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.withStyle
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.sp
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.text.style.LineBreak
@@ -63,6 +69,10 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.talkqquest.app.R
 import com.talkqquest.app.core.designsystem.Error
 import com.talkqquest.app.core.designsystem.FitDesign
+import androidx.compose.foundation.border
+import androidx.compose.ui.draw.rotate
+import androidx.compose.ui.layout.ContentScale
+import com.talkqquest.app.core.designsystem.Gray100
 import com.talkqquest.app.core.designsystem.Gray1000
 import com.talkqquest.app.core.designsystem.Gray200
 import com.talkqquest.app.core.designsystem.Gray300
@@ -211,6 +221,8 @@ private fun HomeContent(
         }
         Spacer(Modifier.height(16.dp))
         OtherMissionsCard(onClick = onOtherMissionsClick)
+        Spacer(Modifier.height(16.dp)) // 다른 미션 보기 → 배지 카드 (카드 간격 16, 스크린샷 균일)
+        BadgeCollectionCard()
         // 떠 있는 하단 네비 가림 방지 여백. 네비 알약은 축소 대상 밖(MainScreen)이라
         // 화면이 축소돼도 알약 크기는 그대로 → 여백은 축소분만큼 되돌려(/scale) 원래 픽셀을 확보.
         Spacer(Modifier.height(100.dp / LocalDesignScale.current))
@@ -323,8 +335,8 @@ private fun HomeHeader(
         Column(
             modifier = Modifier
                 .align(Alignment.TopStart)
-                .padding(top = 39.dp),
-            verticalArrangement = Arrangement.spacedBy(2.dp),
+                .padding(start = 6.dp, top = 39.dp), // 인삿말 프레임 왼쪽 패딩 6 (UI 10차)
+            verticalArrangement = Arrangement.spacedBy(0.dp), // 인사 두 줄 간격 0 (UI 10차)
         ) {
             Row(
                 verticalAlignment = Alignment.CenterVertically,
@@ -340,7 +352,7 @@ private fun HomeHeader(
                     modifier = Modifier.size(width = 24.27.dp, height = 31.67.dp),
                 )
             }
-            Text(text = "오늘도 좋은 대화를 시작해볼까요?", style = TqType.BodyS.figma(), color = Gray600)
+            Text(text = "오늘도 좋은 대화를 시작해볼까요?", style = TqType.BodyM.figma(), color = Gray600) // 13→14 regular (UI 10차)
         }
     }
 }
@@ -373,8 +385,8 @@ private fun HomeLevelCard(level: Int, currentXp: Int, nextLevelXp: Int) {
         modifier = Modifier.fillMaxWidth(),
         contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp),
     ) {
-        Text(text = "대화 진행 레벨", style = TqType.LabelL.figma(), color = Gray600)
-        Spacer(Modifier.height(5.dp)) // CSS Frame428 gap 5
+        Text(text = "대화 진행 레벨", style = TqType.LabelL.figma().copy(fontSize = 16.sp), color = Gray700) // 16 medium / Gray700 (UI 10차)
+        Spacer(Modifier.height(4.dp)) // CSS Frame428 gap 5→4 (UI 10차)
         Row(
             // CSS Frame 333 높이 22 (Lv 배지 틀 22, 텍스트 18) — 없으면 행이 18로 줄어 카드가 4px 낮아짐
             modifier = Modifier.fillMaxWidth().height(22.dp),
@@ -394,7 +406,14 @@ private fun HomeLevelCard(level: Int, currentXp: Int, nextLevelXp: Int) {
                     },
                 )
             }
-            Text(text = "${xpShown.value.toInt()} / ${nextLevelXp}XP", style = TqType.LabelM.figma(), color = Gray400)
+            Text(
+                text = buildAnnotatedString {
+                    // 획득 XP 숫자만 Gray500, 나머지(" / nXP")는 Gray400 (UI 10차)
+                    withStyle(SpanStyle(color = Gray500)) { append("${xpShown.value.toInt()}") }
+                    withStyle(SpanStyle(color = Gray400)) { append(" / ${nextLevelXp}XP") }
+                },
+                style = TqType.LabelM.figma(),
+            )
         }
         Spacer(Modifier.height(4.dp))
         // 진행바: 트랙 Primary100 + 채움 Primary600 (currentXp/nextLevelXp 비율), 높이 10, radius 8
@@ -520,6 +539,43 @@ private fun InfoDivider() {
     )
 }
 
+// 나의 배지 컬렉션 카드 (UI 10차 신규). 흰 카드 radius 12 / 높이 64 (CSS: box-shadow 없음).
+// 좌: 제목 16 medium + 부제 13 regular / 우: 44×44 테두리 박스(Gray100) 안 배지 38×38(회전은 PNG에 구워짐).
+@Composable
+private fun BadgeCollectionCard() {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(64.dp)
+            .clip(RoundedCornerShape(12.dp))
+            .background(White)
+            .padding(start = 20.dp, end = 16.dp), // CSS padding 10 16 10 20 (상하 10은 center로 흡수)
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Column {
+            Text(text = "나의 배지 컬렉션", style = TqType.BodyL.figma().copy(fontWeight = FontWeight.Medium), color = Gray700)
+            Text(text = "대화 경험이 쌓일 수록 새로운 배지를 획득해요!", style = TqType.BodyS.figma(), color = Gray600)
+        }
+        Box(
+            modifier = Modifier
+                .size(44.dp)
+                .border(1.dp, Gray100, RoundedCornerShape(8.dp)),
+            contentAlignment = Alignment.Center,
+        ) {
+            Image(
+                painter = painterResource(R.drawable.img_home_badge),
+                contentDescription = null,
+                // PNG(134px@3x) = 38×38 레이어를 11° 회전까지 포함해 export한 바운딩박스 = 134/3 ≈ 44.7dp.
+                // 그대로 44.7dp로 렌더해야 Figma와 1:1 (38dp로 넣으면 0.85배 축소됨). 회전·크기 보정 금지.
+                // 위치는 실렌더 기준 박스 중앙 (CSS left0/top0을 offset로 옮기면 좌상으로 치우침 — 금지).
+                contentScale = ContentScale.Fit,
+                modifier = Modifier.requiredSize((134f / 3).dp),
+            )
+        }
+    }
+}
+
 // 다른 미션 보기 카드. 흰 카드 radius 12 / 높이 50 (CSS 소프트 그림자).
 @Composable
 private fun OtherMissionsCard(onClick: () -> Unit) {
@@ -550,7 +606,7 @@ private fun OtherMissionsCard(onClick: () -> Unit) {
                 contentDescription = null,
                 modifier = Modifier.size(26.dp),
             )
-            Text(text = "다른 미션 보기", style = TqType.BodyL.figma(), color = Gray600)
+            Text(text = "다른 미션 보기", style = TqType.BodyL.figma().copy(fontWeight = FontWeight.Medium), color = Gray700) // 16 regular→medium / Gray700 (UI 10차)
         }
         Icon(
             // CSS: 뒤로가기와 같은 chevron(12x6·stroke2, 글리프 8x14)의 좌우반전 — 머티리얼 대신 실측 벡터
@@ -564,7 +620,7 @@ private fun OtherMissionsCard(onClick: () -> Unit) {
 
 // ── Preview: 서버 없이 상태별로 확인. 배경 = 실제 앱 배경 Gray50(#F8FAFC). ──
 private val previewSummary = HomeSummary(
-    nickname = "다민",
+    nickname = "소다123",
     level = 2,
     currentXp = 30,
     nextLevelXp = 100,

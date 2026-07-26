@@ -26,17 +26,20 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 
 import com.talkqquest.app.R
@@ -68,15 +71,26 @@ fun ArchiveListScreen(
     initialTabIndex: Int = 0,
     viewModel: ArchiveViewModel = hiltViewModel(),
     onBackClick: () -> Unit = {},
-    onMissionClick: (String) -> Unit = {}, // 💡 Long -> String 으로 변경
+    onMissionClick: (String) -> Unit = {},
     onConversationClick: (String) -> Unit = {},
     onSentenceClick: (String) -> Unit = {},
     onReportClick: (String) -> Unit = {}
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val lifecycleOwner = LocalLifecycleOwner.current
 
-    LaunchedEffect(Unit) {
-        viewModel.refreshData()
+    // 💡 화면이 보여질 때(ON_RESUME)마다 최신 데이터를 갱신합니다.
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) {
+                viewModel.refreshData()
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+
+        onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
+        }
     }
 
     ArchiveListScreenContent(
@@ -100,8 +114,8 @@ private fun ArchiveListScreenContent(
     uiState: ArchiveUiState,
     onBackClick: () -> Unit,
     onFilterSelect: (String) -> Unit,
-    onMissionClick: (String) -> Unit, // 💡 Long -> String 으로 변경
-    onToggleMissionSave: (String) -> Unit, // 💡 Long -> String 으로 변경
+    onMissionClick: (String) -> Unit,
+    onToggleMissionSave: (String) -> Unit,
     onConversationClick: (String) -> Unit,
     onSentenceClick: (String) -> Unit,
     onToggleSentenceSave: (String) -> Unit,
@@ -328,7 +342,6 @@ private fun FilterChip(text: String, isSelected: Boolean, onClick: () -> Unit) {
 private val previewUiState = ArchiveUiState(
     selectedFilter = "전체",
     missions = listOf(
-        // 💡 미리보기 데이터의 ID도 Int(1, 2)에서 String("1", "2")로 변경
         ArchiveMissionItem("1", "처음 보는 사람에게 짧게 인사하기", "짧은 대화", "쉬움", 2, 20, isCompleted = true, isSaved = true),
         ArchiveMissionItem("2", "최근 본 영화 이야기하기", "짧은 대화", "쉬움", 5, 20, isCompleted = false, isSaved = true)
     ),

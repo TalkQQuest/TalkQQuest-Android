@@ -5,6 +5,7 @@ import com.talkqquest.app.core.datastore.TokenDataStore
 import com.talkqquest.app.core.network.ApiResponse
 import com.talkqquest.app.core.network.ApiResult
 import com.talkqquest.app.core.network.safeApiCall
+import kotlinx.coroutines.flow.first
 import retrofit2.HttpException
 import java.io.IOException
 import javax.inject.Inject
@@ -61,6 +62,49 @@ class AuthRepository @Inject constructor(
         return result
     }
 
+
+    
+    suspend fun logout(): ApiResult<Unit> {
+        val refreshToken = tokenDataStore.refreshToken.first()
+        if (refreshToken.isNullOrBlank()) {
+            tokenDataStore.clear()
+            return ApiResult.Success(Unit)
+        }
+
+        return try {
+            val response = authApi.logout(LogoutRequest(refreshToken = refreshToken))
+            if (response.success) {
+                tokenDataStore.clear()
+                ApiResult.Success(Unit)
+            } else {
+                ApiResult.Error(code = null, message = response.message ?: "로그아웃에 실패했어요.")
+            }
+        } catch (e: HttpException) {
+            ApiResult.Error(code = e.code(), message = logoutErrorMessage(e.code()))
+        } catch (e: IOException) {
+            ApiResult.Exception(e)
+        } catch (e: Exception) {
+            ApiResult.Exception(e)
+        }
+    }
+
+    
+    suspend fun withdraw(): ApiResult<Unit> =
+        try {
+            val response = authApi.withdraw()
+            if (response.success) {
+                tokenDataStore.clear()
+                ApiResult.Success(Unit)
+            } else {
+                ApiResult.Error(code = null, message = response.message ?: "회원 탈퇴에 실패했어요.")
+            }
+        } catch (e: HttpException) {
+            ApiResult.Error(code = e.code(), message = withdrawErrorMessage(e.code()))
+        } catch (e: IOException) {
+            ApiResult.Exception(e)
+        } catch (e: Exception) {
+            ApiResult.Exception(e)
+        }
 
     suspend fun saveOnboardingStep(request: OnboardingStepSaveRequest): ApiResult<OnboardingStepSaveData> {
         val result = safeApiCall { authApi.saveOnboardingStep(request) }
@@ -131,6 +175,18 @@ class AuthRepository @Inject constructor(
             ApiResult.Exception(e)
         }
 
+    private fun withdrawErrorMessage(code: Int): String = when (code) {
+        401 -> "로그인이 필요합니다."
+        500 -> "서버 내부 오류가 발생했습니다. 잠시 후 다시 시도해주세요."
+        else -> "회원 탈퇴에 실패했어요."
+    }
+
+    private fun logoutErrorMessage(code: Int): String = when (code) {
+        401 -> "로그인이 필요합니다."
+        500 -> "서버 내부 오류가 발생했습니다. 잠시 후 다시 시도해주세요."
+        else -> "로그아웃에 실패했어요."
+    }
+
     private fun emailLoginErrorMessage(code: Int): String = when (code) {
         403 -> "\uD0C8\uD1F4\uD55C \uACC4\uC815\uC785\uB2C8\uB2E4."
         500 -> "\uC11C\uBC84 \uB0B4\uBD80 \uC624\uB958\uAC00 \uBC1C\uC0DD\uD588\uC2B5\uB2C8\uB2E4. \uC7A0\uC2DC \uD6C4 \uB2E4\uC2DC \uC2DC\uB3C4\uD574\uC8FC\uC138\uC694."
@@ -174,4 +230,9 @@ class AuthRepository @Inject constructor(
         osVersion = Build.VERSION.RELEASE.orEmpty(),
     )
 }
+
+
+
+
+
 

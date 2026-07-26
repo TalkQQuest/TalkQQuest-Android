@@ -10,6 +10,8 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import java.time.ZonedDateTime
+import java.time.format.DateTimeFormatter
 import javax.inject.Inject
 
 enum class ActivityType {
@@ -50,6 +52,15 @@ class ArchiveHomeViewModel @Inject constructor(
         refreshData()
     }
 
+    private fun formatIsoDate(isoString: String): String {
+        return try {
+            val zdt = ZonedDateTime.parse(isoString)
+            zdt.format(DateTimeFormatter.ofPattern("yyyy.MM.dd"))
+        } catch (e: Exception) {
+            isoString.substringBefore("T").replace("-", ".")
+        }
+    }
+
     fun refreshData() {
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true, errorMessage = null) }
@@ -57,33 +68,38 @@ class ArchiveHomeViewModel @Inject constructor(
             when (val result = archiveRepository.getArchiveSummary()) {
                 is ApiResult.Success -> {
                     val summary = result.data
-                    val allMissions = archiveRepository.getArchiveMissions()
 
-                    val uiActivities = summary.recentActivities.map { dto ->
-                        val isMission = dto.type.uppercase() == "MISSION"
-                        val matchedMission = if (isMission) {
-                            // 💡 이미 String 타입이므로 toString() 제거
-                            allMissions.find { it.id == dto.id }
-                        } else null
+                    // 서버에서 받은 전체 목록 중 최대 4개까지만 추출하여 UI에 반영
+                    val uiActivities = summary.recentItems.take(4).map { dto ->
+
+                        val statusText = when (dto.type.lowercase()) {
+                            "conversation" -> "대화 완료"
+                            "phrase", "sentence" -> "문장 저장"
+                            "report" -> "리포트 열람"
+                            else -> ""
+                        }
+
+                        // 💡 수정됨: 껍데기 ID가 아닌 진짜 원본 ID(`referenceId`)를 매핑하여 터짐 방지!
+                        val actualId = dto.referenceId ?: dto.id
 
                         RecentActivity(
-                            id = dto.id,
+                            id = actualId,
                             type = mapToActivityType(dto.type),
                             title = dto.title,
-                            status = dto.status,
-                            date = dto.date,
-                            difficulty = matchedMission?.difficulty,
-                            category = matchedMission?.category,
-                            estimatedMinutes = matchedMission?.duration,
-                            rewardXp = matchedMission?.xp
+                            status = statusText,
+                            date = formatIsoDate(dto.createdAt),
+                            difficulty = dto.difficulty,
+                            category = dto.category,
+                            estimatedMinutes = dto.estimatedMinutes,
+                            rewardXp = dto.rewardXp
                         )
                     }
 
                     _uiState.update {
                         it.copy(
-                            completedMissionCount = summary.completedMissionCount,
+                            completedMissionCount = summary.missionRecordCount,
                             conversationCount = summary.conversationCount,
-                            savedSentenceCount = summary.savedSentenceCount,
+                            savedSentenceCount = summary.phraseCount,
                             reportCount = summary.reportCount,
                             recentActivities = uiActivities,
                             isLoading = false
@@ -105,11 +121,11 @@ class ArchiveHomeViewModel @Inject constructor(
     }
 
     private fun mapToActivityType(typeString: String): ActivityType {
-        return when (typeString.uppercase()) {
-            "MISSION" -> ActivityType.MISSION
-            "CONVERSATION" -> ActivityType.CONVERSATION
-            "SENTENCE" -> ActivityType.SENTENCE
-            "REPORT" -> ActivityType.REPORT
+        return when (typeString.lowercase()) {
+            "mission" -> ActivityType.MISSION
+            "conversation" -> ActivityType.CONVERSATION
+            "phrase", "sentence" -> ActivityType.SENTENCE
+            "report" -> ActivityType.REPORT
             else -> ActivityType.MISSION
         }
     }

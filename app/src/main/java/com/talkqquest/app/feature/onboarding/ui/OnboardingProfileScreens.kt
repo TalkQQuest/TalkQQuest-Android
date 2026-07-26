@@ -113,7 +113,7 @@ fun OnboardingPersonalityScreen(
         Box(
             modifier = Modifier
                 .offset(x = 23.dp, y = 157.dp)
-                .size(width = 168.dp, height = 120.dp),
+                .size(width = 230.dp, height = 120.dp),
         ) {
             Text(
                 text = "\uD3C9\uC18C \uB300\uD654\uD560 \uB54C\n${displayNickname}\uB2D8\uC758 \uBAA8\uC2B5\uC740",
@@ -854,5 +854,9 @@ private fun OnboardingGoalPreview() {
         OnboardingGoalScreen()
     }
 }
+
+
+
+
 
 

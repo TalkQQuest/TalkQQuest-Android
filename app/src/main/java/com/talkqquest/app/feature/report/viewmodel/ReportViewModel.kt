@@ -29,7 +29,8 @@ data class ReportUiState(
     val missionTitle: String = "",
     // 리포트 저장 시트: "리포트 저장하기"를 누르면 saveSheetReport가 생기며 시트가 올라옴
     val saveSheetReport: SavedReportItem? = null,
-    // 보관함(저장된 리포트) — TODO(서버 연동): 리포트 아카이브 API(E102)로 교체. 지금은 CSS 샘플 목업
+    // 보관함(저장된 리포트) — 진입 시 GET /archives?type=report로 교체됨.
+    // 아래 값은 조회 실패/데모(USE_MOCK) 시 쓰이는 폴백 샘플.
     val savedReports: List<SavedReportItem> = listOf(
         SavedReportItem(id = "1", title = "최근 본 영화 이야기 하기", savedDate = "2026.08.20"),
         SavedReportItem(id = "2", title = "학교 생활 꿀팁 나누기", savedDate = "2026.08.19"),
@@ -53,6 +54,21 @@ class ReportViewModel @Inject constructor(
     // 목업 저장 id: 초기 샘플(1,2)과 안 겹치게 100부터 (서버 오면 서버 id 사용)
     private var nextSaveId = 100L
 
+    // 카드 id → 저장할 때 쓴 리포트 종류. 북마크를 껐다 다시 켤 때 같은 종류로 재저장하려고 기억한다.
+    private val savedReportTypes = mutableMapOf<String, String>()
+    private var lastSavedType = "growth"
+
+    // 서버 저장 후 받은 실제 id로 카드 id를 갈아끼움 (해제 시 DELETE 대상이 되게).
+    private fun swapReportId(oldId: String, newId: String) {
+        _uiState.update { s ->
+            s.copy(
+                saveSheetReport = s.saveSheetReport?.takeIf { it.id == oldId }?.copy(id = newId)
+                    ?: s.saveSheetReport,
+                savedReports = s.savedReports.map { if (it.id == oldId) it.copy(id = newId) else it },
+            )
+        }
+    }
+
     init {
         loadReports()
     }
@@ -60,17 +76,29 @@ class ReportViewModel @Inject constructor(
     // "리포트 저장하기": 리포트를 저장하고 시트를 올림.
     // 카드 제목은 탭(성장/주간)과 무관하게 이 리포트가 나온 미션명 — 보관함에선 "어떤 미션의
     // 리포트인지"로 구분하고, 리포트 종류는 메타줄의 "리포트 열람"이 아니라 진입해서 확인한다(CSS).
-    // TODO(서버 연동): POST /api/v1/reports/{reportId}/archive (E102) 호출로 교체.
-    fun saveReport() {
+    // 저장 시 서버(POST /reports, type=growth|weekly_compare)에도 저장. 낙관적 UI는 그대로 유지,
+    // 데모/실패면 serverCall이 건너뛰어 화면 표시만(보관함 실반영은 실서버 모드에서).
+    fun saveReport(reportType: String) {
+        val localId = (nextSaveId++).toString()
+        lastSavedType = reportType
+        savedReportTypes[localId] = reportType
+        // 저장 응답의 서버 reportId를 받아 카드 id를 교체 — 이후 북마크 해제(DELETE)가 가능해짐.
+        viewModelScope.launch {
+            val saved = reportRepository.saveReport(reportType)
+            val serverId = (saved as? ApiResult.Success)?.data?.reportId?.takeIf { it.isNotBlank() } ?: return@launch
+            savedReportTypes[serverId] = reportType
+            swapReportId(localId, serverId)
+        }
         _uiState.update { state ->
             // 시트에 떠 있던 이전 저장분은 보관함 맨 앞으로 (연속 저장 데모가 말이 되게)
             val kept = state.saveSheetReport?.takeIf { it.isSaved }
             state.copy(
                 saveSheetReport = SavedReportItem(
-                    id = (nextSaveId++).toString(),
+                    id = localId, // 서버 저장 성공 시 위 코루틴이 서버 reportId로 교체
                     // 미션명이 없는 경로(아카이브 등 직접 진입)로 들어온 경우만 화면 이름으로 대체
                     title = state.missionTitle.ifBlank { "성장 리포트" },
                     savedDate = LocalDate.now().format(DateTimeFormatter.ofPattern("yyyy.MM.dd")),
+                    type = reportType,
                 ),
                 savedReports = (kept?.let { listOf(it) } ?: emptyList()) + state.savedReports,
             )
@@ -80,6 +108,26 @@ class ReportViewModel @Inject constructor(
     // 시트 안 북마크 토글: 시트에 뜬 리포트를 해제하면 시트가 내려가고(화면 쪽 연출),
     // 보관함 카드는 해제 연출 후에도 목록에 남겨둬 다시 누르면 복구됨.
     fun toggleReportSave(id: String) {
+        // 서버 상태를 화면과 항상 같게 맞춘다: 끄면 삭제(DELETE), 다시 켜면 재저장(POST) 후 새 id로 교체.
+        // (한쪽만 반영하면 화면엔 저장됐는데 보관함엔 없는 상태가 됨)
+        val wasSaved = _uiState.value.saveSheetReport?.takeIf { it.id == id }?.isSaved
+            ?: _uiState.value.savedReports.firstOrNull { it.id == id }?.isSaved
+        if (wasSaved == true) {
+            viewModelScope.launch { reportRepository.deleteReport(id) }
+        } else if (wasSaved == false) {
+            // 재저장 종류: 카드가 들고 있는 서버 type(GET /reports 응답) 우선, 없으면 이 세션에서
+            // 저장했던 종류 — 둘 다 없을 때만 마지막 저장 종류로 폴백.
+            val type = _uiState.value.savedReports.firstOrNull { it.id == id }?.type?.takeIf { it.isNotBlank() }
+                ?: savedReportTypes[id]
+                ?: lastSavedType
+            viewModelScope.launch {
+                val saved = reportRepository.saveReport(type)
+                val serverId = (saved as? ApiResult.Success)?.data?.reportId?.takeIf { it.isNotBlank() }
+                    ?: return@launch
+                savedReportTypes[serverId] = type
+                swapReportId(id, serverId)
+            }
+        }
         _uiState.update { state ->
             val sheet = state.saveSheetReport
             if (sheet != null && sheet.id == id) {
@@ -123,6 +171,16 @@ class ReportViewModel @Inject constructor(
                     it.copy(isLoading = false, errorMessage = message ?: "리포트를 불러오지 못했어요.")
                 }
             }
+            loadSavedReports()
+        }
+    }
+
+    // 시트에 뿌릴 "최근 저장한 리포트"를 서버에서 채운다(GET /archives?type=report).
+    // 실패/데모(USE_MOCK)면 상태를 건드리지 않아 기본값(목업 샘플)이 그대로 남는다 — 데모가 안 죽게.
+    private suspend fun loadSavedReports() {
+        val result = reportRepository.getSavedReports()
+        if (result is ApiResult.Success) {
+            _uiState.update { it.copy(savedReports = result.data) }
         }
     }
 }

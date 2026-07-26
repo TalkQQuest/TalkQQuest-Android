@@ -99,7 +99,7 @@ fun NavGraph(
     val slideSpec = tween<IntOffset>(300)
     NavHost(
         navController = navController,
-        startDestination = Screen.HOME,
+        startDestination = Screen.SPLASH,
         modifier = modifier,
         enterTransition = {
             if (isTabSwitch()) fadeIn(tween(300))

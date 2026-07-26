@@ -109,7 +109,6 @@ class ArchiveRepository @Inject constructor(
         }
     }
 
-    // 💡 수정됨: 아카이브에서는 리포트 재저장이 불가하므로 삭제만 허용
     suspend fun toggleReportBookmark(id: String, isCurrentlySaved: Boolean): ApiResult<Any> {
         if (isMockMode) {
             val index = stubReports.indexOfFirst { it.id == id }
@@ -121,7 +120,6 @@ class ArchiveRepository @Inject constructor(
                     val response = archiveApi.deleteReportArchive(id)
                     if (response.data != null) ApiResult.Success(response.data) else ApiResult.Error(null, response.message ?: "해제 실패")
                 } else {
-                    // 리포트 재저장은 새 리포트 발급을 의미하므로 아카이브에서는 차단
                     ApiResult.Error(null, "리포트는 해제만 가능합니다.")
                 }
             } catch (e: Exception) {
@@ -165,13 +163,12 @@ class ArchiveRepository @Inject constructor(
                 val response = archiveApi.getReportDetail(id)
                 val data = response.data
                 if (data != null) {
-                    // 💡 ReportModels.kt 의 매핑 방식과 동일하게 적용[cite: 26]
                     val growth = GrowthReport(
                         prevLevel = data.growth.levelBefore,
                         currentLevel = data.growth.levelAfter,
-                        growthPercent = data.growth.trendChangeRate.roundToInt(), // 소수점 반올림 처리
+                        growthPercent = data.growth.trendChangeRate.roundToInt(),
                         weekLabels = data.growth.weeklyTrend.map { it.week },
-                        categoryRanks = data.growth.topCategories.map { CategoryRank(name = it.category, count = it.count) }, // name 매핑
+                        categoryRanks = data.growth.topCategories.map { CategoryRank(name = it.category, count = it.count) },
                         completedMissions = data.growth.missionProgress.completed,
                         totalMissions = data.growth.missionProgress.total
                     )
@@ -179,13 +176,13 @@ class ArchiveRepository @Inject constructor(
                     val weekly = data.weeklyCompare?.let { wc ->
                         WeeklyCompareReport(
                             metrics = wc.metricChanges.map {
-                                MetricChange(name = it.label.ifBlank { it.key }, lastWeek = it.from, thisWeek = it.to) // name, lastWeek, thisWeek 매핑
+                                MetricChange(name = it.label.ifBlank { it.key }, lastWeek = it.from, thisWeek = it.to)
                             },
                             highlights = wc.highlights.map {
-                                HighlightItem(emphasis = "", rest = it) // 통문장 처리
+                                HighlightItem(emphasis = "", rest = it)
                             }
                         )
-                    } ?: WeeklyCompareReport(metrics = emptyList(), highlights = emptyList()) // 💡 비교 데이터 없을 때(신규/데이터 부족 리포트) 빈 값 처리
+                    } ?: WeeklyCompareReport(metrics = emptyList(), highlights = emptyList())
 
                     ApiResult.Success(Triple(data.period, growth, weekly))
                 } else {
@@ -223,10 +220,14 @@ class ArchiveRepository @Inject constructor(
     suspend fun getArchiveSummary(): ApiResult<ArchiveSummary> {
         if (isMockMode) {
             val allMockActivities = mutableListOf<ArchiveRecentActivity>()
+
             stubMissions.filter { it.isCompleted && it.isSaved }.forEach { allMockActivities.add(ArchiveRecentActivity(id = it.id, type = "mission", title = it.title, isBookmarked = it.isSaved, missionStatus = "completed", category = it.category, difficulty = it.difficulty, estimatedMinutes = it.duration, rewardXp = it.xp, createdAt = it.completedDate)) }
-            stubConversations.forEach { allMockActivities.add(ArchiveRecentActivity(it.id, "conversation", it.title, isBookmarked = false, createdAt = it.date)) }
-            stubSentences.filter { it.isSaved }.forEach { allMockActivities.add(ArchiveRecentActivity(it.id, "phrase", it.title, isBookmarked = true, createdAt = it.date)) }
-            stubReports.filter { it.isSaved }.forEach { allMockActivities.add(ArchiveRecentActivity(it.id, "report", it.title, isBookmarked = true, createdAt = it.date)) }
+
+            // 💡 이름표(Named Argument)를 명시하여 에러 해결
+            stubConversations.forEach { allMockActivities.add(ArchiveRecentActivity(id = it.id, type = "conversation", title = it.title, isBookmarked = false, createdAt = it.date)) }
+            stubSentences.filter { it.isSaved }.forEach { allMockActivities.add(ArchiveRecentActivity(id = it.id, type = "phrase", title = it.title, isBookmarked = true, createdAt = it.date)) }
+            stubReports.filter { it.isSaved }.forEach { allMockActivities.add(ArchiveRecentActivity(id = it.id, type = "report", title = it.title, isBookmarked = true, createdAt = it.date)) }
+
             val summary = ArchiveSummary(totalCount = allMockActivities.size, missionRecordCount = stubMissions.count { it.isSaved }, conversationCount = stubConversations.size, phraseCount = stubSentences.count { it.isSaved }, reportCount = stubReports.count { it.isSaved }, recentItems = allMockActivities.sortedByDescending { it.createdAt }.take(4))
             return ApiResult.Success(summary)
         } else {

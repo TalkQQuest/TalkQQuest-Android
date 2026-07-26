@@ -1,4 +1,4 @@
-﻿package com.talkqquest.app.navigation
+package com.talkqquest.app.navigation
 
 /**
  * 화면 route 상수 정의.
@@ -33,6 +33,12 @@ object Screen {
     const val PROFILE_BADGES = "profile_badges"                   // ProfileBadgesScreen
     const val PROFILE_RECENT_MISSION = "profile_recent_mission"     // ProfileRecentMissionScreen
     const val PROFILE_SETTINGS = "profile_settings"                 // ProfileSettingsScreen
+    const val PROFILE_INFO = "profile_info"                         // ProfileInfoScreen
+    const val PROFILE_NICKNAME_EDIT = "profile_nickname_edit"     // ProfileNicknameEditScreen
+    const val PROFILE_PASSWORD_CHANGE = "profile_password_change" // ProfilePasswordChangeScreen
+    const val PROFILE_NEW_PASSWORD = "profile_new_password"       // ProfileNewPasswordScreen
+    const val PROFILE_CONNECTED_ACCOUNT = "profile_connected_account" // ProfileConnectedAccountScreen
+    const val PROFILE_CONCERN = "profile_concern"                 // ProfileConcernScreen
     const val PROFILE_TERMS = "profile_terms"                       // ProfileTermsScreen
     const val PROFILE_SERVICE_TERMS = "profile_service_terms"       // ProfileTermsDetailScreen
     const val PROFILE_PRIVACY_POLICY = "profile_privacy_policy"     // ProfileTermsDetailScreen
@@ -63,5 +69,9 @@ object Screen {
     // missionTitle = ??由ы룷?멸? ?섏삩 誘몄뀡 ?쒕ぉ (????쒗듃 移대뱶 ?쒕ぉ???곗엫). ?놁쑝硫?鍮?媛?
     const val REPORT = "report?missionTitle={missionTitle}"
 }
+
+
+
+
 
 

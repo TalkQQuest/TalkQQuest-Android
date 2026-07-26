@@ -10,4 +10,5 @@ data class MissionCompleteResult(
     val xpBefore: Int,           // 획득 전 보유 XP (levelBefore 기준) — 바 카운트업 시작값
     val xpAfter: Int,            // 획득 후 보유 XP (levelAfter 기준)
     val nextLevelXp: Int,        // 다음 레벨 필요 XP (100)
+    val feedbackId: String? = null, // 완료 시 생성된 피드백 id (POST /feedback). null이면 미생성 → 이동 시 missionId 폴백
 )

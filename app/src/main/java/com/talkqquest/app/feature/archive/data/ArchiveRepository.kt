@@ -32,7 +32,7 @@ import kotlin.math.roundToInt
 class ArchiveRepository @Inject constructor(
     private val archiveApi: ArchiveApi
 ) {
-    val isMockMode = true
+    val isMockMode = false
 
     private val stubMissions = mutableListOf(
         ArchiveMissionItem("1", "처음 보는 사람에게 짧게 인사하기", "짧은 대화", "쉬움", 2, 20, isCompleted = true, isSaved = true, completedDate = "2026.07.16"),
@@ -149,6 +149,7 @@ class ArchiveRepository @Inject constructor(
         }
     }
 
+    // 💡 수정됨: 반환 타입을 non-nullable로 확정하고, 서버가 null을 주면 빈 껍데기를 채워넣어 앱 크래시(백지화)를 원천 차단합니다.
     suspend fun getArchiveReportDetail(id: String): ApiResult<Triple<String, GrowthReport, WeeklyCompareReport>> {
         if (isMockMode) {
             val title = stubReports.find { it.id == id }?.title ?: "성장 리포트"
@@ -163,16 +164,25 @@ class ArchiveRepository @Inject constructor(
                 val response = archiveApi.getReportDetail(id)
                 val data = response.data
                 if (data != null) {
-                    val growth = GrowthReport(
-                        prevLevel = data.growth.levelBefore,
-                        currentLevel = data.growth.levelAfter,
-                        growthPercent = data.growth.trendChangeRate.roundToInt(),
-                        weekLabels = data.growth.weeklyTrend.map { it.week },
-                        categoryRanks = data.growth.topCategories.map { CategoryRank(name = it.category, count = it.count) },
-                        completedMissions = data.growth.missionProgress.completed,
-                        totalMissions = data.growth.missionProgress.total
+
+                    // 1. 성장 리포트 파싱 (서버에서 안 주면 빈 객체로 대체하여 화면 뻗음 방지)
+                    val growth = data.growth?.let { g ->
+                        GrowthReport(
+                            prevLevel = g.levelBefore,
+                            currentLevel = g.levelAfter,
+                            growthPercent = g.trendChangeRate.roundToInt(),
+                            weekLabels = g.weeklyTrend.map { it.week },
+                            categoryRanks = g.topCategories.map { CategoryRank(name = it.category, count = it.count) },
+                            completedMissions = g.missionProgress.completed,
+                            totalMissions = g.missionProgress.total
+                        )
+                    } ?: GrowthReport(
+                        prevLevel = 0, currentLevel = 0, growthPercent = 0,
+                        weekLabels = emptyList(), categoryRanks = emptyList(),
+                        completedMissions = 0, totalMissions = 0
                     )
 
+                    // 2. 주간 비교 리포트 파싱 (서버에서 안 주면 빈 객체로 대체하여 화면 뻗음 방지)
                     val weekly = data.weeklyCompare?.let { wc ->
                         WeeklyCompareReport(
                             metrics = wc.metricChanges.map {
@@ -182,9 +192,12 @@ class ArchiveRepository @Inject constructor(
                                 HighlightItem(emphasis = "", rest = it)
                             }
                         )
-                    } ?: WeeklyCompareReport(metrics = emptyList(), highlights = emptyList())
+                    } ?: WeeklyCompareReport(
+                        metrics = emptyList(),
+                        highlights = emptyList()
+                    )
 
-                    ApiResult.Success(Triple(data.period, growth, weekly))
+                    ApiResult.Success(Triple(data.title, growth, weekly))
                 } else {
                     ApiResult.Error(null, response.message ?: "오류가 발생했습니다.")
                 }
@@ -223,7 +236,6 @@ class ArchiveRepository @Inject constructor(
 
             stubMissions.filter { it.isCompleted && it.isSaved }.forEach { allMockActivities.add(ArchiveRecentActivity(id = it.id, type = "mission", title = it.title, isBookmarked = it.isSaved, missionStatus = "completed", category = it.category, difficulty = it.difficulty, estimatedMinutes = it.duration, rewardXp = it.xp, createdAt = it.completedDate)) }
 
-            // 💡 이름표(Named Argument)를 명시하여 에러 해결
             stubConversations.forEach { allMockActivities.add(ArchiveRecentActivity(id = it.id, type = "conversation", title = it.title, isBookmarked = false, createdAt = it.date)) }
             stubSentences.filter { it.isSaved }.forEach { allMockActivities.add(ArchiveRecentActivity(id = it.id, type = "phrase", title = it.title, isBookmarked = true, createdAt = it.date)) }
             stubReports.filter { it.isSaved }.forEach { allMockActivities.add(ArchiveRecentActivity(id = it.id, type = "report", title = it.title, isBookmarked = true, createdAt = it.date)) }

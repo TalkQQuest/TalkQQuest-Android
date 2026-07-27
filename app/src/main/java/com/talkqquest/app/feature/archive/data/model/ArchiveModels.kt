@@ -49,7 +49,8 @@ data class ArchiveReportDetailResponse(
     val id: String,
     val type: String,
     val period: String,
-    val growth: ReportGrowthDto,
+    val title: String, // 💡 추가됨: 새로 추가된 미션(리포트) 대표 제목
+    val growth: ReportGrowthDto? = null, // 💡 수정됨: weekly_compare 타입일 때 null이 올 수 있으므로 안전하게 처리
     val weeklyCompare: ReportWeeklyCompareDto? = null,
     val createdAt: String
 )
@@ -172,7 +173,7 @@ data class ArchiveSummary(
 @Serializable
 data class ArchiveRecentActivity(
     val id: String,
-    val referenceId: String? = null, // 💡 추가됨: 상세 진입을 위한 진짜 원본 ID
+    val referenceId: String? = null,
     val type: String,
     val title: String,
     val isBookmarked: Boolean = false,

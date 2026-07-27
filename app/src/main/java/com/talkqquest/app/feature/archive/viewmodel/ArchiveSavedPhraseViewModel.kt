@@ -11,6 +11,8 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import java.time.ZonedDateTime
+import java.time.format.DateTimeFormatter
 import javax.inject.Inject
 
 data class ArchiveSavedPhraseUiState(
@@ -40,6 +42,16 @@ class ArchiveSavedPhraseViewModel @Inject constructor(
         }
     }
 
+    // 💡 추가됨: 서버의 ISO 시간 포맷을 yyyy.MM.dd로 변환하는 함수
+    private fun formatIsoDate(isoString: String): String {
+        return try {
+            val zdt = ZonedDateTime.parse(isoString)
+            zdt.format(DateTimeFormatter.ofPattern("yyyy.MM.dd"))
+        } catch (e: Exception) {
+            isoString.substringBefore("T").replace("-", ".")
+        }
+    }
+
     private fun loadPhraseData(id: String) {
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true, errorMessage = null) }
@@ -55,7 +67,7 @@ class ArchiveSavedPhraseViewModel @Inject constructor(
                             type = ActivityType.CONVERSATION,
                             title = data.missionTitle,
                             status = "대화 완료",
-                            date = data.createdAt // fallback 날짜
+                            date = formatIsoDate(data.createdAt) // 💡 수정됨: 포맷팅 적용
                         )
                     } else null
 

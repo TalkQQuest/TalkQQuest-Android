@@ -1,5 +1,7 @@
 package com.talkqquest.app.feature.mission.ui
 
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
@@ -10,15 +12,20 @@ import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.res.painterResource
@@ -27,10 +34,13 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.input.pointer.pointerInput
@@ -143,8 +153,19 @@ private fun MissionListScreen(
                     },
                 ) {
                     Box(modifier = Modifier.fillMaxSize()) {
+                        val listState = rememberLazyListState()
+                        // 하단 페이드는 "아래 더 있어요" 힌트이므로, 끝까지 스크롤해 더 내릴 게 없으면
+                        // 사라져야 함(안 그러면 마지막 카드가 페이드에 영구히 가림). 툭 꺼지면 어색하니
+                        // 0.2초에 걸쳐 alpha를 부드럽게 전환.
+                        val showFade by remember { derivedStateOf { listState.canScrollForward } }
+                        val fadeAlpha by animateFloatAsState(
+                            targetValue = if (showFade) 1f else 0f,
+                            animationSpec = tween(200),
+                            label = "listBottomFade",
+                        )
                         MissionListContent(
                             uiState = uiState,
+                            listState = listState,
                             onBack = onBack,
                             onFilterSelect = onFilterSelect,
                             onToggleSave = onToggleSave,
@@ -160,6 +181,7 @@ private fun MissionListScreen(
                                 .padding(start = 16.dp, end = 17.dp, bottom = 114.dp)
                                 .fillMaxWidth()
                                 .height(68.dp)
+                                .alpha(fadeAlpha)
                                 .background(Brush.verticalGradient(listOf(Gray50.copy(alpha = 0f), Gray50))),
                         )
                     }
@@ -172,6 +194,7 @@ private fun MissionListScreen(
 @Composable
 private fun MissionListContent(
     uiState: MissionListUiState,
+    listState: LazyListState,
     onBack: () -> Unit,
     onFilterSelect: (String) -> Unit,
     onToggleSave: (String) -> Unit,
@@ -181,7 +204,12 @@ private fun MissionListContent(
     // 순서(왼→오, 위→아래)로 깔므로 인덱스 ±1 = 읽기 순서 이동 — 줄 오른쪽 끝이면 다음 줄 왼쪽으로 순환.
     // 가로 드래그만 감지해 세로 스크롤과 충돌 안 함.
     val currentFilter by rememberUpdatedState(uiState.selectedFilter)
+    // 목록 끝 여백 = 시스템 네비 인셋 + 떠 있는 하단 네비 묶음(알약 64 + 상하 12×2 = 88) + 카드 간격 14.
+    // → 마지막 카드가 네비바 위로 카드 간격(14dp)만큼 떠서 안 겹침 (MainScreen navTop 산식과 동일).
+    val bottomBarClearance = WindowInsets.navigationBars.asPaddingValues()
+        .calculateBottomPadding() + 88.dp + 14.dp
     LazyColumn(
+        state = listState,
         modifier = Modifier
             .fillMaxSize()
             .statusBarsPadding()
@@ -257,7 +285,7 @@ private fun MissionListContent(
             }
         }
 
-        item { Spacer(Modifier.height(100.dp)) } // 목록 끝 여백 — 떠 있는 하단 네비에 안 가리게 (홈과 동일)
+        item { Spacer(Modifier.height(bottomBarClearance)) } // 목록 끝 여백 (네비바 위로 카드 간격만큼)
     }
 }
 

@@ -204,10 +204,12 @@ private fun MissionListContent(
     // 순서(왼→오, 위→아래)로 깔므로 인덱스 ±1 = 읽기 순서 이동 — 줄 오른쪽 끝이면 다음 줄 왼쪽으로 순환.
     // 가로 드래그만 감지해 세로 스크롤과 충돌 안 함.
     val currentFilter by rememberUpdatedState(uiState.selectedFilter)
-    // 목록 끝 여백 = 시스템 네비 인셋 + 떠 있는 하단 네비 묶음(알약 64 + 상하 12×2 = 88) + 카드 간격 14.
-    // → 마지막 카드가 네비바 위로 카드 간격(14dp)만큼 떠서 안 겹침 (MainScreen navTop 산식과 동일).
+    // 목록 끝 여백. ⚠️ CSS(Frame 431)는 뷰포트 padding:0 + 스크롤 리스트라 "스크롤 끝 여백"을
+    // 정의하지 않음 = CSS 침묵 구간. 그래서 이 값은 전사값이 아니라 판단값이다.
+    // 하단 네비(알약 h64, 인셋+76)에 안 겹치게 확보 + "목록의 끝" 느낌으로 여유를 둔 것(사용자 결정).
+    // ※ 카드 간격(14)과 일치가 목적 아님. CSS가 이 여백을 명시하면 그 값으로 교체할 것.
     val bottomBarClearance = WindowInsets.navigationBars.asPaddingValues()
-        .calculateBottomPadding() + 88.dp + 14.dp
+        .calculateBottomPadding() + 76.dp + 14.dp
     LazyColumn(
         state = listState,
         modifier = Modifier

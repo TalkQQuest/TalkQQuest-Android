@@ -149,7 +149,6 @@ class ArchiveRepository @Inject constructor(
         }
     }
 
-    // 💡 수정됨: 반환 타입을 non-nullable로 확정하고, 서버가 null을 주면 빈 껍데기를 채워넣어 앱 크래시(백지화)를 원천 차단합니다.
     suspend fun getArchiveReportDetail(id: String): ApiResult<Triple<String, GrowthReport, WeeklyCompareReport>> {
         if (isMockMode) {
             val title = stubReports.find { it.id == id }?.title ?: "성장 리포트"
@@ -165,7 +164,7 @@ class ArchiveRepository @Inject constructor(
                 val data = response.data
                 if (data != null) {
 
-                    // 1. 성장 리포트 파싱 (서버에서 안 주면 빈 객체로 대체하여 화면 뻗음 방지)
+                    // 1. 성장 리포트 파싱 (서버 응답이 null이어도 빈 껍데기로 방어하여 화면 크래시 차단)
                     val growth = data.growth?.let { g ->
                         GrowthReport(
                             prevLevel = g.levelBefore,
@@ -182,7 +181,7 @@ class ArchiveRepository @Inject constructor(
                         completedMissions = 0, totalMissions = 0
                     )
 
-                    // 2. 주간 비교 리포트 파싱 (서버에서 안 주면 빈 객체로 대체하여 화면 뻗음 방지)
+                    // 2. 주간 비교 리포트 파싱 (서버 응답이 null이어도 빈 껍데기로 방어하여 화면 크래시 차단)
                     val weekly = data.weeklyCompare?.let { wc ->
                         WeeklyCompareReport(
                             metrics = wc.metricChanges.map {
@@ -197,7 +196,10 @@ class ArchiveRepository @Inject constructor(
                         highlights = emptyList()
                     )
 
-                    ApiResult.Success(Triple(data.title, growth, weekly))
+                    // 💡 title, period, weeklyComparePeriod 중 존재하는 값을 찾아 화면에 예쁘게 띄워줍니다.
+                    val displayTitle = data.title ?: data.period ?: data.weeklyComparePeriod ?: "톡깨 리포트"
+
+                    ApiResult.Success(Triple(displayTitle, growth, weekly))
                 } else {
                     ApiResult.Error(null, response.message ?: "오류가 발생했습니다.")
                 }

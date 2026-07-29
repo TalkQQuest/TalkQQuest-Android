@@ -47,10 +47,10 @@ data class ArchivePhraseDetailResponse(
 @Serializable
 data class ArchiveReportDetailResponse(
     val id: String,
-    val type: String,
-    val period: String,
-    val title: String, // 💡 추가됨: 새로 추가된 미션(리포트) 대표 제목
-    val growth: ReportGrowthDto? = null, // 💡 수정됨: weekly_compare 타입일 때 null이 올 수 있으므로 안전하게 처리
+    val period: String? = null, // 💡 성장 리포트용 기간
+    val weeklyComparePeriod: String? = null, // 💡 새로 추가됨: 주간 비교 리포트용 기간
+    val title: String? = null,
+    val growth: ReportGrowthDto? = null,
     val weeklyCompare: ReportWeeklyCompareDto? = null,
     val createdAt: String
 )

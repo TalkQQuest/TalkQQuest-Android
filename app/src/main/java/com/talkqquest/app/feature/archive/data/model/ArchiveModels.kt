@@ -47,10 +47,11 @@ data class ArchivePhraseDetailResponse(
 @Serializable
 data class ArchiveReportDetailResponse(
     val id: String,
-    val type: String,
-    val period: String,
-    val growth: ReportGrowthDto,
-    val weeklyCompare: ReportWeeklyCompareDto? = null, // 💡 수정됨: 비교 데이터가 없을 때 서버가 null을 내려줌
+    val period: String? = null, // 💡 성장 리포트용 기간
+    val weeklyComparePeriod: String? = null, // 💡 새로 추가됨: 주간 비교 리포트용 기간
+    val title: String? = null,
+    val growth: ReportGrowthDto? = null,
+    val weeklyCompare: ReportWeeklyCompareDto? = null,
     val createdAt: String
 )
 
@@ -59,7 +60,7 @@ data class ReportGrowthDto(
     val levelBefore: Int,
     val levelAfter: Int,
     val weeklyTrend: List<ReportWeeklyTrendDto>,
-    val trendChangeRate: Double, // 💡 ReportModels에 맞춰 Double로 변경
+    val trendChangeRate: Double,
     val topCategories: List<ReportTopCategoryDto>,
     val missionProgress: ReportMissionProgressDto
 )
@@ -86,7 +87,7 @@ data class ReportMissionProgressDto(
 data class ReportWeeklyCompareDto(
     val thisWeek: ReportWeeklyDataDto,
     val lastWeek: ReportWeeklyDataDto,
-    val xpChangeRate: Double, // 💡 ReportModels에 맞춰 Double로 변경[cite: 26]
+    val xpChangeRate: Double,
     val overallScoreChange: ReportScoreChangeDto,
     val metricChanges: List<ReportMetricChangeDto>,
     val highlights: List<String>
@@ -172,6 +173,7 @@ data class ArchiveSummary(
 @Serializable
 data class ArchiveRecentActivity(
     val id: String,
+    val referenceId: String? = null,
     val type: String,
     val title: String,
     val isBookmarked: Boolean = false,

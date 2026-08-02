@@ -5,5 +5,5 @@ package com.talkqquest.app.core
 // false = 실서버 API 연동으로 동작(원래 상태).
 // ※ 서버 연동 코드는 그대로 유지 — 이 값 하나만 바꾸면 목업↔서버 전환됨.
 object DemoConfig {
-    const val USE_MOCK = true
+    const val USE_MOCK = false
 }

@@ -1,6 +1,7 @@
 package com.talkqquest.app.feature.mission.data
 
 import com.talkqquest.app.core.network.ApiResponse
+import com.talkqquest.app.feature.mission.data.model.ArchiveListResponse
 import com.talkqquest.app.feature.mission.data.model.ConversationCreateRequest
 import com.talkqquest.app.feature.mission.data.model.ConversationCreateResponse
 import com.talkqquest.app.feature.mission.data.model.ConversationMessageRequest
@@ -10,6 +11,7 @@ import com.talkqquest.app.feature.mission.data.model.CreateFeedbackRequest
 import com.talkqquest.app.feature.mission.data.model.CreateFeedbackResponse
 import com.talkqquest.app.feature.mission.data.model.CreatePhraseRequest
 import com.talkqquest.app.feature.mission.data.model.CreatePhraseResponse
+import com.talkqquest.app.feature.mission.data.model.DeleteArchiveItemResponse
 import com.talkqquest.app.feature.mission.data.model.FeedbackDetailResponse
 import com.talkqquest.app.feature.mission.data.model.MissionCompleteRequest
 import com.talkqquest.app.feature.mission.data.model.MissionCompleteResponse
@@ -123,4 +125,20 @@ interface MissionApi {
     suspend fun savePhrase(
         @Body body: CreatePhraseRequest,
     ): ApiResponse<CreatePhraseResponse>
+
+    // 문장 저장 해제 — DELETE /api/v1/archives/phrases/{phraseId}.
+    // 시트에서 북마크를 끄면 호출 — 서버 보관함(문장)에서도 빠지게.
+    @DELETE("api/v1/archives/phrases/{phraseId}")
+    suspend fun deletePhrase(
+        @Path("phraseId") phraseId: String,
+    ): ApiResponse<DeleteArchiveItemResponse>
+
+    // 저장한 문장 목록 — GET /api/v1/archives?type=phrase. 문장 저장 시트의 "최근 저장한 문장"에 표시.
+    // 저장(위 savePhrase)과 같은 도메인이라 여기 함께 둔다.
+    @GET("api/v1/archives")
+    suspend fun getSavedPhrases(
+        @Query("type") type: String = "phrase",
+        @Query("sort") sort: String = "latest",
+        @Query("size") size: Int = 5,
+    ): ApiResponse<ArchiveListResponse>
 }

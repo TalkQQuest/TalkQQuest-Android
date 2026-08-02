@@ -88,7 +88,6 @@ fun ArchiveSearchScreen(
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val lifecycleOwner = LocalLifecycleOwner.current
 
-    // 💡 화면이 보여질 때(ON_RESUME)마다 최신 데이터를 갱신합니다.
     DisposableEffect(lifecycleOwner) {
         val observer = LifecycleEventObserver { _, event ->
             if (event == Lifecycle.Event.ON_RESUME) {
@@ -414,10 +413,11 @@ private fun ArchiveSearchScreenContent(
                                 }
 
                                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                                    // 💡 수정됨: selectedDateTab이 null이 아니면(칩이 선택되어 있으면) 무조건 "직접 선택하기" 노출
                                     DateInputBox(
-                                        dateText = uiState.leftDate.format(dateFormatter),
+                                        dateText = if (uiState.selectedDateTab != null) "직접 선택하기" else uiState.leftDate.format(dateFormatter),
                                         isActive = uiState.selectedDateTab == null,
-                                        modifier = Modifier.width(128.dp),
+                                        modifier = Modifier.width(133.dp),
                                         onClick = { isSelectingStartDate = true; showBottomSheet = true }
                                     )
                                     Box(modifier = Modifier.width(9.dp), contentAlignment = Alignment.Center) {
@@ -541,7 +541,7 @@ private fun DateInputBox(
     onClick: () -> Unit = {}
 ) {
     val borderColor = if (isActive) Primary600 else Gray300
-    val textColor = if (isActive) Primary600 else Gray500
+    val textColor = if (isActive) Primary600 else Gray400
     val iconColor = if (isActive) Primary600 else Gray400
 
     Row(
@@ -560,7 +560,7 @@ private fun DateInputBox(
             painter = painterResource(id = R.drawable.ic_archive_calendar),
             contentDescription = "날짜 선택",
             tint = iconColor,
-            modifier = Modifier.size(20.dp)
+            modifier = Modifier.size(20.dp) // 💡 20dp 크기로 다시 복원
         )
     }
 }

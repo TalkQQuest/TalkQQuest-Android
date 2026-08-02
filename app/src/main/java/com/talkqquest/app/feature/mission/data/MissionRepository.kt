@@ -3,12 +3,15 @@ package com.talkqquest.app.feature.mission.data
 import com.talkqquest.app.core.datastore.UserXpStore
 import com.talkqquest.app.core.network.ApiResult
 import com.talkqquest.app.core.network.serverCall
+import com.talkqquest.app.core.util.toSavedDate
+import com.talkqquest.app.feature.home.data.HomeApi
 import com.talkqquest.app.feature.mission.data.model.ConversationCreateRequest
 import com.talkqquest.app.feature.mission.data.model.ConversationMessageRequest
 import com.talkqquest.app.feature.mission.data.model.ConversationPrep
 import com.talkqquest.app.feature.mission.data.model.CreateFeedbackRequest
 import com.talkqquest.app.feature.mission.data.model.CreatePhraseRequest
 import com.talkqquest.app.feature.mission.data.model.CreatePhraseResponse
+import com.talkqquest.app.feature.mission.data.model.DeleteArchiveItemResponse
 import com.talkqquest.app.feature.mission.data.model.FeedbackItemText
 import com.talkqquest.app.feature.mission.data.model.FeedbackResult
 import com.talkqquest.app.feature.mission.data.model.toFeedbackResult
@@ -16,6 +19,7 @@ import com.talkqquest.app.feature.mission.data.model.MissionCompleteRequest
 import com.talkqquest.app.feature.mission.data.model.MissionCompleteResult
 import com.talkqquest.app.feature.mission.data.model.MissionDetail
 import com.talkqquest.app.feature.mission.data.model.MissionListItem
+import com.talkqquest.app.feature.mission.data.model.SavedPhraseItem
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlinx.coroutines.CoroutineScope
@@ -30,6 +34,7 @@ import kotlinx.coroutines.launch
 @Singleton
 class MissionRepository @Inject constructor(
     private val missionApi: MissionApi,
+    private val homeApi: HomeApi, // 피드백 화면 닉네임(GET /users/me) — 홈과 같은 API 재사용 (둘 다 B파트)
     private val userXpStore: UserXpStore, // 서버 전 임시: 완료 XP를 홈과 공유
 ) {
     // 북마크 낙관 토글 공유 — 모든 화면이 같은 상태를 봄 (서버 반영 전/오프라인에도 UI 일관).
@@ -251,7 +256,7 @@ class MissionRepository @Inject constructor(
                 return ApiResult.Success(
                     d.toFeedbackResult(
                         missionTitle = d.topic.orEmpty(), // 서버 피드백엔 미션 제목 없음 → topic 사용
-                        nickname = "소다123",               // TODO(프로필 연동): 유저 닉네임으로 교체
+                        nickname = userNickname(),         // GET /users/me — 실패 시 stub 닉네임 폴백
                     ),
                 )
             }
@@ -284,11 +289,44 @@ class MissionRepository @Inject constructor(
         )
     }
 
+    // 피드백 화면 "OO님을 위한 다른 미션 보러가기"의 닉네임 — GET /users/me.
+    // 세션 중 안 바뀌는 값이라 첫 성공 후 캐시. 실패/데모(USE_MOCK)면 stub 닉네임 폴백.
+    private var cachedNickname: String? = null
+    private suspend fun userNickname(): String {
+        cachedNickname?.let { return it }
+        val me = (serverCall { homeApi.getMe() } as? ApiResult.Success)?.data
+        val nick = me?.nickname?.takeIf { it.isNotBlank() } ?: me?.name?.takeIf { it.isNotBlank() }
+        return nick?.also { cachedNickname = it } ?: "소다123"
+    }
+
     // 베스트 문장 저장 → 아카이브 '문장' (POST /api/v1/archives/phrases).
     // 데모(DemoConfig.USE_MOCK) 시 serverCall이 서버를 건너뛰어 Error 반환 → 화면은 낙관적 표시만 유지.
     // conversationId는 피드백 응답에서 온 값(서버 미연동/stub이면 호출부에서 걸러 여기까지 안 옴).
     suspend fun savePhrase(conversationId: String, content: String): ApiResult<CreatePhraseResponse> =
         serverCall { missionApi.savePhrase(CreatePhraseRequest(conversationId = conversationId, content = content)) }
+
+    // 문장 저장 해제 — DELETE /api/v1/archives/phrases/{phraseId}.
+    // 저장 응답에서 받은 서버 id로만 의미가 있고, 실패/데모면 조용히 무시(화면은 낙관적 표시 유지).
+    suspend fun deletePhrase(phraseId: String): ApiResult<DeleteArchiveItemResponse> =
+        serverCall { missionApi.deletePhrase(phraseId) }
+
+    // 저장한 문장 목록 (문장 저장 시트의 "최근 저장한 문장") — GET /archives?type=phrase.
+    // 실패/데모(USE_MOCK)면 Error를 그대로 돌려줘 호출부가 기존 목업을 유지하게 한다(미션 시트와 동일 방침).
+    suspend fun getSavedPhrases(size: Int = 5): ApiResult<List<SavedPhraseItem>> =
+        when (val r = serverCall { missionApi.getSavedPhrases(size = size) }) {
+            is ApiResult.Success -> ApiResult.Success(
+                r.data.items.map {
+                    SavedPhraseItem(
+                        id = it.referenceId ?: it.id,
+                        phrase = it.title,
+                        savedDate = it.createdAt.toSavedDate(),
+                        isSaved = it.isBookmarked,
+                    )
+                },
+            )
+            is ApiResult.Error -> r
+            is ApiResult.Exception -> r
+        }
 }
 
 // 항목별 피드백 문구 stub — 서버(AI)가 줄 값. 서버 연동 시 통째 삭제.

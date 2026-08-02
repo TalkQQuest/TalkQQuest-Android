@@ -52,7 +52,6 @@ class ArchiveHomeViewModel @Inject constructor(
         refreshData()
     }
 
-    // 💡 날것의 ISO 시간을 yyyy.MM.dd 포맷으로 예쁘게 바꿔주는 함수 추가
     private fun formatIsoDate(isoString: String): String {
         return try {
             val zdt = ZonedDateTime.parse(isoString)
@@ -73,7 +72,6 @@ class ArchiveHomeViewModel @Inject constructor(
                     // 서버에서 받은 전체 목록 중 최대 4개까지만 추출하여 UI에 반영
                     val uiActivities = summary.recentItems.take(4).map { dto ->
 
-                        // 💡 수정됨: 빈 값이 아닌 올바른 상태 텍스트 매핑
                         val statusText = when (dto.type.lowercase()) {
                             "conversation" -> "대화 완료"
                             "phrase", "sentence" -> "문장 저장"
@@ -81,12 +79,15 @@ class ArchiveHomeViewModel @Inject constructor(
                             else -> ""
                         }
 
+                        // 💡 수정됨: 껍데기 ID가 아닌 진짜 원본 ID(`referenceId`)를 매핑하여 터짐 방지!
+                        val actualId = dto.referenceId ?: dto.id
+
                         RecentActivity(
-                            id = dto.id,
+                            id = actualId,
                             type = mapToActivityType(dto.type),
                             title = dto.title,
-                            status = statusText, // 💡 수정됨: 상태 텍스트 노출
-                            date = formatIsoDate(dto.createdAt), // 💡 수정됨: 날짜 포맷팅 적용
+                            status = statusText,
+                            date = formatIsoDate(dto.createdAt),
                             difficulty = dto.difficulty,
                             category = dto.category,
                             estimatedMinutes = dto.estimatedMinutes,

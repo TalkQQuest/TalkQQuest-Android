@@ -230,7 +230,7 @@ private fun ReportContent(
             // 리포트 저장하기 (CSS Frame 272: 두 탭 공통, top 660 절대 위치 = 탭바 끝 102부터 558.
             //  화면 밑 고정이 아니라 콘텐츠 기준 고정 — 콘텐츠와의 간격(성장 36/주간 14)이 CSS 그대로)
             // 누르면 저장 시트가 올라옴 (CSS "리포트 저장" 프레임 — 라벨은 CSS "다음" 대신
-            // "리포트 저장하기" 유지, 사용자 결정). TODO(서버 연동): 저장 API(E102) 호출로 교체.
+            // "리포트 저장하기" 유지, 사용자 결정). 저장은 서버(POST /reports) 연동됨.
             TqButton(
                 text = "리포트 저장하기",
                 onClick = { onSaveClick(if (tab == 0) "growth" else "weekly_compare") },

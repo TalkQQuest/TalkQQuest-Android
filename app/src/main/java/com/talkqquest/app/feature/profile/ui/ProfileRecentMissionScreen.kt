@@ -1,4 +1,4 @@
-﻿package com.talkqquest.app.feature.profile.ui
+package com.talkqquest.app.feature.profile.ui
 
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -18,6 +18,10 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -208,6 +212,31 @@ private fun RecentSummaryCard(
 }
 
 @Composable
+private fun OneLineFitText(
+    text: String,
+    style: TextStyle,
+    color: Color,
+    modifier: Modifier = Modifier,
+    minFontSize: Float = 12f,
+) {
+    var fontSize by remember(text, style.fontSize) { mutableStateOf(style.fontSize.value) }
+    Text(
+        text = text,
+        style = style.copy(fontSize = fontSize.sp),
+        color = color,
+        textAlign = TextAlign.Center,
+        maxLines = 1,
+        softWrap = false,
+        overflow = TextOverflow.Clip,
+        modifier = modifier,
+        onTextLayout = { result ->
+            if (result.didOverflowWidth && fontSize > minFontSize) {
+                fontSize = (fontSize - 0.5f).coerceAtLeast(minFontSize)
+            }
+        },
+    )
+}
+@Composable
 private fun SummaryMetric(
     label: String,
     value: String,
@@ -218,12 +247,11 @@ private fun SummaryMetric(
             modifier = Modifier.size(width = 105.dp, height = 24.dp),
             contentAlignment = Alignment.Center,
         ) {
-            Text(
+            OneLineFitText(
                 text = label,
                 style = RecentTitleStyle,
                 color = Gray500,
-                textAlign = TextAlign.Center,
-                maxLines = 1,
+                modifier = Modifier.fillMaxWidth(),
             )
         }
         Box(

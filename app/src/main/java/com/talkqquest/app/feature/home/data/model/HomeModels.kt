@@ -46,6 +46,7 @@ data class UserUpdateRequest(
     val dailyConversationGoal: Int? = null,
     val preferredStyle: String? = null,
     val interests: List<String>? = null,
+    val termsAgreedAt: String? = null,
 )
 
 @Serializable

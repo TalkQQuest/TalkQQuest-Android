@@ -6,6 +6,8 @@ import com.talkqquest.app.core.network.ApiResponse
 import com.talkqquest.app.core.network.ApiResult
 import com.talkqquest.app.core.network.safeApiCall
 import com.talkqquest.app.feature.home.data.HomeApi
+import com.talkqquest.app.feature.home.data.model.LegalDocument
+import com.talkqquest.app.feature.home.data.model.UserUpdateRequest
 import kotlinx.coroutines.flow.first
 import retrofit2.HttpException
 import java.io.IOException
@@ -22,6 +24,36 @@ class AuthRepository @Inject constructor(
     private val tokenDataStore: TokenDataStore,
     private val homeApi: HomeApi,
 ) {
+    suspend fun getServiceTerms(): ApiResult<LegalDocument> =
+        safeApiCall { homeApi.getServiceTerms() }
+
+    suspend fun getPrivacyPolicy(): ApiResult<LegalDocument> =
+        safeApiCall { homeApi.getPrivacyPolicy() }
+
+    suspend fun updateMyNickname(
+        nickname: String,
+        termsAgreedAt: String? = null,
+    ): ApiResult<Unit> =
+        try {
+            val response = homeApi.updateMe(
+                UserUpdateRequest(
+                    nickname = nickname,
+                    termsAgreedAt = termsAgreedAt,
+                ),
+            )
+            if (response.success) {
+                ApiResult.Success(Unit)
+            } else {
+                ApiResult.Error(code = null, message = response.message)
+            }
+        } catch (e: HttpException) {
+            ApiResult.Error(code = e.code(), message = e.message())
+        } catch (e: IOException) {
+            ApiResult.Exception(e)
+        } catch (e: Exception) {
+            ApiResult.Exception(e)
+        }
+
     suspend fun loginWithKakao(providerAccessToken: String): ApiResult<SocialLoginData> =
         loginWithProvider(providerAccessToken) { request -> authApi.loginWithKakao(request) }
 
@@ -180,7 +212,11 @@ class AuthRepository @Inject constructor(
                 refreshToken = result.data.refreshToken,
             )
         }
-        return result
+        return if (result is ApiResult.Error && result.code != null) {
+            result.copy(message = socialLoginErrorMessage(result.code))
+        } else {
+            result
+        }
     }
 
     private suspend fun callUnitApi(call: suspend () -> ApiResponse<Unit>): ApiResult<Unit> =
@@ -209,6 +245,14 @@ class AuthRepository @Inject constructor(
         401 -> "로그인이 필요합니다."
         500 -> "서버 내부 오류가 발생했습니다. 잠시 후 다시 시도해주세요."
         else -> "로그아웃에 실패했어요."
+    }
+
+    private fun socialLoginErrorMessage(code: Int): String = when (code) {
+        400 -> "소셜 로그인 정보를 확인해주세요."
+        401 -> "소셜 로그인 인증이 만료되었습니다. 다시 시도해주세요."
+        403 -> "탈퇴한 계정은 일정 기간 다시 가입할 수 없어요."
+        500 -> "서버 내부 오류가 발생했습니다. 잠시 후 다시 시도해주세요."
+        else -> "소셜 로그인에 실패했어요."
     }
 
     private fun emailLoginErrorMessage(code: Int): String = when (code) {

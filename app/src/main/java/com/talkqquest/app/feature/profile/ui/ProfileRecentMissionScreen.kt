@@ -139,7 +139,7 @@ private val RecentActivities = listOf(
 @Composable
 fun ProfileRecentMissionScreen(
     onBack: () -> Unit = {},
-) = FitDesign {
+) = FitDesign(contentAlignment = Alignment.TopCenter) {
     Box(
         modifier = Modifier
             .fillMaxSize()

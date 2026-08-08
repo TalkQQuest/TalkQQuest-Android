@@ -1,4 +1,4 @@
-﻿package com.talkqquest.app.feature.profile.ui
+package com.talkqquest.app.feature.profile.ui
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -33,7 +33,7 @@ fun ProfileConnectedAccountScreen(
     connectedAccount: String = "talkqquest@naver.com",
     onBack: () -> Unit = {},
     onLogoutClick: () -> Unit = {},
-) = FitDesign {
+) = FitDesign(contentAlignment = Alignment.TopCenter) {
     Box(
         modifier = Modifier
             .fillMaxSize()

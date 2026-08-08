@@ -305,61 +305,15 @@ private fun RelatedConversationSection(
             modifier = Modifier.padding(horizontal = 8.dp)
         )
 
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(72.dp)
-                .softShadow(color = Gray1000.copy(alpha = 0.01f), offsetY = 8.dp, blur = 24.dp, cornerRadius = 20.dp)
-                .clip(RoundedCornerShape(20.dp))
-                .background(White)
-                .clickable { onClick() }
-                .padding(start = 16.dp, top = 12.dp, bottom = 12.dp, end = 6.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween
-        ) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
-                modifier = Modifier.weight(1f)
-            ) {
-                Box(modifier = Modifier.size(48.dp), contentAlignment = Alignment.Center) {
-                    Image(
-                        painter = painterResource(id = R.drawable.img_archive_conversation),
-                        contentDescription = null,
-                        modifier = Modifier.size(40.dp)
-                    )
-                }
-
-                Column(verticalArrangement = Arrangement.Center) {
-                    Text(
-                        text = conversation.title,
-                        style = TqType.BodyL.copy(fontWeight = FontWeight.Medium).figma(),
-                        color = Gray900,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
-                    Spacer(modifier = Modifier.height(4.dp))
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text(text = conversation.status, style = TqType.Caption.figma(), color = Gray500)
-                        Spacer(modifier = Modifier.width(10.dp))
-                        Box(modifier = Modifier.width(1.dp).height(9.dp).background(Gray300))
-                        Spacer(modifier = Modifier.width(10.dp))
-                        Text(text = conversation.date, style = TqType.Caption.figma(), color = Gray500)
-                    }
-                }
-            }
-
-            Box(
-                modifier = Modifier.size(44.dp),
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(
-                    painter = painterResource(id = R.drawable.ic_forward_chevron),
-                    contentDescription = "상세 보기",
-                    tint = Gray600
-                )
-            }
-        }
+        // 💡 방금 만든 ArchiveConversationCard 적용!
+        ArchiveConversationCard(
+            title = conversation.title,
+            tags = listOf("학교", "진로"), // 💡 TODO: 실제 API 데이터(태그) 연동 필요
+            summary = "서로의 전공과 관심 분야를 공유하고, 진로 고민에 대해 조언을 주고받았어요.", // 💡 TODO: 실제 API 데이터(요약) 연동 필요
+            date = conversation.date,
+            time = "14:35", // 💡 TODO: 실제 API 데이터(시간) 연동 필요
+            onClick = onClick
+        )
     }
 }
 

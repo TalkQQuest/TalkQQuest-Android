@@ -32,30 +32,42 @@ import kotlin.math.roundToInt
 class ArchiveRepository @Inject constructor(
     private val archiveApi: ArchiveApi
 ) {
-    val isMockMode = false
+    // 💡 화면 디자인 확인을 위해 Mock 모드를 활성화했습니다. (실제 서버 연동 시 false로 변경)
+    val isMockMode = true
 
+    // 💡 피그마 시안에 맞게 미션 목업 데이터 업데이트
     private val stubMissions = mutableListOf(
-        ArchiveMissionItem("1", "처음 보는 사람에게 짧게 인사하기", "짧은 대화", "쉬움", 2, 20, isCompleted = true, isSaved = true, completedDate = "2026.07.16"),
-        ArchiveMissionItem("2", "최근 본 영화 이야기하기", "짧은 대화", "쉬움", 5, 20, isCompleted = false, isSaved = true, completedDate = "2026.07.15")
+        ArchiveMissionItem("1", "학교 생활 꿀팁 나누기", "일상 대화", "보통", 8, 30, isCompleted = true, isSaved = true, completedDate = "2026.08.20"),
+        ArchiveMissionItem("2", "최근 본 영화 이야기하기", "짧은 대화", "쉬움", 5, 20, isCompleted = false, isSaved = true, completedDate = "2026.08.20"),
+        ArchiveMissionItem("3", "처음 보는 사람에게 짧게 인사하기", "짧은 대화", "쉬움", 2, 20, isCompleted = true, isSaved = true, completedDate = "2026.08.19")
     )
+
+    // 💡 피그마 시안에 맞게 대화 목업 데이터 업데이트
     private val stubConversations = mutableListOf(
-        RecentActivity(id = "1", title = "처음 보는 사람에게 짧게 인사하기", type = ActivityType.CONVERSATION, status = "대화 완료", date = "2026.07.16")
+        RecentActivity(id = "1", title = "대학교 전공과 진로에 대해 이야기 했어요", type = ActivityType.CONVERSATION, status = "대화 완료", date = "2026.08.20"),
+        RecentActivity(id = "2", title = "여행 계획을 공유하며 추천 장소를 주고 받았어요", type = ActivityType.CONVERSATION, status = "대화 완료", date = "2026.08.20"),
+        RecentActivity(id = "3", title = "처음 보는 사람에게 짧게 인사하기", type = ActivityType.CONVERSATION, status = "대화 완료", date = "2026.08.19")
     )
+
+    // 💡 피그마 시안에 맞게 베스트 문장 목업 데이터 업데이트
     private val stubSentences = mutableListOf(
-        BookmarkArchiveItem(id = "1", title = "\"그렇군요! 저도 편해서 놀랐어요\"", status = "문장 저장", date = "2026.07.16", isSaved = true, memoKeywords = listOf("자기 성장", "첫 만남"), memoText = "좋은 문장", relatedConversationId = "1")
+        BookmarkArchiveItem(id = "1", title = "네, 안녕하세요. 항상 아메리카노만 마셨는데, 오늘은 좀 달달한 걸 먹고 싶어요.", status = "문장 저장", date = "2026.08.20", isSaved = true, memoKeywords = listOf("상황극", "요청하기", "정중함"), memoText = "자신의 평소 취향과 현재 원하는 바를 명확하고 정중하게 전달하는 표현입니다.", relatedConversationId = "1")
     )
+
     private val stubReports = mutableListOf(
-        BookmarkArchiveItem(id = "4", title = "처음 보는 사람에게 짧게 인사하기", status = "리포트 열람", date = "2026.07.16", isSaved = true)
+        BookmarkArchiveItem(id = "4", title = "처음 보는 사람에게 짧게 인사하기", status = "리포트 열람", date = "2026.08.20", isSaved = true)
     )
+
     private val stubReportDetails = mapOf(
         "4" to Pair(
             GrowthReport(prevLevel = 1, currentLevel = 2, growthPercent = 18, weekLabels = listOf("7월 4주"), categoryRanks = listOf(CategoryRank("여행", 10)), completedMissions = 26, totalMissions = 100),
             WeeklyCompareReport(metrics = listOf(MetricChange("친절한 태도", 88, 92)), highlights = listOf(HighlightItem("전체 점수", "가 상승했어요")))
         )
     )
+
     private val stubConversationDetails = listOf(
         ConversationDetailMock(
-            id = "1", title = "처음 보는 사람에게 짧게 인사하기", date = "2026.07.16", duration = "5분 30초", summaryKeywords = listOf("자기 성장"),
+            id = "1", title = "처음 보는 사람에게 짧게 인사하기", date = "2026.08.20", duration = "5분 30초", summaryKeywords = listOf("자기 성장"),
             summaryText = "대화를 시작하는 연습을 진행했습니다.", mainContentText = "먼저 인사를 건네며 대화를 시작했어요.",
             feedbacks = listOf("친절한 태도" to 92),
             messages = listOf(ReviewChatMessage("1", "안녕하세요!", false, "9:20"))
@@ -70,7 +82,7 @@ class ArchiveRepository @Inject constructor(
                 stubMissions[index] = stubMissions[index].copy(isSaved = !stubMissions[index].isSaved)
                 savedStatus = stubMissions[index].isSaved
             }
-            return ApiResult.Success(MissionSaveResponse(missionId = id, isSaved = savedStatus, savedAt = "2026.07.24"))
+            return ApiResult.Success(MissionSaveResponse(missionId = id, isSaved = savedStatus, savedAt = "2026.08.20"))
         } else {
             return try {
                 val response = if (isCurrentlySaved) archiveApi.deleteMissionArchive(id) else archiveApi.saveMissionArchive(id)
@@ -163,8 +175,6 @@ class ArchiveRepository @Inject constructor(
                 val response = archiveApi.getReportDetail(id)
                 val data = response.data
                 if (data != null) {
-
-                    // 1. 성장 리포트 파싱 (서버 응답이 null이어도 빈 껍데기로 방어하여 화면 크래시 차단)
                     val growth = data.growth?.let { g ->
                         GrowthReport(
                             prevLevel = g.levelBefore,
@@ -181,7 +191,6 @@ class ArchiveRepository @Inject constructor(
                         completedMissions = 0, totalMissions = 0
                     )
 
-                    // 2. 주간 비교 리포트 파싱 (서버 응답이 null이어도 빈 껍데기로 방어하여 화면 크래시 차단)
                     val weekly = data.weeklyCompare?.let { wc ->
                         WeeklyCompareReport(
                             metrics = wc.metricChanges.map {
@@ -196,7 +205,6 @@ class ArchiveRepository @Inject constructor(
                         highlights = emptyList()
                     )
 
-                    // 💡 title, period, weeklyComparePeriod 중 존재하는 값을 찾아 화면에 예쁘게 띄워줍니다.
                     val displayTitle = data.title ?: data.period ?: data.weeklyComparePeriod ?: "톡깨 리포트"
 
                     ApiResult.Success(Triple(displayTitle, growth, weekly))

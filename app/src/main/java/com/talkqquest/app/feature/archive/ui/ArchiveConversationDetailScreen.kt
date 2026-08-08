@@ -78,6 +78,7 @@ import com.talkqquest.app.feature.archive.data.model.ReviewChatMessage
 import com.talkqquest.app.feature.archive.viewmodel.ArchiveConversationDetailUiState
 import com.talkqquest.app.feature.archive.viewmodel.ArchiveConversationDetailViewModel
 import com.talkqquest.app.feature.archive.viewmodel.AiFeedbackItem
+import com.talkqquest.app.feature.mission.ui.figma
 
 // ── 공통 색상 상수 ──
 private val ChatText = Color(0xFF1C1C1C)
@@ -188,7 +189,15 @@ private fun ArchiveConversationDetailContent(
             ) {
                 Spacer(modifier = Modifier.height(19.dp))
 
-                ConversationProfileCard(uiState.title, uiState.date, uiState.duration)
+                // 💡 변경됨: 얇았던 기존 ConversationProfileCard 대신 공용 ArchiveConversationCard 사용
+                ArchiveConversationCard(
+                    title = uiState.title,
+                    tags = uiState.summaryKeywords.take(2), // 💡 TODO: API 명세 확정 후 ViewModel 매핑 필요
+                    summary = uiState.summaryText, // 💡 TODO: API 연동 필요
+                    date = uiState.date,
+                    time = "14:35", // 💡 TODO: API의 createdAt에서 시간(HH:mm) 파싱 필요
+                    onClick = { /* 상세 화면 최상단 썸네일이므로 클릭 동작 없음 */ }
+                )
 
                 Spacer(modifier = Modifier.height(16.dp))
 
@@ -347,32 +356,6 @@ private fun TimeLabel(time: String) {
 }
 
 @Composable
-private fun ConversationProfileCard(title: String, date: String, duration: String) {
-    Row(
-        modifier = Modifier.fillMaxWidth().height(72.dp)
-            .softShadow(color = Gray1000.copy(alpha = 0.01f), offsetY = 8.dp, blur = 24.dp, cornerRadius = 20.dp)
-            .clip(RoundedCornerShape(20.dp)).background(White).padding(start = 16.dp, end = 6.dp, top = 12.dp, bottom = 12.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Box(modifier = Modifier.size(48.dp), contentAlignment = Alignment.Center) {
-            Image(painter = painterResource(id = R.drawable.img_archive_conversation), contentDescription = null, modifier = Modifier.size(40.dp))
-        }
-        Spacer(modifier = Modifier.width(12.dp))
-        Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.Center) {
-            Text(text = title, style = TqType.BodyL.copy(fontWeight = FontWeight.Medium).figma(), color = Gray900, maxLines = 1, overflow = TextOverflow.Ellipsis)
-            Spacer(modifier = Modifier.height(4.dp))
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(text = date, style = TqType.Caption.figma(), color = Gray500)
-                Spacer(modifier = Modifier.width(8.dp))
-                Box(modifier = Modifier.width(1.dp).height(9.dp).background(Gray300))
-                Spacer(modifier = Modifier.width(8.dp))
-                Text(text = duration, style = TqType.Caption.figma(), color = Gray500)
-            }
-        }
-    }
-}
-
-@Composable
 private fun ConversationSummarySection(keywords: List<String>, summaryText: String) {
     Column(
         modifier = Modifier.fillMaxWidth().padding(horizontal = 6.dp),
@@ -475,7 +458,6 @@ private fun ConversationAiFeedbackSection(feedbacks: List<AiFeedbackItem>) {
                             Text(text = "점", style = TqType.BodyS.figma(), color = Primary600, modifier = Modifier.padding(bottom = 3.dp))
                         }
                         Box(modifier = Modifier.size(44.dp), contentAlignment = Alignment.Center) {
-                            // 💡 내장 아이콘 대신 커스텀 아이콘 적용
                             Icon(
                                 painter = painterResource(id = R.drawable.ic_forward_chevron),
                                 contentDescription = "상세 보기",

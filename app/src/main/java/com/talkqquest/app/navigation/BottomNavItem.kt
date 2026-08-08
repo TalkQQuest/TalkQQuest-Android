@@ -9,8 +9,8 @@ enum class BottomNavItem(
     val label: String,
     @DrawableRes val iconRes: Int,
 ) {
-    Archive(Screen.ARCHIVE_HOME, "아카이브", R.drawable.ic_nav_archive),
     Home(Screen.HOME, "홈", R.drawable.ic_nav_home),
-    Community(Screen.COMMUNITY_LIST, "모임", R.drawable.ic_nav_community),
+    Mission(Screen.MISSION_LIST, "미션", R.drawable.ic_nav_mission),
+    Archive(Screen.ARCHIVE_HOME, "아카이브", R.drawable.ic_nav_archive),
     Profile(Screen.PROFILE, "프로필", R.drawable.ic_nav_profile),
 }

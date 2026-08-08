@@ -289,6 +289,9 @@ class MissionRepository @Inject constructor(
         )
     }
 
+    // 미션 목록 헤더 "OO님을 위한 미션" · 피드백 화면 닉네임 공용 (같은 캐시 재사용).
+    suspend fun getUserNickname(): String = userNickname()
+
     // 피드백 화면 "OO님을 위한 다른 미션 보러가기"의 닉네임 — GET /users/me.
     // 세션 중 안 바뀌는 값이라 첫 성공 후 캐시. 실패/데모(USE_MOCK)면 stub 닉네임 폴백.
     private var cachedNickname: String? = null

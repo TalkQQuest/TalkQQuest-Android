@@ -201,9 +201,9 @@ private fun SavedPhraseCard(
         // 노트 그림: 48 컨테이너 안에 40 이미지 중앙 (CSS Frame 427321187 48x48 / 이미지 40x40 left4 top4)
         Box(modifier = Modifier.size(48.dp), contentAlignment = Alignment.Center) {
             Image(
-                painter = painterResource(R.drawable.img_feedback_note),
+                painter = painterResource(R.drawable.img_archive_sentence),
                 contentDescription = null, // 장식 — 카드의 문장이 이미 내용을 설명함
-                modifier = Modifier.size(40.dp),
+                modifier = Modifier.size(48.dp), // 디자인: 아이콘이 49px 슬롯을 꽉 채움(옛 40 → 48)
             )
         }
         Spacer(Modifier.width(12.dp)) // 그림 ↔ 텍스트 (CSS Frame 427321179 gap 12)

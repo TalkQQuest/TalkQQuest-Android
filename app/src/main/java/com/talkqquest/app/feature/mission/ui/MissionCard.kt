@@ -90,10 +90,10 @@ internal fun MissionCard(
             // 과녁: 48 컨테이너 안에 40 이미지 중앙 (CSS Frame 427321186 48x48 / 이미지 40x40 left4 top4)
             Box(modifier = Modifier.size(48.dp), contentAlignment = Alignment.Center) {
                 Image(
-                    // small 별도 파일 — img_mission_target은 미션 상세의 다트판 일러스트(다른 이미지)
-                    painter = painterResource(R.drawable.img_mission_target_small),
+                    // 저장 시트 카드 과녁 = 보관함 아이콘과 동일(디자인: 시트·보관함 같은 04_21_46 아이콘)
+                    painter = painterResource(R.drawable.img_archive_mission),
                     contentDescription = null, // 장식 — 카드 제목이 이미 미션을 설명함
-                    modifier = Modifier.size(40.dp),
+                    modifier = Modifier.size(48.dp), // 디자인: 아이콘이 49px 슬롯을 꽉 채움(옛 40 → 48)
                 )
             }
             Spacer(Modifier.width(8.dp)) // 과녁 ↔ 텍스트 (CSS Frame 427321225 gap 8)

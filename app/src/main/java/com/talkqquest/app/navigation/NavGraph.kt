@@ -7,6 +7,7 @@ import androidx.compose.animation.AnimatedContentTransitionScope
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.foundation.pager.PagerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -36,7 +37,6 @@ import com.talkqquest.app.feature.auth.ui.SignupStartScreen
 import com.talkqquest.app.feature.auth.ui.SignupVerifyScreen
 import com.talkqquest.app.feature.auth.ui.SplashScreen
 import com.talkqquest.app.feature.auth.viewmodel.AuthViewModel
-import com.talkqquest.app.feature.home.ui.HomeScreen
 import com.talkqquest.app.feature.onboarding.ui.OnboardingDifficultyScreen
 import com.talkqquest.app.feature.onboarding.ui.OnboardingGoalScreen
 import com.talkqquest.app.feature.onboarding.ui.OnboardingPersonalityScreen
@@ -60,16 +60,13 @@ import com.talkqquest.app.feature.profile.ui.PrivacyPolicySections
 import com.talkqquest.app.feature.profile.ui.ProfileTermsDetailScreen
 import com.talkqquest.app.feature.profile.ui.ProfileTermsScreen
 import com.talkqquest.app.feature.profile.ui.ServiceTermsSections
-import com.talkqquest.app.feature.profile.ui.ProfileScreen
 import com.talkqquest.app.feature.mission.ui.ConversationPrepScreen
 import com.talkqquest.app.feature.mission.ui.ConversationScreen
 import com.talkqquest.app.feature.mission.ui.FeedbackDetailScreen
 import com.talkqquest.app.feature.mission.ui.FeedbackScreen
 import com.talkqquest.app.feature.mission.ui.MissionCompleteScreen
 import com.talkqquest.app.feature.mission.ui.MissionDetailScreen
-import com.talkqquest.app.feature.mission.ui.MissionListScreen
 import com.talkqquest.app.feature.report.ui.ReportScreen
-import com.talkqquest.app.feature.archive.ui.ArchiveHomeScreen
 import com.talkqquest.app.feature.archive.ui.ArchiveListScreen
 import com.talkqquest.app.feature.archive.ui.ArchiveSearchScreen
 import com.talkqquest.app.feature.archive.ui.ArchiveConversationDetailScreen
@@ -88,6 +85,7 @@ import okhttp3.RequestBody.Companion.toRequestBody
 @Composable
 fun NavGraph(
     navController: NavHostController,
+    pagerState: PagerState,
     modifier: Modifier = Modifier,
     onOverlaySheetTop: (Float?) -> Unit = {}, // 화면 위에 겹치는 바텀시트의 top y(px), null이면 없음
 ) {
@@ -436,47 +434,19 @@ fun NavGraph(
                 },
             )
         }
-        // 하단 네비게이션 4개 진입 화면입니다.
-        // HOME 이후 미션/아카이브/리포트 상세 route는 각 담당 화면 구현에 맞춰 연결합니다.
+        // 하단 네비게이션 4개 탭(홈·미션·보관함·프로필)은 하나의 HorizontalPager(MainTabsPager)에서
+        // 손가락 추종 스와이프로 전환됩니다. 4개 route 모두 같은 페이저 셸을 렌더하며,
+        // 실제 표시 페이지는 MainScreen이 pagerState로 제어합니다(진입 시 해당 탭으로 이동).
         composable(Screen.HOME) {
-            val homeScope = rememberCoroutineScope()
-            HomeScreen(
-                onStartMissionClick = { missionId -> navController.navigate("mission_detail/$missionId") },
-                onOtherMissionsClick = { navController.navigate(Screen.MISSION_LIST) },
-                // 알림 아이콘 ripple이 먼저 보인 후 화면이 전환되도록 짧게 지연합니다.
-                onNotificationClick = {
-                    homeScope.launch {
-                        delay(140)
-                        navController.navigate(Screen.NOTIFICATION)
-                    }
-                },
-            )
+            MainTabsPager(navController, pagerState, onOverlaySheetTop)
         }
         // 알림창(종 모양 진입). 디자인 미완성이므로 빈 상태 placeholder.
         composable(Screen.NOTIFICATION) {
             NotificationScreen(onBack = { navController.popBackStack() })
         }
-        // C담당: 아카이브 홈 화면
+        // C담당: 아카이브 홈 화면 (하단 탭 = MainTabsPager의 페이저 페이지)
         composable(Screen.ARCHIVE_HOME) {
-            val context = LocalContext.current
-
-            ArchiveHomeScreen(
-                onNavigateToSearch = {
-                    navController.navigate(Screen.ARCHIVE_SEARCH)
-                },
-                onNavigateToList = { tabIndex: Int ->
-                    navController.navigate("${Screen.ARCHIVE_LIST}/$tabIndex")
-                },
-                // 💡 C담당: 전달 파라미터 타입 명시 유지
-                onNavigateToDetail = { activityId: String, type: ActivityType ->
-                    when (type) {
-                        ActivityType.CONVERSATION -> navController.navigate("archive_conversation_detail/$activityId")
-                        ActivityType.SENTENCE -> navController.navigate("archive_saved_phrase/$activityId")
-                        ActivityType.REPORT -> navController.navigate("archive_report/$activityId")
-                        ActivityType.MISSION -> navController.navigate("mission_detail/$activityId")
-                    }
-                }
-            )
+            MainTabsPager(navController, pagerState, onOverlaySheetTop)
         }
         // C담당: 아카이브 검색 화면
         composable(Screen.ARCHIVE_SEARCH) {
@@ -555,14 +525,9 @@ fun NavGraph(
             )
         }
 
-        // B담당: 미션 리스트 (다른 사람의 미션 둘러보기). 클릭 시 해당 미션의 상세({missionId})로 이동합니다.
+        // B담당: 미션 리스트 (하단 탭 = MainTabsPager의 페이저 페이지). 미션 카드 클릭 시 상세로 이동.
         composable(Screen.MISSION_LIST) {
-            MissionListScreen(
-                onBack = { navController.popBackStack() },
-                onMissionClick = { missionId -> navController.navigate("mission_detail/$missionId") },
-                onSheetTopChange = onOverlaySheetTop, // 바텀시트가 올라올 때 오버레이 처리를 위한 콜백
-                onSavedListClick = { navController.navigate("${Screen.ARCHIVE_LIST}/0") },
-            )
+            MainTabsPager(navController, pagerState, onOverlaySheetTop)
         }
         // B담당: 미션 상세 화면. "시작" 버튼 클릭 시 대화 준비 화면으로, "저장" 클릭 시 보관함으로 이동.
         composable(
@@ -670,43 +635,9 @@ fun NavGraph(
             )
         }
         composable(Screen.COMMUNITY_LIST) { PlaceholderScreen("모임") }
+        // A\uB2F4\uB2F9: \uD504\uB85C\uD544 (\uD558\uB2E8 \uD0ED = MainTabsPager\uC758 \uD398\uC774\uC800 \uD398\uC774\uC9C0)
         composable(Screen.PROFILE) {
-            val context = LocalContext.current
-            val profileViewModel: ProfileViewModel = hiltViewModel()
-            val profileUiState by profileViewModel.uiState.collectAsState()
-            val dashboard = profileUiState.dashboard
-            val profile = profileUiState.profile
-            val nickname = dashboard?.nickname?.takeIf { it.isNotBlank() }
-                ?: profile?.nickname
-                ?: profile?.name
-                ?: "\uB2E4\uBBFC"
-            val earnedBadgeCount = dashboard?.badges?.size
-                ?: profileUiState.badges.count { it.isEarned }.takeIf { it > 0 }
-                ?: 5
-            val weeklyMissionStatus = dashboard?.weeklyMissionStatus
-
-            LaunchedEffect(Unit) {
-                profileViewModel.loadDashboard()
-            }
-
-            profileUiState.errorMessage?.let { message ->
-                Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
-                profileViewModel.clearError()
-            }
-
-            ProfileScreen(
-                nickname = nickname,
-                level = dashboard?.level ?: profile?.level ?: 2,
-                xp = dashboard?.xp ?: profile?.xp ?: 30,
-                earnedBadgeCount = earnedBadgeCount,
-                weeklyCompletedCount = weeklyMissionStatus?.completed ?: 5,
-                weeklyTotalCount = weeklyMissionStatus?.total ?: 7,
-                onEditProfileClick = { navController.navigate(Screen.PROFILE_INFO) },
-                onSettingsClick = { navController.navigate(Screen.PROFILE_SETTINGS) },
-                onBadgesClick = { navController.navigate(Screen.PROFILE_BADGES) },
-                onRecentMissionClick = { navController.navigate(Screen.PROFILE_RECENT_MISSION) },
-                onArchiveClick = { navController.navigate(Screen.ARCHIVE_HOME) },
-            )
+            MainTabsPager(navController, pagerState, onOverlaySheetTop)
         }
         composable(Screen.PROFILE_BADGES) {
             val context = LocalContext.current

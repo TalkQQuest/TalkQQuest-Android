@@ -17,6 +17,7 @@ import java.time.format.DateTimeFormatter
 import javax.inject.Inject
 
 data class ArchiveUiState(
+    val selectedCategory: String = "전체", // 💡 추가됨: 현재 선택된 탭(카테고리) 상태 추적
     val selectedFilter: String = "전체",
     val missions: List<ArchiveMissionItem> = emptyList(),
     val conversations: List<RecentActivity> = emptyList(),
@@ -40,6 +41,12 @@ class ArchiveViewModel @Inject constructor(
     val uiState: StateFlow<ArchiveUiState> = _uiState.asStateFlow()
 
     init { refreshData() }
+
+    // 💡 추가됨: UI 화면에서 카테고리 탭을 누를 때 이 함수를 호출해주세요!
+    fun selectCategory(category: String) {
+        _uiState.update { it.copy(selectedCategory = category) }
+        refreshData() // 카테고리가 변경되면 서버에 해당 타입의 데이터를 새로 요청합니다.
+    }
 
     fun selectFilter(filter: String) { _uiState.update { it.copy(selectedFilter = filter) } }
 
@@ -135,8 +142,20 @@ class ArchiveViewModel @Inject constructor(
     }
 
     fun refreshData() {
+        val currentCategory = _uiState.value.selectedCategory
+
+        // 💡 핵심 추가 로직: 선택된 한글 탭을 API 요청용 영어 파라미터로 변환
+        val apiType = when (currentCategory) {
+            "미션" -> "mission"
+            "대화" -> "conversation"
+            "문장" -> "phrase"
+            "리포트" -> "report"
+            else -> null // "전체"인 경우 null을 할당하여 서버에 필터 없이 요청
+        }
+
         viewModelScope.launch {
-            when (val result = repository.searchArchives()) {
+            // 💡 변경됨: 변환된 apiType을 파라미터로 넘기고, 페이징 한계 방지를 위해 size를 넉넉하게 50으로 설정
+            when (val result = repository.searchArchives(type = apiType, size = 50)) {
                 is ApiResult.Success -> {
                     val items = result.data.items
 
@@ -154,7 +173,6 @@ class ArchiveViewModel @Inject constructor(
                         )
                     }
 
-                    // 💡 변경됨: 대화, 문장, 리포트 모두 원본 ID(`referenceId`)를 우선 매핑
                     val conversations = items.filter { it.type.lowercase() == "conversation" }.map {
                         RecentActivity(
                             id = it.referenceId ?: it.id,
@@ -189,7 +207,14 @@ class ArchiveViewModel @Inject constructor(
                         )
                     }
 
-                    _uiState.update { state -> state.copy(missions = missions, conversations = conversations, sentences = sentences, reports = reports) }
+                    _uiState.update { state ->
+                        state.copy(
+                            missions = missions,
+                            conversations = conversations,
+                            sentences = sentences,
+                            reports = reports
+                        )
+                    }
                 }
                 is ApiResult.Error -> { }
                 is ApiResult.Exception -> { }

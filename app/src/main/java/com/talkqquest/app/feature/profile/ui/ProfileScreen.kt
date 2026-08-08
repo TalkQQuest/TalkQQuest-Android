@@ -109,7 +109,7 @@ fun ProfileScreen(
     onBadgesClick: () -> Unit = {},
     onRecentMissionClick: () -> Unit = {},
     onArchiveClick: () -> Unit = {},
-) = FitDesign(compensateStatusBar = false) {
+) = FitDesign(compensateStatusBar = false, contentAlignment = Alignment.TopCenter) {
     Box(
         modifier = Modifier
             .fillMaxSize()

@@ -26,8 +26,9 @@ class HomeRepository @Inject constructor(
         when (val res = serverCall { homeApi.getHomeSummary() }) {
             is ApiResult.Success -> {
                 val d = res.data
-                // 서버 레벨·XP로 1회 초기화 — 이후엔 미션 완료가 값을 이어감
-                userXpStore.seedFromServer(d.level, d.currentXp)
+                // 서버 레벨·XP로 1회 초기화 — 이후엔 미션 완료가 값을 이어감.
+                // nextLevelXp까지 넘겨야 진행바 분모가 서버와 같아진다(레벨마다 필요량이 달라짐).
+                userXpStore.seedFromServer(d.level, d.currentXp, d.nextLevelXp)
                 return ApiResult.Success(
                     d.copy(
                         // 닉네임 미설정 계정(null→"") 폴백: /users/me의 nickname→name → 그래도 없으면 stub 문구

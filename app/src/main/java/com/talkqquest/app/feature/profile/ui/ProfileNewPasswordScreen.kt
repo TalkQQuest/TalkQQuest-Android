@@ -58,7 +58,7 @@ fun ProfileNewPasswordScreen(
     onConfirmClick: (String) -> Unit = {},
     showCompletionDialog: Boolean = false,
     onCompletionConfirm: () -> Unit = {},
-) = FitDesign {
+) = FitDesign(contentAlignment = Alignment.TopCenter) {
     var password by remember { mutableStateOf(initialPassword) }
     var showPassword by remember { mutableStateOf(true) }
     var samePasswordError by remember { mutableStateOf(initialSamePasswordError) }

@@ -16,11 +16,13 @@ import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.requiredSize
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.pager.PagerState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -42,6 +44,7 @@ import com.talkqquest.app.core.designsystem.softShadow
 import dev.chrisbanes.haze.HazeState
 import dev.chrisbanes.haze.HazeTint
 import dev.chrisbanes.haze.hazeEffect
+import kotlinx.coroutines.launch
 
 // ?섎떒 ?ㅻ퉬 ?????덈뒗 ?좊━ ?뚯빟(?붿옄??CSS 媛?洹몃?濡?.
 // ?뚯빟: ?믪씠 64 / radius 32 / ?곗깋 0.8 + 釉붾윭 10 / ?뚮몢由???0.3 / 洹몃┝??0 -2 12 寃??%
@@ -50,10 +53,10 @@ import dev.chrisbanes.haze.hazeEffect
 
 // route媛 ?랁븳 ?? ??쓽 ?섏쐞 ?붾㈃(?? 誘몄뀡 紐⑸줉 = ???뚮줈???먯꽌???뚯냽 ??씠 怨꾩냽 ?섏씠?쇱씠?몃릺寃???
 private fun tabRouteOf(route: String?): String? = when (route) {
-    Screen.MISSION_LIST -> Screen.HOME
-    Screen.MISSION_DETAIL -> Screen.HOME
-    Screen.CONVERSATION_PREP -> Screen.HOME
-    Screen.CONVERSATION -> Screen.HOME
+    // 미션 목록은 이제 독립 탭(else로 떨어져 자기 자신=미션 탭 선택). 하위 화면은 미션 탭 유지.
+    Screen.MISSION_DETAIL -> Screen.MISSION_LIST
+    Screen.CONVERSATION_PREP -> Screen.MISSION_LIST
+    Screen.CONVERSATION -> Screen.MISSION_LIST
     Screen.REPORT -> Screen.HOME // ???뚮줈???쇰뱶諛????곸꽭 由ы룷??濡?吏꾩엯 ?????좎? (?ъ슜??寃곗젙)
     Screen.PROFILE_BADGES -> Screen.PROFILE
     Screen.PROFILE_RECENT_MISSION -> Screen.PROFILE
@@ -63,21 +66,37 @@ private fun tabRouteOf(route: String?): String? = when (route) {
 @Composable
 fun TqBottomBar(
     navController: NavHostController,
+    pagerState: PagerState,
     hazeState: HazeState,
     modifier: Modifier = Modifier,
 ) {
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route
+    val scope = rememberCoroutineScope()
+    val entries = BottomNavItem.entries
+
+    // 탭 4개 셸(MainTabsPager) 위: 선택 표시는 페이저 현재 페이지, 탭 클릭은 페이저 슬라이드.
+    // 상세 화면 위: tabRouteOf로 부모 탭 표시 + 클릭 시 그 탭으로 navigate.
+    val onShell = currentRoute in entries.map { it.route }.toSet()
+    val selectedRoute = if (onShell) entries[pagerState.currentPage].route else tabRouteOf(currentRoute)
 
     TqBottomBarContent(
-        currentRoute = currentRoute,
+        selectedRoute = selectedRoute,
         onTabClick = { route ->
+            val page = entries.indexOfFirst { it.route == route }
+            if (onShell) {
+                // 이미 페이저 위: 탭도 애니메이션 슬라이드로(네비게이션 없이 페이지만 이동).
+                if (page >= 0 && page != pagerState.currentPage) {
+                    scope.launch { pagerState.animateScrollToPage(page) }
+                }
+            } else {
             // ??쓣 ?꾨Ⅴ硫? 洹????뚮줈???덉そ ?붾㈃(?? ?댿넂誘몄뀡 ?곸꽭?믩???以鍮????덈뜑?쇰룄
             // 洹???쓽 ?쒖옉 ?붾㈃?쇰줈 ?섎룎?꾩삤寃??? (restoreState=true瑜??곕㈃ ?ㅼ뼱媛붾뜕 ?섏쐞 ?붾㈃??
             // ?섏궡?ㅼ꽌 "???뚮윭??硫붿씤?쇰줈 ???ㅻ뒗" 臾몄젣媛 ?앷꺼 類?????= ??긽 洹???猷⑦듃濡?)
             navController.navigate(route) {
                 popUpTo(navController.graph.findStartDestination().id) { inclusive = false }
                 launchSingleTop = true
+            }
             }
         },
         hazeState = hazeState,
@@ -87,7 +106,7 @@ fun TqBottomBar(
 
 @Composable
 private fun TqBottomBarContent(
-    currentRoute: String?,
+    selectedRoute: String?,
     onTabClick: (String) -> Unit,
     hazeState: HazeState,
     modifier: Modifier = Modifier,
@@ -104,7 +123,7 @@ private fun TqBottomBarContent(
                 offsetX = 0.dp,
                 offsetY = (-2).dp,
                 blur = 12.dp,
-                cornerRadius = 32.dp,
+                cornerRadius = 36.dp,
             ),
         contentAlignment = Alignment.Center,
     ) {
@@ -112,13 +131,13 @@ private fun TqBottomBarContent(
         Box(
             modifier = Modifier
                 .matchParentSize()
-                .clip(RoundedCornerShape(32.dp))
+                .clip(RoundedCornerShape(36.dp))
                 .hazeEffect(state = hazeState) {
                     blurRadius = 10.dp
                     backgroundColor = White
                     tints = listOf(HazeTint(White.copy(alpha = 0.8f)))
                 }
-                .border(1.dp, White.copy(alpha = 0.3f), RoundedCornerShape(32.dp)),
+                .border(1.dp, White.copy(alpha = 0.3f), RoundedCornerShape(36.dp)),
         )
         // ?꾩씠肄?移?痢? clip ?놁쓬 ??移?蹂대씪 湲濡쒖슦媛 ?뚯빟 諛뽰쑝濡쒕룄 ?먯뿰?ㅻ읇寃?踰덉쭚(?쇨렇留덉쿂??.
         // BoxWithConstraints濡??뚯빟 ?ㅼ젣 ??쓣 ?뚯븘 ?좏깮 移???쓣 ?뺥븿(醫곸? ?붾㈃?먯꽑 移?異뺤냼).
@@ -142,7 +161,7 @@ private fun TqBottomBarContent(
                 horizontalArrangement = Arrangement.SpaceBetween,
             ) {
                 BottomNavItem.entries.forEach { item ->
-                    val selected = tabRouteOf(currentRoute) == item.route
+                    val selected = selectedRoute == item.route
                     Box(
                         modifier = Modifier
                             .size(44.dp)
@@ -152,7 +171,8 @@ private fun TqBottomBarContent(
                             ) {
                                 // ?섏씠?쇱씠???щ?媛 ?꾨땲??"?ㅼ젣 ?꾩옱 ?붾㈃"?쇰줈 ?먮떒:
                                 // 媛숈? ?붾㈃?대㈃ 臾댁떆, ??쓽 ?섏쐞 ?붾㈃(?? 誘몄뀡 紐⑸줉)?대㈃ ??猷⑦듃濡?蹂듦?.
-                                if (currentRoute != item.route) onTabClick(item.route)
+                                // 중복 클릭 방지는 onTabClick 내부(페이지/route 비교)에서 처리한다.
+                                onTabClick(item.route)
                             },
                         contentAlignment = Alignment.Center,
                     ) {
@@ -218,7 +238,7 @@ private fun TqBottomBarPreview() {
                 .padding(vertical = 24.dp),
         ) {
             TqBottomBarContent(
-                currentRoute = Screen.HOME,
+                selectedRoute = Screen.HOME,
                 onTabClick = {},
                 hazeState = remember { HazeState() },
             )
@@ -239,7 +259,7 @@ private fun TqBottomBarEdgePreview() {
                 .padding(vertical = 24.dp),
         ) {
             TqBottomBarContent(
-                currentRoute = Screen.ARCHIVE_HOME,
+                selectedRoute = Screen.ARCHIVE_HOME,
                 onTabClick = {},
                 hazeState = remember { HazeState() },
             )

@@ -23,11 +23,14 @@ class UserXpStore @Inject constructor() {
 
     // 서버 프로필(/users/me)의 level·xp로 1회 초기화 — 이후 미션 완료 가산은 로컬(addXp)이 이어감.
     // (완료 API가 서버 XP를 갱신하기 전까지의 임시 동기화. 서버 연동 완료 시 클래스째 삭제)
-    fun seedFromServer(serverLevel: Int, serverXp: Int) {
+    // ★serverNextLevelXp를 반드시 함께 넘길 것: 빠뜨리면 초기값 100이 남아 화면에 "250/100XP"처럼
+    //   분모만 낡은 값이 표시된다(2026-07-28 실제 발생 — 홈 첫 진입에서만 어긋났음).
+    fun seedFromServer(serverLevel: Int, serverXp: Int, serverNextLevelXp: Int? = null) {
         if (seeded) return
         seeded = true
         level = serverLevel
         currentXp = serverXp
+        nextLevelXp = serverNextLevelXp?.takeIf { it > 0 } ?: requiredXpFor(serverLevel)
     }
 
     // 서버 완료 처리 후 /xp/summary 값으로 강제 동기화 — 홈 카드가 서버와 같은 숫자를 보게.
@@ -39,13 +42,24 @@ class UserXpStore @Inject constructor() {
         nextLevelXp = serverNextLevelXp
     }
 
-    // 미션 완료 보상 반영. 실제 레벨업 규칙(필요 XP 증가 등)은 서버 정책이지만,
-    // stub도 100을 넘으면 초과분 이월+레벨업 해서 데모에서 숫자가 깨지지 않게 함(110/100 방지).
+    // 미션 완료 보상 반영 — 서버 실패(오프라인) 시에만 타는 폴백 경로.
+    // 레벨업할 때마다 필요 XP를 다시 계산한다: 서버 mission-completion.service.ts와 동일한 절차라야
+    // 온라인 복귀 후 syncFromServer가 덮어쓸 때 숫자가 튀지 않는다.
     fun addXp(gained: Int) {
         currentXp += gained
         while (currentXp >= nextLevelXp) {
             currentXp -= nextLevelXp
             level++
+            nextLevelXp = requiredXpFor(level)
         }
+    }
+
+    companion object {
+        // 서버 xp/services/level.service.ts의 calculateNextLevelXp와 같은 공식.
+        // 서버는 응답에 nextLevelXp를 담아 주므로 온라인에서는 그 값이 우선이고,
+        // 이 공식은 값을 못 받은 오프라인 폴백에서만 쓴다.
+        // ★서버 쪽은 "레벨업 필요 XP 미확정 — level * 100으로 가정" 상태(TODO 주석)라
+        //   기획이 확정되면 서버 공식과 함께 이 함수도 같이 고쳐야 한다.
+        fun requiredXpFor(level: Int): Int = (level.coerceAtLeast(1)) * 100
     }
 }

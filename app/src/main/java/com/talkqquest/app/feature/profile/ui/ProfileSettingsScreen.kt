@@ -1,4 +1,4 @@
-﻿package com.talkqquest.app.feature.profile.ui
+package com.talkqquest.app.feature.profile.ui
 
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -97,7 +97,7 @@ fun ProfileSettingsScreen(
     onTermsClick: () -> Unit = {},
     onSupportClick: () -> Unit = {},
     onWithdrawClick: () -> Unit = {},
-) = FitDesign {
+) = FitDesign(contentAlignment = Alignment.TopCenter) {
     var showTimePicker by remember { mutableStateOf(false) }
 
     Box(

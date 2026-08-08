@@ -54,7 +54,7 @@ fun MainScreen() {
     // currentRoute == null = 泥??꾨젅???쒖옉 ?붾㈃ ?명똿 ?? ???④꼈????쾶 ?⑥? ?딄쾶 諛붾줈 ?쒖떆.
     // ??CONVERSATION_PREP(誘몄뀡 吏꾩엯)? ?쒖쇅 ??UI 7李?"誘몄뀡 吏꾩엯" ?꾨젅?꾩뿉 ?섎떒 ?ㅻ퉬寃뚯씠?섏씠 ?놁쓬(2026-07-19 CSS ?뺤씤).
     val bottomBarRoutes = BottomNavItem.entries.map { it.route } +
-        Screen.MISSION_LIST + Screen.MISSION_DETAIL + Screen.CONVERSATION +
+        Screen.MISSION_LIST + Screen.MISSION_LIST_HOME + Screen.MISSION_DETAIL + Screen.CONVERSATION +
         Screen.PROFILE_BADGES + Screen.PROFILE_RECENT_MISSION
     // REPORT 제외: 최신 시안에서 리포트(성장/주간)는 하단 네비 없는 단독 화면(뒤로가기로 이탈)
 

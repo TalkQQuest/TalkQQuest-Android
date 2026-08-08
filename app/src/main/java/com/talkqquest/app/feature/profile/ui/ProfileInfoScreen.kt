@@ -41,7 +41,7 @@ import com.talkqquest.app.core.designsystem.TqType
 fun ProfileInfoScreen(
     nickname: String = "소다123",
     avatarUrl: String? = null,
-    connectedAccount: String = "talkqquest@naver.com",
+    connectedAccount: String = "이메일 정보 없음",
     onBack: () -> Unit = {},
     onNicknameClick: () -> Unit = {},
     onAvatarClick: (Uri) -> Unit = {},

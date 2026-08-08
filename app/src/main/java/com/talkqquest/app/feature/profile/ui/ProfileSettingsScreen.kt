@@ -88,6 +88,8 @@ private val SettingsBodySmallStyle = TextStyle(
 
 @Composable
 fun ProfileSettingsScreen(
+    nickname: String = "다민",
+    connectedAccount: String = "이메일 정보 없음",
     initialPushEnabled: Boolean = true,
     initialReminderEnabled: Boolean = false,
     onPushEnabledChange: (Boolean) -> Unit = {},
@@ -111,6 +113,7 @@ fun ProfileSettingsScreen(
         )
 
         SettingsProfileHeader(
+            nickname = nickname,
             onEditProfileClick = onEditProfileClick,
             modifier = Modifier
                 .offset(x = 16.dp, y = 104.dp)
@@ -173,7 +176,7 @@ fun ProfileSettingsScreen(
             )
             SettingsArrowRow(
                 title = "연결된 계정",
-                trailing = "talkqquest@naver.com",
+                trailing = connectedAccount,
                 modifier = Modifier
                     .offset(x = 16.dp, y = 90.dp)
                     .size(width = 330.dp, height = 44.dp),
@@ -234,6 +237,7 @@ fun ProfileSettingsScreen(
 
 @Composable
 private fun SettingsProfileHeader(
+    nickname: String,
     onEditProfileClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -246,7 +250,7 @@ private fun SettingsProfileHeader(
                 .size(60.dp),
         )
         Text(
-            text = "다민 님",
+            text = "$nickname 님",
             style = SettingsTitleStyle,
             color = Color.Black,
             modifier = Modifier

@@ -98,7 +98,7 @@ fun NavGraph(
     val slideSpec = tween<IntOffset>(300)
     NavHost(
         navController = navController,
-        startDestination = Screen.LOGIN,
+        startDestination = Screen.SPLASH,
         modifier = modifier,
         enterTransition = {
             if (isTabSwitch()) fadeIn(tween(300))
@@ -816,8 +816,18 @@ fun NavGraph(
             val profileViewModel: ProfileViewModel = hiltViewModel()
             val profileUiState by profileViewModel.uiState.collectAsState()
             val settings = profileUiState.settings
-
+            val profile = profileUiState.profile
+            val dashboard = profileUiState.dashboard
+            val nickname = dashboard?.nickname?.takeIf { it.isNotBlank() }
+                ?: profile?.nickname
+                ?: profile?.name
+                ?: "다민"
+            val connectedAccount = dashboard?.email?.takeIf { it.isNotBlank() }
+                ?: profile?.name?.takeIf { it.contains("@") }
+                ?: "이메일 정보 없음"
             LaunchedEffect(Unit) {
+                profileViewModel.loadProfile()
+                profileViewModel.loadDashboard()
                 profileViewModel.loadSettings()
             }
 
@@ -827,6 +837,8 @@ fun NavGraph(
             }
 
             ProfileSettingsScreen(
+                nickname = nickname,
+                connectedAccount = connectedAccount,
                 initialPushEnabled = settings?.let { it.communityApproved || it.reportReady || it.marketing } ?: true,
                 initialReminderEnabled = settings?.missionReminder ?: false,
                 onPushEnabledChange = profileViewModel::updatePushNotifications,
@@ -844,8 +856,18 @@ fun NavGraph(
             val profileViewModel: ProfileViewModel = hiltViewModel()
             val profileUiState by profileViewModel.uiState.collectAsState()
             val profile = profileUiState.profile
-            val nickname = profile?.nickname ?: profile?.name ?: "\uB2E4\uBBFC"
-            val connectedAccount = profile?.name?.takeIf { it.contains("@") } ?: "talkqquest@naver.com"
+            val dashboard = profileUiState.dashboard
+            val nickname = dashboard?.nickname?.takeIf { it.isNotBlank() }
+                ?: profile?.nickname
+                ?: profile?.name
+                ?: "다민"
+            val connectedAccount = dashboard?.email?.takeIf { it.isNotBlank() }
+                ?: profile?.name?.takeIf { it.contains("@") }
+                ?: "이메일 정보 없음"
+
+            LaunchedEffect(Unit) {
+                profileViewModel.loadDashboard()
+            }
 
             profileUiState.errorMessage?.let { message ->
                 Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
@@ -952,7 +974,13 @@ fun NavGraph(
 
             val profileViewModel: ProfileViewModel = hiltViewModel()
             val profileUiState by profileViewModel.uiState.collectAsState()
-            val connectedAccount = profileUiState.profile?.name?.takeIf { it.contains("@") } ?: "talkqquest@naver.com"
+            val connectedAccount = profileUiState.dashboard?.email?.takeIf { it.isNotBlank() }
+                ?: profileUiState.profile?.name?.takeIf { it.contains("@") }
+                ?: "이메일 정보 없음"
+
+            LaunchedEffect(Unit) {
+                profileViewModel.loadDashboard()
+            }
 
             ProfileConnectedAccountScreen(
                 connectedAccount = connectedAccount,

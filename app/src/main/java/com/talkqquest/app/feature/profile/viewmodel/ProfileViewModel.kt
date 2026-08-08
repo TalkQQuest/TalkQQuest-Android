@@ -135,7 +135,11 @@ class ProfileViewModel @Inject constructor(
                     it.copy(isLoading = false, settings = result.data)
                 }
                 is ApiResult.Error -> _uiState.update {
-                    it.copy(isLoading = false, errorMessage = result.message ?: "\uC124\uC815\uC744 \uBD88\uB7EC\uC624\uC9C0 \uBABB\uD588\uC5B4\uC694.")
+                    if (result.code == 404) {
+                        it.copy(isLoading = false, settings = UserSettings())
+                    } else {
+                        it.copy(isLoading = false, errorMessage = result.message ?: "\uC124\uC815\uC744 \uBD88\uB7EC\uC624\uC9C0 \uBABB\uD588\uC5B4\uC694.")
+                    }
                 }
                 is ApiResult.Exception -> _uiState.update {
                     it.copy(isLoading = false, errorMessage = networkErrorMessage)

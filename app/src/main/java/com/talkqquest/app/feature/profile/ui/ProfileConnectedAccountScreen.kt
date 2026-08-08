@@ -30,7 +30,7 @@ import com.talkqquest.app.core.designsystem.White
 
 @Composable
 fun ProfileConnectedAccountScreen(
-    connectedAccount: String = "talkqquest@naver.com",
+    connectedAccount: String = "이메일 정보 없음",
     onBack: () -> Unit = {},
     onLogoutClick: () -> Unit = {},
 ) = FitDesign(contentAlignment = Alignment.TopCenter) {

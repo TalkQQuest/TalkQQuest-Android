@@ -230,11 +230,23 @@ private fun ArchiveHomeScreen(
                 item { Spacer(modifier = Modifier.height(16.dp)) }
 
                 items(uiState.recentActivities) { activity ->
-                    RecentActivityCard(
-                        activity = activity,
-                        onClick = { onActivityClick(activity.id, activity.type) },
-                        modifier = Modifier.padding(horizontal = 16.dp)
-                    )
+                    if (activity.type == ActivityType.CONVERSATION) {
+                        ArchiveConversationCard(
+                            title = activity.title,
+                            tags = listOf("학교", "진로"), // 💡 TODO: API 명세 확정 후 ViewModel 매핑 필요
+                            summary = "서로의 전공과 관심 분야를 공유하고, 진로 고민에 대해 조언을 주고받았어요.", // 💡 TODO: API 연동 필요
+                            date = activity.date,
+                            time = "14:35", // 💡 TODO: API의 createdAt에서 시간(HH:mm) 파싱 필요
+                            onClick = { onActivityClick(activity.id, activity.type) },
+                            modifier = Modifier.padding(horizontal = 16.dp)
+                        )
+                    } else {
+                        RecentActivityCard(
+                            activity = activity,
+                            onClick = { onActivityClick(activity.id, activity.type) },
+                            modifier = Modifier.padding(horizontal = 16.dp)
+                        )
+                    }
                     Spacer(modifier = Modifier.height(16.dp))
                 }
             }

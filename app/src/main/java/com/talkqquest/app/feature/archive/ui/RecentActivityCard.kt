@@ -84,16 +84,14 @@ internal fun RecentActivityCard(
             ActivityType.REPORT -> R.drawable.img_archive_report
         }
 
-        Box(
-            modifier = Modifier.size(48.dp),
-            contentAlignment = Alignment.Center
-        ) {
-            Image(
-                painter = painterResource(id = iconRes),
-                contentDescription = null,
-                modifier = Modifier.size(40.dp)
-            )
-        }
+        // 💡 [수정됨] CSS 크기에 맞게 49.dp로 수정 및 라운드(8.dp) 처리 (불필요한 Box 제거)
+        Image(
+            painter = painterResource(id = iconRes),
+            contentDescription = null,
+            modifier = Modifier
+                .size(49.dp)
+                .clip(RoundedCornerShape(8.dp))
+        )
 
         // 아이콘 우측 Gap (미션 8dp, 일반 12dp)
         Spacer(modifier = Modifier.width(if (isMission) 8.dp else 12.dp))
@@ -241,7 +239,7 @@ private fun TimeXpRow(minutes: Int, xp: Int) {
         ) {
             Image(
                 painter = painterResource(R.drawable.ic_mission_xp),
-                contentDescription = null,
+                contentDescription = null
             )
             Text(text = "${xp}XP", style = TqType.Caption, color = Gray500, softWrap = false)
         }

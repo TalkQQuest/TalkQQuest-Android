@@ -33,7 +33,6 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
@@ -75,11 +74,11 @@ import com.talkqquest.app.core.designsystem.TqType
 import com.talkqquest.app.core.designsystem.White
 import com.talkqquest.app.core.designsystem.softShadow
 
-// 💡 [수정됨] ReviewChatMessage의 변경된 경로 반영
 import com.talkqquest.app.feature.archive.data.model.ReviewChatMessage
 import com.talkqquest.app.feature.archive.viewmodel.ArchiveConversationDetailUiState
 import com.talkqquest.app.feature.archive.viewmodel.ArchiveConversationDetailViewModel
 import com.talkqquest.app.feature.archive.viewmodel.AiFeedbackItem
+import com.talkqquest.app.feature.mission.ui.figma
 
 // ── 공통 색상 상수 ──
 private val ChatText = Color(0xFF1C1C1C)
@@ -121,18 +120,15 @@ fun ArchiveConversationDetailScreen(
     }
 
     FitDesign {
-        // 💡 화면 전환 애니메이션 적용 (AnimatedContent)
         AnimatedContent(
             targetState = uiState.isReviewMode,
             transitionSpec = {
                 if (targetState) {
-                    // 상세 -> 리뷰 (들어가기): 아래에서 위로 슬라이드 업 + 페이드 인
                     (slideInVertically(
                         animationSpec = tween(300),
                         initialOffsetY = { fullHeight -> fullHeight }
                     ) + fadeIn(animationSpec = tween(300))) togetherWith fadeOut(animationSpec = tween(300))
                 } else {
-                    // 리뷰 -> 상세 (닫기): 위에서 아래로 슬라이드 다운 + 페이드 아웃
                     fadeIn(animationSpec = tween(300)) togetherWith (slideOutVertically(
                         animationSpec = tween(300),
                         targetOffsetY = { fullHeight -> fullHeight }
@@ -193,7 +189,15 @@ private fun ArchiveConversationDetailContent(
             ) {
                 Spacer(modifier = Modifier.height(19.dp))
 
-                ConversationProfileCard(uiState.title, uiState.date, uiState.duration)
+                // 💡 변경됨: 얇았던 기존 ConversationProfileCard 대신 공용 ArchiveConversationCard 사용
+                ArchiveConversationCard(
+                    title = uiState.title,
+                    tags = uiState.summaryKeywords.take(2), // 💡 TODO: API 명세 확정 후 ViewModel 매핑 필요
+                    summary = uiState.summaryText, // 💡 TODO: API 연동 필요
+                    date = uiState.date,
+                    time = "14:35", // 💡 TODO: API의 createdAt에서 시간(HH:mm) 파싱 필요
+                    onClick = { /* 상세 화면 최상단 썸네일이므로 클릭 동작 없음 */ }
+                )
 
                 Spacer(modifier = Modifier.height(16.dp))
 
@@ -206,7 +210,6 @@ private fun ArchiveConversationDetailContent(
                     ConversationAiFeedbackSection(uiState.feedbacks)
                 }
 
-                // 💡 하단 고정 버튼/마스크 영역(158dp)에 가려지지 않도록 패딩을 180dp로 확보
                 Spacer(modifier = Modifier.height(180.dp))
             }
         }
@@ -275,7 +278,6 @@ private fun ArchiveConversationReviewContent(
             Box(modifier = Modifier.fillMaxWidth().weight(1f)) {
                 LazyColumn(
                     modifier = Modifier.fillMaxSize(),
-                    // 💡 하단 마스크(203.dp)에 가려지지 않고 끝까지 스크롤될 수 있도록 bottom 패딩을 220.dp로 확보
                     contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 88.dp, bottom = 220.dp)
                 ) {
                     itemsIndexed(uiState.messages) { index, message ->
@@ -351,32 +353,6 @@ private fun ChatBubbleRow(message: ReviewChatMessage, topGap: androidx.compose.u
 @Composable
 private fun TimeLabel(time: String) {
     Text(text = time, style = TqType.Caption.figma().copy(fontSize = 10.sp, lineHeight = 14.sp, fontWeight = FontWeight.Medium), color = TimeText)
-}
-
-@Composable
-private fun ConversationProfileCard(title: String, date: String, duration: String) {
-    Row(
-        modifier = Modifier.fillMaxWidth().height(72.dp)
-            .softShadow(color = Gray1000.copy(alpha = 0.01f), offsetY = 8.dp, blur = 24.dp, cornerRadius = 20.dp)
-            .clip(RoundedCornerShape(20.dp)).background(White).padding(start = 16.dp, end = 6.dp, top = 12.dp, bottom = 12.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Box(modifier = Modifier.size(48.dp), contentAlignment = Alignment.Center) {
-            Image(painter = painterResource(id = R.drawable.img_archive_conversation), contentDescription = null, modifier = Modifier.size(40.dp))
-        }
-        Spacer(modifier = Modifier.width(12.dp))
-        Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.Center) {
-            Text(text = title, style = TqType.BodyL.copy(fontWeight = FontWeight.Medium).figma(), color = Gray900, maxLines = 1, overflow = TextOverflow.Ellipsis)
-            Spacer(modifier = Modifier.height(4.dp))
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(text = date, style = TqType.Caption.figma(), color = Gray500)
-                Spacer(modifier = Modifier.width(8.dp))
-                Box(modifier = Modifier.width(1.dp).height(9.dp).background(Gray300))
-                Spacer(modifier = Modifier.width(8.dp))
-                Text(text = duration, style = TqType.Caption.figma(), color = Gray500)
-            }
-        }
-    }
 }
 
 @Composable
@@ -461,10 +437,12 @@ private fun ConversationAiFeedbackSection(feedbacks: List<AiFeedbackItem>) {
                 val titleColor = if (feedback.score < 80) Gray800 else Gray600
                 Row(
                     modifier = Modifier.fillMaxWidth().height(44.dp).padding(start = 16.dp, end = 0.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Column(
+                        modifier = Modifier.weight(1f).padding(end = 16.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
                         Text(text = feedback.title, style = TqType.BodyM.copy(lineHeight = 22.sp).figma(), color = titleColor)
                         Box(modifier = Modifier.fillMaxWidth().height(8.dp).clip(RoundedCornerShape(8.dp)).background(Primary100)) {
                             Box(modifier = Modifier.fillMaxWidth(feedback.score / 100f).height(8.dp).clip(RoundedCornerShape(8.dp)).background(Primary600))
@@ -480,7 +458,11 @@ private fun ConversationAiFeedbackSection(feedbacks: List<AiFeedbackItem>) {
                             Text(text = "점", style = TqType.BodyS.figma(), color = Primary600, modifier = Modifier.padding(bottom = 3.dp))
                         }
                         Box(modifier = Modifier.size(44.dp), contentAlignment = Alignment.Center) {
-                            Icon(imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = "상세 보기", tint = Gray400)
+                            Icon(
+                                painter = painterResource(id = R.drawable.ic_forward_chevron),
+                                contentDescription = "상세 보기",
+                                tint = Gray400
+                            )
                         }
                     }
                 }

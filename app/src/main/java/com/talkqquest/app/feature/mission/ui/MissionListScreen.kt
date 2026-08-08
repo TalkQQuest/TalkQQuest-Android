@@ -4,7 +4,6 @@ import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -18,7 +17,6 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBars
-import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
@@ -37,7 +35,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
@@ -82,6 +79,7 @@ fun MissionListScreen(
     onMissionClick: (String) -> Unit = {},
     onSheetTopChange: (Float?) -> Unit = {}, // 저장 시트 위 끝 y(px), null=없음 — 하단 네비 가림 처리(MainScreen 연결)
     onSavedListClick: () -> Unit = {}, // 시트 "저장 목록 >" → 저장 목록 화면
+    onArchiveClick: () -> Unit = {}, // 헤더 폴더 → 보관함 (UI 12)
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     // 다른 화면(상세·저장 목록)에서 바꾼 북마크가 돌아왔을 때 반영되도록, 복귀마다 조용히 재조회.
@@ -100,6 +98,7 @@ fun MissionListScreen(
         onMissionClick = onMissionClick,
         onSheetTopChange = onSheetTopChange,
         onSavedListClick = onSavedListClick,
+        onArchiveClick = onArchiveClick,
     )
 }
 
@@ -114,6 +113,7 @@ private fun MissionListScreen(
     onMissionClick: (String) -> Unit = {},
     onSheetTopChange: (Float?) -> Unit = {},
     onSavedListClick: () -> Unit = {},
+    onArchiveClick: () -> Unit = {},
 ) = FitDesign { // 작은 화면에선 디자인(393x852) 통째 축소 — 저장 시트 포함 (사용자 결정)
     Box(
         modifier = Modifier
@@ -166,10 +166,10 @@ private fun MissionListScreen(
                         MissionListContent(
                             uiState = uiState,
                             listState = listState,
-                            onBack = onBack,
                             onFilterSelect = onFilterSelect,
                             onToggleSave = onToggleSave,
                             onMissionClick = onMissionClick,
+                            onArchiveClick = onArchiveClick,
                         )
                         // 스크롤 유도 마스크 (CSS "스크롤 유도 마스크"): left 16 · 폭 360 · top 670 · 높이 68
                         // = 하단 네비 알약 위에서 목록이 배경색으로 사라짐 (투명→Gray50).
@@ -195,15 +195,13 @@ private fun MissionListScreen(
 private fun MissionListContent(
     uiState: MissionListUiState,
     listState: LazyListState,
-    onBack: () -> Unit,
     onFilterSelect: (String) -> Unit,
     onToggleSave: (String) -> Unit,
     onMissionClick: (String) -> Unit,
+    onArchiveClick: () -> Unit,
 ) {
     // 화면 좌우 스와이프로도 필터 전환 (칩 탭 선택은 그대로 유지). FlowRow가 칩을 missionFilters
     // 순서(왼→오, 위→아래)로 깔므로 인덱스 ±1 = 읽기 순서 이동 — 줄 오른쪽 끝이면 다음 줄 왼쪽으로 순환.
-    // 가로 드래그만 감지해 세로 스크롤과 충돌 안 함.
-    val currentFilter by rememberUpdatedState(uiState.selectedFilter)
     // 목록 끝 여백. ⚠️ CSS(Frame 431)는 뷰포트 padding:0 + 스크롤 리스트라 "스크롤 끝 여백"을
     // 정의하지 않음 = CSS 침묵 구간. 그래서 이 값은 전사값이 아니라 판단값이다.
     // 하단 네비(알약 h64, 인셋+76)에 안 겹치게 확보 + "목록의 끝" 느낌으로 여유를 둔 것(사용자 결정).
@@ -214,53 +212,46 @@ private fun MissionListContent(
         state = listState,
         modifier = Modifier
             .fillMaxSize()
-            .statusBarsPadding()
-            .pointerInput(Unit) {
-                var accum = 0f
-                val threshold = 48.dp.toPx()
-                detectHorizontalDragGestures(
-                    onDragStart = { accum = 0f },
-                    onHorizontalDrag = { _, delta -> accum += delta },
-                    onDragEnd = {
-                        val idx = missionFilters.indexOf(currentFilter)
-                        if (idx >= 0) {
-                            val n = missionFilters.size
-                            when {
-                                accum <= -threshold -> onFilterSelect(missionFilters[(idx + 1) % n]) // 왼쪽으로 밀기 → 다음 칩
-                                accum >= threshold -> onFilterSelect(missionFilters[(idx - 1 + n) % n]) // 오른쪽으로 밀기 → 이전 칩
-                            }
-                        }
-                    },
-                )
-            },
+            .statusBarsPadding(),
         verticalArrangement = Arrangement.spacedBy(14.dp), // 카드 간격 14 (CSS Frame 360 gap)
     ) {
         item {
-            Column(modifier = Modifier.padding(horizontal = 16.dp)) { // 콘텐츠 좌우 16 (CSS Frame 431 left)
-                Spacer(Modifier.height(8.dp)) // 상태바(40) → 뒤로가기(top 48) (CSS chevoren_left)
-                // 뒤로가기 (CSS chevoren_left): 44 터치영역이 화면 왼끝(left 0), 아이콘 Gray500.
-                Box(
-                    modifier = Modifier
-                        .offset(x = (-16).dp) // 콘텐츠 좌우 16 패딩 상쇄 → 터치영역 left 0
-                        .size(44.dp)
-                        .clip(CircleShape) // 눌림 효과를 네모 대신 동그라미로 (아이콘 버튼 관례)
-                        .clickable(onClick = onBack),
-                    contentAlignment = Alignment.Center,
+            Column(modifier = Modifier.padding(horizontal = 16.dp)) { // 콘텐츠 좌우 16 (CSS Frame 427321648 left)
+                Spacer(Modifier.height(18.dp)) // 상태바(40) → 콘텐츠(top 58) = 18 (UI 12 Frame 427321648)
+                // 헤더 (UI 12 Frame 427321646, space-between): 제목(왼) + 보관함 폴더(오). 뒤로가기 없음 —
+                // 미션이 하단 탭이 되어 진입 경로가 탭/스와이프라 뒤로가기가 셸을 벗어나게 됨.
+                Row(
+                    modifier = Modifier.fillMaxWidth().height(44.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    Icon(
-                        painter = painterResource(R.drawable.ic_back_chevron),
-                        contentDescription = "뒤로가기",
-                        tint = Gray500,
+                    // 제목 "OO님을 위한 미션" (Title/L 18/600 Gray700). OO = 서버 닉네임(유동).
+                    Text(
+                        text = "${uiState.nickname}님을 위한 미션",
+                        style = TqType.TitleL.figma(),
+                        color = Gray700,
                     )
+                    // 보관함 폴더 (UI 12 archive 44x44, Gray/500 외곽선). 44 터치영역, 우측 끝(콘텐츠 16 안쪽).
+                    Box(
+                        modifier = Modifier
+                            .size(44.dp)
+                            .clip(CircleShape) // 눌림 효과 동그라미 (아이콘 버튼 관례)
+                            .clickable(onClick = onArchiveClick),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Icon(
+                            painter = painterResource(R.drawable.ic_folder_outline),
+                            contentDescription = "보관함",
+                            tint = Gray500,
+                        )
+                    }
                 }
-                Spacer(Modifier.height(4.dp)) // 뒤로가기(48+44) → 제목(top 96) = 4 (CSS)
-                Text(text = "미션 목록", style = TqType.TitleL.figma(), color = Gray700)
-                Spacer(Modifier.height(12.dp)) // 제목 → 칩 (CSS Frame 355 gap 12)
+                Spacer(Modifier.height(6.dp)) // 제목 → 칩 (UI 12 Frame 427321647 gap 6)
                 MissionFilterChips(
                     selectedFilter = uiState.selectedFilter,
                     onFilterSelect = onFilterSelect,
                 )
-                Spacer(Modifier.height(10.dp)) // 칩 → 목록 24 (CSS Frame 431 gap) = 10 + 카드간격 14
+                Spacer(Modifier.height(10.dp)) // 칩 → 목록 24 (UI 12 콘텐츠 열 gap) = 10 + 카드간격 14
             }
         }
 

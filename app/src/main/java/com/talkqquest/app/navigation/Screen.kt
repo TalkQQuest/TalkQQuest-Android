@@ -51,7 +51,8 @@ object Screen {
     // ?? B?대떦 (?대룄/?ㅺ린??: 誘몄뀡 쨌 AI ???쨌 ?깆옣 由ы룷????
     const val HOME = "home"                                       // HomeScreen
     const val NOTIFICATION = "notification"                       // NotificationScreen (??踰????뚮┝李? ?붿옄??誘몄셿??placeholder)
-    const val MISSION_LIST = "mission_list"                       // MissionListScreen
+    const val MISSION_LIST = "mission_list"                       // MissionListScreen (하단 미션 탭)
+    const val MISSION_LIST_HOME = "mission_list_home"             // MissionListScreen (홈 "다른 미션 보기" — 예전 헤더, 홈 탭 유지)
     const val MISSION_DETAIL = "mission_detail/{missionId}"       // MissionDetailScreen
     const val CONVERSATION_PREP = "conversation_prep/{missionId}" // ConversationPrepScreen
     const val CONVERSATION = "conversation/{conversationId}"      // ConversationScreen

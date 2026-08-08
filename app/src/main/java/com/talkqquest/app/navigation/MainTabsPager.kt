@@ -56,7 +56,8 @@ private fun HomeTab(navController: NavHostController) {
     val homeScope = rememberCoroutineScope()
     HomeScreen(
         onStartMissionClick = { missionId -> navController.navigate("mission_detail/$missionId") },
-        onOtherMissionsClick = { navController.navigate(Screen.MISSION_LIST) },
+        // "다른 미션 보기" → 홈 소속 미션 목록(예전 헤더). 미션 탭으로 전환하지 않고 홈 탭 유지.
+        onOtherMissionsClick = { navController.navigate(Screen.MISSION_LIST_HOME) },
         // 알림 아이콘 ripple이 먼저 보인 후 화면이 전환되도록 짧게 지연합니다.
         onNotificationClick = {
             homeScope.launch {

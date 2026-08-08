@@ -1,9 +1,13 @@
-﻿package com.talkqquest.app.navigation
+package com.talkqquest.app.navigation
 
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -13,6 +17,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.requiredSize
 import androidx.compose.foundation.layout.size
@@ -27,8 +32,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.NavHostController
@@ -46,18 +53,19 @@ import dev.chrisbanes.haze.HazeTint
 import dev.chrisbanes.haze.hazeEffect
 import kotlinx.coroutines.launch
 
-// ?섎떒 ?ㅻ퉬 ?????덈뒗 ?좊━ ?뚯빟(?붿옄??CSS 媛?洹몃?濡?.
-// ?뚯빟: ?믪씠 64 / radius 32 / ?곗깋 0.8 + 釉붾윭 10 / ?뚮몢由???0.3 / 洹몃┝??0 -2 12 寃??%
-// ?좏깮 移? 92x44 / radius 22 / ??0.28 + 釉붾윭 10 / ?뚮몢由???0.4 / 湲濡쒖슦 0 6 24 蹂대씪(114,100,248) 14%
-// 釉붾윭: Haze(?덈뱶12+ 吏꾩쭨 釉붾윭 / 洹?誘몃쭔 ?댄듃 fallback).
+// 하단 네비 바. 디자인 CSS 값 그대로:
+// 바: 높이 64 / radius 36 / 흰색 0.8 + 블러 10 / 테두리 흰 0.3 / 그림자 0 -2 12 검정 6%
+// 선택 칩: 최대 92x44 / radius 22 / 흰 0.9 + 테두리 흰 0.4 / 그림자 0 6 24 보라(114,100,248) 14%
+// 블러: Haze(안드12+ 진짜 블러 / 구버전 틴트 fallback).
 
-// route媛 ?랁븳 ?? ??쓽 ?섏쐞 ?붾㈃(?? 誘몄뀡 紐⑸줉 = ???뚮줈???먯꽌???뚯냽 ??씠 怨꾩냽 ?섏씠?쇱씠?몃릺寃???
+// route가 속한 탭. 하위 화면(예: 미션 상세)은 부모 탭이 계속 선택돼 보이게 매핑.
 private fun tabRouteOf(route: String?): String? = when (route) {
     // 미션 목록은 이제 독립 탭(else로 떨어져 자기 자신=미션 탭 선택). 하위 화면은 미션 탭 유지.
+    Screen.MISSION_LIST_HOME -> Screen.HOME // 홈 "다른 미션 보기"로 띄운 목록은 홈 탭 유지
     Screen.MISSION_DETAIL -> Screen.MISSION_LIST
     Screen.CONVERSATION_PREP -> Screen.MISSION_LIST
     Screen.CONVERSATION -> Screen.MISSION_LIST
-    Screen.REPORT -> Screen.HOME // ???뚮줈???쇰뱶諛????곸꽭 由ы룷??濡?吏꾩엯 ?????좎? (?ъ슜??寃곗젙)
+    Screen.REPORT -> Screen.HOME
     Screen.PROFILE_BADGES -> Screen.PROFILE
     Screen.PROFILE_RECENT_MISSION -> Screen.PROFILE
     else -> route
@@ -79,9 +87,17 @@ fun TqBottomBar(
     // 상세 화면 위: tabRouteOf로 부모 탭 표시 + 클릭 시 그 탭으로 navigate.
     val onShell = currentRoute in entries.map { it.route }.toSet()
     val selectedRoute = if (onShell) entries[pagerState.currentPage].route else tabRouteOf(currentRoute)
+    // 칩 위치(0f..3f). 셸에선 페이저 스크롤을 그대로 물려 스와이프엔 실시간 추종,
+    // 탭 클릭엔 페이저 애니메이션과 동일한 시간으로 슬라이드. 상세 화면에선 부모 탭 인덱스.
+    val parentIndex = entries.indexOfFirst { it.route == tabRouteOf(currentRoute) }.coerceAtLeast(0)
+    val selectedPos: () -> Float = {
+        if (onShell) pagerState.currentPage + pagerState.currentPageOffsetFraction
+        else parentIndex.toFloat()
+    }
 
     TqBottomBarContent(
         selectedRoute = selectedRoute,
+        selectedPos = selectedPos,
         onTabClick = { route ->
             val page = entries.indexOfFirst { it.route == route }
             if (onShell) {
@@ -90,13 +106,11 @@ fun TqBottomBar(
                     scope.launch { pagerState.animateScrollToPage(page) }
                 }
             } else {
-            // ??쓣 ?꾨Ⅴ硫? 洹????뚮줈???덉そ ?붾㈃(?? ?댿넂誘몄뀡 ?곸꽭?믩???以鍮????덈뜑?쇰룄
-            // 洹???쓽 ?쒖옉 ?붾㈃?쇰줈 ?섎룎?꾩삤寃??? (restoreState=true瑜??곕㈃ ?ㅼ뼱媛붾뜕 ?섏쐞 ?붾㈃??
-            // ?섏궡?ㅼ꽌 "???뚮윭??硫붿씤?쇰줈 ???ㅻ뒗" 臾몄젣媛 ?앷꺼 類?????= ??긽 洹???猷⑦듃濡?)
-            navController.navigate(route) {
-                popUpTo(navController.graph.findStartDestination().id) { inclusive = false }
-                launchSingleTop = true
-            }
+                // 상세 화면에서 탭을 누르면 해당 탭의 시작 화면으로 복귀.
+                navController.navigate(route) {
+                    popUpTo(navController.graph.findStartDestination().id) { inclusive = false }
+                    launchSingleTop = true
+                }
             }
         },
         hazeState = hazeState,
@@ -107,6 +121,7 @@ fun TqBottomBar(
 @Composable
 private fun TqBottomBarContent(
     selectedRoute: String?,
+    selectedPos: () -> Float,
     onTabClick: (String) -> Unit,
     hazeState: HazeState,
     modifier: Modifier = Modifier,
@@ -117,7 +132,7 @@ private fun TqBottomBarContent(
             .fillMaxWidth()
             .padding(horizontal = 16.dp, vertical = 12.dp)
             .height(64.dp)
-            // ?뚯빟 洹몃┝?? ?꾨줈 2px, ?먮┝ 12, 寃??6% (CSS 0 -2 12 rgba(0,0,0,0.06))
+            // 바 그림자: 위로 2px, 블러 12, 검정 6% (CSS 0 -2 12 rgba(0,0,0,0.06))
             .softShadow(
                 color = Color.Black.copy(alpha = 0.06f),
                 offsetX = 0.dp,
@@ -127,7 +142,7 @@ private fun TqBottomBarContent(
             ),
         contentAlignment = Alignment.Center,
     ) {
-        // ?좊━ 諛곌꼍 痢? ?ш린留??κ?寃?clip. (洹몃옒???꾨옒 肄섑뀗痢좎쓽 移?湲濡쒖슦?????섎┝)
+        // 바 배경 층. 여기만 모서리 clip.
         Box(
             modifier = Modifier
                 .matchParentSize()
@@ -139,83 +154,111 @@ private fun TqBottomBarContent(
                 }
                 .border(1.dp, White.copy(alpha = 0.3f), RoundedCornerShape(36.dp)),
         )
-        // ?꾩씠肄?移?痢? clip ?놁쓬 ??移?蹂대씪 湲濡쒖슦媛 ?뚯빟 諛뽰쑝濡쒕룄 ?먯뿰?ㅻ읇寃?踰덉쭚(?쇨렇留덉쿂??.
-        // BoxWithConstraints濡??뚯빟 ?ㅼ젣 ??쓣 ?뚯븘 ?좏깮 移???쓣 ?뺥븿(醫곸? ?붾㈃?먯꽑 移?異뺤냼).
+        // 아이콘·칩 층: clip 없음. BoxWithConstraints로 바 실제 폭을 알아 선택 칩 폭을 계산.
         BoxWithConstraints(
             modifier = Modifier.fillMaxSize(),
             contentAlignment = Alignment.Center,
         ) {
-            // ??媛꾧꺽 gap = (?뚯빟??- 醫뚯슦?몄뀑 65 - ?꾩씠肄?媛?4*44=176)) / 3.
-            // ?좏깮 移???= 44 + ?ㅻ쾭?? ?ㅻ쾭?됱씠 (gap-4) ?댄븯媛 ?섍쾶 ?≪븘 ???꾩씠肄섍낵 ??寃뱀묠.
-            // 393 ???됰꼮?섎㈃ ?곹븳 92(?붿옄?멸컪), 醫곸쑝硫?異뺤냼(?섑븳 56).
+            // 탭 간격 gap = (바폭 - 좌우인셋 65 - 아이콘 4*44=176) / 3.
+            // 선택 칩 폭 = 44 + 오버플로*2. 393 기준 최대 92, 좁으면 최소 56.
             val tabGap = (maxWidth - 65.dp - 176.dp) / 3f
             val chipWidth = (44.dp + (tabGap - 4.dp) * 2f).coerceIn(56.dp, 92.dp)
+
+            // 탭별 interaction을 끌어올려(각 탭·칩이 공유) 선택된 탭이 눌리면 칩도 같이 눌리게.
+            val interactions = remember { List(BottomNavItem.entries.size) { MutableInteractionSource() } }
+            // 칩은 선택된 탭 위에 얹혀 있으니, 그 탭의 press를 칩에 물려 아이콘과 통째로 스케일(예전 ①번 동작).
+            val selectedIndex = BottomNavItem.entries.indexOfFirst { it.route == selectedRoute }.coerceAtLeast(0)
+            val chipPressed by interactions[selectedIndex].collectIsPressedAsState()
+            val chipPress by animateFloatAsState(
+                targetValue = if (chipPressed) 0.9f else 1f,
+                animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessMediumLow),
+                label = "chipPress",
+            )
+
+            // 선택 칩(흰 알약) — 하나만 두고 선택 위치로 미끄러진다. Row(아이콘)보다 먼저 그려 뒤에 깔림.
+            // 위치는 페이저 스크롤(selectedPos)에 직접 물려 offset 람다(레이아웃 단계)에서 계산 → 스와이프 실시간 추종·리컴포즈 없음.
+            // 탭 i 중심 X = 인셋 32.5 + 22 + i*(44+gap). 칩 좌변 = 중심 - 칩폭/2.
+            val legacyChip = android.os.Build.VERSION.SDK_INT < 28
+            Box(
+                modifier = Modifier
+                    .align(Alignment.CenterStart)
+                    .offset {
+                        val centerX = 54.5.dp + (44.dp + tabGap) * selectedPos()
+                        IntOffset((centerX - chipWidth / 2f).roundToPx(), 0)
+                    }
+                    .requiredSize(width = chipWidth, height = 44.dp)
+                    // 누르면 아이콘과 함께 0.9로 줄었다 복귀(같은 spring이라 동기화)
+                    .graphicsLayer { scaleX = chipPress; scaleY = chipPress }
+                    // 보라 그림자: 아래 6, 블러 24, 14% (CSS 0 6 24 rgba(114,100,248,0.14))
+                    .softShadow(
+                        color = Primary500.copy(alpha = 0.14f),
+                        offsetX = 0.dp,
+                        offsetY = 6.dp,
+                        blur = 24.dp,
+                        cornerRadius = 22.dp,
+                    )
+                    .background(
+                        if (legacyChip) Gray100 else White.copy(alpha = 0.9f),
+                        RoundedCornerShape(22.dp),
+                    )
+                    .border(1.dp, White.copy(alpha = 0.4f), RoundedCornerShape(22.dp)),
+            )
 
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
                     .fillMaxHeight()
-                    // 醫뚯슦 32.5 怨좎젙 ?몄뀑(?붿옄??. ?몄뀑 > 移??ㅻ쾭?됱씠??留⑤걹 ???좏깮?쇰룄 移⑹씠 ?뚯빟 諛뽰쑝濡????섍컧.
+                    // 좌우 32.5 고정 인셋(디자인).
                     .padding(horizontal = 32.5.dp),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween,
             ) {
-                BottomNavItem.entries.forEach { item ->
+                BottomNavItem.entries.forEachIndexed { index, item ->
                     val selected = selectedRoute == item.route
+                    val interaction = interactions[index]
+                    val pressed by interaction.collectIsPressedAsState()
+
+                    // 탭 피드백: 누르는 동안 0.9로 줄었다 손 떼면 스프링으로 복귀 (칩+아이콘 전체 스케일)
+                    val press by animateFloatAsState(
+                        targetValue = if (pressed) 0.9f else 1f,
+                        animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessMediumLow),
+                        label = "tabPress",
+                    )
+
+                    // 44 레이아웃 박스(SpaceBetween 기준). press 스케일은 여기(칩+아이콘 전체가 눌림).
                     Box(
                         modifier = Modifier
                             .size(44.dp)
-                            .clickable(
-                                interactionSource = remember { MutableInteractionSource() },
-                                indication = null,
-                            ) {
-                                // ?섏씠?쇱씠???щ?媛 ?꾨땲??"?ㅼ젣 ?꾩옱 ?붾㈃"?쇰줈 ?먮떒:
-                                // 媛숈? ?붾㈃?대㈃ 臾댁떆, ??쓽 ?섏쐞 ?붾㈃(?? 誘몄뀡 紐⑸줉)?대㈃ ??猷⑦듃濡?蹂듦?.
-                                // 중복 클릭 방지는 onTabClick 내부(페이지/route 비교)에서 처리한다.
-                                onTabClick(item.route)
-                            },
+                            .graphicsLayer { scaleX = press; scaleY = press },
                         contentAlignment = Alignment.Center,
                     ) {
-                        // ?좏깮 移??꾩씠肄섎낫???볦? ?κ렐 吏곸궗媛곹삎, 44 諛뺤뒪瑜??섏뼱 洹몃젮吏?.
-                        // 移??좊━(haze)媛 ?뚯빟(0.8)蹂대떎 ???섏뼐 ?대몼寃?蹂댁뿬, 諛앹? ?곗깋(0.9) ?ㅻ쾭?덉씠濡?泥섎━.
-                        // API 28 誘몃쭔: 湲濡쒖슦(softShadow)媛 ??洹몃젮吏怨??뚯빟??遺덊닾紐????댄듃??
-                        // ??移⑹씠 ??蹂댁엫 ???고쉶??Gray100) 梨꾩??쇰줈 ?좏깮 ?쒖떆瑜???좏븿.
-                        if (selected) {
-                            val legacyChip = android.os.Build.VERSION.SDK_INT < 28
-                            Box(
-                                modifier = Modifier
-                                    .requiredSize(width = chipWidth, height = 44.dp)
-                                    // 蹂대씪 湲濡쒖슦: ?꾨옒 6, ?먮┝ 24, 蹂대씪 14% (CSS 0 6 24 rgba(114,100,248,0.14))
-                                    .softShadow(
-                                        color = Primary500.copy(alpha = 0.14f),
-                                        offsetX = 0.dp,
-                                        offsetY = 6.dp,
-                                        blur = 24.dp,
-                                        cornerRadius = 22.dp,
-                                    )
-                                    .background(
-                                        if (legacyChip) Gray100 else White.copy(alpha = 0.9f),
-                                        RoundedCornerShape(22.dp),
-                                    )
-                                    .border(1.dp, White.copy(alpha = 0.4f), RoundedCornerShape(22.dp)),
+                        // 클릭 표면 = 칩 크기(오버플로), 알약으로 clip. 칩 하이라이트는 위 슬라이딩 칩이 담당.
+                        Box(
+                            modifier = Modifier
+                                .requiredSize(width = chipWidth, height = 44.dp)
+                                .clip(RoundedCornerShape(22.dp))
+                                .clickable(
+                                    interactionSource = interaction,
+                                    indication = null,
+                                ) { onTabClick(item.route) },
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            // 프로필만 선택 시 전용 이미지(보라 배경+연회색 사람), tint 없이 그림. 나머지는 단색 tint.
+                            val profileSelected = selected && item == BottomNavItem.Profile
+                            Icon(
+                                painter = painterResource(
+                                    if (profileSelected) R.drawable.ic_nav_profile_selected else item.iconRes,
+                                ),
+                                contentDescription = item.label,
+                                tint = when {
+                                    profileSelected -> Color.Unspecified
+                                    selected -> Primary600
+                                    else -> Gray300
+                                },
+                                // 아이콘 벡터가 44 프레임에 CSS inset으로 배치돼 44dp로 채우면 크기·위치 정확.
+                                modifier = Modifier.size(44.dp),
                             )
                         }
-                        // ?꾨줈?꾨쭔 ?좏깮 ??'蹂대씪 諛곌꼍 + ?고쉶???щ엺'(?쇨렇留?諛섏쟾). ?됱씠 baked??
-                        // ?꾩슜 ?쒕줈?대툝??tint ?놁씠 洹몃┝. ?섎㉧吏 ??룸??좏깮? ?⑥깋 tint 洹몃?濡?
-                        val profileSelected = selected && item == BottomNavItem.Profile
-                        Icon(
-                            painter = painterResource(
-                                if (profileSelected) R.drawable.ic_nav_profile_selected else item.iconRes,
-                            ),
-                            contentDescription = item.label,
-                            tint = when {
-                                profileSelected -> Color.Unspecified
-                                selected -> Primary600
-                                else -> Gray300
-                            },
-                            // ?꾩씠肄?踰≫꽣媛 44?꾨젅?꾩뿉 CSS inset?濡?諛곗튂??44dp濡?梨꾩슦硫??ш린쨌?꾩튂 ?뺥솗.
-                            modifier = Modifier.size(44.dp),
-                        )
                     }
                 }
             }
@@ -223,12 +266,10 @@ private fun TqBottomBarContent(
     }
 }
 
-// Preview: ??肄섑뀗痢좉? ?놁뼱 釉붾윭????蹂댁씠吏留??댄듃留? 諛곗튂/移??꾩씠肄??뺤씤??
-// 諛곌꼍? ?ㅼ젣 ??諛곌꼍 Gray50(#F8FAFC)濡?留욎땄 ???ㅺ린湲??먮?怨?媛숈? ?ㅼ쑝濡?蹂댁엫.
-// ??퀎 誘몃━蹂닿린: 393=?붿옄??湲곗??? 360=?뷀븳 ???섏묠 寃利?, 320=理쒖냼 ?? ??媛??????섏퀜???뺤긽.
-@Preview(name = "?ㅻ퉬 393dp", widthDp = 393, showBackground = true, backgroundColor = 0xFFF8FAFC)
-@Preview(name = "?ㅻ퉬 360dp", widthDp = 360, showBackground = true, backgroundColor = 0xFFF8FAFC)
-@Preview(name = "?ㅻ퉬 320dp", widthDp = 320, showBackground = true, backgroundColor = 0xFFF8FAFC)
+// Preview: 뒤 콘텐츠가 없어 블러는 안 보이지만 틴트·배치·칩·아이콘 확인용.
+@Preview(name = "네비 393dp", widthDp = 393, showBackground = true, backgroundColor = 0xFFF8FAFC)
+@Preview(name = "네비 360dp", widthDp = 360, showBackground = true, backgroundColor = 0xFFF8FAFC)
+@Preview(name = "네비 320dp", widthDp = 320, showBackground = true, backgroundColor = 0xFFF8FAFC)
 @Composable
 private fun TqBottomBarPreview() {
     TalkQQuestTheme {
@@ -239,6 +280,7 @@ private fun TqBottomBarPreview() {
         ) {
             TqBottomBarContent(
                 selectedRoute = Screen.HOME,
+                selectedPos = { 0f },
                 onTabClick = {},
                 hazeState = remember { HazeState() },
             )
@@ -246,10 +288,10 @@ private fun TqBottomBarPreview() {
     }
 }
 
-// 留??쇱そ(?꾩뭅?대툕) ?좏깮 ??移⑹씠 ?뚯빟 諛뽰쑝濡????먯졇?섏삤?붿? ?뺤씤??
-@Preview(name = "?쇰걹 ?좏깮 393dp", widthDp = 393, showBackground = true, backgroundColor = 0xFFF8FAFC)
-@Preview(name = "?쇰걹 ?좏깮 360dp", widthDp = 360, showBackground = true, backgroundColor = 0xFFF8FAFC)
-@Preview(name = "?쇰걹 ?좏깮 320dp", widthDp = 320, showBackground = true, backgroundColor = 0xFFF8FAFC)
+// 맨 왼쪽/오른쪽(아카이브) 선택 시 칩이 바 밖으로 안 삐져나오는지 확인용.
+@Preview(name = "가장자리 선택 393dp", widthDp = 393, showBackground = true, backgroundColor = 0xFFF8FAFC)
+@Preview(name = "가장자리 선택 360dp", widthDp = 360, showBackground = true, backgroundColor = 0xFFF8FAFC)
+@Preview(name = "가장자리 선택 320dp", widthDp = 320, showBackground = true, backgroundColor = 0xFFF8FAFC)
 @Composable
 private fun TqBottomBarEdgePreview() {
     TalkQQuestTheme {
@@ -260,6 +302,7 @@ private fun TqBottomBarEdgePreview() {
         ) {
             TqBottomBarContent(
                 selectedRoute = Screen.ARCHIVE_HOME,
+                selectedPos = { 2f },
                 onTabClick = {},
                 hazeState = remember { HazeState() },
             )

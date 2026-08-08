@@ -16,6 +16,10 @@ class AuthInterceptor @Inject constructor(
 ) : Interceptor {
     override fun intercept(chain: Interceptor.Chain): Response {
         val originalRequest = chain.request()
+        if (isPublicAuthRequest(originalRequest)) {
+            return chain.proceed(originalRequest)
+        }
+
         val accessToken = runBlocking { tokenDataStore.accessToken.first() }
         val authorizedRequest = if (accessToken.isNullOrBlank()) {
             originalRequest
@@ -41,4 +45,17 @@ class AuthInterceptor @Inject constructor(
 
     private fun isRefreshRequest(request: okhttp3.Request): Boolean =
         request.url.encodedPath.endsWith("/api/v1/auth/refresh")
+
+    private fun isPublicAuthRequest(request: okhttp3.Request): Boolean {
+        val path = request.url.encodedPath
+        return path.endsWith("/api/v1/auth/login") ||
+            path.endsWith("/api/v1/auth/oauth/kakao") ||
+            path.endsWith("/api/v1/auth/oauth/naver") ||
+            path.endsWith("/api/v1/auth/email/request") ||
+            path.endsWith("/api/v1/auth/email/verify") ||
+            path.endsWith("/api/v1/auth/signup") ||
+            path.endsWith("/api/v1/auth/refresh") ||
+            path.endsWith("/api/v1/auth/password/reset-request") ||
+            path.endsWith("/api/v1/auth/password/reset")
+    }
 }

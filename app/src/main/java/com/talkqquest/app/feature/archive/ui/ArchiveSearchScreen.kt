@@ -368,11 +368,25 @@ private fun ArchiveSearchScreenContent(
                                         onToggleSave = { onToggleMissionBookmark(item.id) },
                                         modifier = Modifier.animateItem()
                                     )
-                                    is RecentActivity -> RecentActivityCard(
-                                        activity = item,
-                                        onClick = { onNavigateToDetail(item.id, item.type) },
-                                        modifier = Modifier.animateItem()
-                                    )
+                                    is RecentActivity -> {
+                                        if (item.type == ActivityType.CONVERSATION) {
+                                            ArchiveConversationCard(
+                                                title = item.title,
+                                                tags = listOf("학교", "진로"), // 💡 TODO: API 명세 확정 후 ViewModel 매핑 필요
+                                                summary = "서로의 전공과 관심 분야를 공유하고, 진로 고민에 대해 조언을 주고받았어요.", // 💡 TODO: API 연동 필요
+                                                date = item.date,
+                                                time = "14:35", // 💡 TODO: API의 createdAt에서 시간(HH:mm) 파싱 필요
+                                                onClick = { onNavigateToDetail(item.id, item.type) },
+                                                modifier = Modifier.animateItem()
+                                            )
+                                        } else {
+                                            RecentActivityCard(
+                                                activity = item,
+                                                onClick = { onNavigateToDetail(item.id, item.type) },
+                                                modifier = Modifier.animateItem()
+                                            )
+                                        }
+                                    }
                                     is SearchBookmarkWrapper -> BookmarkCard(
                                         item = item.item,
                                         isSentence = item.isSentence,

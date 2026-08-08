@@ -1,4 +1,4 @@
-﻿package com.talkqquest.app.feature.auth.viewmodel
+package com.talkqquest.app.feature.auth.viewmodel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -7,6 +7,7 @@ import com.talkqquest.app.feature.auth.data.AuthRepository
 import com.talkqquest.app.feature.auth.data.EmailSignupRequest
 import com.talkqquest.app.feature.auth.data.OnboardingStepSaveRequest
 import com.talkqquest.app.feature.auth.data.SocialLoginData
+import com.talkqquest.app.feature.auth.data.SessionCheckResult
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -28,6 +29,29 @@ class AuthViewModel @Inject constructor(
     private val _uiState = MutableStateFlow(AuthUiState())
     val uiState: StateFlow<AuthUiState> = _uiState.asStateFlow()
 
+    fun checkStoredSession(
+        onAuthenticated: () -> Unit,
+        onUnauthenticated: () -> Unit,
+        onNetworkError: () -> Unit,
+    ) {
+        viewModelScope.launch {
+            _uiState.update { it.copy(isLoading = true, errorMessage = null) }
+            when (authRepository.checkStoredSession()) {
+                SessionCheckResult.Authenticated -> {
+                    _uiState.update { it.copy(isLoading = false) }
+                    onAuthenticated()
+                }
+                SessionCheckResult.Unauthenticated -> {
+                    _uiState.update { it.copy(isLoading = false) }
+                    onUnauthenticated()
+                }
+                SessionCheckResult.NetworkError -> {
+                    _uiState.update { it.copy(isLoading = false, errorMessage = "네트워크 연결을 확인해주세요.") }
+                    onNetworkError()
+                }
+            }
+        }
+    }
     fun loginWithKakao(
         providerAccessToken: String,
         onSuccess: (SocialLoginData) -> Unit,
@@ -264,6 +288,7 @@ class AuthViewModel @Inject constructor(
         }
     }
 }
+
 
 
 

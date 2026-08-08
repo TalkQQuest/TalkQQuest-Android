@@ -74,7 +74,6 @@ import com.talkqquest.app.feature.archive.ui.ArchiveSavedPhraseScreen
 import com.talkqquest.app.feature.archive.ui.ArchiveReportScreen
 import com.talkqquest.app.feature.archive.viewmodel.ActivityType
 import com.talkqquest.app.navigation.Screen
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.MultipartBody
@@ -117,12 +116,23 @@ fun NavGraph(
         },
     ) {
         composable(Screen.SPLASH) {
-            LaunchedEffect(Unit) {
-                delay(1500)
-                navController.navigate(Screen.LOGIN) {
+            val context = LocalContext.current
+            val authViewModel: AuthViewModel = hiltViewModel()
+            fun navigateFromSplash(destination: String) {
+                navController.navigate(destination) {
                     popUpTo(Screen.SPLASH) { inclusive = true }
                     launchSingleTop = true
                 }
+            }
+
+            LaunchedEffect(Unit) {
+                authViewModel.checkStoredSession(
+                    onAuthenticated = { navigateFromSplash(Screen.HOME) },
+                    onUnauthenticated = { navigateFromSplash(Screen.LOGIN) },
+                    onNetworkError = {
+                        Toast.makeText(context, "네트워크 연결을 확인해주세요.", Toast.LENGTH_SHORT).show()
+                    },
+                )
             }
             SplashScreen()
         }
@@ -935,3 +945,4 @@ private fun Uri.toProfileImagePart(context: Context): MultipartBody.Part? {
     val requestBody = bytes.toRequestBody(mimeType.toMediaTypeOrNull())
     return MultipartBody.Part.createFormData("image", "profile_image.$extension", requestBody)
 }
+

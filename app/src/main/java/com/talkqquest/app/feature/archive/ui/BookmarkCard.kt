@@ -33,6 +33,7 @@ import com.talkqquest.app.core.designsystem.Gray500
 import com.talkqquest.app.core.designsystem.Gray900
 import com.talkqquest.app.core.designsystem.TqType
 import com.talkqquest.app.core.designsystem.softShadow
+import com.talkqquest.app.feature.mission.ui.figma
 
 // 💡 북마크 관리를 위한 공통 데이터 모델 (문장 & 리포트용)
 data class BookmarkArchiveItem(
@@ -57,6 +58,7 @@ fun BookmarkCard(
     Row(
         modifier = modifier
             .fillMaxWidth()
+            .softShadow(color = Gray1000.copy(alpha = 0.01f), offsetY = 8.dp, blur = 24.dp, cornerRadius = 20.dp) // 💡 섀도우 통일성 부여
             .clip(RoundedCornerShape(20.dp))
             .clickable(onClick = onClick)
             .background(Color.White)
@@ -64,15 +66,16 @@ fun BookmarkCard(
         verticalAlignment = Alignment.CenterVertically,
     ) {
         // [좌측] 💡 탭에 따른 아이콘 정확한 분기 처리 (문장 vs 리포트)
-        Box(modifier = Modifier.size(48.dp), contentAlignment = Alignment.Center) {
-            Image(
-                painter = painterResource(
-                    id = if (isSentence) R.drawable.img_archive_sentence else R.drawable.img_archive_report
-                ),
-                contentDescription = null,
-                modifier = Modifier.size(40.dp),
-            )
-        }
+        // 💡 CSS 크기에 맞게 49.dp로 수정 및 불필요한 Box 제거
+        Image(
+            painter = painterResource(
+                id = if (isSentence) R.drawable.img_archive_sentence else R.drawable.img_archive_report
+            ),
+            contentDescription = null,
+            modifier = Modifier
+                .size(49.dp)
+                .clip(RoundedCornerShape(8.dp)),
+        )
 
         Spacer(Modifier.width(12.dp))
 
@@ -121,6 +124,7 @@ fun BookmarkCard(
                     if (item.isSaved) R.drawable.ic_mission_bookmark_filled else R.drawable.ic_mission_bookmark
                 ),
                 contentDescription = if (item.isSaved) "저장 해제" else "저장",
+                modifier = Modifier.size(24.dp) // 💡 CSS 크기에 맞게 24.dp로 명시적 지정
             )
         }
     }

@@ -1,4 +1,4 @@
-﻿package com.talkqquest.app.feature.profile.ui
+package com.talkqquest.app.feature.profile.ui
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
@@ -42,7 +42,7 @@ fun ProfileNicknameEditScreen(
     initialNickname: String = "소다123",
     onBack: () -> Unit = {},
     onSaveClick: (String) -> Unit = {},
-) = FitDesign(compensateStatusBar = false) {
+) = FitDesign(compensateStatusBar = false, contentAlignment = Alignment.TopCenter) {
     var nickname by remember { mutableStateOf(initialNickname.take(ProfileNicknameMaxLength)) }
 
     Box(

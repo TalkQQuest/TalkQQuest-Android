@@ -2,4 +2,8 @@
 <resources>
 
     <style name="Theme.TalkQQuest" parent="android:Theme.Material.Light.NoActionBar" />
+
+    <style name="Theme.TalkQQuest.Starting" parent="Theme.TalkQQuest">
+        <item name="android:windowBackground">@color/auth_splash_background</item>
+    </style>
 </resources>

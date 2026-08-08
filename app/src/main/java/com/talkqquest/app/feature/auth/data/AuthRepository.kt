@@ -1,18 +1,26 @@
-﻿package com.talkqquest.app.feature.auth.data
+package com.talkqquest.app.feature.auth.data
 
 import android.os.Build
 import com.talkqquest.app.core.datastore.TokenDataStore
 import com.talkqquest.app.core.network.ApiResponse
 import com.talkqquest.app.core.network.ApiResult
 import com.talkqquest.app.core.network.safeApiCall
+import com.talkqquest.app.feature.home.data.HomeApi
 import kotlinx.coroutines.flow.first
 import retrofit2.HttpException
 import java.io.IOException
 import javax.inject.Inject
 
+sealed interface SessionCheckResult {
+    data object Authenticated : SessionCheckResult
+    data object Unauthenticated : SessionCheckResult
+    data object NetworkError : SessionCheckResult
+}
+
 class AuthRepository @Inject constructor(
     private val authApi: AuthApi,
     private val tokenDataStore: TokenDataStore,
+    private val homeApi: HomeApi,
 ) {
     suspend fun loginWithKakao(providerAccessToken: String): ApiResult<SocialLoginData> =
         loginWithProvider(providerAccessToken) { request -> authApi.loginWithKakao(request) }
@@ -20,6 +28,22 @@ class AuthRepository @Inject constructor(
     suspend fun loginWithNaver(providerAccessToken: String): ApiResult<SocialLoginData> =
         loginWithProvider(providerAccessToken) { request -> authApi.loginWithNaver(request) }
 
+    suspend fun checkStoredSession(): SessionCheckResult {
+        val accessToken = tokenDataStore.accessToken.first()
+        val refreshToken = tokenDataStore.refreshToken.first()
+        if (accessToken.isNullOrBlank() && refreshToken.isNullOrBlank()) {
+            return SessionCheckResult.Unauthenticated
+        }
+
+        return when (val result = safeApiCall { homeApi.getMe() }) {
+            is ApiResult.Success -> SessionCheckResult.Authenticated
+            is ApiResult.Error -> {
+                if (result.code == 401 || result.code == 403) tokenDataStore.clear()
+                SessionCheckResult.Unauthenticated
+            }
+            is ApiResult.Exception -> SessionCheckResult.NetworkError
+        }
+    }
     suspend fun loginWithEmail(email: String, password: String): ApiResult<EmailLoginData> {
         val result = try {
             safeApiCall {
@@ -230,6 +254,7 @@ class AuthRepository @Inject constructor(
         osVersion = Build.VERSION.RELEASE.orEmpty(),
     )
 }
+
 
 
 

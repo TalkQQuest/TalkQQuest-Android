@@ -1,4 +1,4 @@
-﻿package com.talkqquest.app.feature.profile.ui
+package com.talkqquest.app.feature.profile.ui
 
 import android.net.Uri
 
@@ -49,7 +49,7 @@ fun ProfileInfoScreen(
     onConnectedAccountClick: () -> Unit = {},
     onConcernClick: () -> Unit = {},
     isEmailMember: Boolean = true,
-) = FitDesign {
+) = FitDesign(contentAlignment = Alignment.TopCenter) {
     val imagePickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent(),
     ) { uri ->

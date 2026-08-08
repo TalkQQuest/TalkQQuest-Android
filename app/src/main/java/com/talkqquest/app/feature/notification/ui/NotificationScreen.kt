@@ -94,7 +94,7 @@ private fun NotificationScreen(
                 Icon(
                     painter = painterResource(R.drawable.ic_back_chevron),
                     contentDescription = "뒤로가기",
-                    tint = Gray800,
+                    tint = Gray500, // CSS Icon border 2px #64748B = Gray/500 (제목만 Gray/800)
                 )
             }
             Text(
@@ -147,21 +147,41 @@ private fun NotificationSettingBanner() {
             .clip(RoundedCornerShape(16.dp))
             .background(Gray100)
             .padding(start = 16.dp, top = 12.dp, bottom = 12.dp, end = 6.dp),
-        verticalAlignment = Alignment.CenterVertically,
+        verticalAlignment = Alignment.CenterVertically, // CSS Frame 427321602 align-items: center
     ) {
-        Icon(
-            painter = painterResource(R.drawable.ic_notification_info),
-            contentDescription = null,
-            tint = Gray500,
-            modifier = Modifier.size(18.dp),
-        )
-        Spacer(Modifier.width(12.dp)) // CSS 아이콘-문구 gap 12
-        Text(
-            text = "알림 받기를 설정하고 유용한 알림들을 받아보세요.",
-            style = TqType.BodyM, // CSS 14/22 Gray600
-            color = Gray600,
+        // CSS Frame 427321601: 아이콘·문구 묶음은 align-items: flex-start (상단 정렬)
+        Row(
             modifier = Modifier.weight(1f),
-        )
+            verticalAlignment = Alignment.Top,
+        ) {
+            // CSS information-circle-contained 24x26 (padding 4px 3px) 안에 Icon 18x18.
+            // 컨테이너를 생략하면 문구 시작점이 6dp 왼쪽으로 당겨진다.
+            Box(
+                modifier = Modifier.width(24.dp).height(26.dp),
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(
+                    painter = painterResource(R.drawable.ic_notification_info),
+                    contentDescription = null,
+                    tint = Gray500,
+                    modifier = Modifier.size(18.dp),
+                )
+            }
+            Spacer(Modifier.width(12.dp)) // CSS 아이콘-문구 gap 12
+            // CSS 텍스트는 width 238 · height 44 · line-height 22 → 44/22 = 정확히 2줄.
+            // 폭 238에 그냥 흘리면 "받아"까지 첫 줄에 들어가므로(실측 234.33dp) 시안과 달라진다.
+            // = 시안에 수동 줄바꿈이 들어있다는 뜻 → 같은 위치에서 끊는다.
+            Text(
+                text = "알림 받기를 설정하고 유용한 알림들을\n받아보세요.",
+                style = TqType.BodyM, // CSS 14/22 Gray600
+                color = Gray600,
+                modifier = Modifier.weight(1f),
+            )
+        }
+        // CSS엔 gap 30으로 적혀 있으나 그 값만 나머지와 안 맞는다(합이 370 > 364).
+        // 다른 값들(364·16·6·44·274=24+12+238)은 서로 맞물리므로 gap을 역산: 364-16-274-44-6 = 24.
+        // 이 값이라야 문구 폭이 CSS의 238과 정확히 일치한다.
+        Spacer(Modifier.width(24.dp))
         Box(modifier = Modifier.size(44.dp), contentAlignment = Alignment.Center) {
             Icon(
                 painter = painterResource(R.drawable.ic_forward_chevron),
@@ -196,13 +216,13 @@ private fun NotificationCard(item: NotificationUiItem) {
                 color = Gray900,
             )
         }
+        // CSS Frame 427321606/427321608: align-items: flex-start · gap 3 → 점도 상단 정렬
         Row(verticalAlignment = Alignment.Top) {
             Text(text = item.timeText, style = TqType.BodyS, color = Gray400)
             if (item.isUnread) {
                 Spacer(Modifier.width(3.dp)) // CSS gap 3
                 Box(
                     modifier = Modifier
-                        .padding(top = 6.dp) // 시간 줄(20) 가운데쯤에 점이 오도록
                         .size(7.dp)
                         .clip(CircleShape)
                         .background(Primary600),

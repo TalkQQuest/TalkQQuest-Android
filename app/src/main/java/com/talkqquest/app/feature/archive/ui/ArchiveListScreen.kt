@@ -269,8 +269,13 @@ private fun ArchiveListScreenContent(
                             }
                             1 -> { // 대화 탭
                                 items(uiState.conversations, key = { it.id }) { conversation ->
-                                    RecentActivityCard(
-                                        activity = conversation,
+                                    // 💡 변경됨: RecentActivityCard 대신 새롭게 만든 ArchiveConversationCard 적용
+                                    ArchiveConversationCard(
+                                        title = conversation.title,
+                                        tags = listOf("학교", "진로"), // 💡 TODO: API 명세 확정 후 ViewModel 매핑 필요
+                                        summary = "서로의 전공과 관심 분야를 공유하고, 진로 고민에 대해 조언을 주고받았어요.", // 💡 TODO: API 연동 필요
+                                        date = conversation.date,
+                                        time = "14:35", // 💡 TODO: API의 createdAt에서 시간(HH:mm) 파싱 필요
                                         onClick = { onConversationClick(conversation.id) },
                                         modifier = Modifier.animateItem()
                                     )

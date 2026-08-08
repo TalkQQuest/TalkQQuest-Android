@@ -136,9 +136,10 @@ private fun MissionSaveSheetContent(
                 Spacer(Modifier.height(12.dp)) // 묶음 간격 (CSS Frame 457 gap — 섹션과 함께 접히게 안쪽에)
                 Row(
                     modifier = Modifier
-                        // CSS: "보관함" 텍스트에 margin 0 -6px → 텍스트가 왼쪽으로 6, 아이콘은 12 당겨짐
-                        // (행 전체 -6 + 아래 아이콘 자체 -6 = CSS 좌표와 동일: 텍스트 -6~36, 아이콘 30~74)
-                        .offset(x = (-6).dp)
+                        // CSS Frame 447의 "보관함" 텍스트 margin 0 -6px 중 왼쪽 몫은 적용하지 않는다.
+                        // 그대로 두면 제목만 저장됨/카드(x=16)보다 6 왼쪽으로 튀어나온다.
+                        // 프레임 폭도 선언 80 ↔ 계산 74(42-12+44)로 어긋나 의도치 않은 값 —
+                        // 디자이너 합의로 제거(문장·리포트 시트도 동일 처리).
                         .clip(RoundedCornerShape(12.dp))
                         .clickable(onClick = onSavedListClick),
                     verticalAlignment = Alignment.CenterVertically,

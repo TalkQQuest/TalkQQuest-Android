@@ -1,4 +1,4 @@
-﻿package com.talkqquest.app.feature.profile.ui
+package com.talkqquest.app.feature.profile.ui
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -46,7 +46,7 @@ import com.talkqquest.app.core.designsystem.White
 fun ProfileWithdrawScreen(
     onBack: () -> Unit = {},
     onWithdrawConfirm: () -> Unit = {},
-) = FitDesign {
+) = FitDesign(contentAlignment = Alignment.TopCenter) {
     var agreed by remember { mutableStateOf(false) }
     var showConfirm by remember { mutableStateOf(false) }
 

@@ -134,8 +134,10 @@ private fun ReportSaveSheetContent(
                 Spacer(Modifier.height(12.dp)) // 묶음 간격 (CSS Frame 457 gap — 섹션과 함께 접히게 안쪽에)
                 Row(
                     modifier = Modifier
-                        // CSS: "보관함" 텍스트에 margin 0 -6px (미션 시트와 동일 Frame 447)
-                        .offset(x = (-6).dp)
+                        // CSS Frame 447의 "보관함" 텍스트 margin 0 -6px 중 왼쪽 몫은 적용하지 않는다.
+                        // 그대로 두면 제목만 저장됨/카드(x=16)보다 6 왼쪽으로 튀어나온다.
+                        // 프레임 폭도 선언 80 ↔ 계산 74(42-12+44)로 어긋나 의도치 않은 값 —
+                        // 디자이너 합의로 제거(미션·문장 시트도 동일 처리).
                         .clip(RoundedCornerShape(12.dp))
                         // C담당 연결 지점: 아카이브 보관함(리포트 탭)으로 (NavGraph에서 주입)
                         .clickable(onClick = onArchiveClick),

@@ -1,4 +1,4 @@
-﻿package com.talkqquest.app.navigation
+package com.talkqquest.app.navigation
 
 /**
  * 화면 route 상수 정의.
@@ -15,10 +15,13 @@ object Screen {
     const val SPLASH = "splash"                                   // SplashScreen
     const val LOGIN = "login"                                     // LoginScreen
     const val EMAIL_LOGIN = "email_login"                         // EmailLoginScreen
+    const val SIGNUP_TERMS = "signup_terms"                       // SignupTermsScreen
+    const val SIGNUP_TERMS_SOCIAL = "signup_terms_social"         // SignupTermsScreen
     const val SIGNUP_EMAIL = "signup_email"                       // SignupEmailScreen
     const val SIGNUP_VERIFY = "signup_verify"                     // SignupVerifyScreen
     const val SIGNUP_PASSWORD = "signup_password"                 // SignupPasswordScreen
     const val SIGNUP_NICKNAME = "signup_nickname"                 // SignupNicknameScreen
+    const val SIGNUP_NICKNAME_SOCIAL = "signup_nickname_social"   // SignupNicknameScreen
     const val ONBOARDING_WELCOME = "onboarding_welcome"           // OnboardingWelcomeScreen
     const val ONBOARDING_PERSONALITY = "onboarding_personality"   // OnboardingPersonalityScreen
     const val ONBOARDING_DIFFICULTY = "onboarding_difficulty"     // OnboardingDifficultyScreen

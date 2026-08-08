@@ -5,11 +5,13 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.layout.width
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -28,6 +30,7 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -121,7 +124,7 @@ private val BadgeBodyMediumStyle = TextStyle(
 fun ProfileBadgesScreen(
     badges: List<ProfileBadgeUi> = DefaultProfileBadges,
     onBack: () -> Unit = {},
-) = FitDesign(compensateStatusBar = false) {
+) = FitDesign(compensateStatusBar = false, contentAlignment = Alignment.TopCenter) {
     var selectedTab by remember { mutableIntStateOf(0) }
     var selectedBadge by remember { mutableStateOf<ProfileBadgeUi?>(null) }
     val visibleBadges = when (selectedTab) {
@@ -350,6 +353,15 @@ private fun BadgeDetailDialog(
     onClose: () -> Unit,
 ) {
     val dialogHeight = if (badge.isEarned) 446.dp else 401.dp
+    val descriptionText = badge.description ?: if (badge.isEarned) {
+        "\uB300\uD654 \uBBF8\uC158\uC744 \uCC98\uC74C\uC73C\uB85C 1\uD68C \uC644\uB8CC"
+    } else {
+        "\uB300\uD654 \uBBF8\uC158\uC744 \uB204\uC801 15\uD68C \uC644\uB8CC"
+    }
+    val isLongDescription = descriptionText.length > 18
+    val descriptionWidth = if (isLongDescription) 220.dp else if (badge.isEarned) 189.dp else 171.dp
+    val descriptionX = (284.dp - descriptionWidth) / 2
+    val detailMetaY = if (isLongDescription) 336.dp else 316.dp
     Box(
         modifier = Modifier
             .offset(x = 55.dp, y = 240.dp)
@@ -390,17 +402,20 @@ private fun BadgeDetailDialog(
                 .size(width = 120.dp, height = 30.dp),
         )
         Text(
-            text = badge.description ?: if (badge.isEarned) {
-                "\uB300\uD654 \uBBF8\uC158\uC744 \uCC98\uC74C\uC73C\uB85C 1\uD68C \uC644\uB8CC"
+            text = descriptionText,
+            style = if (isLongDescription) {
+                BadgeBodyLargeMediumStyle.copy(fontSize = 13.sp, lineHeight = 20.sp)
             } else {
-                "\uB300\uD654 \uBBF8\uC158\uC744 \uB204\uC801 15\uD68C \uC644\uB8CC"
+                BadgeBodyLargeMediumStyle
             },
-            style = BadgeBodyLargeMediumStyle,
             color = Gray700,
             textAlign = TextAlign.Center,
+            maxLines = if (isLongDescription) 2 else 1,
+            overflow = TextOverflow.Ellipsis,
             modifier = Modifier
-                .offset(x = if (badge.isEarned) 47.5.dp else 56.5.dp, y = 286.dp)
-                .size(width = if (badge.isEarned) 189.dp else 171.dp, height = 24.dp),
+                .offset(x = descriptionX, y = 286.dp)
+                .width(descriptionWidth)
+                .heightIn(min = if (isLongDescription) 42.dp else 28.dp),
         )
         if (badge.isEarned) {
             Text(
@@ -409,7 +424,7 @@ private fun BadgeDetailDialog(
                 color = Gray500,
                 textAlign = TextAlign.Center,
                 modifier = Modifier
-                    .offset(x = 82.dp, y = 316.dp)
+                    .offset(x = 82.dp, y = detailMetaY)
                     .size(width = 120.dp, height = 22.dp),
             )
             Box(
@@ -435,8 +450,9 @@ private fun BadgeDetailDialog(
                 color = Gray500,
                 textAlign = TextAlign.Center,
                 modifier = Modifier
-                    .offset(x = 82.dp, y = 316.dp)
-                    .size(width = 120.dp, height = 24.dp),
+                    .offset(x = 82.dp, y = detailMetaY)
+                    .width(120.dp)
+                    .heightIn(min = 28.dp),
             )
         }
     }

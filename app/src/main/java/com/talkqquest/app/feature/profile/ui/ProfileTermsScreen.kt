@@ -45,7 +45,7 @@ fun ProfileTermsScreen(
     onBack: () -> Unit = {},
     onTermsClick: () -> Unit = {},
     onPrivacyClick: () -> Unit = {},
-) = FitDesign {
+) = FitDesign(contentAlignment = Alignment.TopCenter) {
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -120,7 +120,7 @@ fun ProfileTermsDetailScreen(
     sections: List<TermsSection>,
     content: String? = null,
     onBack: () -> Unit = {},
-) = FitDesign {
+) = FitDesign(contentAlignment = Alignment.TopCenter) {
     Box(
         modifier = Modifier
             .fillMaxSize()

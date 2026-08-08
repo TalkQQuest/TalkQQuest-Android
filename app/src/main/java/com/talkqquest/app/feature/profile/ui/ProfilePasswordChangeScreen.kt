@@ -56,7 +56,7 @@ fun ProfilePasswordChangeScreen(
     currentPasswordError: Boolean = initialError,
     onBack: () -> Unit = {},
     onNextClick: (String) -> Unit = {},
-) = FitDesign {
+) = FitDesign(contentAlignment = Alignment.TopCenter) {
     var password by remember { mutableStateOf(initialPassword) }
     var showPassword by remember { mutableStateOf(true) }
     var isError by remember { mutableStateOf(initialError) }

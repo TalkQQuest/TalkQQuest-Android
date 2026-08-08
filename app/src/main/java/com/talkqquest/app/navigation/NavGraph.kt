@@ -66,6 +66,7 @@ import com.talkqquest.app.feature.mission.ui.FeedbackDetailScreen
 import com.talkqquest.app.feature.mission.ui.FeedbackScreen
 import com.talkqquest.app.feature.mission.ui.MissionCompleteScreen
 import com.talkqquest.app.feature.mission.ui.MissionDetailScreen
+import com.talkqquest.app.feature.mission.ui.MissionListScreen
 import com.talkqquest.app.feature.report.ui.ReportScreen
 import com.talkqquest.app.feature.archive.ui.ArchiveListScreen
 import com.talkqquest.app.feature.archive.ui.ArchiveSearchScreen
@@ -528,6 +529,17 @@ fun NavGraph(
         // B담당: 미션 리스트 (하단 탭 = MainTabsPager의 페이저 페이지). 미션 카드 클릭 시 상세로 이동.
         composable(Screen.MISSION_LIST) {
             MainTabsPager(navController, pagerState, onOverlaySheetTop)
+        }
+        // B담당: 홈 "다른 미션 보기" 전용 미션 목록. 미션 탭과 같은 본문(북마크는 공유 저장소로 자동 동기화)이되
+        // 헤더는 예전 CSS(뒤로가기 + "미션 목록")이고, 홈 위로 push 되어 홈 탭을 유지한다(TqBottomBar.tabRouteOf).
+        composable(Screen.MISSION_LIST_HOME) {
+            MissionListScreen(
+                onBack = { navController.popBackStack() },
+                onMissionClick = { missionId -> navController.navigate("mission_detail/$missionId") },
+                onSheetTopChange = onOverlaySheetTop,
+                onSavedListClick = { navController.navigate("${Screen.ARCHIVE_LIST}/0") },
+                homeContext = true,
+            )
         }
         // B담당: 미션 상세 화면. "시작" 버튼 클릭 시 대화 준비 화면으로, "저장" 클릭 시 보관함으로 이동.
         composable(

@@ -1,3 +1,5 @@
 <resources>
     <string name="app_name">TalkQQuest</string>
+    <!-- FCM 백그라운드 알림 메시지가 사용할 기본 채널 id (PushNotifications.DEFAULT_CHANNEL_ID와 동일해야 함) -->
+    <string name="default_notification_channel_id" translatable="false">talkqquest_default</string>
 </resources>

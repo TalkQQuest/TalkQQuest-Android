@@ -61,7 +61,10 @@ import com.talkqquest.app.feature.profile.ui.PrivacyPolicySections
 import com.talkqquest.app.feature.profile.ui.ProfileTermsDetailScreen
 import com.talkqquest.app.feature.profile.ui.ProfileTermsScreen
 import com.talkqquest.app.feature.profile.ui.ServiceTermsSections
-import com.talkqquest.app.feature.mission.ui.ConversationPrepScreen
+import com.talkqquest.app.feature.mission.ui.ConversationSetup1Screen
+import com.talkqquest.app.feature.mission.ui.ConversationSetup2Screen
+import com.talkqquest.app.feature.mission.ui.ConversationSetup3Screen
+import com.talkqquest.app.feature.mission.ui.ConversationSetup4Screen
 import com.talkqquest.app.feature.mission.ui.ConversationScreen
 import com.talkqquest.app.feature.mission.ui.FeedbackDetailScreen
 import com.talkqquest.app.feature.mission.ui.FeedbackScreen
@@ -675,21 +678,51 @@ fun NavGraph(
         ) {
             MissionDetailScreen(
                 onBack = { navController.popBackStack() },
-                onNextClick = { missionId -> navController.navigate("conversation_prep/$missionId") },
+                onNextClick = { missionId -> navController.navigate("conversation_setup_1/$missionId") },
                 onMissionClick = { missionId -> navController.navigate("mission_detail/$missionId") },
                 onSheetTopChange = onOverlaySheetTop,
                 onSavedListClick = { navController.navigate("${Screen.ARCHIVE_LIST}/0") },
             )
         }
-        // B담당: 대화 준비 화면. 대화 시작 버튼 클릭 시 대화 진행 화면으로 이동합니다.
+        // B담당: 미션 진입 · 대화 설정 4스텝. 상세 "다음" → 1(장소)→2(상대)→3(성별·나이)→4(친밀도·말투) → 대화.
         composable(
-            route = Screen.CONVERSATION_PREP,
+            route = Screen.CONVERSATION_SETUP_1,
             arguments = listOf(navArgument("missionId") { type = NavType.StringType }),
         ) { backStackEntry ->
             val missionId = backStackEntry.arguments?.getString("missionId").orEmpty()
-            ConversationPrepScreen(
+            ConversationSetup1Screen(
                 onBack = { navController.popBackStack() },
-                onStartClick = { navController.navigate("conversation/$missionId") },
+                onNext = { navController.navigate("conversation_setup_2/$missionId") },
+            )
+        }
+        composable(
+            route = Screen.CONVERSATION_SETUP_2,
+            arguments = listOf(navArgument("missionId") { type = NavType.StringType }),
+        ) { backStackEntry ->
+            val missionId = backStackEntry.arguments?.getString("missionId").orEmpty()
+            ConversationSetup2Screen(
+                onBack = { navController.popBackStack() },
+                onNext = { navController.navigate("conversation_setup_3/$missionId") },
+            )
+        }
+        composable(
+            route = Screen.CONVERSATION_SETUP_3,
+            arguments = listOf(navArgument("missionId") { type = NavType.StringType }),
+        ) { backStackEntry ->
+            val missionId = backStackEntry.arguments?.getString("missionId").orEmpty()
+            ConversationSetup3Screen(
+                onBack = { navController.popBackStack() },
+                onNext = { navController.navigate("conversation_setup_4/$missionId") },
+            )
+        }
+        composable(
+            route = Screen.CONVERSATION_SETUP_4,
+            arguments = listOf(navArgument("missionId") { type = NavType.StringType }),
+        ) { backStackEntry ->
+            val missionId = backStackEntry.arguments?.getString("missionId").orEmpty()
+            ConversationSetup4Screen(
+                onBack = { navController.popBackStack() },
+                onNext = { navController.navigate("conversation/$missionId") },
             )
         }
         // B담당: 대화 진행 화면. 종료 시 미션 완료 및 XP 화면으로 이동합니다.

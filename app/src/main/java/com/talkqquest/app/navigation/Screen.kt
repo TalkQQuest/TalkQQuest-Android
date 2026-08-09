@@ -51,7 +51,11 @@ object Screen {
     const val MISSION_LIST = "mission_list"                       // MissionListScreen (하단 미션 탭)
     const val MISSION_LIST_HOME = "mission_list_home"             // MissionListScreen (홈 "다른 미션 보기" — 예전 헤더, 홈 탭 유지)
     const val MISSION_DETAIL = "mission_detail/{missionId}"       // MissionDetailScreen
-    const val CONVERSATION_PREP = "conversation_prep/{missionId}" // ConversationPrepScreen
+    // 미션 진입 · 대화 설정 4스텝 (ConversationSetupScreens). 옛 CONVERSATION_PREP 대체.
+    const val CONVERSATION_SETUP_1 = "conversation_setup_1/{missionId}" // 장소
+    const val CONVERSATION_SETUP_2 = "conversation_setup_2/{missionId}" // 상대
+    const val CONVERSATION_SETUP_3 = "conversation_setup_3/{missionId}" // 성별·나이
+    const val CONVERSATION_SETUP_4 = "conversation_setup_4/{missionId}" // 친밀도·말투
     const val CONVERSATION = "conversation/{conversationId}"      // ConversationScreen
     const val CONVERSATION_COMPLETE = "conversation_complete/{conversationId}" // ConversationCompleteScreen (????붿빟)
     const val MISSION_COMPLETE = "mission_complete/{missionId}"   // MissionCompleteScreen (XP ?띾뱷)

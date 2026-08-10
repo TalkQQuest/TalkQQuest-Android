@@ -13,6 +13,14 @@ data class HomeSummary(
     val communityCount: Int,
     val questionOfDay: String? = null,
     val hasNewNotification: Boolean = false,
+    // 실전 티어(성장 티어 시스템 — 레벨 카드에 표시). 서버 growthTotals(누적 4필드)가 merge되면
+    // 그 값으로 티어/별을 앱에서 계산해 채운다(300점 단위·마름모 3개=티어). 지금은 명세만 상태라 디자인 기본값.
+    // TODO(백엔드 growthTotals merge 후): kindness/initiative/empathy/questionLink 누적값 → 티어·별 계산 연결.
+    val tierName: String = "골드",  // 티어 이름 (브론즈/실버/골드/플래티넘/다이아/마스터)
+    val tierStars: Int = 2,         // 채워진 별 수 0~3 (티어 내 단계)
+    // 안 읽은 주간 비교 리포트가 있으면 홈 진입 시 도착 모달을 띄운다(백엔드 1번째 보고: 주간=목록·홈 알림 진입).
+    // TODO(백엔드 연동): 서버가 '안 읽은 주간 비교 리포트 존재' 신호를 주면 매핑.
+    val hasNewWeeklyReport: Boolean = false,
 )
 
 @Serializable

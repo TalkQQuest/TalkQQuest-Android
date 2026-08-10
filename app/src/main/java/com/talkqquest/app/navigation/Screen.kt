@@ -76,6 +76,11 @@ object Screen {
     // ReportScreen (?깆옣 由ы룷??二쇨컙 鍮꾧탳 ???듯빀).
     // missionTitle = ??由ы룷?멸? ?섏삩 誘몄뀡 ?쒕ぉ (????쒗듃 移대뱶 ?쒕ぉ???곗엫). ?놁쑝硫?鍮?媛?
     const val REPORT = "report?missionTitle={missionTitle}"
+
+    // WeeklyCompareScreen — 주간 비교 리포트(홈/알림창에서 진입).
+    // ReportScreen(성장 리포트)과 다른 화면이다: 주차 이동·자주 연습한 주제·미션 진행률이 있고
+    // 탭이 없다. 주가 끝나면 알림으로 안내되고 그 알림에서 들어온다.
+    const val WEEKLY_COMPARE = "weekly_compare"
 }
 
 

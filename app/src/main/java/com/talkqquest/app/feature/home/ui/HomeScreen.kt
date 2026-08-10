@@ -115,6 +115,7 @@ fun HomeScreen(
     onStartMissionClick: (String) -> Unit = {}, // 오늘의 미션 "미션 시작하기" → 미션 상세
     onOtherMissionsClick: () -> Unit = {},    // "다른 미션 보기" → 미션 목록
     onNotificationClick: () -> Unit = {},     // 상단 벨 → 알림창
+    onWeeklyReportClick: () -> Unit = {},     // 주간 비교 리포트 도착 모달 "보러가기" → 주간 비교 리포트
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     // 화면 복귀 시(미션 완료 후 등) XP·레벨 최신값 조용히 재조회 — 미션 목록과 같은 패턴
@@ -125,6 +126,7 @@ fun HomeScreen(
         onStartMissionClick = onStartMissionClick,
         onOtherMissionsClick = onOtherMissionsClick,
         onNotificationClick = onNotificationClick,
+        onWeeklyReportClick = onWeeklyReportClick,
     )
 }
 
@@ -135,6 +137,7 @@ private fun HomeScreen(
     onStartMissionClick: (String) -> Unit = {},
     onOtherMissionsClick: () -> Unit = {},
     onNotificationClick: () -> Unit = {},
+    onWeeklyReportClick: () -> Unit = {},
 ) = FitDesign { // 작은 화면에선 디자인(393x852) 통째 축소 — 미션 화면들과 동일하게 스크롤 없이 한 화면에
     Box(
         modifier = Modifier
@@ -161,6 +164,7 @@ private fun HomeScreen(
                     onStartMissionClick = onStartMissionClick,
                     onOtherMissionsClick = onOtherMissionsClick,
                     onNotificationClick = onNotificationClick,
+                    onWeeklyReportClick = onWeeklyReportClick,
                 )
             }
         }

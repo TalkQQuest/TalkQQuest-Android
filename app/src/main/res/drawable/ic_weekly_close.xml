@@ -1,0 +1,12 @@
+<!-- 주간 비교 리포트 헤더 닫기 (Figma export "Icon" 14x14, Gray/500, stroke 2 round) -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="14dp"
+    android:height="14dp"
+    android:viewportWidth="14"
+    android:viewportHeight="14">
+    <path
+        android:pathData="M13,1L1,13M13,13L1,1"
+        android:strokeColor="#64748B"
+        android:strokeWidth="2"
+        android:strokeLineCap="round" />
+</vector>

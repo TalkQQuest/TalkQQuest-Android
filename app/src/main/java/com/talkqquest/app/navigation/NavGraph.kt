@@ -72,6 +72,7 @@ import com.talkqquest.app.feature.mission.ui.MissionCompleteScreen
 import com.talkqquest.app.feature.mission.ui.MissionDetailScreen
 import com.talkqquest.app.feature.mission.ui.MissionListScreen
 import com.talkqquest.app.feature.report.ui.ReportScreen
+import com.talkqquest.app.feature.report.ui.WeeklyCompareScreen
 import com.talkqquest.app.feature.archive.ui.ArchiveListScreen
 import com.talkqquest.app.feature.archive.ui.ArchiveSearchScreen
 import com.talkqquest.app.feature.archive.ui.ArchiveConversationDetailScreen
@@ -574,9 +575,18 @@ fun NavGraph(
         composable(Screen.NOTIFICATION) {
             NotificationScreen(
                 onBack = { navController.popBackStack() },
-                // TODO(연결): 주간 비교 리포트 화면이 아직 없다. Screen.REPORT는 성장 리포트라
-                //   여기에 이으면 다른 화면으로 간다. C담당 주간 비교 화면이 생기면 그 route로 연결할 것.
-                onWeeklyReportClick = {},
+                // 주간 비교 리포트 알림(화살표가 붙는 유일한 알림) → 주간 비교 리포트 화면.
+                // Screen.REPORT는 성장 리포트라 다른 화면이다.
+                onWeeklyReportClick = { navController.navigate(Screen.WEEKLY_COMPARE) },
+            )
+        }
+        // 주간 비교 리포트(홈/알림창에서 진입) — 닫기로 빠져나온다(뒤로가기 아님).
+        composable(Screen.WEEKLY_COMPARE) {
+            WeeklyCompareScreen(
+                onClose = { navController.popBackStack() },
+                // TODO(연결): "완료한 미션 >"은 보관함 미션 목록(C 담당)으로 가는 자리.
+                //   해당 화면이 생기면 그 route로 연결할 것.
+                onCompletedMissionsClick = {},
             )
         }
         // C담당: 아카이브 홈 화면(하단 탭 = MainTabsPager의 페이저 페이지).

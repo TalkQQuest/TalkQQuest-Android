@@ -45,7 +45,7 @@ class ReportViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
 ) : ViewModel() {
 
-    // 피드백 요약 "상세 리포트"에서 넘겨준 미션 제목 (route 인자). 직접 진입 시엔 빈 값.
+    // 피드백 요약 "성장 리포트"에서 넘겨준 미션 제목 (route 인자). 직접 진입 시엔 빈 값.
     private val missionTitle: String = savedStateHandle["missionTitle"] ?: ""
 
     private val _uiState = MutableStateFlow(ReportUiState(missionTitle = missionTitle))

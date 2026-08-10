@@ -293,12 +293,24 @@ private fun FeedbackSection(
                 Row {
                     Text(text = "•", style = TqType.BodyL.figma(), color = Gray800, modifier = Modifier.padding(start = 4.dp))
                     Spacer(Modifier.width(8.dp))
-                    // keepWordsIntact: 어절 중간 줄바꿈("좋/은") 방지 + glueShortWords: 한 글자 어절 고아 방지
-                    // (홈·미션 카드와 동일). lineBreak Paragraph: 줄 길이를 고르게 배분해 오른쪽 끝 정돈.
+                    // 줄바꿈 규칙 (2026-08-10 변경):
+                    //  이전: keepWordsIntact()로 글자 사이마다 word-joiner를 박아 "물리적으로" 못 자르게 했다.
+                    //        어절 하나가 열 폭보다 길면(서버가 만든 문구라 가능) 갈 데가 없어 넘치거나 잘린다.
+                    //  지금: WordBreak.Phrase — 어절 단위로 끊되 한 어절이 폭을 넘을 때만 그 안에서 자른다.
+                    //        보관함 대화 상세·대화 말풍선·알림 카드와 같은 규칙(전부 서버가 주는 가변 문구).
+                    //  LineBreak.Paragraph 프리셋은 HighQuality/Strict/WordBreak.Default라 어절 보호가 없다.
+                    //  줄 길이 균등 배분은 HighQuality가 하는 몫이므로 그 둘은 그대로 두고 wordBreak만 바꾼다.
+                    //  glueShortWords는 유지 — 한 글자 어절("한 번"의 "한")이 줄 끝에 혼자 남는 건 Phrase가 못 막는다.
                     // end 18 = 왼쪽 글자 들임(점 4+점 폭 6+간격 8)만큼 오른쪽도 최소 여백(사용자 결정).
                     Text(
-                        text = line.keepWordsIntact().glueShortWords(),
-                        style = TqType.BodyL.figma().copy(lineBreak = LineBreak.Paragraph),
+                        text = line.glueShortWords(),
+                        style = TqType.BodyL.figma().copy(
+                            lineBreak = LineBreak(
+                                strategy = LineBreak.Strategy.HighQuality,
+                                strictness = LineBreak.Strictness.Strict,
+                                wordBreak = LineBreak.WordBreak.Phrase,
+                            ),
+                        ),
                         color = Gray800,
                         modifier = Modifier.padding(end = 18.dp),
                     )
@@ -372,8 +384,14 @@ private fun BestPhraseSection(
             var closeMarkPos by remember(phrase) { mutableStateOf<Offset?>(null) }
             Box(modifier = Modifier.weight(1f, fill = false)) {
                 Text(
-                    text = phrase.keepWordsIntact().glueShortWords(), // 인용문도 어절 중간 줄바꿈 방지
-                    style = TqType.BodyL.figma(),
+                    text = phrase.glueShortWords(), // 인용문도 같은 규칙 (위 불릿 주석 참고)
+                    style = TqType.BodyL.figma().copy(
+                        lineBreak = LineBreak(
+                            strategy = LineBreak.Strategy.HighQuality,
+                            strictness = LineBreak.Strictness.Strict,
+                            wordBreak = LineBreak.WordBreak.Phrase,
+                        ),
+                    ),
                     color = Gray600,
                     onTextLayout = { result ->
                         val last = result.lineCount - 1

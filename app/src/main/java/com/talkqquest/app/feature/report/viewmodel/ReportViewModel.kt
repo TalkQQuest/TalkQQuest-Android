@@ -5,7 +5,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.talkqquest.app.core.network.ApiResult
 import com.talkqquest.app.feature.report.data.ReportRepository
-import com.talkqquest.app.feature.report.data.model.GrowthReport
+import com.talkqquest.app.feature.report.data.model.GrowthTierReport
 import com.talkqquest.app.feature.report.data.model.SavedReportItem
 import com.talkqquest.app.feature.report.data.model.WeeklyCompareReport
 import java.time.LocalDate
@@ -21,7 +21,7 @@ import kotlinx.coroutines.launch
 // 리포트 화면 상태 (CONVENTIONS 6번: [화면이름]UiState)
 data class ReportUiState(
     val isLoading: Boolean = true,
-    val growth: GrowthReport? = null,          // 성장 리포트 탭
+    val growth: GrowthTierReport? = null,      // 성장 리포트(B, 실전 티어 + 핵심 역량)
     val weekly: WeeklyCompareReport? = null,   // 주간 비교 리포트 탭
     val errorMessage: String? = null,
     // 이 리포트가 나온 미션의 제목 — 저장 카드의 제목으로 들어감(CSS 목업이 미션명).

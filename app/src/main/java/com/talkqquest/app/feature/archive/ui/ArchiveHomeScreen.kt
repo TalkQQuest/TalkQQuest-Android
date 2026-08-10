@@ -72,7 +72,7 @@ fun ArchiveHomeScreen(
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val lifecycleOwner = LocalLifecycleOwner.current
 
-    // 💡 화면이 보여질 때(ON_RESUME)마다 최신 데이터를 갱신합니다.
+    // 💡 화면이 보여질 때(ON_RESUME)마다 최신 데이터를 갱신합니다.[cite: 26]
     DisposableEffect(lifecycleOwner) {
         val observer = LifecycleEventObserver { _, event ->
             if (event == Lifecycle.Event.ON_RESUME) {
@@ -129,7 +129,7 @@ private fun ArchiveHomeScreen(
                     .statusBarsPadding(),
                 contentPadding = PaddingValues(
                     top = 29.dp,
-                    // 💡 [수정됨] 하단 네비게이션 바(플로팅)에 카드가 가려지지 않도록 하단 여백을 대폭 늘림 (32.dp -> 120.dp)
+                    // 💡 [수정됨] 하단 네비게이션 바(플로팅)에 카드가 가려지지 않도록 하단 여백을 대폭 늘림 (32.dp -> 120.dp)[cite: 26]
                     bottom = 120.dp
                 )
             ) {
@@ -139,7 +139,7 @@ private fun ArchiveHomeScreen(
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(horizontal = 16.dp),
-                        verticalArrangement = Arrangement.spacedBy(2.dp) // 💡 디자이너 피드백: "보관함과 아래 '톡깨와~' 문장 사이 간격 0->2"
+                        verticalArrangement = Arrangement.spacedBy(2.dp) // 💡 디자이너 피드백: "보관함과 아래 '톡깨와~' 문장 사이 간격 0->2"[cite: 26]
                     ) {
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
@@ -176,7 +176,7 @@ private fun ArchiveHomeScreen(
                     }
                 }
 
-                item { Spacer(modifier = Modifier.height(24.dp)) } // 💡 헤더(타이틀)와 카테고리 사이는 기존대로 24.dp 유지
+                item { Spacer(modifier = Modifier.height(24.dp)) } // 💡 헤더(타이틀)와 카테고리 사이는 기존대로 24.dp 유지[cite: 26]
 
                 // [카테고리 영역]
                 item {
@@ -214,7 +214,7 @@ private fun ArchiveHomeScreen(
                     }
                 }
 
-                item { Spacer(modifier = Modifier.height(36.dp)) } // 💡 디자이너 피드백: 카테고리 섹션과 최근 활동 섹션 사이 간격 36.dp로 변경
+                item { Spacer(modifier = Modifier.height(36.dp)) } // 💡 디자이너 피드백: 카테고리 섹션과 최근 활동 섹션 사이 간격 36.dp로 변경[cite: 26]
 
                 // [최근 활동 리스트 영역]
                 item {
@@ -234,10 +234,10 @@ private fun ArchiveHomeScreen(
                     if (activity.type == ActivityType.CONVERSATION) {
                         ArchiveConversationCard(
                             title = activity.title,
-                            tags = listOf("학교", "진로"), // 💡 TODO: API 명세 확정 후 ViewModel 매핑 필요
-                            summary = "서로의 전공과 관심 분야를 공유하고, 진로 고민에 대해 조언을 주고받았어요.", // 💡 TODO: API 연동 필요
+                            tags = activity.tags, // 💡 실제 데이터 매핑으로 수정
+                            summary = activity.summary ?: "", // 💡 실제 데이터 매핑으로 수정
                             date = activity.date,
-                            time = "14:35", // 💡 TODO: API의 createdAt에서 시간(HH:mm) 파싱 필요
+                            time = "14:35", // 💡 TODO: API의 createdAt에서 시간(HH:mm) 파싱 필요[cite: 26]
                             onClick = { onActivityClick(activity.id, activity.type) },
                             modifier = Modifier.padding(horizontal = 16.dp)
                         )
@@ -321,7 +321,8 @@ private fun ArchiveCategoryItem(
 private fun ArchiveHomeScreenPreview() {
     val mockActivities = listOf(
         RecentActivity("1", ActivityType.MISSION, "처음 보는 사람에게 짧게 인사하기", "미션 완료", "2026.08.20", "쉬움", "짧은 대화", 2, 20),
-        RecentActivity("2", ActivityType.CONVERSATION, "처음 보는 사람에게 짧게 인사하기", "대화 완료", "2026.08.20"),
+        // 💡 프리뷰가 깨지지 않게 tags와 summary 데이터 추가
+        RecentActivity("2", ActivityType.CONVERSATION, "처음 보는 사람에게 짧게 인사하기", "대화 완료", "2026.08.20", tags = listOf("자기 성장", "첫 만남"), summary = "간단한 인사와 자기소개를 나누며 첫 만남의 어색함을 줄이고 대화를 시작했어요."),
         RecentActivity("3", ActivityType.SENTENCE, "\"그렇군요! 저도 편해서 놀랐습니다.\"", "문장 저장", "2026.08.20"),
         RecentActivity("4", ActivityType.REPORT, "처음 보는 사람에게 짧게 인사하기", "리포트 열람", "2026.08.20")
     )

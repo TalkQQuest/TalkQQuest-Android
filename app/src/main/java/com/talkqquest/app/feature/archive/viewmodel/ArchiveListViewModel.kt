@@ -17,7 +17,7 @@ import java.time.format.DateTimeFormatter
 import javax.inject.Inject
 
 data class ArchiveUiState(
-    val selectedCategory: String = "전체", // 💡 추가됨: 현재 선택된 탭(카테고리) 상태 추적
+    val selectedCategory: String = "전체",
     val selectedFilter: String = "전체",
     val missions: List<ArchiveMissionItem> = emptyList(),
     val conversations: List<RecentActivity> = emptyList(),
@@ -42,13 +42,18 @@ class ArchiveViewModel @Inject constructor(
 
     init { refreshData() }
 
-    // 💡 추가됨: UI 화면에서 카테고리 탭을 누를 때 이 함수를 호출해주세요!
     fun selectCategory(category: String) {
         _uiState.update { it.copy(selectedCategory = category) }
-        refreshData() // 카테고리가 변경되면 서버에 해당 타입의 데이터를 새로 요청합니다.
+        refreshData()
     }
 
-    fun selectFilter(filter: String) { _uiState.update { it.copy(selectedFilter = filter) } }
+    fun selectFilter(filter: String) {
+        _uiState.update { it.copy(selectedFilter = filter) }
+        // 💡 API 명세 변경: 미션 필터 변경 시 서버에 다시 요청하여 데이터를 새로 받음
+        if (_uiState.value.selectedCategory == "미션") {
+            refreshData()
+        }
+    }
 
     fun toggleMissionSave(id: String) {
         val targetMission = _uiState.value.missions.find { it.id == id } ?: return
@@ -143,19 +148,28 @@ class ArchiveViewModel @Inject constructor(
 
     fun refreshData() {
         val currentCategory = _uiState.value.selectedCategory
+        val currentFilter = _uiState.value.selectedFilter
 
-        // 💡 핵심 추가 로직: 선택된 한글 탭을 API 요청용 영어 파라미터로 변환
         val apiType = when (currentCategory) {
             "미션" -> "mission"
             "대화" -> "conversation"
             "문장" -> "phrase"
             "리포트" -> "report"
-            else -> null // "전체"인 경우 null을 할당하여 서버에 필터 없이 요청
+            else -> null
         }
 
+        // 💡 API 명세 변경: 미션 로컬 필터를 서버 missionFilter 파라미터로 변환
+        val apiMissionFilter = if (apiType == "mission" || apiType == null) {
+            when (currentFilter) {
+                "완료" -> "completed"
+                "미완료" -> "incomplete"
+                else -> "all"
+            }
+        } else null
+
         viewModelScope.launch {
-            // 💡 변경됨: 변환된 apiType을 파라미터로 넘기고, 페이징 한계 방지를 위해 size를 넉넉하게 50으로 설정
-            when (val result = repository.searchArchives(type = apiType, size = 50)) {
+            // 💡 API 명세 변경: missionFilter 추가 연동
+            when (val result = repository.searchArchives(type = apiType, missionFilter = apiMissionFilter, size = 50)) {
                 is ApiResult.Success -> {
                     val items = result.data.items
 
@@ -179,7 +193,9 @@ class ArchiveViewModel @Inject constructor(
                             type = ActivityType.CONVERSATION,
                             title = it.title,
                             status = "대화 완료",
-                            date = formatIsoDate(it.createdAt)
+                            date = formatIsoDate(it.createdAt),
+                            tags = it.tags, // 💡 API 명세 변경: 태그 배열 매핑
+                            summary = it.description // 💡 API 명세 변경: AI 요약 설명 매핑
                         )
                     }
                     val sentences = items.filter { (it.type.lowercase() == "phrase" || it.type.lowercase() == "sentence") && it.isBookmarked }.map {

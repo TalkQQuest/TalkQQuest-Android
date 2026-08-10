@@ -32,24 +32,21 @@ import kotlin.math.roundToInt
 class ArchiveRepository @Inject constructor(
     private val archiveApi: ArchiveApi
 ) {
-    // 💡 화면 디자인 확인을 위해 Mock 모드를 활성화했습니다. (실제 서버 연동 시 false로 변경)
-    val isMockMode = true
+    val isMockMode = false
 
-    // 💡 피그마 시안에 맞게 미션 목업 데이터 업데이트
     private val stubMissions = mutableListOf(
         ArchiveMissionItem("1", "학교 생활 꿀팁 나누기", "일상 대화", "보통", 8, 30, isCompleted = true, isSaved = true, completedDate = "2026.08.20"),
         ArchiveMissionItem("2", "최근 본 영화 이야기하기", "짧은 대화", "쉬움", 5, 20, isCompleted = false, isSaved = true, completedDate = "2026.08.20"),
         ArchiveMissionItem("3", "처음 보는 사람에게 짧게 인사하기", "짧은 대화", "쉬움", 2, 20, isCompleted = true, isSaved = true, completedDate = "2026.08.19")
     )
 
-    // 💡 피그마 시안에 맞게 대화 목업 데이터 업데이트
     private val stubConversations = mutableListOf(
-        RecentActivity(id = "1", title = "대학교 전공과 진로에 대해 이야기 했어요", type = ActivityType.CONVERSATION, status = "대화 완료", date = "2026.08.20"),
-        RecentActivity(id = "2", title = "여행 계획을 공유하며 추천 장소를 주고 받았어요", type = ActivityType.CONVERSATION, status = "대화 완료", date = "2026.08.20"),
-        RecentActivity(id = "3", title = "처음 보는 사람에게 짧게 인사하기", type = ActivityType.CONVERSATION, status = "대화 완료", date = "2026.08.19")
+        // 💡 API 명세 변경 반영: tags, summary 파라미터 매핑을 위해 Mock 데이터에 반영
+        RecentActivity(id = "1", title = "대학교 전공과 진로에 대해 이야기 했어요", type = ActivityType.CONVERSATION, status = "대화 완료", date = "2026.08.20", tags = listOf("학교", "진로"), summary = "서로의 전공과 관심 분야를 공유하고, 진로 고민에 대해 조언을 주고받았어요."),
+        RecentActivity(id = "2", title = "여행 계획을 공유하며 추천 장소를 주고 받았어요", type = ActivityType.CONVERSATION, status = "대화 완료", date = "2026.08.20", tags = listOf("여행", "취미"), summary = "이번 주말 여행 계획을 이야기하고, 가고 싶은 장소를 추천했어요."),
+        RecentActivity(id = "3", title = "처음 보는 사람에게 짧게 인사하기", type = ActivityType.CONVERSATION, status = "대화 완료", date = "2026.08.19", tags = emptyList(), summary = null) // 요약이 아직 생성 안된 케이스
     )
 
-    // 💡 피그마 시안에 맞게 베스트 문장 목업 데이터 업데이트
     private val stubSentences = mutableListOf(
         BookmarkArchiveItem(id = "1", title = "네, 안녕하세요. 항상 아메리카노만 마셨는데, 오늘은 좀 달달한 걸 먹고 싶어요.", status = "문장 저장", date = "2026.08.20", isSaved = true, memoKeywords = listOf("상황극", "요청하기", "정중함"), memoText = "자신의 평소 취향과 현재 원하는 바를 명확하고 정중하게 전달하는 표현입니다.", relatedConversationId = "1")
     )
@@ -244,11 +241,16 @@ class ArchiveRepository @Inject constructor(
         if (isMockMode) {
             val allMockActivities = mutableListOf<ArchiveRecentActivity>()
 
-            stubMissions.filter { it.isCompleted && it.isSaved }.forEach { allMockActivities.add(ArchiveRecentActivity(id = it.id, type = "mission", title = it.title, isBookmarked = it.isSaved, missionStatus = "completed", category = it.category, difficulty = it.difficulty, estimatedMinutes = it.duration, rewardXp = it.xp, createdAt = it.completedDate)) }
+            // 💡 API 명세 변경: referenceId 매핑
+            stubMissions.filter { it.isCompleted && it.isSaved }.forEach { allMockActivities.add(ArchiveRecentActivity(id = it.id, referenceId = it.id, type = "mission", title = it.title, isBookmarked = it.isSaved, missionStatus = "completed", category = it.category, difficulty = it.difficulty, estimatedMinutes = it.duration, rewardXp = it.xp, createdAt = it.completedDate)) }
 
-            stubConversations.forEach { allMockActivities.add(ArchiveRecentActivity(id = it.id, type = "conversation", title = it.title, isBookmarked = false, createdAt = it.date)) }
-            stubSentences.filter { it.isSaved }.forEach { allMockActivities.add(ArchiveRecentActivity(id = it.id, type = "phrase", title = it.title, isBookmarked = true, createdAt = it.date)) }
-            stubReports.filter { it.isSaved }.forEach { allMockActivities.add(ArchiveRecentActivity(id = it.id, type = "report", title = it.title, isBookmarked = true, createdAt = it.date)) }
+            // 💡 Mock 응답에 tags, description, referenceId 포함
+            stubConversations.forEach { allMockActivities.add(ArchiveRecentActivity(id = it.id, referenceId = it.id, type = "conversation", title = it.title, isBookmarked = false, createdAt = it.date, tags = it.tags, description = it.summary)) }
+
+            stubSentences.filter { it.isSaved }.forEach { allMockActivities.add(ArchiveRecentActivity(id = it.id, referenceId = it.id, type = "phrase", title = it.title, isBookmarked = true, createdAt = it.date)) }
+
+            // 💡 API 명세 변경: 리포트 타입에 reportType="growth" 추가 매핑
+            stubReports.filter { it.isSaved }.forEach { allMockActivities.add(ArchiveRecentActivity(id = it.id, referenceId = it.id, type = "report", reportType = "growth", title = it.title, isBookmarked = true, createdAt = it.date)) }
 
             val summary = ArchiveSummary(totalCount = allMockActivities.size, missionRecordCount = stubMissions.count { it.isSaved }, conversationCount = stubConversations.size, phraseCount = stubSentences.count { it.isSaved }, reportCount = stubReports.count { it.isSaved }, recentItems = allMockActivities.sortedByDescending { it.createdAt }.take(4))
             return ApiResult.Success(summary)
@@ -262,19 +264,34 @@ class ArchiveRepository @Inject constructor(
 
     suspend fun searchArchives(
         keyword: String? = null, type: String? = null, startDate: String? = null,
-        endDate: String? = null, sort: String? = null, folderId: String? = null,
+        endDate: String? = null, sort: String? = null, missionFilter: String? = null, folderId: String? = null, // 💡 API 명세 변경: missionFilter 추가
         tag: String? = null, page: Int? = null, size: Int? = null
     ): ApiResult<ArchiveSearchResponse> {
         if (isMockMode) {
             val allMockItems = mutableListOf<ArchiveSearchItem>()
-            stubMissions.forEach { allMockItems.add(ArchiveSearchItem(id = it.id, type = "mission", title = it.title, isBookmarked = it.isSaved, missionStatus = if (it.isCompleted) "completed" else "in_progress", category = it.category, difficulty = it.difficulty, estimatedMinutes = it.duration, rewardXp = it.xp, missionId = it.id, createdAt = it.completedDate)) }
-            stubConversations.forEach { allMockItems.add(ArchiveSearchItem(id = it.id, type = "conversation", title = it.title, isBookmarked = false, createdAt = it.date)) }
-            stubSentences.forEach { allMockItems.add(ArchiveSearchItem(id = it.id, type = "phrase", title = it.title, isBookmarked = it.isSaved, createdAt = it.date)) }
-            stubReports.forEach { allMockItems.add(ArchiveSearchItem(id = it.id, type = "report", title = it.title, isBookmarked = it.isSaved, createdAt = it.date)) }
+
+            // 💡 Mock 데이터 missionFilter 필터링 반영 (all, completed, incomplete)
+            val filteredMissions = when (missionFilter) {
+                "completed" -> stubMissions.filter { it.isCompleted }
+                "incomplete" -> stubMissions.filter { !it.isCompleted }
+                else -> stubMissions
+            }
+
+            // 💡 API 명세 변경: referenceId 매핑
+            filteredMissions.forEach { allMockItems.add(ArchiveSearchItem(id = it.id, referenceId = it.id, type = "mission", title = it.title, isBookmarked = it.isSaved, missionStatus = if (it.isCompleted) "completed" else "in_progress", category = it.category, difficulty = it.difficulty, estimatedMinutes = it.duration, rewardXp = it.xp, missionId = it.id, createdAt = it.completedDate)) }
+
+            // 💡 Mock 응답에 tags, description, referenceId 포함
+            stubConversations.forEach { allMockItems.add(ArchiveSearchItem(id = it.id, referenceId = it.id, type = "conversation", title = it.title, isBookmarked = false, tags = it.tags, description = it.summary, createdAt = it.date)) }
+
+            stubSentences.forEach { allMockItems.add(ArchiveSearchItem(id = it.id, referenceId = it.id, type = "phrase", title = it.title, isBookmarked = it.isSaved, createdAt = it.date)) }
+
+            // 💡 API 명세 변경: 리포트 타입에 reportType="growth" 추가 매핑
+            stubReports.forEach { allMockItems.add(ArchiveSearchItem(id = it.id, referenceId = it.id, type = "report", reportType = "growth", title = it.title, isBookmarked = it.isSaved, createdAt = it.date)) }
+
             return ApiResult.Success(ArchiveSearchResponse(totalCount = allMockItems.size, items = allMockItems, pageInfo = PageInfo(allMockItems.size, 1, 0)))
         } else {
             return try {
-                val response = archiveApi.searchArchives(keyword, type, startDate, endDate, sort, folderId, tag, page, size)
+                val response = archiveApi.searchArchives(keyword, type, startDate, endDate, sort, missionFilter, folderId, tag, page, size)
                 if (response.data != null) ApiResult.Success(response.data) else ApiResult.Error(null, response.message ?: "오류가 발생했습니다.")
             } catch (e: Exception) { ApiResult.Exception(e) }
         }

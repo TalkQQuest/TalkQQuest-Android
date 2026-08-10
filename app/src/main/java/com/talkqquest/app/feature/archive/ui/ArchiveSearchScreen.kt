@@ -372,10 +372,10 @@ private fun ArchiveSearchScreenContent(
                                         if (item.type == ActivityType.CONVERSATION) {
                                             ArchiveConversationCard(
                                                 title = item.title,
-                                                tags = listOf("학교", "진로"), // 💡 TODO: API 명세 확정 후 ViewModel 매핑 필요
-                                                summary = "서로의 전공과 관심 분야를 공유하고, 진로 고민에 대해 조언을 주고받았어요.", // 💡 TODO: API 연동 필요
+                                                tags = item.tags, // 💡 실제 데이터 매핑으로 수정
+                                                summary = item.summary ?: "", // 💡 실제 데이터 매핑으로 수정
                                                 date = item.date,
-                                                time = "14:35", // 💡 TODO: API의 createdAt에서 시간(HH:mm) 파싱 필요
+                                                time = "14:35", // 💡 TODO: API의 createdAt에서 시간(HH:mm) 파싱 필요[cite: 28]
                                                 onClick = { onNavigateToDetail(item.id, item.type) },
                                                 modifier = Modifier.animateItem()
                                             )
@@ -595,12 +595,15 @@ private val previewUiState = ArchiveSearchUiState(
         ArchiveMissionItem("1", "처음 보는 사람에게 짧게 인사하기", "짧은 대화", "쉬움", 2, 20, isCompleted = true, isSaved = true, completedDate = "2026.07.16")
     ),
     allConversations = listOf(
+        // 💡 프리뷰가 깨지지 않게 tags와 summary 데이터 추가
         RecentActivity(
             id = "1",
             title = "식당에서 메뉴 추천받고 주문하기",
             type = ActivityType.CONVERSATION,
             status = "대화 완료",
-            date = "2026.07.15"
+            date = "2026.07.15",
+            tags = listOf("상황극", "주문"),
+            summary = "직원에게 정중하게 메뉴를 묻고 주문하는 연습을 했습니다."
         )
     ),
     allSentences = listOf(

@@ -27,7 +27,10 @@ data class RecentActivity(
     val difficulty: String? = null,
     val category: String? = null,
     val estimatedMinutes: Int? = null,
-    val rewardXp: Int? = null
+    val rewardXp: Int? = null,
+    val tags: List<String> = emptyList(), // 💡 추가됨: 태그(키워드) 배열
+    val summary: String? = null, // 💡 추가됨: 설명/요약 텍스트
+    val reportType: String? = null // 💡 추가됨: 리포트 타입 식별용
 )
 
 data class ArchiveHomeUiState(
@@ -91,13 +94,16 @@ class ArchiveHomeViewModel @Inject constructor(
                             difficulty = dto.difficulty,
                             category = dto.category,
                             estimatedMinutes = dto.estimatedMinutes,
-                            rewardXp = dto.rewardXp
+                            rewardXp = dto.rewardXp,
+                            tags = dto.tags, // 💡 API 명세 변경 반영
+                            summary = dto.description, // 💡 API 명세 변경 반영
+                            reportType = dto.reportType // 💡 API 명세 변경 반영
                         )
                     }
 
                     _uiState.update {
                         it.copy(
-                            completedMissionCount = summary.missionRecordCount,
+                            completedMissionCount = summary.missionRecordCount, // 💡 명세 변경: 완료수가 아닌 북마크된 개수가 들어옴
                             conversationCount = summary.conversationCount,
                             savedSentenceCount = summary.phraseCount,
                             reportCount = summary.reportCount,

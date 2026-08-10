@@ -31,6 +31,7 @@ interface ArchiveApi {
         @Query("startDate") startDate: String? = null,
         @Query("endDate") endDate: String? = null,
         @Query("sort") sort: String? = null,
+        @Query("missionFilter") missionFilter: String? = null, // 💡 API 명세 변경: 미션 필터 파라미터 추가
         @Query("folderId") folderId: String? = null,
         @Query("tag") tag: String? = null,
         @Query("page") page: Int? = null,
@@ -72,7 +73,6 @@ interface ArchiveApi {
         @Path("phraseId") phraseId: String
     ): ApiResponse<DeletePhraseResponse>
 
-    // 💡 추가됨: 리포트 저장 및 해제
     @POST("api/v1/reports")
     suspend fun saveReportArchive(
         @Body request: SaveReportRequest

@@ -253,14 +253,15 @@ class ArchiveSearchViewModel @Inject constructor(
                         )
                     }
 
-                    // 💡 변경됨: 대화, 문장, 리포트 모두 원본 ID(`referenceId`)를 우선 매핑
                     val allConversations = items.filter { it.type.lowercase() == "conversation" }.map {
                         RecentActivity(
                             id = it.referenceId ?: it.id,
                             type = ActivityType.CONVERSATION,
                             title = it.title,
                             status = "대화 완료",
-                            date = formatIsoDate(it.createdAt)
+                            date = formatIsoDate(it.createdAt),
+                            tags = it.tags, // 💡 API 명세 변경: 태그 배열 매핑
+                            summary = it.description // 💡 API 명세 변경: AI 요약 설명 매핑
                         )
                     }
                     val allSentences = items.filter { it.type.lowercase() == "phrase" || it.type.lowercase() == "sentence" }.map {

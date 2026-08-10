@@ -3,7 +3,7 @@ package com.talkqquest.app.feature.report.viewmodel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.talkqquest.app.core.network.ApiResult
-import com.talkqquest.app.feature.report.data.ReportRepository
+import com.talkqquest.app.feature.report.data.WeeklyCompareRepository
 import com.talkqquest.app.feature.report.data.model.WeeklyCompareDetail
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
@@ -40,7 +40,7 @@ data class WeeklyCompareUiState(
 
 @HiltViewModel
 class WeeklyCompareViewModel @Inject constructor(
-    private val reportRepository: ReportRepository,
+    private val weeklyCompareRepository: WeeklyCompareRepository,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(WeeklyCompareUiState())
@@ -53,7 +53,7 @@ class WeeklyCompareViewModel @Inject constructor(
     fun load() {
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true, errorMessage = null) }
-            when (val r = reportRepository.getWeeklyCompareDetail()) {
+            when (val r = weeklyCompareRepository.getWeeklyCompareDetail()) {
                 // TODO(서버 연동): 주간 비교가 목록 API로 바뀌면 listOf(...) 대신 응답 목록을 그대로 넣는다.
                 //   그때부터 좌우 화살표가 실제로 동작한다(지금은 한 주치뿐이라 양쪽 다 비활성).
                 is ApiResult.Success -> _uiState.update {

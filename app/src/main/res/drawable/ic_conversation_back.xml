@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 대화 화면 뒤로가기 — CSS "chevoren_left > chevron-left(30x32) > Icon" 전사.
+     Icon은 12x6 꺾은선에 transform: rotate(-90deg)가 걸려 있어 실제로는 6x12(왼쪽 향한 ">"의 반전).
+     stroke Gray/500 #64748B, 굵기 2. 끝 처리는 CSS에 없어 프로젝트 아이콘 관례(둥글게)를 따름. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="30dp"
+    android:height="32dp"
+    android:viewportWidth="30"
+    android:viewportHeight="32">
+    <path
+        android:pathData="M18 10L12 16L18 22"
+        android:strokeColor="#64748B"
+        android:strokeWidth="2"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round" />
+</vector>

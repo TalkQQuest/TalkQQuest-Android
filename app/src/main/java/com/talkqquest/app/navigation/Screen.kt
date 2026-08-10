@@ -75,7 +75,8 @@ object Screen {
     const val MY_GROUPS = "my_groups"                            // MyGroupsScreen
     // ReportScreen (?깆옣 由ы룷??二쇨컙 鍮꾧탳 ???듯빀).
     // missionTitle = ??由ы룷?멸? ?섏삩 誘몄뀡 ?쒕ぉ (????쒗듃 移대뱶 ?쒕ぉ???곗엫). ?놁쑝硫?鍮?媛?
-    const val REPORT = "report?missionTitle={missionTitle}"
+    // conversationId = 이 리포트가 나온 대화 id. POST /reports가 2026-08-10부터 이 값을 받는다.
+    const val REPORT = "report?missionTitle={missionTitle}&conversationId={conversationId}"
 
     // WeeklyCompareScreen — 주간 비교 리포트(홈/알림창에서 진입).
     // ReportScreen(성장 리포트)과 다른 화면이다: 주차 이동·자주 연습한 주제·미션 진행률이 있고

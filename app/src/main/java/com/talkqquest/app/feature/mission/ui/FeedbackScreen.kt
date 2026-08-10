@@ -82,7 +82,7 @@ import kotlinx.coroutines.launch
 fun FeedbackScreen(
     onBack: () -> Unit = {},
     onItemClick: (Int) -> Unit = {},
-    onDetailReport: (String) -> Unit = {}, // 미션 제목을 함께 넘김 — 리포트 저장 카드 제목에 쓰임
+    onDetailReport: (String, String) -> Unit = { _, _ -> }, // 미션 제목(저장 카드 제목) + 대화 id(POST /reports 바디)
     onHome: () -> Unit = {},
     viewModel: FeedbackViewModel = hiltViewModel(),
 ) {
@@ -102,7 +102,7 @@ private fun FeedbackScreen(
     uiState: FeedbackUiState,
     onBack: () -> Unit = {},
     onItemClick: (Int) -> Unit = {},
-    onDetailReport: (String) -> Unit = {},
+    onDetailReport: (String, String) -> Unit = { _, _ -> },
     onHome: () -> Unit = {},
     onRetry: () -> Unit = {},
 ) = FitDesign { // 작은 화면에선 디자인(393x852) 통째 축소 — 다른 화면들과 동일
@@ -140,7 +140,7 @@ private fun FeedbackContent(
     result: FeedbackResult,
     onBack: () -> Unit,
     onItemClick: (Int) -> Unit,
-    onDetailReport: (String) -> Unit,
+    onDetailReport: (String, String) -> Unit,
     onHome: () -> Unit,
     initialStage: Int = 0, // 프리뷰용: 1이면 연출 끝 상태로 그림
 ) {
@@ -243,7 +243,7 @@ private fun FeedbackContent(
         ) {
             TqButton(
                 text = "성장 리포트",
-                onClick = { if (stage >= 1) onDetailReport(result.missionTitle) },
+                onClick = { if (stage >= 1) onDetailReport(result.missionTitle, result.conversationId.orEmpty()) },
                 modifier = Modifier.fillMaxWidth(),
             )
             Spacer(Modifier.height(8.dp)) // 버튼 사이 (CSS gap 8)
@@ -417,7 +417,7 @@ private fun FeedbackBandPreview(k: Int, i: Int, e: Int, q: Int) {
                 ),
                 onBack = {},
                 onItemClick = {},
-                onDetailReport = {},
+                onDetailReport = { _, _ -> },
                 onHome = {},
                 initialStage = 1,
             )

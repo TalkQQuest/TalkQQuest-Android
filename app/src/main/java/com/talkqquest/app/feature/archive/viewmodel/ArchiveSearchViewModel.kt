@@ -137,91 +137,21 @@ class ArchiveSearchViewModel @Inject constructor(
     fun toggleMissionBookmark(missionId: String) {
         val target = _uiState.value.allMissions.find { it.id == missionId } ?: return
         val isCurrentlySaved = target.isSaved
-
-        _uiState.update { state ->
-            state.copy(
-                allMissions = state.allMissions.map {
-                    if (it.id == missionId) it.copy(isSaved = !isCurrentlySaved) else it
-                }
-            )
-        }
-
-        viewModelScope.launch {
-            when (val result = repository.toggleMissionBookmark(missionId, isCurrentlySaved)) {
-                is ApiResult.Success -> {
-                    refreshData()
-                    _uiState.update { state ->
-                        val key = "mission_$missionId"
-                        val updatedTimestamps = state.savedTimestamps.toMutableMap()
-                        if (!isCurrentlySaved) updatedTimestamps[key] = System.currentTimeMillis()
-                        state.copy(savedTimestamps = updatedTimestamps)
-                    }
-                }
-                is ApiResult.Error -> {
-                    android.util.Log.e("ArchiveTest", "검색 미션 저장 에러: ${result.message}")
-                    refreshData()
-                }
-                is ApiResult.Exception -> {
-                    android.util.Log.e("ArchiveTest", "검색 미션 네트워크 에러 발생")
-                    refreshData()
-                }
-            }
-        }
+        _uiState.update { state -> state.copy(allMissions = state.allMissions.map { if (it.id == missionId) it.copy(isSaved = !isCurrentlySaved) else it }) }
+        viewModelScope.launch { repository.toggleMissionBookmark(missionId, isCurrentlySaved).also { refreshData() } }
     }
 
     fun toggleSentenceBookmark(sentenceId: String) {
         val target = _uiState.value.allSentences.find { it.id == sentenceId } ?: return
         val isCurrentlySaved = target.isSaved
-
-        viewModelScope.launch {
-            when (val result = repository.toggleSentenceBookmark(
-                id = sentenceId,
-                isCurrentlySaved = isCurrentlySaved,
-                conversationId = target.relatedConversationId,
-                content = target.title,
-                memo = target.memoText
-            )) {
-                is ApiResult.Success -> {
-                    refreshData()
-                    _uiState.update { state ->
-                        val key = "bookmark_true_$sentenceId"
-                        val updatedTimestamps = state.savedTimestamps.toMutableMap()
-                        if (!isCurrentlySaved) updatedTimestamps[key] = System.currentTimeMillis()
-                        state.copy(savedTimestamps = updatedTimestamps)
-                    }
-                }
-                is ApiResult.Error -> {
-                    android.util.Log.e("ArchiveTest", "검색 문장 저장 에러: ${result.message}")
-                    refreshData()
-                }
-                is ApiResult.Exception -> {
-                    android.util.Log.e("ArchiveTest", "검색 문장 네트워크 에러 발생")
-                    refreshData()
-                }
-            }
-        }
+        viewModelScope.launch { repository.toggleSentenceBookmark(id = sentenceId, isCurrentlySaved = isCurrentlySaved, conversationId = target.relatedConversationId, content = target.title, memo = target.memoText).also { refreshData() } }
     }
 
     fun toggleReportBookmark(reportId: String) {
         val target = _uiState.value.allReports.find { it.id == reportId } ?: return
-
         if (target.isSaved) {
-            _uiState.update { state ->
-                state.copy(allReports = state.allReports.filter { it.id != reportId })
-            }
-            viewModelScope.launch {
-                when (val result = repository.toggleReportBookmark(reportId, true)) {
-                    is ApiResult.Success -> {
-                        _uiState.update { state ->
-                            val key = "bookmark_false_$reportId"
-                            val updatedTimestamps = state.savedTimestamps.toMutableMap()
-                            updatedTimestamps[key] = System.currentTimeMillis()
-                            state.copy(savedTimestamps = updatedTimestamps)
-                        }
-                    }
-                    else -> refreshData()
-                }
-            }
+            _uiState.update { state -> state.copy(allReports = state.allReports.filter { it.id != reportId }) }
+            viewModelScope.launch { repository.toggleReportBookmark(reportId, true).also { refreshData() } }
         }
     }
 
@@ -229,8 +159,17 @@ class ArchiveSearchViewModel @Inject constructor(
         return try {
             val zdt = ZonedDateTime.parse(isoString)
             zdt.format(DateTimeFormatter.ofPattern("yyyy.MM.dd"))
+        } catch (e: Exception) { isoString.substringBefore("T").replace("-", ".") }
+    }
+
+    // 💡 추가됨: 시간 파싱 함수
+    private fun formatIsoTime(isoString: String): String {
+        return try {
+            val zdt = ZonedDateTime.parse(isoString)
+            zdt.format(DateTimeFormatter.ofPattern("HH:mm"))
         } catch (e: Exception) {
-            isoString.substringBefore("T").replace("-", ".")
+            val timePart = isoString.substringAfter("T").substringBefore("+").substringBefore("Z")
+            if (timePart.length >= 5) timePart.substring(0, 5) else ""
         }
     }
 
@@ -240,17 +179,7 @@ class ArchiveSearchViewModel @Inject constructor(
                 is ApiResult.Success -> {
                     val items = result.data.items
                     val allMissions = items.filter { it.type.lowercase() == "mission" }.map {
-                        ArchiveMissionItem(
-                            id = it.missionId ?: it.id,
-                            title = it.title,
-                            category = it.category ?: "",
-                            difficulty = it.difficulty ?: "",
-                            duration = it.estimatedMinutes ?: 0,
-                            xp = it.rewardXp ?: 0,
-                            isCompleted = it.missionStatus == "completed",
-                            isSaved = it.isBookmarked,
-                            completedDate = formatIsoDate(it.createdAt)
-                        )
+                        ArchiveMissionItem(id = it.missionId ?: it.id, title = it.title, category = it.category ?: "", difficulty = it.difficulty ?: "", duration = it.estimatedMinutes ?: 0, xp = it.rewardXp ?: 0, isCompleted = it.missionStatus == "completed", isSaved = it.isBookmarked, completedDate = formatIsoDate(it.createdAt))
                     }
 
                     val allConversations = items.filter { it.type.lowercase() == "conversation" }.map {
@@ -260,34 +189,13 @@ class ArchiveSearchViewModel @Inject constructor(
                             title = it.title,
                             status = "대화 완료",
                             date = formatIsoDate(it.createdAt),
-                            tags = it.tags, // 💡 API 명세 변경: 태그 배열 매핑
-                            summary = it.description // 💡 API 명세 변경: AI 요약 설명 매핑
+                            time = formatIsoTime(it.createdAt), // 💡 시간 파싱 적용
+                            tags = it.tags,
+                            summary = it.description
                         )
                     }
-                    val allSentences = items.filter { it.type.lowercase() == "phrase" || it.type.lowercase() == "sentence" }.map {
-                        BookmarkArchiveItem(
-                            id = it.referenceId ?: it.id,
-                            title = it.title,
-                            status = "문장 저장",
-                            date = formatIsoDate(it.createdAt),
-                            isSaved = it.isBookmarked,
-                            memoKeywords = it.tags,
-                            memoText = "",
-                            relatedConversationId = ""
-                        )
-                    }
-                    val allReports = items.filter { it.type.lowercase() == "report" }.map {
-                        BookmarkArchiveItem(
-                            id = it.referenceId ?: it.id,
-                            title = it.title,
-                            status = "리포트 열람",
-                            date = formatIsoDate(it.createdAt),
-                            isSaved = it.isBookmarked,
-                            memoKeywords = it.tags,
-                            memoText = "",
-                            relatedConversationId = ""
-                        )
-                    }
+                    val allSentences = items.filter { it.type.lowercase() == "phrase" || it.type.lowercase() == "sentence" }.map { BookmarkArchiveItem(id = it.referenceId ?: it.id, title = it.title, status = "문장 저장", date = formatIsoDate(it.createdAt), isSaved = it.isBookmarked, memoKeywords = it.tags, memoText = "", relatedConversationId = "") }
+                    val allReports = items.filter { it.type.lowercase() == "report" }.map { BookmarkArchiveItem(id = it.referenceId ?: it.id, title = it.title, status = "리포트 열람", date = formatIsoDate(it.createdAt), isSaved = it.isBookmarked, memoKeywords = it.tags, memoText = "", relatedConversationId = "") }
 
                     _uiState.update { state -> state.copy(allMissions = allMissions, allConversations = allConversations, allSentences = allSentences, allReports = allReports) }
                 }

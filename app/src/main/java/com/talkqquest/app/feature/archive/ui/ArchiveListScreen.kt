@@ -275,7 +275,7 @@ private fun ArchiveListScreenContent(
                                         tags = conversation.tags, // 💡 실제 데이터 매핑으로 수정
                                         summary = conversation.summary ?: "", // 💡 실제 데이터 매핑으로 수정
                                         date = conversation.date,
-                                        time = "14:35", // 💡 TODO: API의 createdAt에서 시간(HH:mm) 파싱 필요[cite: 27]
+                                        time = conversation.time,
                                         onClick = { onConversationClick(conversation.id) },
                                         modifier = Modifier.animateItem()
                                     )

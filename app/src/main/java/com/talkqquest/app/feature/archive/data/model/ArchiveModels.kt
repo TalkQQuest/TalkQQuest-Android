@@ -16,19 +16,29 @@ data class ArchiveConversationDetailResponse(
 
 @Serializable
 data class ArchiveConversationMessageDto(
-    val sender: String,
+    val id: String? = null, // 💡 API 명세 추가됨
+    val role: String? = null, // 💡 JSON 명세 기준
+    val sender: String? = null, // 💡 표 명세 기준
     val content: String,
-    val sentAt: String
-)
+    val createdAt: String? = null, // 💡 JSON 명세 기준
+    val sentAt: String? = null // 💡 표 명세 기준
+) {
+    // 💡 ViewModel에서 에러 나던 헬퍼 프로퍼티들을 여기에 정의합니다!
+    val actualRole: String get() = role ?: sender ?: "bot"
+    val actualTime: String get() = createdAt ?: sentAt ?: ""
+}
 
 @Serializable
 data class ArchiveConversationFeedbackDto(
-    val feedbackId: String,
+    val id: String? = null, // 💡 JSON 명세 기준
+    val feedbackId: String? = null, // 💡 표 명세 기준
     val kindnessScore: Int = 0,
     val initiativeScore: Int = 0,
     val empathyScore: Int = 0,
     val questionLinkScore: Int = 0
-)
+) {
+    val actualId: String get() = id ?: feedbackId ?: ""
+}
 
 // --- 저장 문장 상세 조회 DTO ---
 @Serializable
@@ -145,10 +155,10 @@ data class ArchiveSearchItem(
     val referenceId: String? = null,
     val id: String,
     val type: String,
-    val reportType: String? = null, // 💡 API 명세 변경: reportType 추가
+    val reportType: String? = null,
     val title: String,
     val tags: List<String> = emptyList(),
-    val description: String? = null, // 💡 API 명세 변경: 요약 설명 추가
+    val description: String? = null,
     val folderId: String? = null,
     val isBookmarked: Boolean = false,
     val missionStatus: String? = null,
@@ -177,10 +187,10 @@ data class ArchiveRecentActivity(
     val id: String,
     val referenceId: String? = null,
     val type: String,
-    val reportType: String? = null, // 💡 API 명세 변경: reportType 추가
+    val reportType: String? = null,
     val title: String,
-    val tags: List<String> = emptyList(), // 💡 API 명세 변경: tags 추가
-    val description: String? = null, // 💡 API 명세 변경: description 추가
+    val tags: List<String> = emptyList(),
+    val description: String? = null,
     val isBookmarked: Boolean = false,
     val missionId: String? = null,
     val conversationId: String? = null,

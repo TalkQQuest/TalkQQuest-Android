@@ -49,7 +49,6 @@ class ArchiveViewModel @Inject constructor(
 
     fun selectFilter(filter: String) {
         _uiState.update { it.copy(selectedFilter = filter) }
-        // 💡 API 명세 변경: 미션 필터 변경 시 서버에 다시 요청하여 데이터를 새로 받음
         if (_uiState.value.selectedCategory == "미션") {
             refreshData()
         }
@@ -60,24 +59,14 @@ class ArchiveViewModel @Inject constructor(
         val isCurrentlySaved = targetMission.isSaved
 
         _uiState.update { state ->
-            state.copy(
-                missions = state.missions.map {
-                    if (it.id == id) it.copy(isSaved = !isCurrentlySaved) else it
-                }
-            )
+            state.copy(missions = state.missions.map { if (it.id == id) it.copy(isSaved = !isCurrentlySaved) else it })
         }
 
         viewModelScope.launch {
             when (val result = repository.toggleMissionBookmark(id, isCurrentlySaved)) {
                 is ApiResult.Success -> refreshData()
-                is ApiResult.Error -> {
-                    android.util.Log.e("ArchiveTest", "API 에러: ${result.message}")
-                    refreshData()
-                }
-                is ApiResult.Exception -> {
-                    android.util.Log.e("ArchiveTest", "통신 예외 (주소 틀림 등)")
-                    refreshData()
-                }
+                is ApiResult.Error -> refreshData()
+                is ApiResult.Exception -> refreshData()
             }
         }
     }
@@ -87,11 +76,7 @@ class ArchiveViewModel @Inject constructor(
         val isCurrentlySaved = target.isSaved
 
         _uiState.update { state ->
-            state.copy(
-                sentences = state.sentences.map {
-                    if (it.id == id) it.copy(isSaved = !isCurrentlySaved) else it
-                }
-            )
+            state.copy(sentences = state.sentences.map { if (it.id == id) it.copy(isSaved = !isCurrentlySaved) else it })
         }
 
         viewModelScope.launch {
@@ -103,14 +88,8 @@ class ArchiveViewModel @Inject constructor(
                 memo = target.memoText
             )) {
                 is ApiResult.Success -> refreshData()
-                is ApiResult.Error -> {
-                    android.util.Log.e("ArchiveTest", "문장 저장 API 에러: ${result.message}")
-                    refreshData()
-                }
-                is ApiResult.Exception -> {
-                    android.util.Log.e("ArchiveTest", "문장 저장 통신 예외 (주소 틀림 등)")
-                    refreshData()
-                }
+                is ApiResult.Error -> refreshData()
+                is ApiResult.Exception -> refreshData()
             }
         }
     }
@@ -119,19 +98,12 @@ class ArchiveViewModel @Inject constructor(
         val target = _uiState.value.reports.find { it.id == id } ?: return
 
         if (target.isSaved) {
-            _uiState.update { state ->
-                state.copy(reports = state.reports.filter { it.id != id })
-            }
+            _uiState.update { state -> state.copy(reports = state.reports.filter { it.id != id }) }
 
             viewModelScope.launch {
                 when (val result = repository.toggleReportBookmark(id, true)) {
-                    is ApiResult.Success -> {
-                        // 정상 삭제됨, 유지
-                    }
-                    else -> {
-                        android.util.Log.e("ArchiveTest", "리포트 해제 실패")
-                        refreshData() // 실패 시에만 원상 복구
-                    }
+                    is ApiResult.Success -> {}
+                    else -> refreshData()
                 }
             }
         }
@@ -141,8 +113,17 @@ class ArchiveViewModel @Inject constructor(
         return try {
             val zdt = ZonedDateTime.parse(isoString)
             zdt.format(DateTimeFormatter.ofPattern("yyyy.MM.dd"))
+        } catch (e: Exception) { isoString.substringBefore("T").replace("-", ".") }
+    }
+
+    // 💡 추가됨: 시간 파싱 함수
+    private fun formatIsoTime(isoString: String): String {
+        return try {
+            val zdt = ZonedDateTime.parse(isoString)
+            zdt.format(DateTimeFormatter.ofPattern("HH:mm"))
         } catch (e: Exception) {
-            isoString.substringBefore("T").replace("-", ".")
+            val timePart = isoString.substringAfter("T").substringBefore("+").substringBefore("Z")
+            if (timePart.length >= 5) timePart.substring(0, 5) else ""
         }
     }
 
@@ -158,7 +139,6 @@ class ArchiveViewModel @Inject constructor(
             else -> null
         }
 
-        // 💡 API 명세 변경: 미션 로컬 필터를 서버 missionFilter 파라미터로 변환
         val apiMissionFilter = if (apiType == "mission" || apiType == null) {
             when (currentFilter) {
                 "완료" -> "completed"
@@ -168,7 +148,6 @@ class ArchiveViewModel @Inject constructor(
         } else null
 
         viewModelScope.launch {
-            // 💡 API 명세 변경: missionFilter 추가 연동
             when (val result = repository.searchArchives(type = apiType, missionFilter = apiMissionFilter, size = 50)) {
                 is ApiResult.Success -> {
                     val items = result.data.items
@@ -194,8 +173,9 @@ class ArchiveViewModel @Inject constructor(
                             title = it.title,
                             status = "대화 완료",
                             date = formatIsoDate(it.createdAt),
-                            tags = it.tags, // 💡 API 명세 변경: 태그 배열 매핑
-                            summary = it.description // 💡 API 명세 변경: AI 요약 설명 매핑
+                            time = formatIsoTime(it.createdAt), // 💡 시간 파싱 적용
+                            tags = it.tags,
+                            summary = it.description
                         )
                     }
                     val sentences = items.filter { (it.type.lowercase() == "phrase" || it.type.lowercase() == "sentence") && it.isBookmarked }.map {
@@ -223,14 +203,7 @@ class ArchiveViewModel @Inject constructor(
                         )
                     }
 
-                    _uiState.update { state ->
-                        state.copy(
-                            missions = missions,
-                            conversations = conversations,
-                            sentences = sentences,
-                            reports = reports
-                        )
-                    }
+                    _uiState.update { state -> state.copy(missions = missions, conversations = conversations, sentences = sentences, reports = reports) }
                 }
                 is ApiResult.Error -> { }
                 is ApiResult.Exception -> { }

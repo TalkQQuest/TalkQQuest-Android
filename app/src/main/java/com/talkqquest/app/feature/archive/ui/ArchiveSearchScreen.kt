@@ -375,7 +375,7 @@ private fun ArchiveSearchScreenContent(
                                                 tags = item.tags, // 💡 실제 데이터 매핑으로 수정
                                                 summary = item.summary ?: "", // 💡 실제 데이터 매핑으로 수정
                                                 date = item.date,
-                                                time = "14:35", // 💡 TODO: API의 createdAt에서 시간(HH:mm) 파싱 필요[cite: 28]
+                                                time = item.time,
                                                 onClick = { onNavigateToDetail(item.id, item.type) },
                                                 modifier = Modifier.animateItem()
                                             )

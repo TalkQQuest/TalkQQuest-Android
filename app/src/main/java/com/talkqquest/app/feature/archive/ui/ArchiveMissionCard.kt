@@ -202,8 +202,7 @@ private fun ArchiveTimeXpRow(minutes: Int, xp: Int) {
         ) {
             Image(
                 painter = painterResource(R.drawable.ic_mission_xp),
-                contentDescription = null,
-                modifier = Modifier.size(11.dp) // 💡 CSS 크기에 맞게 11.dp로 명시적 지정
+                contentDescription = null
             )
             Text(text = "${xp}XP", style = TqType.Caption.figma(), color = Gray500, softWrap = false)
         }

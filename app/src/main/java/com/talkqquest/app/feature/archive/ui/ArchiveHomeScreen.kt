@@ -237,7 +237,7 @@ private fun ArchiveHomeScreen(
                             tags = activity.tags, // 💡 실제 데이터 매핑으로 수정
                             summary = activity.summary ?: "", // 💡 실제 데이터 매핑으로 수정
                             date = activity.date,
-                            time = "14:35", // 💡 TODO: API의 createdAt에서 시간(HH:mm) 파싱 필요[cite: 26]
+                            time = activity.time,
                             onClick = { onActivityClick(activity.id, activity.type) },
                             modifier = Modifier.padding(horizontal = 16.dp)
                         )
@@ -320,12 +320,47 @@ private fun ArchiveCategoryItem(
 @Composable
 private fun ArchiveHomeScreenPreview() {
     val mockActivities = listOf(
-        RecentActivity("1", ActivityType.MISSION, "처음 보는 사람에게 짧게 인사하기", "미션 완료", "2026.08.20", "쉬움", "짧은 대화", 2, 20),
-        // 💡 프리뷰가 깨지지 않게 tags와 summary 데이터 추가
-        RecentActivity("2", ActivityType.CONVERSATION, "처음 보는 사람에게 짧게 인사하기", "대화 완료", "2026.08.20", tags = listOf("자기 성장", "첫 만남"), summary = "간단한 인사와 자기소개를 나누며 첫 만남의 어색함을 줄이고 대화를 시작했어요."),
-        RecentActivity("3", ActivityType.SENTENCE, "\"그렇군요! 저도 편해서 놀랐습니다.\"", "문장 저장", "2026.08.20"),
-        RecentActivity("4", ActivityType.REPORT, "처음 보는 사람에게 짧게 인사하기", "리포트 열람", "2026.08.20")
+        // 💡 파라미터 이름을 명시하여 순서가 밀려 타입 에러(Int -> String?)가 발생하는 것을 방지했습니다!
+        RecentActivity(
+            id = "1",
+            type = ActivityType.MISSION,
+            title = "처음 보는 사람에게 짧게 인사하기",
+            status = "미션 완료",
+            date = "2026.08.20",
+            time = "14:35",
+            difficulty = "쉬움",
+            category = "짧은 대화",
+            estimatedMinutes = 2,
+            rewardXp = 20
+        ),
+        RecentActivity(
+            id = "2",
+            type = ActivityType.CONVERSATION,
+            title = "처음 보는 사람에게 짧게 인사하기",
+            status = "대화 완료",
+            date = "2026.08.20",
+            time = "14:35",
+            tags = listOf("자기 성장", "첫 만남"),
+            summary = "간단한 인사와 자기소개를 나누며 첫 만남의 어색함을 줄이고 대화를 시작했어요."
+        ),
+        RecentActivity(
+            id = "3",
+            type = ActivityType.SENTENCE,
+            title = "\"그렇군요! 저도 편해서 놀랐습니다.\"",
+            status = "문장 저장",
+            date = "2026.08.20",
+            time = "14:35"
+        ),
+        RecentActivity(
+            id = "4",
+            type = ActivityType.REPORT,
+            title = "처음 보는 사람에게 짧게 인사하기",
+            status = "리포트 열람",
+            date = "2026.08.20",
+            time = "14:35"
+        )
     )
+
     TalkQQuestTheme {
         ArchiveHomeScreen(
             uiState = ArchiveHomeUiState(3, 3, 2, 3, mockActivities),

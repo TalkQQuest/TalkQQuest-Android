@@ -311,7 +311,7 @@ private fun RelatedConversationSection(
             tags = conversation.tags, // 💡 실제 데이터 매핑으로 수정
             summary = conversation.summary ?: "", // 💡 실제 데이터 매핑으로 수정
             date = conversation.date,
-            time = "14:35", // 💡 TODO: 실제 API 데이터(시간) 연동 필요
+            time = conversation.time,
             onClick = onClick
         )
     }

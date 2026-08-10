@@ -24,13 +24,14 @@ data class RecentActivity(
     val title: String,
     val status: String,
     val date: String,
+    val time: String = "", // 💡 추가됨: 시간 데이터
     val difficulty: String? = null,
     val category: String? = null,
     val estimatedMinutes: Int? = null,
     val rewardXp: Int? = null,
-    val tags: List<String> = emptyList(), // 💡 추가됨: 태그(키워드) 배열
-    val summary: String? = null, // 💡 추가됨: 설명/요약 텍스트
-    val reportType: String? = null // 💡 추가됨: 리포트 타입 식별용
+    val tags: List<String> = emptyList(),
+    val summary: String? = null,
+    val reportType: String? = null
 )
 
 data class ArchiveHomeUiState(
@@ -64,6 +65,17 @@ class ArchiveHomeViewModel @Inject constructor(
         }
     }
 
+    // 💡 추가됨: ISO 포맷에서 시간(HH:mm)만 추출하는 함수
+    private fun formatIsoTime(isoString: String): String {
+        return try {
+            val zdt = ZonedDateTime.parse(isoString)
+            zdt.format(DateTimeFormatter.ofPattern("HH:mm"))
+        } catch (e: Exception) {
+            val timePart = isoString.substringAfter("T").substringBefore("+").substringBefore("Z")
+            if (timePart.length >= 5) timePart.substring(0, 5) else ""
+        }
+    }
+
     fun refreshData() {
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true, errorMessage = null) }
@@ -72,7 +84,6 @@ class ArchiveHomeViewModel @Inject constructor(
                 is ApiResult.Success -> {
                     val summary = result.data
 
-                    // 서버에서 받은 전체 목록 중 최대 4개까지만 추출하여 UI에 반영
                     val uiActivities = summary.recentItems.take(4).map { dto ->
 
                         val statusText = when (dto.type.lowercase()) {
@@ -82,7 +93,6 @@ class ArchiveHomeViewModel @Inject constructor(
                             else -> ""
                         }
 
-                        // 💡 수정됨: 껍데기 ID가 아닌 진짜 원본 ID(`referenceId`)를 매핑하여 터짐 방지!
                         val actualId = dto.referenceId ?: dto.id
 
                         RecentActivity(
@@ -91,19 +101,20 @@ class ArchiveHomeViewModel @Inject constructor(
                             title = dto.title,
                             status = statusText,
                             date = formatIsoDate(dto.createdAt),
+                            time = formatIsoTime(dto.createdAt), // 💡 시간 파싱 적용
                             difficulty = dto.difficulty,
                             category = dto.category,
                             estimatedMinutes = dto.estimatedMinutes,
                             rewardXp = dto.rewardXp,
-                            tags = dto.tags, // 💡 API 명세 변경 반영
-                            summary = dto.description, // 💡 API 명세 변경 반영
-                            reportType = dto.reportType // 💡 API 명세 변경 반영
+                            tags = dto.tags,
+                            summary = dto.description,
+                            reportType = dto.reportType
                         )
                     }
 
                     _uiState.update {
                         it.copy(
-                            completedMissionCount = summary.missionRecordCount, // 💡 명세 변경: 완료수가 아닌 북마크된 개수가 들어옴
+                            completedMissionCount = summary.missionRecordCount,
                             conversationCount = summary.conversationCount,
                             savedSentenceCount = summary.phraseCount,
                             reportCount = summary.reportCount,

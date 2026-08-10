@@ -129,7 +129,8 @@ private fun ArchiveHomeScreen(
                     .statusBarsPadding(),
                 contentPadding = PaddingValues(
                     top = 29.dp,
-                    bottom = 32.dp
+                    // 💡 [수정됨] 하단 네비게이션 바(플로팅)에 카드가 가려지지 않도록 하단 여백을 대폭 늘림 (32.dp -> 120.dp)
+                    bottom = 120.dp
                 )
             ) {
                 // [헤더 영역] 보관함 타이틀

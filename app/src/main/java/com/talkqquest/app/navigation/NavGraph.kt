@@ -732,12 +732,14 @@ fun NavGraph(
         ) { backStackEntry ->
             val missionId = backStackEntry.arguments?.getString("conversationId").orEmpty()
             ConversationScreen(
+                // 헤더 "대화 완료" → 확인 팝업 → 미션 완료·저장. 소요 시간을 미션 완료 화면에 전달합니다.
                 onExitConfirm = { durationSec ->
-                    // 대화 종료 후 소요 시간을 파라미터로 넘겨 미션 완료 화면에 전달합니다.
                     navController.navigate("mission_complete/$missionId?durationSec=$durationSec") {
                         popUpTo(Screen.HOME)
                     }
                 },
+                // 헤더 뒤로가기 → 미션을 저장하지 않고 종료(완료 처리 없이 이전 화면으로).
+                onBack = { navController.popBackStack() },
             )
         }
         // B담당: 미션 완료 및 XP 화면. 이후 AI 피드백 화면으로 진입합니다.

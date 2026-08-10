@@ -18,6 +18,34 @@ data class MissionListItem(
     val status: String = "미완료",
 )
 
+// GET /api/v1/missions/today 응답 data — 백엔드 TodayMissionResponseDto.
+// ★목록 항목(MissionListItem)과 모양이 다르다: 식별자가 `id`가 아니라 `missionId`이고
+//   description·reason·expectedEffect·새로고침 정보가 함께 온다. 예전엔 이걸 MissionListItem으로
+//   받다가 필수 필드 `id`가 없어 파싱이 깨졌고, 그 바람에 오늘의 미션이 항상 폴백으로 떨어졌다.
+//   (2026-08-11 스웨거 대조 + 실호출로 확인)
+@Serializable
+data class TodayMissionResponse(
+    val missionId: String = "",
+    val title: String = "",
+    val category: String = "",
+    val difficulty: String = "",     // 서버 enum: 쉬움 / 보통 / 어려움
+    val estimatedMinutes: Int = 0,
+    val rewardXp: Int = 0,
+    val description: String = "",    // 카드 부제 — 목록 응답엔 없어 예전엔 상세를 한 번 더 불렀다
+    val reason: String = "",         // 추천 이유
+    val expectedEffect: String = "", // 기대 효과
+    val source: String = "",
+    val isSaved: Boolean = false,
+    val recommendationLogId: String = "",
+    val date: String = "",           // YYYY-MM-DD
+    // 하루 새로고침 정보 (백엔드 2026-08-10). refreshLimit 기본 3.
+    // remainingRefreshes == 0 이면 재추천 요청 시 429 MISSION_REFRESH_LIMIT_EXCEEDED.
+    val refreshCount: Int = 0,
+    val refreshLimit: Int = 0,
+    val remainingRefreshes: Int = 0,
+    val isNew: Boolean = false,
+)
+
 // GET /api/v1/missions 응답 data — 백엔드 MissionListResponseDto { missions, pageInfo }.
 @Serializable
 data class MissionListResponse(

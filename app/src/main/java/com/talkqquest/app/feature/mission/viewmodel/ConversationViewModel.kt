@@ -27,7 +27,10 @@ data class ConversationUiState(
     val recommendationsExpanded: Boolean = true, // 시작 = 펼침(목업 "대화 시작"), chevron으로 토글
     val inputText: String = "",
     val isAiReplying: Boolean = false,           // AI 응답 대기 중 (그동안 보내기 잠금)
-    val showExitDialog: Boolean = false,         // 나가기 → "대화를 종료하시겠어요?" 팝업
+    // 헤더 "대화 완료" → "대화를 종료하시겠어요?" (미션 완료·저장)
+    val showCompleteDialog: Boolean = false,
+    // 헤더 뒤로가기 → "정말 나가시겠습니까?" (저장하지 않고 종료)
+    val showLeaveDialog: Boolean = false,
     val errorMessage: String? = null,
 ) {
     val canSend: Boolean get() = inputText.isNotBlank() && !isAiReplying
@@ -145,7 +148,11 @@ class ConversationViewModel @Inject constructor(
         }
     }
 
-    fun setExitDialogVisible(visible: Boolean) {
-        _uiState.update { it.copy(showExitDialog = visible) }
+    fun setCompleteDialogVisible(visible: Boolean) {
+        _uiState.update { it.copy(showCompleteDialog = visible) }
+    }
+
+    fun setLeaveDialogVisible(visible: Boolean) {
+        _uiState.update { it.copy(showLeaveDialog = visible) }
     }
 }

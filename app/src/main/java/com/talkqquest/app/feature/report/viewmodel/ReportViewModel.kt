@@ -48,6 +48,11 @@ class ReportViewModel @Inject constructor(
     // 피드백 요약 "성장 리포트"에서 넘겨준 미션 제목 (route 인자). 직접 진입 시엔 빈 값.
     private val missionTitle: String = savedStateHandle["missionTitle"] ?: ""
 
+    // 이 리포트가 나온 대화 id (route 인자). POST /reports가 2026-08-10부터 conversationId를 받는다.
+    // 피드백 응답(FeedbackDetailResponse.conversationId)에서 받아 피드백 화면이 넘겨준다.
+    // 직접 진입(아카이브 등)이면 빈 값 → 저장은 화면 표시만 되고 서버 저장은 건너뛴다.
+    private val conversationId: String = savedStateHandle["conversationId"] ?: ""
+
     private val _uiState = MutableStateFlow(ReportUiState(missionTitle = missionTitle))
     val uiState: StateFlow<ReportUiState> = _uiState.asStateFlow()
 
@@ -76,7 +81,7 @@ class ReportViewModel @Inject constructor(
     // "리포트 저장하기": 리포트를 저장하고 시트를 올림.
     // 카드 제목은 탭(성장/주간)과 무관하게 이 리포트가 나온 미션명 — 보관함에선 "어떤 미션의
     // 리포트인지"로 구분하고, 리포트 종류는 메타줄의 "리포트 열람"이 아니라 진입해서 확인한다(CSS).
-    // 저장 시 서버(POST /reports, type=growth|weekly_compare)에도 저장. 낙관적 UI는 그대로 유지,
+    // 저장 시 서버(POST /reports, 바디 conversationId)에도 저장. 낙관적 UI는 그대로 유지,
     // 데모/실패면 serverCall이 건너뛰어 화면 표시만(보관함 실반영은 실서버 모드에서).
     fun saveReport(reportType: String) {
         val localId = (nextSaveId++).toString()
@@ -84,7 +89,7 @@ class ReportViewModel @Inject constructor(
         savedReportTypes[localId] = reportType
         // 저장 응답의 서버 reportId를 받아 카드 id를 교체 — 이후 북마크 해제(DELETE)가 가능해짐.
         viewModelScope.launch {
-            val saved = reportRepository.saveReport(reportType)
+            val saved = reportRepository.saveReport(conversationId)
             val serverId = (saved as? ApiResult.Success)?.data?.reportId?.takeIf { it.isNotBlank() } ?: return@launch
             savedReportTypes[serverId] = reportType
             swapReportId(localId, serverId)
@@ -121,7 +126,7 @@ class ReportViewModel @Inject constructor(
                 ?: savedReportTypes[id]
                 ?: lastSavedType
             viewModelScope.launch {
-                val saved = reportRepository.saveReport(type)
+                val saved = reportRepository.saveReport(conversationId)
                 val serverId = (saved as? ApiResult.Success)?.data?.reportId?.takeIf { it.isNotBlank() }
                     ?: return@launch
                 savedReportTypes[serverId] = type

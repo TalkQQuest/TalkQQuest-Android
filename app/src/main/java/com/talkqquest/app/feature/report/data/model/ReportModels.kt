@@ -122,9 +122,12 @@ data class WeeklyMetricChangeDto(
     val delta: Int = 0,
 )
 
-// POST /api/v1/reports (리포트 저장 시트) — type: growth | weekly_compare
+// POST /api/v1/reports (리포트 저장 시트)
+// 2026-08-10 백엔드 변경: 바디가 `type` → `conversationId`. 성장 리포트 전용이 됐다.
+// 스웨거 확인(2026-08-11): SaveReportRequestDto = { conversationId: string } (required).
+// conversationId는 피드백 응답(FeedbackDetailResponse.conversationId)에서 받아 route로 넘어온다.
 @Serializable
-data class SaveReportRequest(val type: String)
+data class SaveReportRequest(val conversationId: String)
 
 @Serializable
 data class SaveReportResponse(

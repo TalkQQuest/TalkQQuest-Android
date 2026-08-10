@@ -105,6 +105,7 @@ fun WeeklyCompareScreen(
         onPrevWeek = viewModel::showPrevWeek,
         onNextWeek = viewModel::showNextWeek,
         onRetry = viewModel::load,
+        onSaveClick = viewModel::toggleSaved,
         onCompletedMissionsClick = onCompletedMissionsClick,
     )
 }
@@ -125,7 +126,7 @@ fun WeeklyCompareScreen(
             .background(Gray50), // 페이지 배경 Gray/50 BG (CSS)
         contentAlignment = Alignment.Center,
     ) {
-        val report = uiState.current
+        val report = uiState.detail
         when {
             uiState.isLoading -> CircularProgressIndicator(color = Primary600)
 
@@ -637,7 +638,7 @@ private val previewReport = WeeklyCompareDetail(
 private fun WeeklyCompareScreenPreview() {
     TalkQQuestTheme {
         WeeklyCompareScreen(
-            uiState = WeeklyCompareUiState(isLoading = false, weeks = listOf(previewReport)),
+            uiState = WeeklyCompareUiState(isLoading = false, detail = previewReport),
         )
     }
 }

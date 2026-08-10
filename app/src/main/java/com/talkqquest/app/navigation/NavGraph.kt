@@ -783,8 +783,12 @@ fun NavGraph(
                 onItemClick = { index -> navController.navigate("feedback_detail/$feedbackId?item=$index") },
                 // 피드백 진입 전 기존 ViewModel 선택 상태를 위한 백업 처리입니다.
                 // URI 인코딩을 통해 파라미터를 전달합니다.
-                onDetailReport = { missionTitle ->
-                    navController.navigate("report?missionTitle=${Uri.encode(missionTitle)}")
+                // conversationId는 리포트 저장(POST /reports)이 요구하는 값이라 함께 넘긴다.
+                onDetailReport = { missionTitle, conversationId ->
+                    navController.navigate(
+                        "report?missionTitle=${Uri.encode(missionTitle)}" +
+                            "&conversationId=${Uri.encode(conversationId)}",
+                    )
                 },
                 onHome = { navController.popBackStack(Screen.HOME, inclusive = false) },
             )
@@ -794,6 +798,7 @@ fun NavGraph(
             route = Screen.REPORT,
             arguments = listOf(
                 navArgument("missionTitle") { type = NavType.StringType; defaultValue = "" },
+                navArgument("conversationId") { type = NavType.StringType; defaultValue = "" },
             ),
         ) {
             ReportScreen(

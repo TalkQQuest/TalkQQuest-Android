@@ -33,6 +33,9 @@ data class ConversationCreateResponse(
     val selectedTopic: String? = null,
     val status: String = "in_progress",
     val startedAt: String = "",
+    // 첫 AI 인사말 — 2026-08-10 백엔드 추가. 예전엔 안 내려와서 앱이 자체 문구를 띄웠다.
+    // 비어 오면(생성 실패 등) 기존 로컬 문구로 폴백한다.
+    val openingMessage: String = "",
 )
 
 // POST /api/v1/conversations/{id}/messages 요청 body. role은 user 고정(서버 enum).

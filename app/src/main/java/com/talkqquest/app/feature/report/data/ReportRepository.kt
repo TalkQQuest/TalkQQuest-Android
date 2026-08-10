@@ -35,9 +35,16 @@ class ReportRepository @Inject constructor(
         else ApiResult.Success(stubWeekly)
     }
 
-    // 리포트 저장 (리포트 저장 시트) — POST /api/v1/reports. type: "growth" | "weekly_compare".
-    suspend fun saveReport(type: String): ApiResult<SaveReportResponse> =
-        serverCall { reportApi.saveReport(SaveReportRequest(type = type)) }
+    // 리포트 저장 (리포트 저장 시트) — POST /api/v1/reports.
+    // 2026-08-10 백엔드 변경으로 바디가 type → conversationId. 성장 리포트 전용이 됐고,
+    // 주간 비교는 별도 API(POST /reports/weekly-compare/{id}/save)로 갈라졌다.
+    // conversationId가 비면 서버가 400을 주므로 호출하지 않고 실패로 돌려준다(화면은 낙관적 표시 유지).
+    suspend fun saveReport(conversationId: String): ApiResult<SaveReportResponse> {
+        if (conversationId.isBlank()) {
+            return ApiResult.Error(code = null, message = "저장할 대화를 찾지 못했어요.")
+        }
+        return serverCall { reportApi.saveReport(SaveReportRequest(conversationId = conversationId)) }
+    }
 
     // 리포트 저장 해제 — DELETE /api/v1/reports/{reportId}.
     // 저장 응답에서 받은 서버 id로만 의미가 있고, 실패/데모면 조용히 무시(화면은 낙관적 표시 유지).

@@ -308,10 +308,10 @@ private fun RelatedConversationSection(
         // 💡 방금 만든 ArchiveConversationCard 적용!
         ArchiveConversationCard(
             title = conversation.title,
-            tags = listOf("학교", "진로"), // 💡 TODO: 실제 API 데이터(태그) 연동 필요
-            summary = "서로의 전공과 관심 분야를 공유하고, 진로 고민에 대해 조언을 주고받았어요.", // 💡 TODO: 실제 API 데이터(요약) 연동 필요
+            tags = conversation.tags, // 💡 실제 데이터 매핑으로 수정
+            summary = conversation.summary ?: "", // 💡 실제 데이터 매핑으로 수정
             date = conversation.date,
-            time = "14:35", // 💡 TODO: 실제 API 데이터(시간) 연동 필요
+            time = conversation.time,
             onClick = onClick
         )
     }
@@ -328,7 +328,9 @@ private fun ArchiveSavedPhraseScreenPreview() {
         title = "처음 보는 사람에게 짧게 인사하기",
         type = ActivityType.CONVERSATION,
         status = "대화 완료",
-        date = "2026.08.20"
+        date = "2026.08.20",
+        tags = listOf("학교", "진로"), // 💡 프리뷰용 데이터 추가
+        summary = "서로의 전공과 관심 분야를 공유하고, 진로 고민에 대해 조언을 주고받았어요." // 💡 프리뷰용 데이터 추가
     )
 
     TalkQQuestTheme {

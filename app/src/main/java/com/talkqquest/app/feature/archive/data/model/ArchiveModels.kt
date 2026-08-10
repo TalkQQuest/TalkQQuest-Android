@@ -16,19 +16,29 @@ data class ArchiveConversationDetailResponse(
 
 @Serializable
 data class ArchiveConversationMessageDto(
-    val sender: String,
+    val id: String? = null, // 💡 API 명세 추가됨
+    val role: String? = null, // 💡 JSON 명세 기준
+    val sender: String? = null, // 💡 표 명세 기준
     val content: String,
-    val sentAt: String
-)
+    val createdAt: String? = null, // 💡 JSON 명세 기준
+    val sentAt: String? = null // 💡 표 명세 기준
+) {
+    // 💡 ViewModel에서 에러 나던 헬퍼 프로퍼티들을 여기에 정의합니다!
+    val actualRole: String get() = role ?: sender ?: "bot"
+    val actualTime: String get() = createdAt ?: sentAt ?: ""
+}
 
 @Serializable
 data class ArchiveConversationFeedbackDto(
-    val feedbackId: String,
+    val id: String? = null, // 💡 JSON 명세 기준
+    val feedbackId: String? = null, // 💡 표 명세 기준
     val kindnessScore: Int = 0,
     val initiativeScore: Int = 0,
     val empathyScore: Int = 0,
     val questionLinkScore: Int = 0
-)
+) {
+    val actualId: String get() = id ?: feedbackId ?: ""
+}
 
 // --- 저장 문장 상세 조회 DTO ---
 @Serializable
@@ -47,8 +57,8 @@ data class ArchivePhraseDetailResponse(
 @Serializable
 data class ArchiveReportDetailResponse(
     val id: String,
-    val period: String? = null, // 💡 성장 리포트용 기간
-    val weeklyComparePeriod: String? = null, // 💡 새로 추가됨: 주간 비교 리포트용 기간
+    val period: String? = null,
+    val weeklyComparePeriod: String? = null,
     val title: String? = null,
     val growth: ReportGrowthDto? = null,
     val weeklyCompare: ReportWeeklyCompareDto? = null,
@@ -145,8 +155,10 @@ data class ArchiveSearchItem(
     val referenceId: String? = null,
     val id: String,
     val type: String,
+    val reportType: String? = null,
     val title: String,
     val tags: List<String> = emptyList(),
+    val description: String? = null,
     val folderId: String? = null,
     val isBookmarked: Boolean = false,
     val missionStatus: String? = null,
@@ -175,7 +187,10 @@ data class ArchiveRecentActivity(
     val id: String,
     val referenceId: String? = null,
     val type: String,
+    val reportType: String? = null,
     val title: String,
+    val tags: List<String> = emptyList(),
+    val description: String? = null,
     val isBookmarked: Boolean = false,
     val missionId: String? = null,
     val conversationId: String? = null,

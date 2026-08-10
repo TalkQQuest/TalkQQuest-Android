@@ -189,13 +189,12 @@ private fun ArchiveConversationDetailContent(
             ) {
                 Spacer(modifier = Modifier.height(19.dp))
 
-                // 💡 변경됨: 얇았던 기존 ConversationProfileCard 대신 공용 ArchiveConversationCard 사용
                 ArchiveConversationCard(
                     title = uiState.title,
-                    tags = uiState.summaryKeywords.take(2), // 💡 TODO: API 명세 확정 후 ViewModel 매핑 필요
-                    summary = uiState.summaryText, // 💡 TODO: API 연동 필요
+                    tags = uiState.summaryKeywords.take(2),
+                    summary = uiState.summaryText,
                     date = uiState.date,
-                    time = "14:35", // 💡 TODO: API의 createdAt에서 시간(HH:mm) 파싱 필요
+                    time = uiState.time, // 💡 수정됨: 하드코딩 제거하고 실제 시간 파싱 데이터 연동
                     onClick = { /* 상세 화면 최상단 썸네일이므로 클릭 동작 없음 */ }
                 )
 
@@ -458,6 +457,7 @@ private fun ConversationAiFeedbackSection(feedbacks: List<AiFeedbackItem>) {
                             Text(text = "점", style = TqType.BodyS.figma(), color = Primary600, modifier = Modifier.padding(bottom = 3.dp))
                         }
                         Box(modifier = Modifier.size(44.dp), contentAlignment = Alignment.Center) {
+                            // 💡 내장 아이콘 대신 커스텀 아이콘 적용
                             Icon(
                                 painter = painterResource(id = R.drawable.ic_forward_chevron),
                                 contentDescription = "상세 보기",
@@ -483,6 +483,7 @@ private fun ArchiveConversationDetailScreenPreview() {
             uiState = ArchiveConversationDetailUiState(
                 title = "처음 보는 사람에게 짧게 인사하기",
                 date = "2026.07.16",
+                time = "14:35",
                 duration = "5분 30초",
                 summaryKeywords = listOf("자기 성장", "첫 만남", "스몰 토크"),
                 summaryText = "카페에서 처음 만난 사람에게 자연스럽게 인사를 건네고, 간단한 질문을 이어가며 어색하지 않게 대화를 시작하는 연습을 진행했습니다.",

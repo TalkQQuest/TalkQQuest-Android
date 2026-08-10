@@ -3,6 +3,7 @@ package com.talkqquest.app.feature.mission.ui
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.SizeTransform
 import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.CubicBezierEasing
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.LinearEasing
@@ -80,6 +81,7 @@ import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.layout.positionInRoot
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.style.LineBreak
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
@@ -102,7 +104,6 @@ import com.talkqquest.app.core.designsystem.Gray700
 import com.talkqquest.app.core.designsystem.Gray800
 import com.talkqquest.app.core.designsystem.Gray900
 import com.talkqquest.app.core.designsystem.LocalDesignScale
-import com.talkqquest.app.core.designsystem.Primary500
 import com.talkqquest.app.core.designsystem.Primary600
 import com.talkqquest.app.core.designsystem.TalkQQuestTheme
 import com.talkqquest.app.core.designsystem.TqType
@@ -125,24 +126,33 @@ import kotlinx.coroutines.launch
 private val ChatText = Color(0xFF1C1C1C)
 private val TimeText = Color(0xFF999999) // CSS "Gray 400(푸터)" — 시스템 Gray400(#94A3B8)과 다른 값
 
-// 스크롤 페이드 마스크 (CSS): Gray50 알파 0.8 → 0.45 → 0 그라데이션.
-// CSS 정의역이 31.41%~130.71%라 화면 안(100%) 끝 알파는 보간값 0.28
-// (검산: (100-81.06)/(130.71-81.06)=0.381 → 0.45x(1-0.381)=0.28). topDown=false면 위아래 반전.
-private fun scrollMaskBrush(topDown: Boolean): Brush {
-    val stops = if (topDown) {
-        arrayOf(
-            0f to Gray50.copy(alpha = 0.8f),
-            0.3141f to Gray50.copy(alpha = 0.8f),
-            0.8106f to Gray50.copy(alpha = 0.45f),
-            1f to Gray50.copy(alpha = 0.28f),
-        )
-    } else {
-        arrayOf(
-            0f to Gray50.copy(alpha = 0.28f),
-            0.1894f to Gray50.copy(alpha = 0.45f),
-            0.6859f to Gray50.copy(alpha = 0.8f),
-            1f to Gray50.copy(alpha = 0.8f),
-        )
+// 아래 스크롤 마스크 (CSS "스크롤 마스크"): Gray50 알파 0.8 → 0.45 → 0 그라데이션에
+// transform: matrix(1,0,0,-1,0,0)(상하 반전)이 걸려 있어 위가 옅고 아래가 진하다.
+// CSS 정의역이 31.41%~130.71%라 상자 안(100%) 끝 알파는 보간값 0.28
+// (검산: (100-81.06)/(130.71-81.06)=0.381 → 0.45x(1-0.381)=0.28).
+// 이쪽 끝은 추천 카드에 가려 보이지 않으므로 CSS 계산 그대로 둔다.
+private fun scrollMaskBrush(): Brush = Brush.verticalGradient(
+    0f to Gray50.copy(alpha = 0.28f),
+    0.1894f to Gray50.copy(alpha = 0.45f),
+    0.6859f to Gray50.copy(alpha = 0.8f),
+    1f to Gray50.copy(alpha = 0.8f),
+)
+
+// 위 스크롤 페이드 (CSS "대화 길어졌을 때_ 스크롤시 위 흐림 효과" Frame 427320986).
+//
+// CSS 원본은 직선 3토막이다 — 0~24% 알파 0.8 평평 / 24~62% 0.8→0.45 / 62~100% 0.45→0.
+// 이대로 옮겼더니 두 가지가 눈에 걸렸다(사용자 지적, 스크린샷 실측으로 확인):
+//   ① 24%·62%에서 기울기가 꺾여 그 지점이 경계선처럼 보인다(마흐 밴드)
+//   ② 맨 위 24%는 알파가 변하지 않아 "위쪽만 덜 흐린" 단계처럼 읽힌다
+// 실측 알파는 이론값과 소수점 셋째 자리까지 일치했으므로 구현 오류가 아니라 곡선 모양 문제다.
+//
+// 그래서 양 끝(시작 0.8 / 끝 0)은 CSS 그대로 두고 사이를 smoothstep(3p²-2p³)으로 잇는다.
+// 꺾이는 점도, 평평한 구간도 없어진다. 11스텝이면 계단이 눈에 보이지 않는다.
+private fun topFadeBrush(): Brush {
+    val stops = Array(11) { i ->
+        val p = i / 10f
+        val s = 3f * p * p - 2f * p * p * p
+        p to Gray50.copy(alpha = 0.8f * (1f - s))
     }
     return Brush.verticalGradient(*stops)
 }
@@ -150,7 +160,8 @@ private fun scrollMaskBrush(topDown: Boolean): Brush {
 @Composable
 fun ConversationScreen(
     viewModel: ConversationViewModel = hiltViewModel(),
-    onExitConfirm: (durationSec: Long) -> Unit = {}, // 종료하기 → 미션 완료&XP (대화 시간 전달)
+    onExitConfirm: (durationSec: Long) -> Unit = {}, // 대화 완료 → 미션 완료&XP (대화 시간 전달)
+    onBack: () -> Unit = {},                         // 뒤로가기 → 저장하지 않고 종료
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     ConversationScreen(
@@ -160,7 +171,8 @@ fun ConversationScreen(
         onSend = viewModel::sendMessage,
         onToggleRecommendations = viewModel::toggleRecommendations,
         onSelectRecommendation = viewModel::selectRecommendation,
-        onExitClick = { viewModel.setExitDialogVisible(true) },
+        onBackClick = onBack,
+        onCompleteClick = { viewModel.setExitDialogVisible(true) },
         onExitDismiss = { viewModel.setExitDialogVisible(false) },
         onExitConfirm = { onExitConfirm(viewModel.elapsedSeconds()) },
     )
@@ -174,7 +186,8 @@ private fun ConversationScreen(
     onSend: () -> Unit = {},
     onToggleRecommendations: () -> Unit = {},
     onSelectRecommendation: (String) -> Unit = {},
-    onExitClick: () -> Unit = {},
+    onBackClick: () -> Unit = {},
+    onCompleteClick: () -> Unit = {},
     onExitDismiss: () -> Unit = {},
     onExitConfirm: () -> Unit = {},
 ) = FitDesign { // 작은 화면에선 디자인(393x852) 통째 축소 — 다른 화면들과 크기감 통일
@@ -201,7 +214,8 @@ private fun ConversationScreen(
                 onSend = onSend,
                 onToggleRecommendations = onToggleRecommendations,
                 onSelectRecommendation = onSelectRecommendation,
-                onExitClick = onExitClick,
+                onBackClick = onBackClick,
+                onCompleteClick = onCompleteClick,
             )
         }
 
@@ -222,7 +236,8 @@ private fun ConversationContent(
     onSend: () -> Unit,
     onToggleRecommendations: () -> Unit,
     onSelectRecommendation: (String) -> Unit,
-    onExitClick: () -> Unit,
+    onBackClick: () -> Unit,
+    onCompleteClick: () -> Unit,
 ) {
     // ── 전송 비행 연출(카톡 신모션): 내 메시지가 입력창 왼쪽에서 출발해 오른쪽으로
     // 미끄러지다 벽 앞에서 회전하며 위로 빨려 올라가 제자리에 안착. 진짜 리스트 아이템은
@@ -268,19 +283,24 @@ private fun ConversationContent(
             .statusBarsPadding()
             .imePadding(), // 키보드가 올라오면 입력창·목록이 위로 (목업엔 없는 기본 처리)
     ) {
-        Spacer(Modifier.height(8.dp)) // 상태바(40) → 헤더(top 48) (CSS Frame 427321191)
-        // 헤더: 나가기 아이콘 왼끝 + 미션 제목 화면 정중앙 (Body/M Gray800, 가변 — 길면 말줄임)
+        Spacer(Modifier.height(8.dp)) // 상태바(40) → 헤더(top 48) (CSS Frame 427321717)
+        // 헤더 (CSS Frame 427321717: width 380 left 0 → 오른쪽 여백 13, height 44)
+        //   뒤로가기(44) 왼끝 · 미션 제목(x113~281, 중심 197 = 393/2이라 화면 정중앙) · "대화 완료" 오른끝
+        // ★두 버튼의 동작이 다르다(사용자 확정 2026-08-10):
+        //   뒤로가기  = 미션을 저장하지 않고 종료
+        //   대화 완료 = 미션 완료 처리 + 저장 후 종료
+        //   시안에도 "대화 이탈 팝업(뒤로가기)"과 "대화 종료 팝업(완료 버튼)"이 각각 따로 있다.
         Box(modifier = Modifier.fillMaxWidth().height(44.dp)) {
             Box(
                 modifier = Modifier
                     .size(44.dp)
                     .clip(CircleShape) // 눌림 효과 원형 (아이콘 버튼 관례)
-                    .clickable(onClick = onExitClick),
+                    .clickable(onClick = onBackClick),
                 contentAlignment = Alignment.Center,
             ) {
                 Image(
-                    painter = painterResource(R.drawable.ic_conversation_exit),
-                    contentDescription = "대화 종료",
+                    painter = painterResource(R.drawable.ic_conversation_back),
+                    contentDescription = "뒤로 가기",
                 )
             }
             Text(
@@ -291,8 +311,28 @@ private fun ConversationContent(
                 overflow = TextOverflow.Ellipsis,
                 modifier = Modifier
                     .align(Alignment.Center)
-                    .widthIn(max = 260.dp), // 나가기 아이콘(44) 침범 방지
+                    .widthIn(max = 168.dp), // CSS 제목 폭. 좌우 버튼(44 / 78+13) 침범 방지
             )
+            // "대화 완료" (CSS Frame 427321716): 78x30, padding 4/12, r8,
+            // 흰 배경 + Primary600 테두리 1, Label/L Primary600
+            Box(
+                modifier = Modifier
+                    .align(Alignment.CenterEnd)
+                    .padding(end = 13.dp) // 헤더 폭 380 → 393-380
+                    .clip(RoundedCornerShape(8.dp))
+                    .background(White)
+                    .border(1.dp, Primary600, RoundedCornerShape(8.dp))
+                    .clickable(onClick = onCompleteClick)
+                    .padding(horizontal = 12.dp, vertical = 4.dp),
+                contentAlignment = Alignment.Center,
+            ) {
+                Text(
+                    text = "대화 완료",
+                    style = TqType.LabelL.figma(),
+                    color = Primary600,
+                    textAlign = TextAlign.Center,
+                )
+            }
         }
 
         // ── 메시지 영역 + 하단부(추천 답변·입력창) 겹침 ──
@@ -336,11 +376,13 @@ private fun ConversationContent(
                 // reverseLayout에선 위/아래 의미가 뒤집혀서, 메시지가 적을 땐 Bottom이 "위부터 쌓임"
                 // (목업 "대화 시작"의 위 정렬 유지)
                 verticalArrangement = Arrangement.Bottom,
-                // top 88 = 아바타(104~174)를 지나 메시지 시작(top 180) - 헤더 끝(92) (CSS)
+                // start 13 = 아바타 왼끝(CSS left 13). 아바타(40)+간격(8)을 더해 말풍선이 61에서 시작한다.
+                // end 16 = 메시지 컬럼 오른끝 377 (393-16)
+                // top 16 = 헤더 끝(92) → 메시지·아바타 시작(top 108) (CSS Frame 427320981)
                 // bottom = 하단부 높이 + 16 → 평소엔 최신 메시지가 카드 바로 위에 놓이고,
                 // 위로 스크롤하면 옛 메시지가 그 여백(=카드 뒤)으로 내려가며 마스크에 녹아 사라짐
                 contentPadding = androidx.compose.foundation.layout.PaddingValues(
-                    start = 16.dp, end = 16.dp, top = 88.dp, bottom = bottomSectionHeight + 16.dp,
+                    start = 13.dp, end = 16.dp, top = 16.dp, bottom = bottomSectionHeight + 16.dp,
                 ),
             ) {
                 items(count = uiState.messages.size, key = { uiState.messages[uiState.messages.size - 1 - it].id }) { reversedIndex ->
@@ -392,62 +434,55 @@ private fun ConversationContent(
                             },
                             // 시각은 같은 발신자 묶음의 마지막 말풍선 옆에만 (CSS)
                             showTime = next == null || next.isFromUser != message.isFromUser,
+                            // 아바타는 AI 묶음의 첫 말풍선 옆에만 (CSS: 아바타 프레임이 AI 묶음 수만큼 있음)
+                            showAvatar = !message.isFromUser && (prev == null || prev.isFromUser),
                             hidden = flightMessage?.id == message.id, // 비행 오버레이가 대신 보이는 동안
                         )
                     }
                 }
             }
-            // 위 스크롤 마스크 (CSS Frame 427320986): 헤더 아래 65, 메시지가 위로 사라질 때 페이드
+            // 위 스크롤 마스크 (CSS "대화 길어졌을 때_ 스크롤시 위 흐림 효과" Frame 427320986):
+            //   393x65, top 92(=헤더 끝), 위 0.8 → 아래로 갈수록 투명. 옛 메시지가 헤더 밑으로
+            //   빨려 들어가며 배경색에 녹게 한다.
+            // ★"대화 시작" 프레임에는 이 밴드가 없고 이 프레임(스크롤된 상태)에만 있다 →
+            //   항상 깔지 않고 위쪽에 가려진 메시지가 있을 때만 보인다.
+            //   reverseLayout이라 index가 커지는 쪽(=화면 위쪽)이 canScrollForward.
+            // 나타나고 사라질 때 뚝 끊기지 않게 알파를 200ms로 보간 — CSS엔 없는 자작 처리.
+            val topMaskAlpha by animateFloatAsState(
+                targetValue = if (listState.canScrollForward) 1f else 0f,
+                animationSpec = tween(200),
+                label = "topMask",
+            )
             Box(
                 modifier = Modifier
                     .align(Alignment.TopCenter)
                     .fillMaxWidth()
-                    .height(65.dp)
-                    .background(scrollMaskBrush(topDown = true)),
+                    // CSS 상자는 65지만 그라데이션이 130.71%에서야 0에 닿는다(65 x 1.3071 = 85).
+                    // 65에서 자르면 알파 0.28이 남아 가로줄이 생기므로 페이드가 끝나는 85까지 그린다.
+                    .height(85.dp)
+                    .graphicsLayer { alpha = topMaskAlpha }
+                    .background(topFadeBrush()),
             )
-            // 봇 아바타 (CSS Frame 427320975): 70 원 + 보라 그림자, 이미지(70x81)가 원을 위아래로 살짝 벗어남
-            Box(
-                modifier = Modifier
-                    .offset(x = 16.dp, y = 12.dp) // 헤더 끝(92) → 아바타(top 104) = 12
-                    .size(70.dp)
-                    .softShadow(
-                        color = Color(0xFF9A73FF).copy(alpha = 0.08f), // CSS 봇 뒤 그림자
-                        offsetY = 6.dp,
-                        blur = 12.dp,
-                        cornerRadius = 35.dp,
-                    )
-                    .clip(CircleShape)
-                    .background(Gray100),
-                contentAlignment = Alignment.Center,
-            ) {
-                Image(
-                    painter = painterResource(R.drawable.img_conversation_bot),
-                    contentDescription = null,
-                    modifier = Modifier.requiredSize(width = 70.dp, height = 81.dp),
-                )
-            }
         }
 
         // 아래 스크롤 마스크 (CSS Frame 427320988): 하단부 위 88을 그라데이션으로 덮어
         // 옛 메시지가 카드에 닿기 전에 배경색으로 녹아 사라지게 함. 그 아래(하단부 높이만큼)는
         // 단색 — 카드 좌우 16 여백으로 메시지가 비쳐 지나가는 것도 같이 가림.
         // 하단부보다 먼저 그려 카드·입력창 뒤에 깔림 (CSS 레이어 순서와 동일).
-        // ★위치 재조사(2026-07-22): CSS "스크롤 마스크"는 y605~717(높이 112) — 카드(502~699)·
-        //   입력창(672~716) "뒤"에 겹치는 밴드고, 카드 위 메시지 영역엔 마스크가 없음.
-        //   예전 구현은 이 밴드를 카드 위(88dp)에 얹어 마스크 시작이 디자인보다 ~190px 높았고,
-        //   방금 온 메시지가 카드 위에서 옅게 씻겨 보였음 → 아래끝을 입력창 바닥에 정렬해 수정.
+        // ★위치·크기 갱신(UI 13차): "스크롤 마스크"는 y653~741(높이 88) — 카드(566~763)·
+        //   입력창(736~780) "뒤"에 겹치는 밴드고, 카드 위 메시지 영역엔 마스크가 없다.
+        //   아래끝을 입력창 바닥에 정렬한다(11차의 112 → 13차 88).
         Column(modifier = Modifier.align(Alignment.BottomCenter).fillMaxWidth()) {
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(112.dp) // CSS 마스크 높이 그대로 (그라데이션 정의역도 112 기준)
-                    .background(scrollMaskBrush(topDown = false)),
+                    .height(88.dp) // CSS 마스크 높이 그대로 (그라데이션 정의역도 88 기준)
+                    .background(scrollMaskBrush()),
             )
-            // 입력창 아래(네비 알약 존)로 스크롤돼 내려간 옛 메시지 가림 — CSS엔 이 구간 정의가
-            // 없어(목업 리스트가 717에서 끝남) 그라데이션 끝 알파(0.8)를 그대로 이어 채움.
+            // 입력창 아래(시스템 네비 존)로 스크롤돼 내려간 옛 메시지 가림 — CSS엔 이 구간 정의가
+            // 없어(목업 리스트가 780에서 끝남) 그라데이션 끝 알파(0.8)를 그대로 이어 채움.
             val navBarInset = with(LocalDensity.current) { WindowInsets.navigationBars.getBottom(this).toDp() }
-            val navGap = if (WindowInsets.ime.getBottom(LocalDensity.current) > 0) 8.dp
-            else 88.dp / LocalDesignScale.current
+            val navGap = if (WindowInsets.ime.getBottom(LocalDensity.current) > 0) 8.dp else 24.dp
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -456,7 +491,7 @@ private fun ConversationContent(
             )
         }
 
-        // ── 하단: 추천 답변 + 입력창 (하단 네비 알약 위 88 = CSS 입력창 바닥 716 → 네비존 804) ──
+        // ── 하단: 추천 답변 + 입력창 (시스템 네비 위 24 = CSS 입력창 바닥 780 → 네비존 804) ──
         Column(
             modifier = Modifier
                 .align(Alignment.BottomCenter)
@@ -468,13 +503,10 @@ private fun ConversationContent(
                 }
                 .padding(horizontal = 16.dp)
                 .navigationBarsPadding()
-                // 하단 네비 알약 몫 88은 축소 대상 밖(MainScreen)이라 비율로 되돌려 실제 크기 유지.
-                // 단, 키보드가 떠 있는 동안엔 알약이 키보드에 덮여 안 보이므로 예약 공간을 걷어내고
-                // 입력창~키보드 사이 8만 남김(딱 붙지 않게 — 톡앱 관례) —
-                // 88을 그대로 두면 입력창과 키보드 사이에 88dp(축소 화면은 그 이상)짜리 빈 띠가 생김.
+                // 13차에서 하단 앱 네비가 이 화면에서 빠지고(헤더 "대화 완료"가 그 역할을 대신함)
+                // 입력창이 시스템 네비 바로 위 24까지 내려왔다. 키보드가 뜨면 8만 남긴다(딱 붙지 않게).
                 .padding(
-                    bottom = if (WindowInsets.ime.getBottom(LocalDensity.current) > 0) 8.dp
-                    else 88.dp / LocalDesignScale.current,
+                    bottom = if (WindowInsets.ime.getBottom(LocalDensity.current) > 0) 8.dp else 24.dp,
                 ),
         ) {
             // 입력창은 두 상태 모두 맨 아래 같은 자리 → 아래 고정층으로 분리해 전환 때 움직이지 않게.
@@ -672,11 +704,13 @@ private fun FlyingBubble(
 }
 
 // 말풍선 한 줄: AI = 왼쪽 흰색(왼아래 뾰족) / 나 = 오른쪽 보라(오른아래 뾰족), 시각은 바깥쪽 아래 정렬
+// AI 쪽은 말풍선 왼쪽에 봇 아바타(40) + 간격 8이 붙어, 말풍선이 CSS의 x=61에서 시작한다.
 @Composable
 private fun ChatBubbleRow(
     message: ChatMessage,
     topGap: androidx.compose.ui.unit.Dp,
     showTime: Boolean,
+    showAvatar: Boolean = false,
     hidden: Boolean = false, // 전송 비행 중엔 오버레이가 대신 보이므로 진짜 아이템은 투명 처리
 ) {
     Row(
@@ -687,6 +721,36 @@ private fun ChatBubbleRow(
         horizontalArrangement = if (message.isFromUser) Arrangement.End else Arrangement.Start,
         verticalAlignment = Alignment.Bottom,
     ) {
+        if (!message.isFromUser) {
+            // 봇 아바타 (CSS Frame 427320975): 40 원, Gray200 바탕 + 보라 그림자, 이미지 34x40.
+            // 묶음의 첫 말풍선에만 보이고, 이어지는 말풍선은 같은 폭을 비워 세로선을 맞춘다.
+            // 말풍선 위쪽에 정렬 — CSS에서 아바타 top(108/286)이 그 묶음 첫 말풍선 top과 같다.
+            if (showAvatar) {
+                Box(
+                    modifier = Modifier
+                        .align(Alignment.Top)
+                        .size(40.dp)
+                        .softShadow(
+                            color = Color(0xFF9A73FF).copy(alpha = 0.08f), // CSS "봇 뒤" 그림자
+                            offsetY = 6.dp,
+                            blur = 12.dp,
+                            cornerRadius = 20.dp,
+                        )
+                        .clip(CircleShape)
+                        .background(Gray200),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Image(
+                        painter = painterResource(R.drawable.img_conversation_bot),
+                        contentDescription = null,
+                        modifier = Modifier.requiredSize(width = 34.dp, height = 40.dp),
+                    )
+                }
+            } else {
+                Spacer(Modifier.width(40.dp))
+            }
+            Spacer(Modifier.width(8.dp))
+        }
         if (message.isFromUser && showTime) {
             TimeLabel(message.time)
             Spacer(Modifier.width(8.dp))
@@ -715,7 +779,16 @@ private fun ChatBubbleRow(
         ) {
             Text(
                 text = message.text,
-                style = TqType.BodyM.figma(),
+                // 어절(띄어쓰기 덩어리) 중간에서 끊기지 않게 — "추천해 드/릴까요?" 방지.
+                // 어절 하나가 말풍선 max-width보다 길면 그때만 어절 안에서 끊어 삐져나오지 않게 한다.
+                // 같은 대화 텍스트를 다루는 보관함 대화 상세(ArchiveConversationDetailScreen)와 동일한 설정.
+                style = TqType.BodyM.copy(
+                    lineBreak = LineBreak(
+                        strategy = LineBreak.Strategy.Simple,
+                        strictness = LineBreak.Strictness.Normal,
+                        wordBreak = LineBreak.WordBreak.Phrase,
+                    ),
+                ).figma(),
                 color = if (message.isFromUser) Gray50 else ChatText,
             )
         }
@@ -763,9 +836,17 @@ private fun RecommendationCard(
             modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Image(painter = painterResource(R.drawable.ic_conversation_lightbulb), contentDescription = null)
+            // CSS Frame 427320989: padding 0 4px, gap 6, 전구 19x19
+            Spacer(Modifier.width(4.dp))
+            Image(
+                painter = painterResource(R.drawable.ic_conversation_lightbulb),
+                contentDescription = null,
+                modifier = Modifier.size(19.dp),
+            )
             Spacer(Modifier.width(6.dp))
-            Text(text = "톡깨의 추천 답변", style = TqType.BodyM.figma(), color = Primary600)
+            // 13차에서 문구가 "톡깨의 추천 답변" → "답장이 고민되시나요?"로 바뀜(접힘 바와 같은 문구)
+            Text(text = "답장이 고민되시나요?", style = TqType.BodyM.figma(), color = Primary600)
+            Spacer(Modifier.width(4.dp))
             Spacer(Modifier.weight(1f))
             Box(
                 modifier = Modifier
@@ -777,7 +858,7 @@ private fun RecommendationCard(
                 Icon(
                     imageVector = Icons.Filled.KeyboardArrowDown,
                     contentDescription = "추천 답변 접기",
-                    tint = Gray700,
+                    tint = Gray700, // CSS Gray/700 #334155
                 )
             }
         }
@@ -790,7 +871,7 @@ private fun RecommendationCard(
                         .clickable { onSelect(text) }
                         .padding(horizontal = 12.dp, vertical = 4.dp),
                 ) {
-                    Text(text = text, style = TqType.BodyM.figma(), color = Gray500)
+                    Text(text = text, style = TqType.BodyM.figma(), color = Gray600) // CSS Gray/600 #475569
                 }
             }
         }
@@ -811,14 +892,20 @@ private fun CollapsedRecommendationBar(onToggle: () -> Unit) {
             .height(30.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Image(painter = painterResource(R.drawable.ic_conversation_lightbulb), contentDescription = null)
+        // CSS Frame 427320989: padding 0 4px 0 0(오른쪽만), gap 6, 전구 19x19
+        Image(
+            painter = painterResource(R.drawable.ic_conversation_lightbulb),
+            contentDescription = null,
+            modifier = Modifier.size(19.dp),
+        )
         Spacer(Modifier.width(6.dp))
-        Text(text = "답장이 고민되시나요?", style = TqType.BodyM.figma(), color = Primary500)
+        Text(text = "답장이 고민되시나요?", style = TqType.BodyM.figma(), color = Primary600) // CSS #6353F0
+        Spacer(Modifier.width(4.dp))
         Spacer(Modifier.weight(1f))
         Icon(
             imageVector = Icons.Filled.KeyboardArrowUp,
             contentDescription = "추천 답변 펼치기",
-            tint = Gray600,
+            tint = Gray600, // CSS Gray/600 #475569
         )
     }
 }
@@ -868,7 +955,17 @@ private fun MessageInputRow(
                     },
             )
             if (text.isEmpty()) {
-                Text(text = "메세지를 입력하세요...", style = TqType.BodyM.figma(), color = Gray300)
+                // CSS "14/Medium": 14px / weight 500 / line-height 150%(=21) / letter-spacing -0.02em.
+                // Body/M(400·22)과 달라 그대로 옮긴다.
+                Text(
+                    text = "메세지를 입력하세요...",
+                    style = TqType.BodyM.figma().copy(
+                        fontWeight = androidx.compose.ui.text.font.FontWeight.Medium,
+                        lineHeight = androidx.compose.ui.unit.TextUnit(21f, androidx.compose.ui.unit.TextUnitType.Sp),
+                        letterSpacing = androidx.compose.ui.unit.TextUnit(-0.02f, androidx.compose.ui.unit.TextUnitType.Em),
+                    ),
+                    color = Gray300,
+                )
             }
         }
         Spacer(Modifier.width(16.dp))

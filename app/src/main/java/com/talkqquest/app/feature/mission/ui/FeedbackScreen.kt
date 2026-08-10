@@ -71,7 +71,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 // ── AI 피드백 요약 (CSS "AI 피드백" 프레임 전사) ──
-// 로봇(161x160) → 문구 → 분석 카드(4항목: 이름+바+점수+chevron) → "상세 리포트"/"홈으로" 버튼.
+// 로봇(161x160) → 문구 → 분석 카드(4항목: 이름+바+점수+chevron) → "성장 리포트"/"홈으로" 버튼.
 // 하단 네비 없음(CSS에 알약 없음) — bottomBarRoutes 미등록.
 // CSS와 다른 점(합의됨):
 //  - 버튼 열만 CSS가 left 17/폭 362로 콘텐츠(16/361)와 1px 어긋남 → 16/361 통일(디자이너 확인거리)
@@ -242,7 +242,7 @@ private fun FeedbackContent(
                 .graphicsLayer { alpha = buttonsAlpha },
         ) {
             TqButton(
-                text = "상세 리포트",
+                text = "성장 리포트",
                 onClick = { if (stage >= 1) onDetailReport(result.missionTitle) },
                 modifier = Modifier.fillMaxWidth(),
             )

@@ -572,7 +572,12 @@ fun NavGraph(
         }
         // 알림 화면 진입. 디자인 미완성으로 현재는 빈 상태 placeholder입니다.
         composable(Screen.NOTIFICATION) {
-            NotificationScreen(onBack = { navController.popBackStack() })
+            NotificationScreen(
+                onBack = { navController.popBackStack() },
+                // TODO(연결): 주간 비교 리포트 화면이 아직 없다. Screen.REPORT는 성장 리포트라
+                //   여기에 이으면 다른 화면으로 간다. C담당 주간 비교 화면이 생기면 그 route로 연결할 것.
+                onWeeklyReportClick = {},
+            )
         }
         // C담당: 아카이브 홈 화면(하단 탭 = MainTabsPager의 페이저 페이지).
         composable(Screen.ARCHIVE_HOME) {
@@ -757,7 +762,7 @@ fun NavGraph(
             )
         }
         // B담당: AI 피드백 화면. 항목 클릭 시 피드백 상세 화면으로 이동합니다.
-        // 상세 리포트 버튼은 리포트 화면으로, 다음 버튼은 홈으로 이동합니다.
+        // 성장 리포트 버튼은 리포트 화면으로, 다음 버튼은 홈으로 이동합니다.
         composable(
             route = Screen.FEEDBACK,
             arguments = listOf(navArgument("feedbackId") { type = NavType.StringType }),
@@ -774,7 +779,7 @@ fun NavGraph(
                 onHome = { navController.popBackStack(Screen.HOME, inclusive = false) },
             )
         }
-        // B담당: 리포트 성장/주간 화면. 피드백 화면에서 상세 리포트 클릭 시 진입합니다.
+        // B담당: 성장 리포트 화면. 피드백 화면에서 "성장 리포트" 클릭 시 진입합니다.
         composable(
             route = Screen.REPORT,
             arguments = listOf(

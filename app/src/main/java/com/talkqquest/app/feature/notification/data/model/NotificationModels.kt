@@ -36,4 +36,7 @@ data class NotificationUiItem(
     val body: String,      // 아래 굵은 줄 (Body/L Medium Gray900)
     val timeText: String,  // 방금 / N분 전 / N시간 전 / N일 전 / yyyy.MM.dd
     val isUnread: Boolean, // true = 보라 점 표시
+    // 주간 비교 리포트 알림만 아래 줄 옆에 화살표가 붙는다 — 눌러서 바로 리포트로 이동하는 통로라서
+    // (CSS "알림창" Frame 427321769). 나머지 알림은 읽고 마는 것이라 화살표가 없다.
+    val hasLink: Boolean = false,
 )

@@ -5,50 +5,80 @@ import com.talkqquest.app.core.network.serverCall
 import com.talkqquest.app.feature.report.data.model.CategoryRank
 import com.talkqquest.app.feature.report.data.model.MetricChange
 import com.talkqquest.app.feature.report.data.model.WeeklyCompareDetail
+import com.talkqquest.app.feature.report.data.model.WeeklyCompareListItem
 import com.talkqquest.app.feature.report.data.model.toGrowthReport
-import com.talkqquest.app.feature.report.data.model.toWeeklyCompareReport
 import javax.inject.Inject
 import javax.inject.Singleton
 
 // 주간 비교 리포트(홈/알림창에서 진입) 전용 Repository.
 // ReportRepository(성장 리포트)와 파일을 나눠 둔다 — 모델·API는 공용이지만, 성장 리포트가
 // 티어 개편으로 계속 바뀌는 중이라 한 파일에 같이 두면 서로 손대는 곳이 겹친다.
+//
+// 서버 구조(2026-08-10 백엔드 개편, 2026-08-11 실호출 확인):
+//   GET /reports/weekly-compare        → 목록 (주차 이동용). 최신이 앞
+//   GET /reports/weekly-compare/{id}   → 상세 (지표 4축 변화·하이라이트)
+// 화면에 필요한 「자주 연습한 주제」와 「미션 진행률」은 주간 응답에 없어 성장 리포트에서 가져온다.
 @Singleton
 class WeeklyCompareRepository @Inject constructor(
     private val reportApi: ReportApi,
 ) {
 
-    // 한 화면에 들어갈 값을 모아서 만든다.
-    //  · 지표·하이라이트  ← GET /reports/weekly-compare
-    //  · 주제·미션 진행률 ← GET /reports/growth (주간 응답에 없는 값이라 성장 쪽에서 가져옴)
-    //  · 주차 라벨        ← 서버에 없음. 아래 stub 값 사용
-    // TODO(서버 연동): 백엔드가 GET /reports/weekly-compare를 "완전히 끝난 주끼리 비교한 목록"으로
-    //   바꾸고 상세를 별도 API로 분리했다(2026-08-10 보고). 새 스키마가 확정되면 주차 라벨을 서버에서
-    //   받고, 목록을 그대로 받아 주차 이동에 쓰도록 이 메서드를 목록 반환으로 바꿀 것.
-    suspend fun getWeeklyCompareDetail(): ApiResult<WeeklyCompareDetail> {
-        val weekly = serverCall { reportApi.getWeeklyCompare() }
+    // 주차 목록 — 화면 진입 시 한 번. 비면 목업 1건으로 폴백해 화면이 비지 않게 한다.
+    suspend fun getWeekList(): ApiResult<List<WeeklyCompareListItem>> {
+        val r = serverCall { reportApi.getWeeklyCompareList() }
+        val list = (r as? ApiResult.Success)?.data?.reports.orEmpty()
+        return ApiResult.Success(list)
+    }
+
+    // 선택한 주차의 상세 + 주제·진행률.
+    // reportId가 비면(목록이 비어 실서버가 없을 때) 시안 목업을 그대로 돌려준다.
+    suspend fun getWeekDetail(item: WeeklyCompareListItem?): ApiResult<WeeklyCompareDetail> {
+        val fallback = stubWeeklyDetail
+        if (item == null) return ApiResult.Success(fallback)
+
+        val detail = serverCall { reportApi.getWeeklyCompareDetail(item.id) }
         val growth = serverCall { reportApi.getGrowth() }
-        if (weekly !is ApiResult.Success && growth !is ApiResult.Success) {
-            return ApiResult.Success(stubWeeklyDetail) // 둘 다 실패/데모 → 시안 목업
-        }
-        val w = (weekly as? ApiResult.Success)?.data?.toWeeklyCompareReport()
+        val d = (detail as? ApiResult.Success)?.data
         val g = (growth as? ApiResult.Success)?.data?.toGrowthReport()
+
+        val metrics = d?.data?.metricChanges
+            ?.map { MetricChange(name = it.label.ifBlank { it.key }, lastWeek = it.from, thisWeek = it.to) }
+            ?.takeIf { it.isNotEmpty() }
+            ?: fallback.metrics
+        val highlights = d?.data?.highlights?.filter { it.isNotBlank() }?.takeIf { it.isNotEmpty() }
+            ?: fallback.highlights
+
         return ApiResult.Success(
             WeeklyCompareDetail(
-                prevWeekLabel = stubWeeklyDetail.prevWeekLabel,
-                thisWeekLabel = stubWeeklyDetail.thisWeekLabel,
-                metrics = w?.metrics?.takeIf { it.isNotEmpty() } ?: stubWeeklyDetail.metrics,
-                highlights = w?.highlights?.map { (it.emphasis + it.rest).trim() }
-                    ?.filter { it.isNotBlank() }
-                    ?: stubWeeklyDetail.highlights,
-                topics = g?.categoryRanks?.takeIf { it.isNotEmpty() } ?: stubWeeklyDetail.topics,
-                completedMissions = g?.completedMissions ?: stubWeeklyDetail.completedMissions,
-                totalMissions = g?.totalMissions ?: stubWeeklyDetail.totalMissions,
+                id = item.id,
+                isSaved = d?.isSaved ?: item.isSaved,
+                // TODO(백엔드 확인): 서버는 달력 주차를 안 준다. weekIndex(가입일 기준 N번째 주)뿐이라
+                //   시안의 "7월 4주차 → 8월 1주차"를 그대로 만들 수 없다. 임시로 weekIndex를 쓴다.
+                prevWeekLabel = weekLabel(item.weekIndex - 1),
+                thisWeekLabel = weekLabel(item.weekIndex),
+                metrics = metrics,
+                highlights = highlights,
+                topics = g?.categoryRanks?.takeIf { it.isNotEmpty() } ?: fallback.topics,
+                completedMissions = g?.completedMissions ?: fallback.completedMissions,
+                totalMissions = g?.totalMissions ?: fallback.totalMissions,
             ),
         )
     }
 
-    // 목업 = UI 14차 시안 값 그대로 (사용자 결정)
+    // 저장 토글 — 성장 리포트의 삭제와 달리 원본은 안 지워지고 isSaved만 바뀐다(백엔드 보고).
+    suspend fun setSaved(reportId: String, saved: Boolean): ApiResult<Boolean> {
+        val r = if (saved) serverCall { reportApi.saveWeeklyCompare(reportId) }
+        else serverCall { reportApi.unsaveWeeklyCompare(reportId) }
+        return when (r) {
+            is ApiResult.Success -> ApiResult.Success(r.data.isSaved)
+            is ApiResult.Error -> r
+            is ApiResult.Exception -> r
+        }
+    }
+
+    private fun weekLabel(index: Int): String = "${index.coerceAtLeast(1)}주차"
+
+    // 목업 = UI 14차 시안 값 그대로 (서버 실패/데모 시에만 쓰임)
     private val stubWeeklyDetail = WeeklyCompareDetail(
         prevWeekLabel = "7월 4주차",
         thisWeekLabel = "8월 1주차",

@@ -2,6 +2,7 @@ package com.talkqquest.app.feature.notification.data
 
 import com.talkqquest.app.core.network.ApiResponse
 import com.talkqquest.app.feature.notification.data.model.NotificationSettings
+import com.talkqquest.app.feature.notification.data.model.NotificationSettingsUpdateRequest
 import com.talkqquest.app.feature.notification.data.model.NotificationsResponse
 import kotlinx.serialization.Serializable
 import retrofit2.http.Body
@@ -40,7 +41,7 @@ interface NotificationApi {
     // 알림 설정 변경 (부분 업데이트)
     @PATCH("api/v1/notifications/settings")
     suspend fun updateSettings(
-        @Body body: NotificationSettings,
+        @Body body: NotificationSettingsUpdateRequest,
     ): ApiResponse<NotificationSettings>
 }
 

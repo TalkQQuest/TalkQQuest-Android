@@ -24,12 +24,22 @@ data class NotificationItemDto(
 @Serializable
 data class NotificationSettings(
     val missionReminder: Boolean = false,
+    val missionReminderTime: String = "09:00",
     val communityApproved: Boolean = false,
     val reportReady: Boolean = false,
     val marketing: Boolean = false,
 )
 
 // 화면용 모델 — 알림 카드 1장 (디자인: 위 작은 회색 줄 + 아래 굵은 줄 + 시간 + 안읽음 점).
+
+@Serializable
+data class NotificationSettingsUpdateRequest(
+    val missionReminder: Boolean? = null,
+    val missionReminderTime: String? = null,
+    val communityApproved: Boolean? = null,
+    val reportReady: Boolean? = null,
+    val marketing: Boolean? = null,
+)
 data class NotificationUiItem(
     val id: String,
     val category: String,  // 위 작은 줄 (Body/S Gray500)

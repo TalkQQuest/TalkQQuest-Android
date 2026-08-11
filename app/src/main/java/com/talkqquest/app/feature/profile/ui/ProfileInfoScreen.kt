@@ -13,9 +13,9 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
-import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -24,13 +24,14 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
 import com.talkqquest.app.R
 import com.talkqquest.app.core.designsystem.FitDesign
 import com.talkqquest.app.core.designsystem.Gray50
-import com.talkqquest.app.core.designsystem.Gray400
 import com.talkqquest.app.core.designsystem.Gray500
 import com.talkqquest.app.core.designsystem.Gray600
 import com.talkqquest.app.core.designsystem.Gray800
@@ -65,30 +66,50 @@ fun ProfileInfoScreen(
         Row(
             modifier = Modifier
                 .offset(x = 16.dp, y = 116.dp)
-                .size(width = 202.dp, height = 60.dp)
-                .clickable(onClick = onNicknameClick),
+                .size(width = 202.dp, height = 60.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Image(
-                painter = painterResource(R.drawable.img_profile_avatar),
-                contentDescription = null,
-                modifier = Modifier.size(60.dp),
-            )
+            Box(
+                modifier = Modifier
+                    .size(60.dp)
+                    .clickable { imagePickerLauncher.launch("image/*") },
+                contentAlignment = Alignment.Center,
+            ) {
+                if (avatarUrl.isNullOrBlank()) {
+                    Image(
+                        painter = painterResource(R.drawable.img_profile_avatar),
+                        contentDescription = null,
+                        modifier = Modifier.size(60.dp),
+                    )
+                } else {
+                    AsyncImage(
+                        model = avatarUrl,
+                        contentDescription = null,
+                        modifier = Modifier.size(60.dp),
+                        error = painterResource(R.drawable.img_profile_avatar),
+                        placeholder = painterResource(R.drawable.img_profile_avatar),
+                    )
+                }
+            }
             Spacer(Modifier.size(width = 12.dp, height = 1.dp))
             Row(
-                modifier = Modifier.size(width = 130.dp, height = 44.dp),
+                modifier = Modifier
+                    .size(width = 130.dp, height = 44.dp)
+                    .clickable(onClick = onNicknameClick),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Text(
                     text = "$nickname 님",
                     style = TqType.HeadingM.copy(fontWeight = FontWeight.SemiBold),
                     color = Color(0xFF1E293B),
-                    modifier = Modifier.size(width = 90.dp, height = 30.dp),
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.weight(1f, fill = false),
                 )
-                Icon(
-                    imageVector = Icons.Default.Edit,
+                Spacer(Modifier.width(6.dp))
+                Image(
+                    painter = painterResource(R.drawable.ic_profile_info_edit),
                     contentDescription = null,
-                    tint = Gray400,
                     modifier = Modifier.size(15.dp),
                 )
             }
@@ -152,7 +173,10 @@ private fun ProfileInfoRow(
                 text = trailing,
                 style = TqType.BodyL,
                 color = Gray500,
-                modifier = Modifier.size(width = 163.dp, height = 24.dp),
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                textAlign = TextAlign.End,
+                modifier = Modifier.size(width = 195.dp, height = 24.dp),
             )
         }
         Box(
@@ -184,15 +208,3 @@ private fun ProfileInfoSocialMemberScreenPreview() {
         ProfileInfoScreen(isEmailMember = false)
     }
 }
-
-
-
-
-
-
-
-
-
-
-
-

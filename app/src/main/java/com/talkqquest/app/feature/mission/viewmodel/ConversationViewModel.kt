@@ -64,6 +64,7 @@ class ConversationViewModel @Inject constructor(
 
     fun startConversation() {
         viewModelScope.launch {
+            val startedAt = System.currentTimeMillis()
             _uiState.update { it.copy(isLoading = true, errorMessage = null) }
 
             // 헤더 제목 = 미션 제목
@@ -71,7 +72,9 @@ class ConversationViewModel @Inject constructor(
                 is ApiResult.Success -> d.data.title
                 else -> ""
             }
-            when (val intro = missionRepository.getConversationIntro(conversationId)) {
+            val intro = missionRepository.getConversationIntro(conversationId)
+            awaitMinimumIntro(startedAt)
+            when (intro) {
                 is ApiResult.Success -> {
                     val now = timeFormat.format(Date())
                     _uiState.update {
@@ -93,6 +96,13 @@ class ConversationViewModel @Inject constructor(
                 }
             }
         }
+    }
+
+    // 대화 진입 대기 화면이 깜빡하고 지나가지 않게 최소 1초는 보여준다(사용자 결정).
+    // 서버가 그보다 오래 걸리면 그냥 끝날 때까지 기다린다 — 여기서 더 늘리지 않는다.
+    private suspend fun awaitMinimumIntro(startedAt: Long) {
+        val elapsed = System.currentTimeMillis() - startedAt
+        if (elapsed < MIN_INTRO_MILLIS) delay(MIN_INTRO_MILLIS - elapsed)
     }
 
     // 추천 답변 조회. 실패해도 대화엔 지장 없어 조용히 무시.
@@ -156,3 +166,6 @@ class ConversationViewModel @Inject constructor(
         _uiState.update { it.copy(showLeaveDialog = visible) }
     }
 }
+
+// 대화 진입 대기 화면 최소 노출 시간(사용자 결정).
+private const val MIN_INTRO_MILLIS = 1_000L

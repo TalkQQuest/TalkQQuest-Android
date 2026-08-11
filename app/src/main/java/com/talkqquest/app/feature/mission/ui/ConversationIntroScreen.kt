@@ -13,13 +13,17 @@ import com.talkqquest.app.core.designsystem.component.TqLoadingScreen
 // 여기서는 이 화면의 문구와 뒤로가기만 넘긴다.
 
 @Composable
-fun ConversationIntroScreen(onBack: () -> Unit = {}) {
+fun ConversationIntroScreen(
+    onBack: () -> Unit = {},
+    compensateStatusBar: Boolean = true, // 대화 화면의 로딩 상태로 끼워 쓸 땐 false
+) {
     // CSS 문구 블록 167x80 — 높이 80 ÷ 행간 40 = 2줄.
     // 블록 폭 167이 "대화를 시작할"(6글자+공백)의 폭과 맞아떨어져(28x6 - 자간 ≈ 165)
     // 줄바꿈 자리가 거기로 확정된다. 자동 줄바꿈에 맡기지 않고 그대로 적는다.
     TqLoadingScreen(
         message = "대화를 시작할\n준비가 됐어요",
         onBack = onBack,
+        compensateStatusBar = compensateStatusBar,
     )
 }
 

@@ -77,7 +77,7 @@ class ArchiveSavedPhraseViewModel @Inject constructor(
                             title = data.missionTitle,
                             status = "대화 완료",
                             date = formatIsoDate(data.createdAt),
-                            time = formatIsoTime(data.createdAt) // 💡 시간 파싱 적용
+                            duration = formatIsoTime(data.createdAt) // 💡 시간 파싱 적용
                         )
                     } else null
 

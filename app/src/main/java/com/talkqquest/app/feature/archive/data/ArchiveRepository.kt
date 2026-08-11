@@ -34,9 +34,8 @@ import javax.inject.Singleton
 class ArchiveRepository @Inject constructor(
     private val archiveApi: ArchiveApi
 ) {
-    val isMockMode = true
+    val isMockMode = false
 
-    // 💡 모든 날짜를 현재 시점 이전(8월 8일 ~ 8월 10일)으로 안전하게 수정
     private val stubMissions = mutableListOf(
         ArchiveMissionItem("1", "학교 생활 꿀팁 나누기", "일상 대화", "보통", 8, 30, isCompleted = true, isSaved = true, completedDate = "2026.08.10"),
         ArchiveMissionItem("2", "최근 본 영화 이야기하기", "짧은 대화", "쉬움", 5, 20, isCompleted = false, isSaved = true, completedDate = "2026.08.09"),
@@ -44,9 +43,9 @@ class ArchiveRepository @Inject constructor(
     )
 
     private val stubConversations = mutableListOf(
-        RecentActivity(id = "1", title = "대학교 전공과 진로에 대해 이야기 했어요", type = ActivityType.CONVERSATION, status = "대화 완료", date = "2026.08.10", tags = listOf("학교", "진로"), summary = "서로의 전공과 관심 분야를 공유하고, 진로 고민에 대해 조언을 주고받았어요."),
-        RecentActivity(id = "2", title = "여행 계획을 공유하며 추천 장소를 주고 받았어요", type = ActivityType.CONVERSATION, status = "대화 완료", date = "2026.08.09", tags = listOf("여행", "취미"), summary = "이번 주말 여행 계획을 이야기하고, 가고 싶은 장소를 추천했어요."),
-        RecentActivity(id = "3", title = "처음 보는 사람에게 짧게 인사하기", type = ActivityType.CONVERSATION, status = "대화 완료", date = "2026.08.08", tags = emptyList(), summary = null)
+        RecentActivity(id = "1", title = "대학교 전공과 진로에 대해 이야기 했어요", type = ActivityType.CONVERSATION, status = "대화 완료", date = "2026.08.10", duration = "12:34", tags = listOf("학교", "진로"), summary = "서로의 전공과 관심 분야를 공유하고, 진로 고민에 대해 조언을 주고받았어요."),
+        RecentActivity(id = "2", title = "여행 계획을 공유하며 추천 장소를 주고 받았어요", type = ActivityType.CONVERSATION, status = "대화 완료", date = "2026.08.09", duration = "05:15", tags = listOf("여행", "취미"), summary = "이번 주말 여행 계획을 이야기하고, 가고 싶은 장소를 추천했어요."),
+        RecentActivity(id = "3", title = "처음 보는 사람에게 짧게 인사하기", type = ActivityType.CONVERSATION, status = "대화 완료", date = "2026.08.08", duration = "02:40", tags = emptyList(), summary = null)
     )
 
     private val stubSentences = mutableListOf(
@@ -316,7 +315,7 @@ class ArchiveRepository @Inject constructor(
             val allMockActivities = mutableListOf<ArchiveRecentActivity>()
 
             stubMissions.filter { it.isCompleted && it.isSaved }.forEach { allMockActivities.add(ArchiveRecentActivity(id = it.id, referenceId = it.id, type = "MISSION", title = it.title, isBookmarked = it.isSaved, missionStatus = "COMPLETED", category = it.category, difficulty = it.difficulty, estimatedMinutes = it.duration, rewardXp = it.xp, createdAt = it.completedDate)) }
-            stubConversations.forEach { allMockActivities.add(ArchiveRecentActivity(id = it.id, referenceId = it.id, type = "CONVERSATION", title = it.title, isBookmarked = false, createdAt = it.date, tags = it.tags, description = it.summary)) }
+            stubConversations.forEach { allMockActivities.add(ArchiveRecentActivity(id = it.id, referenceId = it.id, type = "CONVERSATION", title = it.title, isBookmarked = false, createdAt = it.date, duration = it.duration, tags = it.tags, description = it.summary)) }
             stubSentences.filter { it.isSaved }.forEach { allMockActivities.add(ArchiveRecentActivity(id = it.id, referenceId = it.id, type = "PHRASE", title = it.title, isBookmarked = true, createdAt = it.date)) }
             stubReports.filter { it.isSaved }.forEach { allMockActivities.add(ArchiveRecentActivity(id = it.id, referenceId = it.id, type = "REPORT", reportType = "GROWTH", title = it.title, isBookmarked = true, createdAt = it.date)) }
 
@@ -359,7 +358,7 @@ class ArchiveRepository @Inject constructor(
                     ArchiveSearchItem(
                         id = it.id, referenceId = it.id, archiveItemId = it.id,
                         type = "CONVERSATION", title = it.title, isBookmarked = false,
-                        tags = it.tags, description = it.summary, createdAt = it.date
+                        tags = it.tags, description = it.summary, duration = it.duration, createdAt = it.date
                     )
                 )
             }

@@ -158,6 +158,7 @@ data class ArchiveSearchItem(
     val title: String,
     val tags: List<String> = emptyList(),
     val description: String? = null,
+    val duration: String? = null, // 💡 추가됨: 대화 소요 시간
     val folderId: String? = null,
     val isBookmarked: Boolean = false,
     val missionStatus: String? = null,
@@ -190,6 +191,7 @@ data class ArchiveRecentActivity(
     val title: String,
     val tags: List<String> = emptyList(),
     val description: String? = null,
+    val duration: String? = null, // 💡 추가됨: 대화 소요 시간
     val isBookmarked: Boolean = false,
     val missionId: String? = null,
     val conversationId: String? = null,
@@ -305,13 +307,11 @@ data class HighlightItem(
     val rest: String
 )
 
-// 💡 [추가] 주제 랭킹 모델 추가
 data class CategoryRank(
     val name: String,
     val count: Int
 )
 
-// 💡 [수정] 주간 비교 리포트에 미션 진행도 및 카테고리 랭크 추가
 data class WeeklyCompareReport(
     val metrics: List<MetricChange>,
     val highlights: List<HighlightItem>,

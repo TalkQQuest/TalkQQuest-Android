@@ -26,6 +26,11 @@ data class WeeklyCompareDetailResponse(
     val weekIndex: Int = 0,
     val isSaved: Boolean = false,
     val createdAt: String = "",
+    // 좌우 주차 이동용 이웃 리포트 id (백엔드 추가 2026-08-11). 그 방향에 리포트가 없으면 null.
+    // previousReportId = 더 예전 주차(왼쪽), nextReportId = 더 최근 주차(오른쪽).
+    // 실서버 3건으로 확인: weekIndex 4의 previous가 3, 2의 previous가 null.
+    val previousReportId: String? = null,
+    val nextReportId: String? = null,
     val data: WeeklyCompareDetailData = WeeklyCompareDetailData(),
 )
 
@@ -53,6 +58,10 @@ data class WeeklyCompareSaveResponse(
 data class WeeklyCompareDetail(
     val id: String = "",                 // 서버 리포트 id — 저장 토글에 씀
     val isSaved: Boolean = false,        // 보관함에 저장돼 있는지
+    // 좌우 화살표가 데려갈 리포트 id. null이면 그 방향엔 더 볼 리포트가 없다.
+    // 목록 인덱스가 아니라 서버가 상세에 직접 실어 주는 값을 쓴다 — 목록이 잘려 와도 이동이 맞는다.
+    val prevReportId: String? = null,
+    val nextReportId: String? = null,
     val prevWeekLabel: String,           // 왼쪽 주차 ("7월 4주차")
     val thisWeekLabel: String,           // 오른쪽 주차 ("8월 1주차")
     val metrics: List<MetricChange>,     // 핵심 지표 4종 (친절한 태도/대화 주도/공감 표현/질문 연결성)

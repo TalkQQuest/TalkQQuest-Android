@@ -67,12 +67,11 @@ fun ArchiveHomeScreen(
     viewModel: ArchiveHomeViewModel = hiltViewModel(),
     onNavigateToSearch: () -> Unit = {},
     onNavigateToList: (tabIndex: Int) -> Unit = {},
-    onNavigateToDetail: (activityId: String, type: ActivityType) -> Unit = { _: String, _: ActivityType -> }
+    onNavigateToDetail: (activityId: String, type: ActivityType, isWeeklyCompare: Boolean) -> Unit = { _, _, _ -> }
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val lifecycleOwner = LocalLifecycleOwner.current
 
-    // 💡 화면이 보여질 때(ON_RESUME)마다 최신 데이터를 갱신합니다.[cite: 26]
     DisposableEffect(lifecycleOwner) {
         val observer = LifecycleEventObserver { _, event ->
             if (event == Lifecycle.Event.ON_RESUME) {
@@ -97,8 +96,8 @@ fun ArchiveHomeScreen(
         onCategoryClick = { tabIndex ->
             onNavigateToList(tabIndex)
         },
-        onActivityClick = { activityId, type ->
-            onNavigateToDetail(activityId, type)
+        onActivityClick = { activityId, type, isWeeklyCompare ->
+            onNavigateToDetail(activityId, type, isWeeklyCompare)
         }
     )
 }
@@ -109,7 +108,7 @@ private fun ArchiveHomeScreen(
     onSearchClick: () -> Unit,
     onArchiveBoxClick: () -> Unit,
     onCategoryClick: (Int) -> Unit,
-    onActivityClick: (String, ActivityType) -> Unit
+    onActivityClick: (String, ActivityType, Boolean) -> Unit
 ) = FitDesign {
     BoxWithConstraints(
         modifier = Modifier
@@ -129,24 +128,23 @@ private fun ArchiveHomeScreen(
                     .statusBarsPadding(),
                 contentPadding = PaddingValues(
                     top = 29.dp,
-                    // 💡 [수정됨] 하단 네비게이션 바(플로팅)에 카드가 가려지지 않도록 하단 여백을 대폭 늘림 (32.dp -> 120.dp)[cite: 26]
                     bottom = 120.dp
                 )
             ) {
-                // [헤더 영역] 보관함 타이틀
+                // [헤더 영역]
                 item {
                     Column(
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(horizontal = 16.dp),
-                        verticalArrangement = Arrangement.spacedBy(2.dp) // 💡 디자이너 피드백: "보관함과 아래 '톡깨와~' 문장 사이 간격 0->2"[cite: 26]
+                        verticalArrangement = Arrangement.spacedBy(2.dp)
                     ) {
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
                             modifier = Modifier
                                 .size(width = 79.dp, height = 32.dp)
                                 .clip(CircleShape)
-                                .clickable { onArchiveBoxClick() }
+                                .clickable(onClick = onArchiveBoxClick)
                         ) {
                             Text(
                                 text = "보관함",
@@ -176,7 +174,7 @@ private fun ArchiveHomeScreen(
                     }
                 }
 
-                item { Spacer(modifier = Modifier.height(24.dp)) } // 💡 헤더(타이틀)와 카테고리 사이는 기존대로 24.dp 유지[cite: 26]
+                item { Spacer(modifier = Modifier.height(24.dp)) }
 
                 // [카테고리 영역]
                 item {
@@ -191,30 +189,34 @@ private fun ArchiveHomeScreen(
                         ArchiveCategoryItem(
                             iconRes = R.drawable.img_archive_mission,
                             label = "미션",
-                            count = uiState.completedMissionCount
-                        ) { onCategoryClick(0) }
+                            count = uiState.completedMissionCount,
+                            onClick = { onCategoryClick(0) }
+                        )
 
                         ArchiveCategoryItem(
                             iconRes = R.drawable.img_archive_conversation,
                             label = "대화",
-                            count = uiState.conversationCount
-                        ) { onCategoryClick(1) }
+                            count = uiState.conversationCount,
+                            onClick = { onCategoryClick(1) }
+                        )
 
                         ArchiveCategoryItem(
                             iconRes = R.drawable.img_archive_sentence,
                             label = "문장",
-                            count = uiState.savedSentenceCount
-                        ) { onCategoryClick(2) }
+                            count = uiState.savedSentenceCount,
+                            onClick = { onCategoryClick(2) }
+                        )
 
                         ArchiveCategoryItem(
                             iconRes = R.drawable.img_archive_report,
                             label = "리포트",
-                            count = uiState.reportCount
-                        ) { onCategoryClick(3) }
+                            count = uiState.reportCount,
+                            onClick = { onCategoryClick(3) }
+                        )
                     }
                 }
 
-                item { Spacer(modifier = Modifier.height(36.dp)) } // 💡 디자이너 피드백: 카테고리 섹션과 최근 활동 섹션 사이 간격 36.dp로 변경[cite: 26]
+                item { Spacer(modifier = Modifier.height(36.dp)) }
 
                 // [최근 활동 리스트 영역]
                 item {
@@ -231,20 +233,22 @@ private fun ArchiveHomeScreen(
                 item { Spacer(modifier = Modifier.height(16.dp)) }
 
                 items(uiState.recentActivities) { activity ->
+                    val isWeeklyCompare = activity.title.contains("주간 비교")
+
                     if (activity.type == ActivityType.CONVERSATION) {
                         ArchiveConversationCard(
                             title = activity.title,
-                            tags = activity.tags, // 💡 실제 데이터 매핑으로 수정
-                            summary = activity.summary ?: "", // 💡 실제 데이터 매핑으로 수정
+                            tags = activity.tags,
+                            summary = activity.summary ?: "",
                             date = activity.date,
                             time = activity.time,
-                            onClick = { onActivityClick(activity.id, activity.type) },
+                            onClick = { onActivityClick(activity.id, activity.type, false) },
                             modifier = Modifier.padding(horizontal = 16.dp)
                         )
                     } else {
                         RecentActivityCard(
                             activity = activity,
-                            onClick = { onActivityClick(activity.id, activity.type) },
+                            onClick = { onActivityClick(activity.id, activity.type, isWeeklyCompare) },
                             modifier = Modifier.padding(horizontal = 16.dp)
                         )
                     }
@@ -260,7 +264,7 @@ private fun ArchiveHomeScreen(
                     .padding(top = 8.dp, end = 6.dp)
                     .size(44.dp)
                     .clip(CircleShape)
-                    .clickable { onSearchClick() },
+                    .clickable(onClick = onSearchClick),
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
@@ -286,7 +290,7 @@ private fun ArchiveCategoryItem(
         modifier = modifier
             .size(width = 64.dp, height = 93.dp)
             .clip(RoundedCornerShape(16.dp))
-            .clickable { onClick() }
+            .clickable(onClick = onClick)
     ) {
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
@@ -320,7 +324,6 @@ private fun ArchiveCategoryItem(
 @Composable
 private fun ArchiveHomeScreenPreview() {
     val mockActivities = listOf(
-        // 💡 파라미터 이름을 명시하여 순서가 밀려 타입 에러(Int -> String?)가 발생하는 것을 방지했습니다!
         RecentActivity(
             id = "1",
             type = ActivityType.MISSION,
@@ -354,7 +357,7 @@ private fun ArchiveHomeScreenPreview() {
         RecentActivity(
             id = "4",
             type = ActivityType.REPORT,
-            title = "처음 보는 사람에게 짧게 인사하기",
+            title = "8월 2-3주차 주간 비교 리포트",
             status = "리포트 열람",
             date = "2026.08.20",
             time = "14:35"
@@ -367,7 +370,8 @@ private fun ArchiveHomeScreenPreview() {
             onSearchClick = {},
             onArchiveBoxClick = {},
             onCategoryClick = {},
-            onActivityClick = { _: String, _: ActivityType -> }
+            // 💡 [해결완료] 올바른 파라미터명(onActivityClick)과 타입(String, ActivityType, Boolean) 적용
+            onActivityClick = { _, _, _ -> }
         )
     }
 }

@@ -50,15 +50,19 @@ fun MainTabsPager(
     onOverlaySheetTop: (Float?) -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    // 홈의 티어 승급 안내 시트처럼 딤이 깔린 모달이 떠 있는 동안은 탭 스와이프를 끈다.
+    // (시트가 페이저 페이지 안에 들어 있어서, 안 끄면 모달 위에서 쓸었을 때 옆 탭으로 넘어가 버림)
+    var modalSheetOpen by remember { mutableStateOf(false) }
     HorizontalPager(
         state = pagerState,
         modifier = modifier.fillMaxSize(),
         // 인접 탭을 미리 구성해 스와이프 중 빈 화면 없이 콘텐츠가 따라오게 한다.
         beyondViewportPageCount = 1,
+        userScrollEnabled = !modalSheetOpen,
         key = { BottomNavItem.entries[it].route },
     ) { page ->
         when (BottomNavItem.entries[page]) {
-            BottomNavItem.Home -> HomeTab(navController)
+            BottomNavItem.Home -> HomeTab(navController, onOverlaySheetTop) { modalSheetOpen = it }
             BottomNavItem.Mission -> MissionTab(navController, onOverlaySheetTop)
             BottomNavItem.Archive -> ArchiveTab(navController)
             BottomNavItem.Profile -> ProfileTab(navController)
@@ -67,7 +71,11 @@ fun MainTabsPager(
 }
 
 @Composable
-private fun HomeTab(navController: NavHostController) {
+private fun HomeTab(
+    navController: NavHostController,
+    onOverlaySheetTop: (Float?) -> Unit,
+    onModalSheetChange: (Boolean) -> Unit,
+) {
     val homeScope = rememberCoroutineScope()
     HomeScreen(
         onStartMissionClick = { missionId -> navController.navigate("mission_detail/$missionId") },
@@ -82,6 +90,10 @@ private fun HomeTab(navController: NavHostController) {
         },
         // 주간 비교 리포트 도착 모달 "보러가기" → 주간 비교 리포트 (알림창 화살표와 같은 화면)
         onWeeklyReportClick = { navController.navigate(Screen.WEEKLY_COMPARE) },
+        // 티어 승급 안내 시트가 하단 네비를 덮는 동안 네비를 가림.
+        onSheetTopChange = onOverlaySheetTop,
+        // 그 시트가 떠 있는 동안 탭 스와이프를 끔(모달이라 뒤 화면으로 못 넘어가야 함).
+        onModalSheetChange = onModalSheetChange,
     )
 }
 

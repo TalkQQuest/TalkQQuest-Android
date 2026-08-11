@@ -55,16 +55,15 @@ import com.talkqquest.app.core.designsystem.Gray300
 import com.talkqquest.app.core.designsystem.Gray400
 import com.talkqquest.app.core.designsystem.Gray50
 import com.talkqquest.app.core.designsystem.Gray500
-import com.talkqquest.app.core.designsystem.Gray1000
 import com.talkqquest.app.core.designsystem.Gray600
 import com.talkqquest.app.core.designsystem.Gray700
 import com.talkqquest.app.core.designsystem.Gray800
 import com.talkqquest.app.core.designsystem.Primary200
 import com.talkqquest.app.core.designsystem.Primary600
 import com.talkqquest.app.core.designsystem.TalkQQuestTheme
-import com.talkqquest.app.core.designsystem.softShadow
 import com.talkqquest.app.core.designsystem.TqType
 import com.talkqquest.app.core.designsystem.White
+import com.talkqquest.app.core.designsystem.component.TierPromotionSheet
 import com.talkqquest.app.core.designsystem.component.TqButton
 import com.talkqquest.app.feature.report.data.model.Competency
 import com.talkqquest.app.feature.report.data.model.CompetencyAxis
@@ -239,14 +238,11 @@ private fun ReportContent(
             )
         }
 
-        // 티어 승급 안내 바텀시트
-        if (showTierHelp) {
-            TierPromotionSheet(
-                tierName = growth.tierName,
-                competencies = growth.competencies,
-                onDismiss = { showTierHelp = false },
-            )
-        }
+        // 티어 승급 안내 바텀시트(공용) — 항상 컴포즈해 두고 visible로 등장/퇴장을 태운다.
+        TierPromotionSheet(
+            visible = showTierHelp,
+            onDismiss = { showTierHelp = false },
+        )
     }
 }
 
@@ -485,166 +481,6 @@ private fun LegendRow(c: Competency) {
     }
 }
 
-// ── 티어 승급 안내 바텀시트 (info 아이콘 → 열림) ──
-@Composable
-private fun TierPromotionSheet(
-    tierName: String,
-    competencies: List<Competency>,
-    onDismiss: () -> Unit,
-) {
-    Box(modifier = Modifier.fillMaxSize()) {
-        // 배경 딤 없음(피그마에 없음). 투명 클릭 영역으로 바깥 탭 시 닫기만.
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .clickable(
-                    interactionSource = remember { MutableInteractionSource() },
-                    indication = null,
-                    onClick = onDismiss,
-                ),
-        )
-        // 시트 본체 — CSS "바텀시트": 393폭, Gray/50 BG, radius 36 top, padding 20/16, gap 20, height 342
-        Column(
-            modifier = Modifier
-                .align(Alignment.BottomCenter)
-                .fillMaxWidth()
-                // 시트 그림자 = CSS `0px -8px 24px rgba(15,23,42,0.06)` 단일 레이어(저장 시트와 동일).
-                // 넓게 은은하게 페이드아웃 — 경계에 선 긋는 접촉 겹 없음.
-                .softShadow(
-                    color = Gray1000.copy(alpha = 0.06f),
-                    offsetY = (-8).dp,
-                    blur = 24.dp,
-                    cornerRadius = 36.dp,
-                )
-                .clip(RoundedCornerShape(topStart = 36.dp, topEnd = 36.dp))
-                .background(Gray50)
-                .clickable(
-                    interactionSource = remember { MutableInteractionSource() },
-                    indication = null,
-                    onClick = {},
-                )
-                .padding(horizontal = 16.dp, vertical = 20.dp),
-            verticalArrangement = Arrangement.spacedBy(20.dp), // 핸들 ↔ 콘텐츠
-            horizontalAlignment = Alignment.CenterHorizontally,
-        ) {
-            // 핸들 Frame 453 (36x4, Gray/600)
-            Box(
-                modifier = Modifier
-                    .width(36.dp)
-                    .height(4.dp)
-                    .clip(CircleShape)
-                    .background(Gray600),
-            )
-
-            // 콘텐츠 Frame 427321757 (width 361, gap 16, align center)
-            Column(
-                modifier = Modifier.fillMaxWidth(),
-                verticalArrangement = Arrangement.spacedBy(16.dp),
-                horizontalAlignment = Alignment.CenterHorizontally,
-            ) {
-                Text(
-                    text = "티어 승급 안내",
-                    style = TqType.TitleL.figma(), // 18/600
-                    color = Gray800,
-                    // 제목은 가운데 정렬 (부모 CenterHorizontally + hug)
-                )
-
-                // 항목 Frame 427321756 (내용폭만큼 hug → 시트 가운데로 들여쓰기, gap 7)
-                // 항목 · 가운데 chevron · 항목 · chevron · 항목. 행은 블록 안 좌측 정렬(아이콘 정렬),
-                // chevron은 블록 폭 기준 가운데. 부제는 hug라 한 줄로 안 잘림.
-                Column(
-                    verticalArrangement = Arrangement.spacedBy(7.dp),
-                    horizontalAlignment = Alignment.Start,
-                ) {
-                    HelpRow(
-                        title = "핵심 역량 채우기",
-                        subtitle = "미션을 통해 대화 역량을 넓혀요",
-                    ) {
-                        // 미니 마름모 = Vector 78 이미지 (사용자 지정) — 50x50
-                        Box(modifier = Modifier.size(50.dp), contentAlignment = Alignment.Center) {
-                            Image(
-                                painter = painterResource(R.drawable.img_help_radar),
-                                contentDescription = null,
-                                modifier = Modifier.size(50.dp),
-                            )
-                        }
-                    }
-                    ChevronDown(Modifier.align(Alignment.CenterHorizontally))
-                    HelpRow(
-                        title = "별 획득하기",
-                        subtitle = "핵심 역량 당 300점을 모두 채우면 별을 얻어요",
-                    ) {
-                        // Star 4 (44x44) in 50x50
-                        Box(modifier = Modifier.size(50.dp), contentAlignment = Alignment.Center) {
-                            Icon(
-                                painter = painterResource(R.drawable.ic_tier_star),
-                                contentDescription = null,
-                                tint = StarYellow,
-                                modifier = Modifier.size(44.dp),
-                            )
-                        }
-                    }
-                    ChevronDown(Modifier.align(Alignment.CenterHorizontally))
-                    HelpRow(
-                        title = "티어 승급하기",
-                        subtitle = "별 3개를 다 모으면 다음 티어로!",
-                    ) {
-                        // 챌린저(마스터) 뱃지 — 승급 지향 아이콘(현재 티어 아님). 50 박스 꽉 채움
-                        Box(modifier = Modifier.size(50.dp), contentAlignment = Alignment.Center) {
-                            Image(
-                                painter = painterResource(R.drawable.img_tier_master_s),
-                                contentDescription = null,
-                                modifier = Modifier.size(50.dp),
-                            )
-                        }
-                    }
-                }
-            }
-        }
-    }
-}
-
-// 티어 승급 안내 항목 행 (height 50, gap 8): 아이콘50 + 텍스트콜럼. 폭은 hug(부제 한 줄 안 잘림)
-@Composable
-private fun HelpRow(
-    title: String,
-    subtitle: String,
-    leading: @Composable () -> Unit,
-) {
-    Row(
-        modifier = Modifier.height(50.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-    ) {
-        leading()
-        Column {
-            Text(
-                text = title,
-                style = TqType.BodyL.figma().copy(fontWeight = FontWeight.Medium), // 16/500
-                color = Gray800,
-            )
-            Text(
-                text = subtitle,
-                style = TqType.BodyM.figma(), // 14/400
-                color = Gray600,
-                maxLines = 1,
-                softWrap = false,
-            )
-        }
-    }
-}
-
-// 항목 사이 chevron-down (24, Purple/600). 가운데 정렬은 호출부에서 Modifier.align으로
-// (fillMaxWidth를 쓰면 hug Column이 전폭으로 늘어나 블록이 왼쪽에 붙어버림)
-@Composable
-private fun ChevronDown(modifier: Modifier = Modifier) {
-    Icon(
-        painter = painterResource(R.drawable.ic_chevron_down),
-        contentDescription = null,
-        tint = Primary600,
-        modifier = modifier.size(24.dp),
-    )
-}
 
 @Preview(name = "성장 리포트", showSystemUi = true, device = "spec:width=393dp,height=852dp")
 @Composable

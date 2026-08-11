@@ -50,6 +50,8 @@ import com.talkqquest.app.core.designsystem.Gray500
 import com.talkqquest.app.core.designsystem.Gray700
 import com.talkqquest.app.core.designsystem.Gray800
 import com.talkqquest.app.core.designsystem.Primary50
+import com.talkqquest.app.core.designsystem.Primary100
+import com.talkqquest.app.core.designsystem.Primary200
 import com.talkqquest.app.core.designsystem.Primary600
 import com.talkqquest.app.core.designsystem.Primary700
 import com.talkqquest.app.core.designsystem.TalkQQuestTheme
@@ -63,7 +65,8 @@ import com.talkqquest.app.core.designsystem.component.TqButton
 // ★옵션 라벨·아이콘·세부설명은 피그마 실렌더(스크린샷) 기준. CSS 레이어명은 플레이스홀더라 못 씀.
 // ★아이콘 = 디자이너 SVG를 vector drawable로 변환(ic_setup_*).
 // ★선택값은 대화 시작 API에 넣을 서버 필드가 아직 없어 화면 로컬 상태만(흐름·네비만 동작).
-// ★카드 선택 상태 색(Primary600 테두리 + Primary50 배경)은 디자인에 없어 앱 관례로.
+// ★선택 상태 색은 디자이너 컴포넌트 CSS(component.css)의 default↔filled 변형 그대로.
+//   화면 CSS엔 미선택만 깔려 있어 예전엔 앱 관례로 임시 지정했었는데, 컴포넌트가 와서 전부 교체했다.
 
 private data class PlaceOption(val label: String, val subtitle: String?, val icon: Int)
 private data class IconOption(val label: String, val icon: Int)
@@ -170,9 +173,15 @@ private fun SetupHeader(title: String, subtitle: String) {
     }
 }
 
-private fun cardBorder(selected: Boolean) = if (selected) 1.5.dp else 1.dp
+// 선택 상태 색 — 디자이너 컴포넌트 CSS(component.css)의 default ↔ filled 쌍 그대로.
+// 화면 CSS(ui_14)엔 미선택 상태만 깔려 있어 눌렀을 때 색은 이 컴포넌트 파일이 유일한 기준이다.
+//  · 장소·상대 카드: 배경 Purple/100 + 테두리 Purple/600 + 아이콘 원 Purple/200 + 아이콘/제목 Purple/600·700
+//  · 성별·나이 칩  : 배경 Purple/600 + 테두리 제거 + Body/L Medium + 글자 Purple/50 (칩만 반전형)
+// 테두리 굵기는 두 상태 다 1px (예전엔 선택 시 1.5로 굵혔는데 CSS에 없던 임의값이라 되돌림).
 private fun cardBorderColor(selected: Boolean) = if (selected) Primary600 else Gray200
-private fun cardBg(selected: Boolean) = if (selected) Primary50 else Gray50
+private fun cardBg(selected: Boolean, unselected: Color) = if (selected) Primary100 else unselected
+private fun cardIconTint(selected: Boolean, unselected: Color) = if (selected) Primary600 else unselected
+private fun cardLabelColor(selected: Boolean) = if (selected) Primary700 else Gray800
 
 // ══════════════════ 화면 1 · 장소 (세로 리스트) ══════════════════
 // 카드: 아이콘(40 원형) + 제목 + 선택적 세부설명. CSS 361x76, radius 16, gap 12.
@@ -184,8 +193,8 @@ private fun PlaceCard(option: PlaceOption, selected: Boolean, onClick: () -> Uni
             .fillMaxWidth()
             .heightIn(min = 76.dp)
             .clip(RoundedCornerShape(16.dp))
-            .background(cardBg(selected))
-            .border(cardBorder(selected), cardBorderColor(selected), RoundedCornerShape(16.dp))
+            .background(cardBg(selected, Gray50))
+            .border(1.dp, cardBorderColor(selected), RoundedCornerShape(16.dp))
             .clickable(
                 interactionSource = remember { MutableInteractionSource() },
                 indication = null,
@@ -199,21 +208,26 @@ private fun PlaceCard(option: PlaceOption, selected: Boolean, onClick: () -> Uni
             modifier = Modifier
                 .size(40.dp)
                 .clip(CircleShape)
-                .background(Gray200), // CSS Frame 427321657 배경 = Gray/200(#E2E8F0)
+                // CSS Frame 427321657 배경 = 미선택 Gray/200(#E2E8F0) / 선택 Purple/200(#E4DFFF)
+                .background(if (selected) Primary200 else Gray200),
             contentAlignment = Alignment.Center,
         ) {
             Icon(
                 painter = painterResource(option.icon),
                 contentDescription = null,
-                tint = Gray500, // CSS Vector #64748B(Gray/500). 옆 글자색 관성으로 Gray700 넣던 것 수정
+                // 화면 CSS(ui_14) Vector 미선택 #94A3B8(Gray/400) / 선택 Purple/600.
+                // 컴포넌트 CSS엔 Gray/500으로 남아 있지만 화면 인스턴스 5개가 전부 Gray/400이고
+                // 상대 카드 아이콘도 Gray/400이라 화면 쪽(=최종 기준)으로 맞춘다.
+                tint = cardIconTint(selected, Gray400),
                 // 크기 미지정 = 벡터 native(학교 27×20 등) 그대로 = CSS Vector 크기와 일치.
                 // 정사각 size()로 우기면 비정사각 글리프가 비율맞춤으로 작아짐(작게 보이던 원인)
             )
         }
         Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-            Text(text = option.label, style = TqType.TitleL.figma(), color = Gray800)
+            Text(text = option.label, style = TqType.TitleL.figma(), color = cardLabelColor(selected))
             if (option.subtitle != null) {
-                Text(text = option.subtitle, style = TqType.BodyM.figma(), color = Gray500)
+                // 세부 설명 = Body/M Gray/700(#334155). 선택돼도 색이 안 바뀐다(filled 변형도 Gray/700 그대로)
+                Text(text = option.subtitle, style = TqType.BodyM.figma(), color = Gray700)
             }
         }
     }
@@ -242,8 +256,9 @@ private fun PartnerCard(option: IconOption, selected: Boolean, onClick: () -> Un
         modifier = modifier
             .height(90.dp)
             .clip(RoundedCornerShape(16.dp))
-            .background(cardBg(selected))
-            .border(cardBorder(selected), cardBorderColor(selected), RoundedCornerShape(16.dp))
+            // 미선택은 CSS에 배경이 없다(= 화면 바탕 Gray/50이 그대로 비침) / 선택은 Purple/100
+            .background(cardBg(selected, Gray50))
+            .border(1.dp, cardBorderColor(selected), RoundedCornerShape(16.dp))
             .clickable(
                 interactionSource = remember { MutableInteractionSource() },
                 indication = null,
@@ -255,11 +270,12 @@ private fun PartnerCard(option: IconOption, selected: Boolean, onClick: () -> Un
         Icon(
             painter = painterResource(option.icon),
             contentDescription = null,
-            tint = Gray500, // CSS Vector #64748B(Gray/500)
+            tint = cardIconTint(selected, Gray400), // CSS Vector 미선택 #94A3B8(Gray/400) / 선택 Purple/600
             // 크기 미지정 = 벡터 native(친구 25×19 등) = CSS Vector(30 슬롯 안 글리프). 정사각 size(30)이면 비율 왜곡
         )
         Spacer(Modifier.height(4.dp)) // CSS Frame 427321664 gap 4
-        Text(text = option.label, style = TqType.TitleL.figma(), color = Gray800) // CSS 상대 라벨 = 18/600 (Title/L)
+        // CSS 상대 라벨 = 18/600 (Title/L)
+        Text(text = option.label, style = TqType.TitleL.figma(), color = cardLabelColor(selected))
     }
 }
 
@@ -302,12 +318,17 @@ private fun PillOption(
     height: Int,
     radius: Int,
 ) {
+    // 칩만 카드와 반전 규칙이 다르다 — 선택 시 Purple/600으로 꽉 채우고 테두리를 없앤 뒤 글자를 Purple/50으로 뒤집는다.
     Box(
         modifier = modifier
             .height(height.dp)
             .clip(RoundedCornerShape(radius.dp))
-            .background(if (selected) Primary50 else Color.Transparent)
-            .border(cardBorder(selected), cardBorderColor(selected), RoundedCornerShape(radius.dp))
+            .background(if (selected) Primary600 else Color.Transparent)
+            // 선택 상태엔 테두리 자체가 없다(CSS filled/Variant4에 border 선언 없음)
+            .then(
+                if (selected) Modifier
+                else Modifier.border(1.dp, Gray300, RoundedCornerShape(radius.dp)), // CSS 미선택 테두리 = Gray/300
+            )
             .clickable(
                 interactionSource = remember { MutableInteractionSource() },
                 indication = null,
@@ -316,7 +337,12 @@ private fun PillOption(
             .padding(horizontal = 23.dp), // CSS pill 안쪽 좌우 패딩 23. 고정폭 안 주면 글자만큼 hug(60대 이상=113 등)
         contentAlignment = Alignment.Center,
     ) {
-        Text(text = label, style = TqType.BodyL.figma(), color = if (selected) Primary700 else Gray800)
+        Text(
+            text = label,
+            // 선택되면 Body/L → Body/L Medium (400→500)까지 같이 바뀐다
+            style = if (selected) TqType.BodyL.copy(fontWeight = FontWeight.Medium).figma() else TqType.BodyL.figma(),
+            color = if (selected) Primary50 else Gray800,
+        )
     }
 }
 

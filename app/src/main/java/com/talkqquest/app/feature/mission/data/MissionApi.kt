@@ -17,6 +17,7 @@ import com.talkqquest.app.feature.mission.data.model.MissionCompleteRequest
 import com.talkqquest.app.feature.mission.data.model.MissionCompleteResponse
 import com.talkqquest.app.feature.mission.data.model.MissionDetail
 import com.talkqquest.app.feature.mission.data.model.MissionListItem
+import com.talkqquest.app.feature.mission.data.model.TodayMissionResponse
 import com.talkqquest.app.feature.mission.data.model.MissionListResponse
 import com.talkqquest.app.feature.mission.data.model.MissionPrepResponse
 import com.talkqquest.app.feature.mission.data.model.MissionSaveResponse
@@ -44,7 +45,12 @@ interface MissionApi {
 
     // 오늘의 추천 미션 (홈 카드). 응답 data = 미션 항목 1건. 미션이 없으면 404 MISSION_NOT_FOUND.
     @GET("api/v1/missions/today")
-    suspend fun getTodayMission(): ApiResponse<MissionListItem>
+    // date 생략 = 오늘. refresh=true면 재추천(하루 refreshLimit회, 초과 시 429).
+    // 응답은 목록 항목과 모양이 달라 전용 DTO를 쓴다 (식별자가 missionId).
+    suspend fun getTodayMission(
+        @Query("date") date: String? = null,
+        @Query("refresh") refresh: Boolean? = null,
+    ): ApiResponse<TodayMissionResponse>
 
     // 미션 상세 조회 (missionId = UUID 문자열)
     @GET("api/v1/missions/{missionId}")

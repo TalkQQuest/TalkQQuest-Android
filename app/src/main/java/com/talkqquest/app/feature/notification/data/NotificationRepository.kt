@@ -36,7 +36,16 @@ class NotificationRepository @Inject constructor(
         body = body.orEmpty(), // dev 실계약 필드명 body (이전 추정 message에서 정정)
         timeText = relativeTime(createdAt),
         isUnread = !isRead,
+        hasLink = isWeeklyCompare,
     )
+
+    // 주간 비교 리포트 알림인지 — 이 알림만 화살표가 붙어 눌러서 바로 리포트로 간다.
+    // ★서버가 이 알림에 어떤 type을 쓰는지 아직 못 받았다. 지금까지 받은 type 목록은
+    //   mission_reminder / report_ready / community_approved / event 뿐이고 주간 비교용이 없다.
+    //   그래서 type에 weekly가 들어있는지를 먼저 보고, 아니면 제목 문구로 판별한다.
+    //   백엔드에서 정확한 값을 받으면 이 한 곳만 그 값 비교로 바꾸면 된다.
+    private val NotificationItemDto.isWeeklyCompare: Boolean
+        get() = type.contains("weekly", ignoreCase = true) || title.contains("주간 비교")
 }
 
 // ISO 시각 → 디자인 표기(방금 / N분 전 / N시간 전 / N일 전 / yyyy.MM.dd)
@@ -53,12 +62,21 @@ private fun relativeTime(iso: String): String {
     }
 }
 
-// 서버 없이 확인용 목업 — 디자인 목업 2건 그대로 전사. 서버가 알림을 만들기 시작하면 자동으로 안 쓰임.
+// 서버 없이 확인용 목업 — 디자인 목업 3건 그대로 전사. 서버가 알림을 만들기 시작하면 자동으로 안 쓰임.
 private val stubNotifications = listOf(
+    // 주간 비교 리포트 알림 — 화살표가 붙는 유일한 종류 (CSS Frame 427321769, 목록 맨 위)
+    NotificationUiItem(
+        id = "stub-0",
+        category = "아직 읽지 않은 주간 비교 리포트가 있어요.",
+        body = "내 주간 비교 리포트 보러가기",
+        timeText = "방금",
+        isUnread = true,
+        hasLink = true,
+    ),
     NotificationUiItem(
         id = "stub-1",
         category = "새로운 리포트가 도착했어요!",
-        body = "지금 바로 리포트를 보러갈 수 있어요.",
+        body = "지금 바로 성장 리포트를 보러갈 수 있어요.", // 13차에서 "성장" 추가됨
         timeText = "방금",
         isUnread = true,
     ),

@@ -222,23 +222,11 @@ fun <T : Any> TqSaveSheetScaffold(
                         .height(with(density) { (hiddenOffset - expandedOffset).toDp() })
                         .offset { IntOffset(0, offsetY.roundToInt()) }
                         .nestedScroll(nestedScrollConnection)
-                        // 시트 그림자 = CSS `0px -8px 24px rgba(15,23,42,0.06)`를 두 겹으로 나눠 그림.
-                        // CSS 한 겹(6%)을 정확히 그려보면(픽셀 실측으로 CSS 가우시안과 오차 1/255 미만
-                        // 확인함) 넓게 퍼진 그림자 전체가 진해서 시트 윤곽이 통째로 떠 보인다.
-                        // → 넓은 그림자는 4.5%로 낮춰 은은하게 두고(아래), 시트와 배경이 맞닿는
-                        //   경계에만 좁은 그림자를 한 겹 더 얹어 선처럼 경계를 잡는다(사용자 결정).
-                        // ※ 피그마 값에서 의도적으로 벗어난 유일한 항목 — 디자이너 확인거리.
-                        //
-                        // (1) 접촉 그림자: 경계에 바짝 붙어 4dp 안에서 사라짐 → 경계선 역할
+                        // 시트 그림자 = CSS `0px -8px 24px rgba(15,23,42,0.06)` 단일 레이어 그대로.
+                        // 넓게(blur 24) 은은하게 사라지는 소프트 그림자 — 경계에 선 긋는 접촉 겹은 두지 않음
+                        // (선처럼 끝나지 않고 부드럽게 페이드아웃, 사용자 결정).
                         .softShadow(
                             color = Gray1000.copy(alpha = 0.06f),
-                            offsetY = (-1).dp,
-                            blur = 4.dp,
-                            cornerRadius = 36.dp,
-                        )
-                        // (2) 넓은 그림자: CSS의 위치·흐림(offset -8, blur 24) 그대로, 진하기만 4.5%
-                        .softShadow(
-                            color = Gray1000.copy(alpha = 0.045f),
                             offsetY = (-8).dp,
                             blur = 24.dp,
                             cornerRadius = 36.dp, // SheetShape 위 모서리와 동일

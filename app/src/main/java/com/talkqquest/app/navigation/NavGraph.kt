@@ -72,6 +72,7 @@ import com.talkqquest.app.feature.mission.ui.MissionCompleteScreen
 import com.talkqquest.app.feature.mission.ui.MissionDetailScreen
 import com.talkqquest.app.feature.mission.ui.MissionListScreen
 import com.talkqquest.app.feature.report.ui.ReportScreen
+import com.talkqquest.app.feature.report.ui.WeeklyCompareScreen
 import com.talkqquest.app.feature.archive.ui.ArchiveListScreen
 import com.talkqquest.app.feature.archive.ui.ArchiveSearchScreen
 import com.talkqquest.app.feature.archive.ui.ArchiveConversationDetailScreen
@@ -572,7 +573,21 @@ fun NavGraph(
         }
         // 알림 화면 진입. 디자인 미완성으로 현재는 빈 상태 placeholder입니다.
         composable(Screen.NOTIFICATION) {
-            NotificationScreen(onBack = { navController.popBackStack() })
+            NotificationScreen(
+                onBack = { navController.popBackStack() },
+                // 주간 비교 리포트 알림(화살표가 붙는 유일한 알림) → 주간 비교 리포트 화면.
+                // Screen.REPORT는 성장 리포트라 다른 화면이다.
+                onWeeklyReportClick = { navController.navigate(Screen.WEEKLY_COMPARE) },
+            )
+        }
+        // 주간 비교 리포트(홈/알림창에서 진입) — 닫기로 빠져나온다(뒤로가기 아님).
+        composable(Screen.WEEKLY_COMPARE) {
+            WeeklyCompareScreen(
+                onClose = { navController.popBackStack() },
+                // TODO(연결): "완료한 미션 >"은 보관함 미션 목록(C 담당)으로 가는 자리.
+                //   해당 화면이 생기면 그 route로 연결할 것.
+                onCompletedMissionsClick = {},
+            )
         }
         // C담당: 아카이브 홈 화면(하단 탭 = MainTabsPager의 페이저 페이지).
         composable(Screen.ARCHIVE_HOME) {
@@ -757,7 +772,7 @@ fun NavGraph(
             )
         }
         // B담당: AI 피드백 화면. 항목 클릭 시 피드백 상세 화면으로 이동합니다.
-        // 상세 리포트 버튼은 리포트 화면으로, 다음 버튼은 홈으로 이동합니다.
+        // 성장 리포트 버튼은 리포트 화면으로, 다음 버튼은 홈으로 이동합니다.
         composable(
             route = Screen.FEEDBACK,
             arguments = listOf(navArgument("feedbackId") { type = NavType.StringType }),
@@ -768,17 +783,22 @@ fun NavGraph(
                 onItemClick = { index -> navController.navigate("feedback_detail/$feedbackId?item=$index") },
                 // 피드백 진입 전 기존 ViewModel 선택 상태를 위한 백업 처리입니다.
                 // URI 인코딩을 통해 파라미터를 전달합니다.
-                onDetailReport = { missionTitle ->
-                    navController.navigate("report?missionTitle=${Uri.encode(missionTitle)}")
+                // conversationId는 리포트 저장(POST /reports)이 요구하는 값이라 함께 넘긴다.
+                onDetailReport = { missionTitle, conversationId ->
+                    navController.navigate(
+                        "report?missionTitle=${Uri.encode(missionTitle)}" +
+                            "&conversationId=${Uri.encode(conversationId)}",
+                    )
                 },
                 onHome = { navController.popBackStack(Screen.HOME, inclusive = false) },
             )
         }
-        // B담당: 리포트 성장/주간 화면. 피드백 화면에서 상세 리포트 클릭 시 진입합니다.
+        // B담당: 성장 리포트 화면. 피드백 화면에서 "성장 리포트" 클릭 시 진입합니다.
         composable(
             route = Screen.REPORT,
             arguments = listOf(
                 navArgument("missionTitle") { type = NavType.StringType; defaultValue = "" },
+                navArgument("conversationId") { type = NavType.StringType; defaultValue = "" },
             ),
         ) {
             ReportScreen(

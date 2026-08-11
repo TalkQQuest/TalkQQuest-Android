@@ -171,10 +171,12 @@ fun ConversationScreen(
         onSend = viewModel::sendMessage,
         onToggleRecommendations = viewModel::toggleRecommendations,
         onSelectRecommendation = viewModel::selectRecommendation,
-        onBackClick = onBack,
-        onCompleteClick = { viewModel.setExitDialogVisible(true) },
-        onExitDismiss = { viewModel.setExitDialogVisible(false) },
-        onExitConfirm = { onExitConfirm(viewModel.elapsedSeconds()) },
+        onBackClick = { viewModel.setLeaveDialogVisible(true) },
+        onCompleteClick = { viewModel.setCompleteDialogVisible(true) },
+        onCompleteDismiss = { viewModel.setCompleteDialogVisible(false) },
+        onCompleteConfirm = { onExitConfirm(viewModel.elapsedSeconds()) },
+        onLeaveDismiss = { viewModel.setLeaveDialogVisible(false) },
+        onLeaveConfirm = onBack,
     )
 }
 
@@ -188,8 +190,10 @@ private fun ConversationScreen(
     onSelectRecommendation: (String) -> Unit = {},
     onBackClick: () -> Unit = {},
     onCompleteClick: () -> Unit = {},
-    onExitDismiss: () -> Unit = {},
-    onExitConfirm: () -> Unit = {},
+    onCompleteDismiss: () -> Unit = {},
+    onCompleteConfirm: () -> Unit = {},
+    onLeaveDismiss: () -> Unit = {},
+    onLeaveConfirm: () -> Unit = {},
 ) = FitDesign { // 작은 화면에선 디자인(393x852) 통째 축소 — 다른 화면들과 크기감 통일
     Box(
         modifier = Modifier
@@ -219,12 +223,31 @@ private fun ConversationScreen(
             )
         }
 
-        // 대화 종료 팝업 (CSS "탈퇴 모달" 프레임 — 최종 확정 2026-07-21).
-        // ★ 별도 FitDesign으로 감싸지 않는다: 이미 이 화면 전체가 바깥 FitDesign(171줄) 안이라
+        // 확인 팝업 2종.
+        // ★ 별도 FitDesign으로 감싸지 않는다: 이미 이 화면 전체가 바깥 FitDesign 안이라
         //   여기서 또 감싸면 팝업만 다른 좌표계가 돼 위치가 어긋남(살짝 아래로 밀렸던 원인).
         //   메인 콘텐츠와 같은 프레임에 두면 CSS top 313이 다른 요소들과 동일 규칙으로 맞음.
-        if (uiState.showExitDialog) {
-            ExitDialog(onContinue = onExitDismiss, onExit = onExitConfirm)
+        if (uiState.showCompleteDialog) {
+            // CSS "대화 종료 팝업(완료 버튼)" — 헤더 "대화 완료"에서 열림
+            ConversationConfirmDialog(
+                title = "대화를 종료하시겠어요?",
+                description = "대화를 종료하면 현재 미션이 완료됩니다.",
+                confirmText = "완료하기",
+                confirmColor = Primary600,
+                onContinue = onCompleteDismiss,
+                onConfirm = onCompleteConfirm,
+            )
+        }
+        if (uiState.showLeaveDialog) {
+            // CSS "대화 이탈 팝업(뒤로가기)" — 헤더 뒤로가기에서 열림. 확인 버튼만 RED
+            ConversationConfirmDialog(
+                title = "정말 나가시겠습니까?",
+                description = "여기서 나가면 대화 내역이 저장되지 않아요.",
+                confirmText = "종료하기",
+                confirmColor = Error,
+                onContinue = onLeaveDismiss,
+                onConfirm = onLeaveConfirm,
+            )
         }
     }
 }
@@ -844,8 +867,10 @@ private fun RecommendationCard(
                 modifier = Modifier.size(19.dp),
             )
             Spacer(Modifier.width(6.dp))
-            // 13차에서 문구가 "톡깨의 추천 답변" → "답장이 고민되시나요?"로 바뀜(접힘 바와 같은 문구)
-            Text(text = "답장이 고민되시나요?", style = TqType.BodyM.figma(), color = Primary600)
+            // ★13차 CSS는 펼침·접힘 모두 "답장이 고민되시나요?"로 통일했지만,
+            //   펼친 카드는 "톡깨의 추천 답변"을 그대로 쓰기로 함(사용자 결정 2026-08-10).
+            //   접힘 바는 CSS대로 "답장이 고민되시나요?" 유지 — 두 상태의 문구가 다른 것이 의도된 상태다.
+            Text(text = "톡깨의 추천 답변", style = TqType.BodyM.figma(), color = Primary600)
             Spacer(Modifier.width(4.dp))
             Spacer(Modifier.weight(1f))
             Box(
@@ -987,11 +1012,21 @@ private fun MessageInputRow(
     }
 }
 
-// 나가기 팝업 (CSS "미션 종료 팝업" Frame 427321198): 카드 332x180, r24, Gray50 + 카드그림자.
-// 대화 종료 확인 팝업 (CSS "탈퇴 모달" 프레임 — 최종 확정 2026-07-21, 보류 마커 해제).
-// 오버레이 = Gray700 23% 딤 / 모달 = 흰 배경 radius16 / 종료하기 = Primary600(빨강 아님, 확정).
+// 대화 화면 확인 팝업 (CSS "탈퇴 모달" 프레임 — 두 팝업이 같은 껍데기를 쓴다).
+//   오버레이 = op bg Gray700 #334155 23% 딤 / 카드 = 336 x 흰 배경 radius16(그림자 없음)
+//   left 28 top 313, padding 24/24/20, 문구↔버튼 gap 16, 제목↔설명 gap 4, 버튼 간격 12
+// 문구와 오른쪽 버튼만 달라진다 (UI 13차에서 팝업이 둘로 나뉨):
+//   "대화 종료 팝업(완료 버튼)" — 완료하기 / Purple600
+//   "대화 이탈 팝업(뒤로가기)"  — 종료하기 / RED #F14444(디자인시스템 Error와 같은 값)
 @Composable
-private fun ExitDialog(onContinue: () -> Unit, onExit: () -> Unit) {
+private fun ConversationConfirmDialog(
+    title: String,
+    description: String,
+    confirmText: String,
+    confirmColor: Color,
+    onContinue: () -> Unit,
+    onConfirm: () -> Unit,
+) {
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -1025,9 +1060,9 @@ private fun ExitDialog(onContinue: () -> Unit, onExit: () -> Unit) {
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.spacedBy(4.dp), // 제목↔설명 gap 4 (CSS)
             ) {
-                Text(text = "대화를 종료하시겠어요?", style = TqType.HeadingM.figma(), color = Gray900) // CSS Heading/M 20
+                Text(text = title, style = TqType.HeadingM.figma(), color = Gray900) // CSS Heading/M 20
                 Text(
-                    text = "대화를 종료하면 현재 미션이 완료됩니다.",
+                    text = description,
                     style = TqType.BodyM.figma(), // CSS Body/M 14 regular
                     color = Gray600,
                     textAlign = TextAlign.Center,
@@ -1048,11 +1083,11 @@ private fun ExitDialog(onContinue: () -> Unit, onExit: () -> Unit) {
                     modifier = Modifier
                         .size(width = 138.dp, height = 48.dp)
                         .clip(RoundedCornerShape(8.dp))
-                        .background(Primary600) // CSS Purple/600 #6353F0
-                        .clickable(onClick = onExit),
+                        .background(confirmColor) // 완료=Purple600 / 이탈=RED #F14444 (CSS)
+                        .clickable(onClick = onConfirm),
                     contentAlignment = Alignment.Center,
                 ) {
-                    Text(text = "종료하기", style = TqType.TitleL.figma(), color = Gray50)
+                    Text(text = confirmText, style = TqType.TitleL.figma(), color = Gray50)
                 }
             }
         }
@@ -1104,15 +1139,30 @@ private fun ConversationCollapsedPreview() {
     }
 }
 
-@Preview(name = "나가기 팝업", showSystemUi = true, device = "spec:width=393dp,height=852dp")
+@Preview(name = "대화 종료 팝업(완료 버튼)", showSystemUi = true, device = "spec:width=393dp,height=852dp")
 @Composable
-private fun ConversationExitPreview() {
+private fun ConversationCompleteDialogPreview() {
     TalkQQuestTheme {
         ConversationScreen(
             uiState = ConversationUiState(
                 missionTitle = "처음보는 사람과 짧게 인사하기",
                 messages = previewMessages,
-                showExitDialog = true,
+                showCompleteDialog = true,
+            ),
+            onRetry = {},
+        )
+    }
+}
+
+@Preview(name = "대화 이탈 팝업(뒤로가기)", showSystemUi = true, device = "spec:width=393dp,height=852dp")
+@Composable
+private fun ConversationLeaveDialogPreview() {
+    TalkQQuestTheme {
+        ConversationScreen(
+            uiState = ConversationUiState(
+                missionTitle = "처음보는 사람과 짧게 인사하기",
+                messages = previewMessages,
+                showLeaveDialog = true,
             ),
             onRetry = {},
         )

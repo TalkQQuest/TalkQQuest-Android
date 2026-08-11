@@ -3,16 +3,16 @@ package com.talkqquest.app.feature.report.data
 import com.talkqquest.app.core.network.ApiResult
 import com.talkqquest.app.core.network.serverCall
 import com.talkqquest.app.core.util.toSavedDate
-import com.talkqquest.app.feature.report.data.model.CategoryRank
+import com.talkqquest.app.feature.report.data.model.Competency
+import com.talkqquest.app.feature.report.data.model.CompetencyAxis
 import com.talkqquest.app.feature.report.data.model.DeleteReportResponse
-import com.talkqquest.app.feature.report.data.model.GrowthReport
+import com.talkqquest.app.feature.report.data.model.GrowthTierReport
 import com.talkqquest.app.feature.report.data.model.HighlightItem
 import com.talkqquest.app.feature.report.data.model.MetricChange
 import com.talkqquest.app.feature.report.data.model.SaveReportRequest
 import com.talkqquest.app.feature.report.data.model.SaveReportResponse
 import com.talkqquest.app.feature.report.data.model.SavedReportItem
 import com.talkqquest.app.feature.report.data.model.WeeklyCompareReport
-import com.talkqquest.app.feature.report.data.model.toGrowthReport
 import com.talkqquest.app.feature.report.data.model.toWeeklyCompareReport
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -24,12 +24,9 @@ class ReportRepository @Inject constructor(
     private val reportApi: ReportApi,
 ) {
 
-    // 성장 리포트 — GET /api/v1/reports/growth (dev 실계약 대조 2026-07-25).
-    suspend fun getGrowthReport(): ApiResult<GrowthReport> {
-        val r = serverCall { reportApi.getGrowth() }
-        return if (r is ApiResult.Success) ApiResult.Success(r.data.toGrowthReport())
-        else ApiResult.Success(stubGrowth)
-    }
+    // 성장 리포트(B) — 티어/핵심역량(growthTotals) 대개편 전이라 서버 매핑 없이 stub.
+    // TODO(서버 growthTotals merge 후): GET /reports/growth 실 응답 → tier·별·4축 매핑으로 교체.
+    suspend fun getGrowthReport(): ApiResult<GrowthTierReport> = ApiResult.Success(stubGrowth)
 
     // 주간 비교 리포트 — GET /api/v1/reports/weekly-compare.
     suspend fun getWeeklyCompare(): ApiResult<WeeklyCompareReport> {
@@ -38,9 +35,16 @@ class ReportRepository @Inject constructor(
         else ApiResult.Success(stubWeekly)
     }
 
-    // 리포트 저장 (리포트 저장 시트) — POST /api/v1/reports. type: "growth" | "weekly_compare".
-    suspend fun saveReport(type: String): ApiResult<SaveReportResponse> =
-        serverCall { reportApi.saveReport(SaveReportRequest(type = type)) }
+    // 리포트 저장 (리포트 저장 시트) — POST /api/v1/reports.
+    // 2026-08-10 백엔드 변경으로 바디가 type → conversationId. 성장 리포트 전용이 됐고,
+    // 주간 비교는 별도 API(POST /reports/weekly-compare/{id}/save)로 갈라졌다.
+    // conversationId가 비면 서버가 400을 주므로 호출하지 않고 실패로 돌려준다(화면은 낙관적 표시 유지).
+    suspend fun saveReport(conversationId: String): ApiResult<SaveReportResponse> {
+        if (conversationId.isBlank()) {
+            return ApiResult.Error(code = null, message = "저장할 대화를 찾지 못했어요.")
+        }
+        return serverCall { reportApi.saveReport(SaveReportRequest(conversationId = conversationId)) }
+    }
 
     // 리포트 저장 해제 — DELETE /api/v1/reports/{reportId}.
     // 저장 응답에서 받은 서버 id로만 의미가 있고, 실패/데모면 조용히 무시(화면은 낙관적 표시 유지).
@@ -69,20 +73,18 @@ class ReportRepository @Inject constructor(
             is ApiResult.Exception -> r
         }
 
-    // stub 값 = UI CSS 목업 그대로 (사용자 결정)
-    private val stubGrowth = GrowthReport(
-        prevLevel = 1,
-        currentLevel = 2,
-        growthPercent = 18,
-        weekLabels = listOf("7월 4주", "8월 1주", "8월 2주", "8월 3주"),
-        categoryRanks = listOf(
-            CategoryRank(name = "여행", count = 10),
-            CategoryRank(name = "음식", count = 9),
-            CategoryRank(name = "일상", count = 7),
-            CategoryRank(name = "인사", count = 4),
+    // stub 값 = UI CSS 목업 그대로 (성장 티어 시스템 — growthTotals merge 전 기본값)
+    private val stubGrowth = GrowthTierReport(
+        tierName = "골드",
+        tierStars = 2,
+        nextStarsNeeded = 1,
+        nextTierName = "플래티넘",
+        competencies = listOf(
+            Competency(CompetencyAxis.KINDNESS, "친절한 태도", "친절한 태도", score = 300, gain = 70),
+            Competency(CompetencyAxis.INITIATIVE, "대화 주도", "대화 주도", score = 200, gain = 70),
+            Competency(CompetencyAxis.EMPATHY, "공감 표현", "공감 능력", score = 100, gain = 70),
+            Competency(CompetencyAxis.QUESTION_LINK, "질문 연결성", "질문 연결성", score = 300, gain = 70),
         ),
-        completedMissions = 26,
-        totalMissions = 100,
     )
 
     private val stubWeekly = WeeklyCompareReport(

@@ -1,5 +1,10 @@
 package com.talkqquest.app.feature.notification.ui
 
+import android.app.ActivityOptions
+import android.app.NotificationManager
+import android.content.Intent
+import android.provider.Settings
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -26,16 +31,21 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.ripple
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.LineBreak
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.talkqquest.app.R
 import com.talkqquest.app.core.designsystem.FitDesign
@@ -65,14 +75,54 @@ fun NotificationScreen(
     onWeeklyReportClick: () -> Unit = {}, // 주간 비교 리포트 알림의 화살표
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
-    NotificationScreen(uiState = uiState, onBack = onBack, onWeeklyReportClick = onWeeklyReportClick)
+    val context = LocalContext.current
+    val notificationManager = remember(context) {
+        context.getSystemService(NotificationManager::class.java)
+    }
+    var notificationsEnabled by remember {
+        mutableStateOf(notificationManager.areNotificationsEnabled())
+    }
+    // 시스템 설정에서 알림을 켜고 돌아오면 안내 카드가 즉시 사라지도록 다시 확인한다.
+    LifecycleEventEffect(Lifecycle.Event.ON_RESUME) {
+        notificationsEnabled = notificationManager.areNotificationsEnabled()
+    }
+    val closeNotifications: () -> Unit = {
+        viewModel.readVisibleNotifications()
+        onBack()
+    }
+
+    BackHandler(onBack = closeNotifications)
+    NotificationScreen(
+        uiState = uiState,
+        onBack = closeNotifications,
+        showNotificationSettingsBanner = !notificationsEnabled,
+        onNotificationSettingsClick = {
+            val intent = Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS).apply {
+                putExtra(Settings.EXTRA_APP_PACKAGE, context.packageName)
+            }
+            val transition = ActivityOptions.makeCustomAnimation(
+                context,
+                R.anim.notification_slide_in_right,
+                R.anim.notification_slide_out_left,
+            )
+            context.startActivity(intent, transition.toBundle())
+        },
+        onNotificationClick = { item ->
+            viewModel.readNotification(item.id)
+            if (item.hasLink) {
+                onWeeklyReportClick()
+            }
+        },
+    )
 }
 
 @Composable
 private fun NotificationScreen(
     uiState: NotificationUiState,
     onBack: () -> Unit = {},
-    onWeeklyReportClick: () -> Unit = {},
+    showNotificationSettingsBanner: Boolean = true,
+    onNotificationSettingsClick: () -> Unit = {},
+    onNotificationClick: (NotificationUiItem) -> Unit = {},
 ) = FitDesign { // 다른 화면들과 동일: 작은 화면에선 디자인(393x852) 통째 축소
     Column(
         modifier = Modifier
@@ -122,9 +172,11 @@ private fun NotificationScreen(
                     .padding(start = 16.dp, end = 13.dp), // CSS left 16 · 폭 364 → 오른쪽 13 (비대칭)
                 verticalArrangement = Arrangement.spacedBy(16.dp), // CSS gap 16
             ) {
-                item { NotificationSettingBanner() }
+                if (showNotificationSettingsBanner) {
+                    item { NotificationSettingBanner(onClick = onNotificationSettingsClick) }
+                }
                 items(uiState.items, key = { it.id }) { item ->
-                    NotificationCard(item, onLinkClick = onWeeklyReportClick)
+                    NotificationCard(item, onClick = { onNotificationClick(item) })
                 }
                 if (uiState.items.isEmpty()) {
                     // 빈 상태 — 시안에 빈 화면 정의가 없어 기존 문구 유지 (디자인 나오면 교체)
@@ -143,15 +195,15 @@ private fun NotificationScreen(
 }
 
 // 알림 설정 유도 배너 (CSS Frame 427321602): 364x68 · Gray100 · r16 · padding 12/6/12/16 · 오른끝 화살표.
-// TODO(연결): 탭 시 이동할 알림 설정 화면이 시안에 아직 없음 — 화면 나오면 onClick 연결.
 @Composable
-private fun NotificationSettingBanner() {
+private fun NotificationSettingBanner(onClick: () -> Unit = {}) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .height(68.dp)
             .clip(RoundedCornerShape(16.dp))
             .background(Gray100)
+            .clickable(onClick = onClick)
             .padding(start = 16.dp, top = 12.dp, bottom = 12.dp, end = 6.dp),
         verticalAlignment = Alignment.CenterVertically, // CSS Frame 427321602 align-items: center
     ) {
@@ -207,7 +259,7 @@ private fun NotificationSettingBanner() {
 //   치수 주의: 그 프레임은 텍스트 열이 46인데 화살표 자리는 44로 적혀 있어 합이 안 맞는다
 //   (46 = 20 + 2 + 24 여야 카드 78이 성립). 화살표는 줄 높이를 늘리지 않고 옆에 얹는다.
 @Composable
-private fun NotificationCard(item: NotificationUiItem, onLinkClick: () -> Unit = {}) {
+private fun NotificationCard(item: NotificationUiItem, onClick: () -> Unit = {}) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -217,7 +269,8 @@ private fun NotificationCard(item: NotificationUiItem, onLinkClick: () -> Unit =
             .heightIn(min = 78.dp)
             .clip(RoundedCornerShape(24.dp))
             .background(White)
-            .then(if (item.hasLink) Modifier.clickable(onClick = onLinkClick) else Modifier)
+            // 홈의 "다른 미션 보기"와 같은 기본 눌림 애니메이션을 사용한다.
+            .clickable(onClick = onClick)
             .padding(16.dp),
         verticalAlignment = Alignment.Top,
     ) {

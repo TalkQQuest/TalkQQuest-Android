@@ -1,4 +1,4 @@
-package com.talkqquest.app.feature.profile.data
+﻿package com.talkqquest.app.feature.profile.data
 
 import com.talkqquest.app.core.network.ApiResult
 import com.talkqquest.app.core.network.serverCall
@@ -13,6 +13,9 @@ import com.talkqquest.app.feature.home.data.model.UserMe
 import com.talkqquest.app.feature.home.data.model.UserSettings
 import com.talkqquest.app.feature.home.data.model.UserSettingsUpdateRequest
 import com.talkqquest.app.feature.home.data.model.UserUpdateRequest
+import com.talkqquest.app.feature.notification.data.NotificationApi
+import com.talkqquest.app.feature.notification.data.model.NotificationSettings
+import com.talkqquest.app.feature.notification.data.model.NotificationSettingsUpdateRequest
 import okhttp3.MultipartBody
 import retrofit2.HttpException
 import java.io.IOException
@@ -20,6 +23,7 @@ import javax.inject.Inject
 
 class ProfileRepository @Inject constructor(
     private val homeApi: HomeApi,
+    private val notificationApi: NotificationApi,
 ) {
     suspend fun getMyProfile(): ApiResult<UserMe> =
         serverCall { homeApi.getMe() }
@@ -37,13 +41,17 @@ class ProfileRepository @Inject constructor(
         serverCall { homeApi.getPrivacyPolicy() }
 
     suspend fun getUserSettings(): ApiResult<UserSettings> =
-        serverCall { homeApi.getUserSettings() }
+        when (val result = serverCall { notificationApi.getSettings() }) {
+            is ApiResult.Success -> ApiResult.Success(result.data.toUserSettings())
+            is ApiResult.Error -> result
+            is ApiResult.Exception -> result
+        }
 
     suspend fun uploadProfileImage(image: MultipartBody.Part): ApiResult<ProfileImageUploadResponse> =
         serverCall { homeApi.uploadProfileImage(image) }
     suspend fun updateUserSettings(request: UserSettingsUpdateRequest): ApiResult<Unit> =
         try {
-            val response = homeApi.updateUserSettings(request)
+            val response = notificationApi.updateSettings(request.toNotificationSettingsUpdateRequest())
             if (response.success) {
                 ApiResult.Success(Unit)
             } else {
@@ -105,3 +113,19 @@ class ProfileRepository @Inject constructor(
             ApiResult.Exception(e)
         }
 }
+private fun NotificationSettings.toUserSettings() = UserSettings(
+    missionReminder = missionReminder,
+    missionReminderTime = missionReminderTime,
+    communityApproved = communityApproved,
+    reportReady = reportReady,
+    marketing = marketing,
+)
+private fun UserSettingsUpdateRequest.toNotificationSettingsUpdateRequest() =
+    NotificationSettingsUpdateRequest(
+        missionReminder = missionReminder,
+        missionReminderTime = missionReminderTime,
+        communityApproved = communityApproved,
+        reportReady = reportReady,
+        marketing = marketing,
+    )
+

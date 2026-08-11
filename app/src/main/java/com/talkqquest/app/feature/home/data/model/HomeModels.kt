@@ -123,6 +123,7 @@ data class ProfileImageUploadResponse(
 @Serializable
 data class UserSettings(
     val missionReminder: Boolean = false,
+    val missionReminderTime: String = "09:00",
     val communityApproved: Boolean = false,
     val reportReady: Boolean = false,
     val marketing: Boolean = false,
@@ -130,6 +131,7 @@ data class UserSettings(
 @Serializable
 data class UserSettingsUpdateRequest(
     val missionReminder: Boolean? = null,
+    val missionReminderTime: String? = null,
     val communityApproved: Boolean? = null,
     val reportReady: Boolean? = null,
     val marketing: Boolean? = null,

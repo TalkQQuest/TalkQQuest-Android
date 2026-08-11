@@ -26,6 +26,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -35,6 +36,7 @@ import androidx.compose.material3.ripple
 import androidx.compose.material3.Text
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.CubicBezierEasing
@@ -51,6 +53,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -58,6 +61,7 @@ import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.lerp
@@ -243,6 +247,8 @@ private fun HomeContent(
 ) {
     // 검증용(임시): 상단 벨 탭으로 주간 비교 리포트 도착 모달 토글. 실제 트리거는 summary.hasNewWeeklyReport.
     var showWeekly by remember { mutableStateOf(summary.hasNewWeeklyReport) }
+    var missionHasLongText by remember { mutableStateOf(false) }
+    val scrollState = rememberScrollState()
     // 실전 티어 ⓘ 탭 → 티어 승급 안내 시트(성장 리포트와 동일 공용 시트).
     var showTierHelp by remember { mutableStateOf(false) }
     // 콘텐츠가 떠 있는 하단 네비(118 몫) 위로 다 들어가게 "필요한 만큼만" 균등 축소.
@@ -252,22 +258,24 @@ private fun HomeContent(
     BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
         val availPx = constraints.maxHeight - with(LocalDensity.current) { 118.dp.roundToPx() }
         var naturalPx by remember { mutableIntStateOf(0) }
-        val scale = if (naturalPx > 0 && naturalPx > availPx) {
+        val scale = if (!missionHasLongText && naturalPx > 0 && naturalPx > availPx) {
             (availPx.toFloat() / naturalPx).coerceIn(0.8f, 1f) // 하한 0.8 (과축소 방지)
         } else 1f
         Box(
             modifier = Modifier
-                .fillMaxWidth()
-                .graphicsLayer {
-                    scaleX = scale
-                    scaleY = scale
-                    transformOrigin = TransformOrigin(0.5f, 0f) // 위쪽 기준(상단 고정, 아래로만 당겨 올림)
-                }
-                .onGloballyPositioned { naturalPx = it.size.height }, // graphicsLayer는 레이아웃 크기 불변 → 안정
+                .fillMaxSize()
+                .padding(bottom = 118.dp)
+                .verticalScroll(scrollState)
         ) {
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
+                    .graphicsLayer {
+                        scaleX = scale
+                        scaleY = scale
+                        transformOrigin = TransformOrigin(0.5f, 0f) // 위쪽 기준(상단 고정, 아래로만 당겨 올림)
+                    }
+                    .onGloballyPositioned { naturalPx = it.size.height } // graphicsLayer는 레이아웃 크기 불변 → 안정
                     .statusBarsPadding()
                     // CSS: 카드 묶음 Frame 430 left 16, 폭 362 → 우측 여백 15 (좌우 비대칭)
                     .padding(start = 16.dp, end = 15.dp),
@@ -289,7 +297,13 @@ private fun HomeContent(
                 )
                 Spacer(Modifier.height(12.dp)) // CSS 카드 스택 gap 12
                 summary.todayMission?.let { mission ->
-                    HomeMissionCard(mission = mission, onStartClick = { onStartMissionClick(mission.id) })
+                    HomeMissionCard(
+                        mission = mission,
+                        onStartClick = { onStartMissionClick(mission.id) },
+                        onTextLineCountChanged = { titleLines, descriptionLines ->
+                            missionHasLongText = titleLines >= 3 || descriptionLines >= 3
+                        },
+                    )
                 }
                 Spacer(Modifier.height(12.dp)) // CSS 카드 스택 gap 12
                 OtherMissionsCard(onClick = onOtherMissionsClick)
@@ -338,35 +352,89 @@ private fun String.keepWordsIntact(): String =
 private fun String.glueShortWords(): String =
     replace(Regex("(?<=(^|\\s)\\S) "), " ")
 
-// 한 줄에 담기더라도 제목이 영역 폭의 절반을 넘으면 2줄로 나눠 보여줌(디자인 목업의 2줄 형태).
-// 시스템 줄바꿈(Balanced)은 줄 수를 늘리지 않아서 이 규칙은 직접 처리:
-// 그리기 전에 폭을 재보고 → 절반 초과·한 줄이면 → 중간을 넘는 어절까지 첫 줄에 두고 그 다음 어절부터 둘째 줄로.
+// 제목은 먼저 필요한 최소 줄 수를 구한 뒤, 그 줄 수 안에서 실제 글자 폭이 가장 균등해지는
+// 어절 경계를 선택한다. 제목이 한 줄에 들어가면 디자인처럼 한 줄을 그대로 유지한다.
 private const val TITLE_MAX_WIDTH_DP = 256 // 디자인 Frame313 제목 영역 폭
-private const val TITLE_SPLIT_RATIO = 0.5f // 이 비율(폭의 절반)을 넘으면 2줄로
 
 @Composable
-private fun MissionTitleText(title: String, modifier: Modifier = Modifier) {
+private fun MissionTitleText(
+    title: String,
+    modifier: Modifier = Modifier,
+    onLineCountChanged: (Int) -> Unit = {},
+) {
     val style = TqType.TitleL.figma().copy(lineBreak = LineBreak.Heading)
     val measurer = rememberTextMeasurer()
     val density = LocalDensity.current
     val displayTitle = remember(title) {
-        val glued = title.glueShortWords()
         val maxWidthPx = with(density) { TITLE_MAX_WIDTH_DP.dp.toPx() }
-        val oneLineWidth = measurer.measure(AnnotatedString(glued.keepWordsIntact()), style = style).size.width
-        val needsSplit = oneLineWidth <= maxWidthPx && oneLineWidth > maxWidthPx * TITLE_SPLIT_RATIO
-        if (needsSplit) {
-            // 중간 지점 이후에 나오는 첫 일반 공백(NBSP 제외)에서 끊음
-            // → 중간에 걸친 어절은 첫 줄에 남고, 그 다음 어절부터 둘째 줄 시작.
-            val middle = glued.length / 2
-            val spaces = glued.indices.filter { glued[it] == ' ' }
-            val breakAt = spaces.firstOrNull { it >= middle } ?: spaces.lastOrNull()
-            if (breakAt != null) {
-                glued.replaceRange(breakAt, breakAt + 1, "\n").keepWordsIntact()
-            } else {
-                glued.keepWordsIntact()
+        fun width(text: String): Int =
+            measurer.measure(AnnotatedString(text.keepWordsIntact()), style = style).size.width
+
+        val rawWords = title.trim().split(Regex("\\s+")).filter(String::isNotEmpty)
+        val words = buildList {
+            var index = 0
+            while (index < rawWords.size) {
+                val word = rawWords[index]
+                if (word.length == 1 && index + 1 < rawWords.size) {
+                    add("$word ${rawWords[index + 1]}")
+                    index += 2
+                } else {
+                    add(word)
+                    index++
+                }
             }
+        }
+        val oneLine = words.joinToString(" ")
+        if (width(oneLine) <= maxWidthPx || words.size <= 1) {
+            oneLine
         } else {
-            glued.keepWordsIntact()
+            // Greedy packing으로 모든 어절을 담을 수 있는 최소 줄 수를 구한다.
+            val minimumLines = buildList {
+                var current = ""
+                words.forEach { word ->
+                    val candidate = if (current.isEmpty()) word else "$current $word"
+                    if (current.isNotEmpty() && width(candidate) > maxWidthPx) {
+                        add(current)
+                        current = word
+                    } else {
+                        current = candidate
+                    }
+                }
+                if (current.isNotEmpty()) add(current)
+            }
+            val lineCount = minimumLines.size
+            val targetWidth = minimumLines.sumOf { width(it) }.toFloat() / lineCount
+            data class Partition(val lines: List<String>, val score: Float)
+            val memo = mutableMapOf<Pair<Int, Int>, Partition?>()
+            fun choose(start: Int, linesLeft: Int): Partition? {
+                if (start >= words.size) return null
+                if (linesLeft == 1) {
+                    val last = words.subList(start, words.size).joinToString(" ")
+                    val lastWidth = width(last)
+                    return if (lastWidth <= maxWidthPx || start == words.lastIndex) {
+                        Partition(listOf(last), abs(lastWidth - targetWidth))
+                    } else null
+                }
+                val key = start to linesLeft
+                memo[key]?.let { return it }
+                var current = ""
+                var best: Partition? = null
+                for (end in start until words.size - (linesLeft - 1)) {
+                    current = if (current.isEmpty()) words[end] else "$current ${words[end]}"
+                    val currentWidth = width(current)
+                    if (currentWidth > maxWidthPx && end > start) break
+                    val tail = choose(end + 1, linesLeft - 1) ?: continue
+                    val candidate = Partition(
+                        lines = listOf(current) + tail.lines,
+                        score = abs(currentWidth - targetWidth) + tail.score,
+                    )
+                    if (best == null || candidate.score < best!!.score) best = candidate
+                }
+                memo[key] = best
+                return best
+            }
+            val chosen = choose(0, lineCount)?.lines ?: minimumLines
+            chosen.joinToString("\n")
         }
     }
     Text(
@@ -374,6 +442,7 @@ private fun MissionTitleText(title: String, modifier: Modifier = Modifier) {
         style = style,
         color = Gray900,
         modifier = modifier.widthIn(max = TITLE_MAX_WIDTH_DP.dp),
+        onTextLayout = { onLineCountChanged(it.lineCount) },
     )
 }
 
@@ -504,12 +573,22 @@ private fun HomeLevelCard(
     var levelTapRunning by remember { mutableStateOf(false) }
     val levelTapScope = rememberCoroutineScope()
     var lastXpAnimationTrigger by rememberSaveable { mutableIntStateOf(0) }
-    var tierGrowthPhase by rememberSaveable { mutableIntStateOf(0) }
+    // 티어 전환/광택 단계는 화면 복귀 때 복원하면 안 되는 일회성 애니메이션 상태다.
+    // 저장 상태로 두면 다른 화면으로 이동 중의 phase=1이 복원되어 게이지보다 먼저 재생된다.
+    var tierTextTrigger by remember { mutableIntStateOf(0) }
+    var tierVisualPhase by remember { mutableIntStateOf(0) }
+    val tierVisualScope = rememberCoroutineScope()
     val xpFillEasing = CubicBezierEasing(0.12f, 0.78f, 0.22f, 1f)
     suspend fun playTierGrowthSequence() {
-        tierGrowthPhase = 1 // 뱃지 + 별 동시
+        // animateTo가 마지막 값을 반영한 뒤 한 프레임을 실제로 그린 다음 티어 전환을 시작한다.
+        // 그래야 게이지가 끝까지 찬 화면을 건너뛰고 Gold가 먼저 보이는 일이 없다.
+        withFrameNanos { }
+        tierTextTrigger++ // 게이지 완료 후 티어명 전환 시작
+    }
+    suspend fun playTierVisualSequence() {
+        tierVisualPhase = 1 // 광택 시작 시 뱃지 + 별 동시
         delay(720)
-        tierGrowthPhase = 0
+        tierVisualPhase = 0
     }
     LaunchedEffect(level, currentXp, xpAnimationTrigger) {
         if (xpAnimationTrigger == 0 && lastXpAnimationTrigger == 0) {
@@ -646,7 +725,13 @@ private fun HomeLevelCard(
         HomeTierRow(
             tierName = tierName,
             tierStars = tierStars,
-            tierGrowthPhase = tierGrowthPhase,
+            tierTextTrigger = tierTextTrigger,
+            tierVisualPhase = tierVisualPhase,
+            onTierVisualAnimation = {
+                if (tierVisualPhase == 0) {
+                    tierVisualScope.launch { playTierVisualSequence() }
+                }
+            },
             onInfoClick = onTierInfoClick,
         )
     }
@@ -658,7 +743,9 @@ private fun HomeLevelCard(
 private fun HomeTierRow(
     tierName: String,
     tierStars: Int,
-    tierGrowthPhase: Int = 0,
+    tierTextTrigger: Int = 0,
+    tierVisualPhase: Int = 0,
+    onTierVisualAnimation: () -> Unit = {},
     onInfoClick: () -> Unit = {},
 ) {
     val tierBadgeShineProgress = remember { Animatable(0f) }
@@ -666,6 +753,21 @@ private fun HomeTierRow(
     val tierBadgeScope = rememberCoroutineScope()
     val tierBadgeOuterShinePath = remember { Path() }
     val tierBadgeInnerShinePath = remember { Path() }
+    val tierEnglish = tierEnglishName(tierName)
+    val tierPalette = tierTextPalette(tierName)
+    // 브론즈·실버 리소스는 투명 외곽 여백이 커서 같은 40dp로 그리면 글자와 멀어 보인다.
+    // 이미지 자체는 건드리지 않고 시각 영역만 확대해 두 뱃지의 외곽 여백을 맞춘다.
+    val tierBadgeScale = if (tierName == "브론즈" || tierName == "실버") 1.14f else 1f
+    // 확대 후에도 남는 투명 외곽만큼 티어명·별 묶음을 왼쪽으로 당겨 체감 간격을 맞춘다.
+    val tierBadgeContentOffset = if (tierName == "브론즈" || tierName == "실버") (-6).dp else 0.dp
+    // 날개가 없는 뱃지의 왼쪽 투명 여백 때문에 전체 그룹이 안쪽으로 보이지 않게 기준선에 맞춘다.
+    val tierBadgeGroupOffset = if (tierName == "브론즈" || tierName == "실버") (-6).dp else 0.dp
+    var tierTextPhase by remember { mutableIntStateOf(0) } // 0=한글, 1=삭제, 2=입력, 3=광택, 4=크로스페이드
+    var tierTextCharCount by remember { mutableIntStateOf(tierName.length) }
+    var tierTextRunning by remember { mutableStateOf(false) }
+    val tierTextShineProgress = remember { Animatable(0f) }
+    val tierTextFadeProgress = remember { Animatable(0f) }
+    val tierTextScope = rememberCoroutineScope()
 
     suspend fun playBadgeShine() {
         tierBadgeShineVisible = true
@@ -683,8 +785,54 @@ private fun HomeTierRow(
         }
     }
 
-    LaunchedEffect(tierGrowthPhase) {
-        if (tierGrowthPhase == 1) playBadgeShine()
+    suspend fun playTierTextAnimation() {
+        if (tierEnglish == null || tierTextRunning) return
+        tierTextRunning = true
+        try {
+            tierTextShineProgress.snapTo(0f)
+            tierTextFadeProgress.snapTo(0f)
+            tierTextPhase = 1
+            for (count in (tierName.length - 1) downTo 0) {
+                tierTextCharCount = count
+                delay(110)
+            }
+            tierTextPhase = 2
+            for (count in 1..tierEnglish.length) {
+                tierTextCharCount = count
+                delay(110)
+            }
+            delay(500)
+            tierTextPhase = 3
+            // 글자 광택 시작과 동시에 뱃지 광선·별 하이라이트를 함께 시작한다.
+            onTierVisualAnimation()
+            tierTextShineProgress.animateTo(
+                targetValue = 1f,
+                animationSpec = tween(650, easing = LinearOutSlowInEasing),
+            )
+            tierTextPhase = 4
+            tierTextFadeProgress.snapTo(0f)
+            tierTextFadeProgress.animateTo(
+                targetValue = 1f,
+                animationSpec = tween(400, easing = LinearOutSlowInEasing),
+            )
+            tierTextPhase = 0
+            tierTextCharCount = tierName.length
+            tierTextShineProgress.snapTo(0f)
+            tierTextFadeProgress.snapTo(0f)
+        } finally {
+            tierTextRunning = false
+        }
+    }
+
+    LaunchedEffect(tierTextTrigger) {
+        if (tierTextTrigger > 0) {
+            // 게이지 완료 기준에서는 텍스트 전환부터 시작한다. 뱃지·별은 광택 시점에 별도 트리거된다.
+            tierTextScope.launch { playTierTextAnimation() }
+        }
+    }
+
+    LaunchedEffect(tierVisualPhase) {
+        if (tierVisualPhase == 1) launch { playBadgeShine() }
     }
 
     Row(
@@ -694,6 +842,7 @@ private fun HomeTierRow(
     ) {
         // 좌측 그룹 (Frame 427321762, gap 7)
         Row(
+            modifier = Modifier.offset(x = tierBadgeGroupOffset),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(7.dp),
         ) {
@@ -705,9 +854,7 @@ private fun HomeTierRow(
                         interactionSource = remember { MutableInteractionSource() },
                         indication = null,
                         onClick = {
-                            if (!tierBadgeShineVisible) {
-                                tierBadgeScope.launch { playBadgeShine() }
-                            }
+                            tierTextScope.launch { playTierTextAnimation() }
                         },
                     ),
                 contentAlignment = Alignment.Center,
@@ -716,7 +863,10 @@ private fun HomeTierRow(
                     painter = painterResource(tierEmblemRes(tierName)),
                     contentDescription = "$tierName 티어",
                     contentScale = ContentScale.Fit,
-                    modifier = Modifier.size(40.dp),
+                    modifier = Modifier.size(40.dp).graphicsLayer {
+                        scaleX = tierBadgeScale
+                        scaleY = tierBadgeScale
+                    },
                 )
                 if (tierBadgeShineVisible) {
                     Image(
@@ -726,6 +876,10 @@ private fun HomeTierRow(
                         colorFilter = ColorFilter.tint(White.copy(alpha = 0.12f)),
                         modifier = Modifier
                             .size(40.dp)
+                            .graphicsLayer {
+                                scaleX = tierBadgeScale
+                                scaleY = tierBadgeScale
+                            }
                             .drawWithContent {
                                 val progress = tierBadgeShineProgress.value
                                 val spread = 1f - abs((progress * 2f) - 1f)
@@ -756,6 +910,10 @@ private fun HomeTierRow(
                         colorFilter = ColorFilter.tint(White.copy(alpha = 0.2f)),
                         modifier = Modifier
                             .size(40.dp)
+                            .graphicsLayer {
+                                scaleX = tierBadgeScale
+                                scaleY = tierBadgeScale
+                            }
                             .drawWithContent {
                                 val progress = tierBadgeShineProgress.value
                                 val spread = 1f - abs((progress * 2f) - 1f)
@@ -783,14 +941,86 @@ private fun HomeTierRow(
             }
             // 티어명 + 별 (Frame 427321761, gap 4)
             Row(
+                modifier = Modifier.offset(x = tierBadgeContentOffset),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(4.dp),
             ) {
-                Text(text = tierName, style = TqType.BodyL.figma().copy(fontWeight = FontWeight.Medium), color = Gray600)
+                if (tierEnglish != null) {
+                    val titleStyle = TqType.BodyL.figma().copy(fontWeight = FontWeight.Medium)
+                    val titleMeasurer = rememberTextMeasurer()
+                    val density = LocalDensity.current
+                    val koreanText = tierName.take(tierTextCharCount)
+                    val englishText = tierEnglish.take(tierTextCharCount)
+                    val displayedText = if (tierTextPhase <= 1) koreanText else englishText
+                    fun textWidth(text: String): Int =
+                        titleMeasurer.measure(AnnotatedString(text), style = titleStyle).size.width
+                    val targetWidthDp = with(density) {
+                        (if (tierTextPhase == 4) textWidth(tierName) else textWidth(displayedText)).toDp()
+                    }
+                    val animatedWidth by animateDpAsState(
+                        targetValue = targetWidthDp,
+                        animationSpec = tween(
+                            durationMillis = if (tierTextPhase == 4) 400 else 90,
+                            easing = FastOutSlowInEasing,
+                        ),
+                        label = "tierTextWidth",
+                    )
+                    Box(
+                        modifier = Modifier
+                            // 한글 티어명의 왼쪽 시작점을 고정하고, 영문이 길어지는 만큼만
+                            // 오른쪽 폭을 늘려 별 묶음을 밀어낸다. 크로스페이드 때는 원래 폭으로 복귀.
+                            .width(animatedWidth)
+                            .height(24.dp)
+                            .clickable(
+                                interactionSource = remember { MutableInteractionSource() },
+                                indication = null,
+                                onClick = { tierTextScope.launch { playTierTextAnimation() } },
+                            ),
+                        contentAlignment = Alignment.CenterStart,
+                    ) {
+                        if (tierTextPhase == 4) {
+                            Text(
+                                text = tierEnglish,
+                                style = titleStyle.copy(brush = tierPalette.brush(tierTextShineProgress.value)),
+                                softWrap = false,
+                                maxLines = 1,
+                                modifier = Modifier
+                                    .wrapContentWidth(Alignment.Start, unbounded = true)
+                                    .graphicsLayer { alpha = 1f - tierTextFadeProgress.value },
+                            )
+                            Text(
+                                text = tierName,
+                                style = titleStyle,
+                                color = Gray600,
+                                softWrap = false,
+                                maxLines = 1,
+                                modifier = Modifier
+                                    .wrapContentWidth(Alignment.Start, unbounded = true)
+                                    .graphicsLayer { alpha = tierTextFadeProgress.value },
+                            )
+                        } else {
+                            val isEnglish = tierTextPhase >= 2
+                            Text(
+                                text = displayedText,
+                                style = if (isEnglish) {
+                                    titleStyle.copy(brush = tierPalette.brush(tierTextShineProgress.value))
+                                } else titleStyle,
+                                color = if (isEnglish) Color.Unspecified else Gray600,
+                                softWrap = false,
+                                maxLines = 1,
+                                modifier = Modifier
+                                    .wrapContentWidth(Alignment.Start, unbounded = true),
+                            )
+                        }
+                    }
+                } else {
+                    Text(text = tierName, style = TqType.BodyL.figma().copy(fontWeight = FontWeight.Medium), color = Gray600)
+                }
                 // 별 3개 (Frame 427321742, gap 4) — 채움 #F9AC17 / 빈칸 Gray300
                 TierProgressStars(
                     tierStars = tierStars,
-                    growthPhase = tierGrowthPhase,
+                    growthPhase = tierVisualPhase,
+                    onClick = { tierTextScope.launch { playTierTextAnimation() } },
                 )
             }
         }
@@ -887,7 +1117,11 @@ private fun HomeTierRow(
 }
 
 @Composable
-private fun TierProgressStars(tierStars: Int, growthPhase: Int = 0) {
+private fun TierProgressStars(
+    tierStars: Int,
+    growthPhase: Int = 0,
+    onClick: () -> Unit = {},
+) {
     val progress = remember { Animatable(0f) }
     var animationRunning by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
@@ -919,7 +1153,7 @@ private fun TierProgressStars(tierStars: Int, growthPhase: Int = 0) {
                 interactionSource = remember { MutableInteractionSource() },
                 indication = null,
                 onClick = {
-                    scope.launch { playStarSequence() }
+                    onClick()
                 },
             ),
         horizontalArrangement = Arrangement.spacedBy(4.dp),
@@ -969,13 +1203,51 @@ private fun tierEmblemRes(tierName: String): Int = when (tierName) {
     else -> R.drawable.img_tier_gold
 }
 
+private data class TierTextPalette(val dark: Color, val base: Color, val highlight: Color)
+
+private fun tierEnglishName(tierName: String): String? = when (tierName) {
+    "브론즈" -> "Bronze"
+    "실버" -> "Silver"
+    "골드" -> "Gold"
+    "플래티넘", "플레티넘" -> "Platinum"
+    "다이아", "다이아몬드" -> "Diamond"
+    "마스터" -> "Master"
+    else -> null
+}
+
+// 각 뱃지의 어두운 외곽·기본 금속·밝은 하이라이트 계열을 글자에 그대로 대응시킨다.
+private fun tierTextPalette(tierName: String): TierTextPalette = when (tierName) {
+    "브론즈" -> TierTextPalette(Color(0xFF7A431F), Color(0xFFB87333), Color(0xFFFFD3A8))
+    "실버" -> TierTextPalette(Color(0xFF64748B), Color(0xFFC0C7D1), Color(0xFFF8FAFC))
+    "골드" -> TierTextPalette(Color(0xFF9A6700), Color(0xFFD4A72C), Color(0xFFFFE69A))
+    "플래티넘", "플레티넘" -> TierTextPalette(Color(0xFF4C3F9B), Color(0xFF8B7FF0), Color(0xFFDCD8FF))
+    "다이아", "다이아몬드" -> TierTextPalette(Color(0xFF087E9B), Color(0xFF45C4E8), Color(0xFFD6F7FF))
+    "마스터" -> TierTextPalette(Color(0xFF5B2B8A), Color(0xFFA05CDA), Color(0xFFF0D7FF))
+    else -> TierTextPalette(Gray700, Gray600, Gray400)
+}
+
+private fun TierTextPalette.brush(progress: Float): Brush {
+    val shift = (progress * 2f) - 1f
+    return Brush.linearGradient(
+        colors = listOf(dark, base, highlight, base, dark),
+        start = Offset(shift * 180f, 0f),
+        end = Offset((shift * 180f) + 180f, 0f),
+    )
+}
+
 // 실전 티어 별 채움색 (YELLOW_star, CSS #F9AC17) — 디자인 토큰 아님, 로컬.
 private val StarYellow = Color(0xFFF9AC17)
 private val StarHighlight = Color(0xFFFFE7A3)
 
 // 오늘의 미션 카드.
 @Composable
-private fun HomeMissionCard(mission: TodayMission, onStartClick: () -> Unit = {}) {
+private fun HomeMissionCard(
+    mission: TodayMission,
+    onStartClick: () -> Unit = {},
+    onTextLineCountChanged: (titleLines: Int, descriptionLines: Int) -> Unit = { _, _ -> },
+) {
+    var titleLineCount by remember(mission.title) { mutableIntStateOf(1) }
+    var descriptionLineCount by remember(mission.description) { mutableIntStateOf(0) }
     val targetImpactProgress = remember { Animatable(0f) }
     var targetImpactRunning by remember { mutableStateOf(false) }
     val targetImpactScope = rememberCoroutineScope()
@@ -993,6 +1265,42 @@ private fun HomeMissionCard(mission: TodayMission, onStartClick: () -> Unit = {}
         ),
         label = "recommendationPressScale",
     )
+    val missionHeaderInteraction = remember { MutableInteractionSource() }
+    val missionHeaderPressed by missionHeaderInteraction.collectIsPressedAsState()
+    var missionHeaderClickAnimating by remember { mutableStateOf(false) }
+    val missionHeaderScope = rememberCoroutineScope()
+    val missionHeaderScale by animateFloatAsState(
+        targetValue = if (missionHeaderPressed || missionHeaderClickAnimating) 0.94f else 1f,
+        animationSpec = tween(
+            durationMillis = if (missionHeaderPressed || missionHeaderClickAnimating) 90 else 140,
+            easing = FastOutSlowInEasing,
+        ),
+        label = "missionHeaderPressScale",
+    )
+    val titleInteraction = remember { MutableInteractionSource() }
+    val titlePressed by titleInteraction.collectIsPressedAsState()
+    var titleClickAnimating by remember { mutableStateOf(false) }
+    val titleScope = rememberCoroutineScope()
+    val titleScale by animateFloatAsState(
+        targetValue = if (titlePressed || titleClickAnimating) 0.94f else 1f,
+        animationSpec = tween(
+            durationMillis = if (titlePressed || titleClickAnimating) 90 else 140,
+            easing = FastOutSlowInEasing,
+        ),
+        label = "missionTitlePressScale",
+    )
+    val descriptionInteraction = remember { MutableInteractionSource() }
+    val descriptionPressed by descriptionInteraction.collectIsPressedAsState()
+    var descriptionClickAnimating by remember { mutableStateOf(false) }
+    val descriptionScope = rememberCoroutineScope()
+    val descriptionScale by animateFloatAsState(
+        targetValue = if (descriptionPressed || descriptionClickAnimating) 0.94f else 1f,
+        animationSpec = tween(
+            durationMillis = if (descriptionPressed || descriptionClickAnimating) 90 else 140,
+            easing = FastOutSlowInEasing,
+        ),
+        label = "missionDescriptionPressScale",
+    )
     HomeCard(
         modifier = Modifier.fillMaxWidth(),
         contentPadding = PaddingValues(horizontal = 16.dp, vertical = 20.dp),
@@ -1003,7 +1311,29 @@ private fun HomeMissionCard(mission: TodayMission, onStartClick: () -> Unit = {}
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Text(text = "오늘의 미션", style = TqType.BodyM.figma(), color = Gray800)
+            Text(
+                text = "오늘의 미션",
+                style = TqType.BodyM.figma(),
+                color = Gray800,
+                modifier = Modifier
+                    .graphicsLayer {
+                        scaleX = missionHeaderScale
+                        scaleY = missionHeaderScale
+                    }
+                    .clickable(
+                        interactionSource = missionHeaderInteraction,
+                        indication = null,
+                        onClick = {
+                            if (!missionHeaderClickAnimating) {
+                                missionHeaderClickAnimating = true
+                                missionHeaderScope.launch {
+                                    delay(100)
+                                    missionHeaderClickAnimating = false
+                                }
+                            }
+                        },
+                    ),
+            )
             // 추천 뱃지: 컴포넌트.css 그대로 (고정 40x22, Primary100, radius 4, 텍스트 중앙)
             Box(
                 modifier = Modifier
@@ -1088,15 +1418,67 @@ private fun HomeMissionCard(mission: TodayMission, onStartClick: () -> Unit = {}
                 modifier = Modifier.weight(1f),
                 verticalArrangement = Arrangement.spacedBy(4.dp),
             ) {
-                // 제목·설명 영역 256(디자인 Frame313) 상한. 줄바꿈 규칙은 MissionTitleText 참고:
-                // 어절 중간 끊김 방지 + 줄 길이 균형 + 한 글자 어절 고아 방지 + 반 넘는 한 줄은 2줄로.
-                MissionTitleText(title = mission.title)
+                // 제목·설명 영역 256(디자인 Frame313) 상한. 제목은 필요한 최소 줄 수 안에서
+                // 어절 경계를 균등하게 나누고, 설명은 AI 피드백 상세와 같은 Phrase 줄바꿈을 쓴다.
+                MissionTitleText(
+                    title = mission.title,
+                    modifier = Modifier
+                        .graphicsLayer {
+                            scaleX = titleScale
+                            scaleY = titleScale
+                        }
+                        .clickable(
+                            interactionSource = titleInteraction,
+                            indication = null,
+                            onClick = {
+                                if (!titleClickAnimating) {
+                                    titleClickAnimating = true
+                                    titleScope.launch {
+                                        delay(100)
+                                        titleClickAnimating = false
+                                    }
+                                }
+                            },
+                        ),
+                    onLineCountChanged = { lines ->
+                        titleLineCount = lines
+                        onTextLineCountChanged(lines, descriptionLineCount)
+                    },
+                )
                 mission.description?.let {
                     Text(
-                        text = it,
-                        style = TqType.BodyS.figma(),
+                        text = it.glueShortWords(),
+                        style = TqType.BodyS.figma().copy(
+                            lineBreak = LineBreak(
+                                strategy = LineBreak.Strategy.HighQuality,
+                                strictness = LineBreak.Strictness.Strict,
+                                wordBreak = LineBreak.WordBreak.Phrase,
+                            ),
+                        ),
                         color = Gray600,
-                        modifier = Modifier.widthIn(max = 256.dp),
+                        modifier = Modifier
+                            .widthIn(max = 256.dp)
+                            .graphicsLayer {
+                                scaleX = descriptionScale
+                                scaleY = descriptionScale
+                            }
+                            .clickable(
+                                interactionSource = descriptionInteraction,
+                                indication = null,
+                                onClick = {
+                                    if (!descriptionClickAnimating) {
+                                        descriptionClickAnimating = true
+                                        descriptionScope.launch {
+                                            delay(100)
+                                            descriptionClickAnimating = false
+                                        }
+                                    }
+                                },
+                            ),
+                        onTextLayout = { result ->
+                            descriptionLineCount = result.lineCount
+                            onTextLineCountChanged(titleLineCount, result.lineCount)
+                        },
                     )
                 }
             }

@@ -34,11 +34,14 @@ interface NotificationApi {
     suspend fun markAllRead(): ApiResponse<MarkReadResponse>
 
     // 알림 설정 조회 — dev NotificationSettingsResponseDto.
-    // ※ 알림 설정 화면이 아직 디자인에 없어 UI 미연결 — API 계약만 확보(2026-07-25).
+    // 설정 UI는 프로필 설정 화면(A담당)에 있고, 그쪽은 같은 값을 /users/me/settings로 읽는다.
+    // 여기는 알림 기능 쪽 계약으로 남겨둔 것.
+    // ⚠️설정을 한 번도 저장한 적 없는 계정은 이 두 엔드포인트가 다 404(NOT_FOUND)다 — 실서버 확인(2026-08-11).
     @GET("api/v1/notifications/settings")
     suspend fun getSettings(): ApiResponse<NotificationSettings>
 
-    // 알림 설정 변경 (부분 업데이트)
+    // 알림 설정 변경 (부분 업데이트) — 바꿀 항목만 담은 요청 DTO를 쓴다.
+    // 응답 DTO를 그대로 보내면 안 건드린 항목까지 기본값으로 덮인다.
     @PATCH("api/v1/notifications/settings")
     suspend fun updateSettings(
         @Body body: NotificationSettingsUpdateRequest,

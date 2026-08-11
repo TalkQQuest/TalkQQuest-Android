@@ -95,6 +95,7 @@ import com.talkqquest.app.core.designsystem.TqType
 import com.talkqquest.app.core.designsystem.White
 import com.talkqquest.app.core.designsystem.softShadow
 import com.talkqquest.app.core.designsystem.component.LevelUpBurst
+import com.talkqquest.app.core.designsystem.component.TierPromotionSheet
 import com.talkqquest.app.core.designsystem.component.TqButton
 import com.talkqquest.app.core.designsystem.component.TqButtonSize
 import com.talkqquest.app.feature.home.data.model.HomeSummary
@@ -116,6 +117,8 @@ fun HomeScreen(
     onOtherMissionsClick: () -> Unit = {},    // "다른 미션 보기" → 미션 목록
     onNotificationClick: () -> Unit = {},     // 상단 벨 → 알림창
     onWeeklyReportClick: () -> Unit = {},     // 주간 비교 리포트 도착 모달 "보러가기" → 주간 비교 리포트
+    onSheetTopChange: (Float?) -> Unit = {},  // 티어 승급 안내 시트가 하단 네비를 덮는 동안 네비 가림
+    onModalSheetChange: (Boolean) -> Unit = {}, // 티어 시트가 떠 있는 동안 탭 스와이프를 끄기 위한 신호
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     // 화면 복귀 시(미션 완료 후 등) XP·레벨 최신값 조용히 재조회 — 미션 목록과 같은 패턴
@@ -127,6 +130,8 @@ fun HomeScreen(
         onOtherMissionsClick = onOtherMissionsClick,
         onNotificationClick = onNotificationClick,
         onWeeklyReportClick = onWeeklyReportClick,
+        onSheetTopChange = onSheetTopChange,
+        onModalSheetChange = onModalSheetChange,
     )
 }
 
@@ -138,6 +143,8 @@ private fun HomeScreen(
     onOtherMissionsClick: () -> Unit = {},
     onNotificationClick: () -> Unit = {},
     onWeeklyReportClick: () -> Unit = {},
+    onSheetTopChange: (Float?) -> Unit = {},
+    onModalSheetChange: (Boolean) -> Unit = {},
 ) = FitDesign { // 작은 화면에선 디자인(393x852) 통째 축소 — 미션 화면들과 동일하게 스크롤 없이 한 화면에
     Box(
         modifier = Modifier
@@ -165,6 +172,8 @@ private fun HomeScreen(
                     onOtherMissionsClick = onOtherMissionsClick,
                     onNotificationClick = onNotificationClick,
                     onWeeklyReportClick = onWeeklyReportClick,
+                    onSheetTopChange = onSheetTopChange,
+                    onModalSheetChange = onModalSheetChange,
                 )
             }
         }
@@ -203,9 +212,13 @@ private fun HomeContent(
     onOtherMissionsClick: () -> Unit = {},
     onNotificationClick: () -> Unit = {},
     onWeeklyReportClick: () -> Unit = {},
+    onSheetTopChange: (Float?) -> Unit = {},
+    onModalSheetChange: (Boolean) -> Unit = {},
 ) {
     // 검증용(임시): 상단 벨 탭으로 주간 비교 리포트 도착 모달 토글. 실제 트리거는 summary.hasNewWeeklyReport.
     var showWeekly by remember { mutableStateOf(summary.hasNewWeeklyReport) }
+    // 실전 티어 ⓘ 탭 → 티어 승급 안내 시트(성장 리포트와 동일 공용 시트).
+    var showTierHelp by remember { mutableStateOf(false) }
     // 콘텐츠가 떠 있는 하단 네비(118 몫) 위로 다 들어가게 "필요한 만큼만" 균등 축소.
     // 짧은 미션이면 자연 높이가 여유에 들어가 축소 0 = 피그마 그대로. 넘치면 넘치는 만큼만.
     // 축소는 그리기 단계(graphicsLayer)만 → 레이아웃 크기 불변 → 측정 안정(진동/깜빡임 없음).
@@ -245,6 +258,7 @@ private fun HomeContent(
                     nextLevelXp = summary.nextLevelXp,
                     tierName = summary.tierName,
                     tierStars = summary.tierStars,
+                    onTierInfoClick = { showTierHelp = true },
                 )
                 Spacer(Modifier.height(12.dp)) // CSS 카드 스택 gap 12
                 summary.todayMission?.let { mission ->
@@ -265,6 +279,16 @@ private fun HomeContent(
                 onDismiss = { showWeekly = false },
             )
         }
+
+        // 티어 승급 안내 시트(공용) — 홈 축소(scale)와 무관하게 전체 화면에 오버레이.
+        // onSheetTopChange로 시트가 덮는 동안 하단 네비를 가림(저장 시트와 동일).
+        // onModalChange는 시트가 떠 있는 동안 탭 스와이프를 끄는 신호 — 딤이 깔린 모달이라 뒤로 못 넘어가야 한다.
+        TierPromotionSheet(
+            visible = showTierHelp,
+            onDismiss = { showTierHelp = false },
+            onSheetTopChange = onSheetTopChange,
+            onModalChange = onModalSheetChange,
+        )
     }
 }
 
@@ -400,7 +424,14 @@ private fun HomeHeader(
 // XP가 바뀌면(미션 완료 후 복귀 등) 숫자·바가 부드럽게 차오르고, 레벨업이면
 // 미션 완료 화면과 같은 연출: 바 가득 → "Lv" 글자가 튀며 +1 → 새 레벨 바가 0부터 재충전.
 @Composable
-private fun HomeLevelCard(level: Int, currentXp: Int, nextLevelXp: Int, tierName: String, tierStars: Int) {
+private fun HomeLevelCard(
+    level: Int,
+    currentXp: Int,
+    nextLevelXp: Int,
+    tierName: String,
+    tierStars: Int,
+    onTierInfoClick: () -> Unit = {},
+) {
     val xpShown = remember { Animatable(currentXp.toFloat()) }
     var displayLevel by remember { mutableIntStateOf(level) }
     val levelScale = remember { Animatable(1f) } // 레벨업 순간 Lv 글자가 튀는 배율
@@ -478,14 +509,14 @@ private fun HomeLevelCard(level: Int, currentXp: Int, nextLevelXp: Int, tierName
         Box(Modifier.fillMaxWidth().height(1.dp).background(Gray200))
         // 구분선 → 티어 행 gap 4 (CSS 카드 Frame427321766 gap)
         Spacer(Modifier.height(4.dp))
-        HomeTierRow(tierName = tierName, tierStars = tierStars)
+        HomeTierRow(tierName = tierName, tierStars = tierStars, onInfoClick = onTierInfoClick)
     }
 }
 
 // 실전 티어 행 (Frame 427321763, 높이 40, space-between).
 // 좌: 티어 휘장 40x40 + 티어명 + 별 3개 / 우: "실전 티어" + info-circle.
 @Composable
-private fun HomeTierRow(tierName: String, tierStars: Int) {
+private fun HomeTierRow(tierName: String, tierStars: Int, onInfoClick: () -> Unit = {}) {
     Row(
         modifier = Modifier.fillMaxWidth().height(40.dp),
         horizontalArrangement = Arrangement.SpaceBetween,
@@ -528,8 +559,19 @@ private fun HomeTierRow(tierName: String, tierStars: Int) {
             horizontalArrangement = Arrangement.spacedBy(2.dp),
         ) {
             Text(text = "실전 티어", style = TqType.BodyM.figma(), color = Gray500)
-            // information-circle (24x24 슬롯 안 글리프 ~14 → 18dp 벡터 중앙 배치, tint Gray400)
-            Box(Modifier.size(24.dp), contentAlignment = Alignment.Center) {
+            // information-circle (24x24 슬롯 안 글리프 ~14 → 18dp 벡터 중앙 배치, tint Gray400).
+            // 탭 → 티어 승급 안내 시트(성장 리포트와 동일 공용 시트).
+            Box(
+                modifier = Modifier
+                    .size(24.dp)
+                    .clip(CircleShape)
+                    .clickable(
+                        interactionSource = remember { MutableInteractionSource() },
+                        indication = null,
+                        onClick = onInfoClick,
+                    ),
+                contentAlignment = Alignment.Center,
+            ) {
                 Icon(
                     painter = painterResource(R.drawable.ic_notification_info),
                     contentDescription = "실전 티어 안내",

@@ -30,32 +30,40 @@ class WeeklyCompareRepository @Inject constructor(
         return ApiResult.Success(list)
     }
 
-    // 선택한 주차의 상세 + 주제·진행률.
+    // 한 리포트의 상세 + 주제·진행률.
     // reportId가 비면(목록이 비어 실서버가 없을 때) 시안 목업을 그대로 돌려준다.
-    suspend fun getWeekDetail(item: WeeklyCompareListItem?): ApiResult<WeeklyCompareDetail> {
+    // 좌우 이동도 이 함수 하나로 한다 — 서버가 상세에 이웃 리포트 id를 실어 주기 때문에
+    // 목록에서 몇 번째인지 셀 필요가 없다.
+    suspend fun getWeekDetail(reportId: String?): ApiResult<WeeklyCompareDetail> {
         val fallback = stubWeeklyDetail
-        if (item == null) return ApiResult.Success(fallback)
+        if (reportId.isNullOrBlank()) return ApiResult.Success(fallback)
 
-        val detail = serverCall { reportApi.getWeeklyCompareDetail(item.id) }
+        val detail = serverCall { reportApi.getWeeklyCompareDetail(reportId) }
         val growth = serverCall { reportApi.getGrowth() }
         val d = (detail as? ApiResult.Success)?.data
         val g = (growth as? ApiResult.Success)?.data?.toGrowthReport()
 
-        val metrics = d?.data?.metricChanges
-            ?.map { MetricChange(name = it.label.ifBlank { it.key }, lastWeek = it.from, thisWeek = it.to) }
-            ?.takeIf { it.isNotEmpty() }
+        // 상세를 못 받으면 주차 라벨도 이웃 id도 없어 좌우 이동이 통째로 막힌다.
+        // 반쪽짜리로 그리지 말고 다른 실패 경로와 똑같이 시안 목업으로 떨어뜨린다.
+        if (d == null) return ApiResult.Success(fallback)
+
+        val metrics = d.data.metricChanges
+            .map { MetricChange(name = it.label.ifBlank { it.key }, lastWeek = it.from, thisWeek = it.to) }
+            .takeIf { it.isNotEmpty() }
             ?: fallback.metrics
-        val highlights = d?.data?.highlights?.filter { it.isNotBlank() }?.takeIf { it.isNotEmpty() }
+        val highlights = d.data.highlights.filter { it.isNotBlank() }.takeIf { it.isNotEmpty() }
             ?: fallback.highlights
 
         return ApiResult.Success(
             WeeklyCompareDetail(
-                id = item.id,
-                isSaved = d?.isSaved ?: item.isSaved,
+                id = d.id.ifBlank { reportId },
+                isSaved = d.isSaved,
+                prevReportId = d.previousReportId,
+                nextReportId = d.nextReportId,
                 // TODO(백엔드 확인): 서버는 달력 주차를 안 준다. weekIndex(가입일 기준 N번째 주)뿐이라
                 //   시안의 "7월 4주차 → 8월 1주차"를 그대로 만들 수 없다. 임시로 weekIndex를 쓴다.
-                prevWeekLabel = weekLabel(item.weekIndex - 1),
-                thisWeekLabel = weekLabel(item.weekIndex),
+                prevWeekLabel = weekLabel(d.weekIndex - 1),
+                thisWeekLabel = weekLabel(d.weekIndex),
                 metrics = metrics,
                 highlights = highlights,
                 topics = g?.categoryRanks?.takeIf { it.isNotEmpty() } ?: fallback.topics,

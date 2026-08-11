@@ -79,7 +79,7 @@ fun ArchiveListScreen(
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val lifecycleOwner = LocalLifecycleOwner.current
 
-    // 💡 화면이 보여질 때(ON_RESUME)마다 최신 데이터를 갱신합니다.
+    // 💡 화면이 보여질 때(ON_RESUME)마다 최신 데이터를 갱신합니다.[cite: 27]
     DisposableEffect(lifecycleOwner) {
         val observer = LifecycleEventObserver { _, event ->
             if (event == Lifecycle.Event.ON_RESUME) {
@@ -269,13 +269,13 @@ private fun ArchiveListScreenContent(
                             }
                             1 -> { // 대화 탭
                                 items(uiState.conversations, key = { it.id }) { conversation ->
-                                    // 💡 변경됨: RecentActivityCard 대신 새롭게 만든 ArchiveConversationCard 적용
+                                    // 💡 변경됨: RecentActivityCard 대신 새롭게 만든 ArchiveConversationCard 적용[cite: 27]
                                     ArchiveConversationCard(
                                         title = conversation.title,
-                                        tags = listOf("학교", "진로"), // 💡 TODO: API 명세 확정 후 ViewModel 매핑 필요
-                                        summary = "서로의 전공과 관심 분야를 공유하고, 진로 고민에 대해 조언을 주고받았어요.", // 💡 TODO: API 연동 필요
+                                        tags = conversation.tags, // 💡 실제 데이터 매핑으로 수정
+                                        summary = conversation.summary ?: "", // 💡 실제 데이터 매핑으로 수정
                                         date = conversation.date,
-                                        time = "14:35", // 💡 TODO: API의 createdAt에서 시간(HH:mm) 파싱 필요
+                                        time = conversation.time,
                                         onClick = { onConversationClick(conversation.id) },
                                         modifier = Modifier.animateItem()
                                     )
@@ -351,7 +351,8 @@ private val previewUiState = ArchiveUiState(
         ArchiveMissionItem("2", "최근 본 영화 이야기하기", "짧은 대화", "쉬움", 5, 20, isCompleted = false, isSaved = true)
     ),
     conversations = listOf(
-        RecentActivity(id = "1", title = "처음 보는 사람에게 짧게 인사하기", type = ActivityType.CONVERSATION, status = "대화 완료", date = "2026.08.20")
+        // 💡 프리뷰가 깨지지 않게 tags와 summary 데이터 추가
+        RecentActivity(id = "1", title = "처음 보는 사람에게 짧게 인사하기", type = ActivityType.CONVERSATION, status = "대화 완료", date = "2026.08.20", tags = listOf("자기 성장", "첫 만남"), summary = "간단한 인사와 자기소개를 나누며 첫 만남의 어색함을 줄이고 대화를 시작했어요.")
     ),
     sentences = listOf(
         BookmarkArchiveItem("1", "그렇군요! 저도 편해서 놀랐어요.", "문장 저장", "2026.08.20")

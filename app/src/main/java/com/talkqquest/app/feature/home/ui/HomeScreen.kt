@@ -7,6 +7,7 @@ import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.PaddingValues
@@ -38,6 +39,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -46,6 +48,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.AnnotatedString
@@ -112,6 +115,7 @@ fun HomeScreen(
     onStartMissionClick: (String) -> Unit = {}, // 오늘의 미션 "미션 시작하기" → 미션 상세
     onOtherMissionsClick: () -> Unit = {},    // "다른 미션 보기" → 미션 목록
     onNotificationClick: () -> Unit = {},     // 상단 벨 → 알림창
+    onWeeklyReportClick: () -> Unit = {},     // 주간 비교 리포트 도착 모달 "보러가기" → 주간 비교 리포트
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     // 화면 복귀 시(미션 완료 후 등) XP·레벨 최신값 조용히 재조회 — 미션 목록과 같은 패턴
@@ -122,6 +126,7 @@ fun HomeScreen(
         onStartMissionClick = onStartMissionClick,
         onOtherMissionsClick = onOtherMissionsClick,
         onNotificationClick = onNotificationClick,
+        onWeeklyReportClick = onWeeklyReportClick,
     )
 }
 
@@ -132,6 +137,7 @@ private fun HomeScreen(
     onStartMissionClick: (String) -> Unit = {},
     onOtherMissionsClick: () -> Unit = {},
     onNotificationClick: () -> Unit = {},
+    onWeeklyReportClick: () -> Unit = {},
 ) = FitDesign { // 작은 화면에선 디자인(393x852) 통째 축소 — 미션 화면들과 동일하게 스크롤 없이 한 화면에
     Box(
         modifier = Modifier
@@ -158,6 +164,7 @@ private fun HomeScreen(
                     onStartMissionClick = onStartMissionClick,
                     onOtherMissionsClick = onOtherMissionsClick,
                     onNotificationClick = onNotificationClick,
+                    onWeeklyReportClick = onWeeklyReportClick,
                 )
             }
         }
@@ -195,37 +202,69 @@ private fun HomeContent(
     onStartMissionClick: (String) -> Unit = {},
     onOtherMissionsClick: () -> Unit = {},
     onNotificationClick: () -> Unit = {},
+    onWeeklyReportClick: () -> Unit = {},
 ) {
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .verticalScroll(rememberScrollState())
-            .statusBarsPadding()
-            // CSS: 카드 묶음 Frame 430 left 16, 폭 362 → 우측 여백 15 (좌우 비대칭)
-            .padding(start = 16.dp, end = 15.dp),
-    ) {
-        HomeHeader(
-            nickname = summary.nickname,
-            hasNewNotification = summary.hasNewNotification,
-            onNotificationClick = onNotificationClick,
-        )
-        Spacer(Modifier.height(18.dp)) // CSS: 인사(bottom ~132.67) → 콘텐츠(top 151) ≈ 18
-        HomeLevelCard(
-            level = summary.level,
-            currentXp = summary.currentXp,
-            nextLevelXp = summary.nextLevelXp,
-        )
-        Spacer(Modifier.height(16.dp))
-        summary.todayMission?.let { mission ->
-            HomeMissionCard(mission = mission, onStartClick = { onStartMissionClick(mission.id) })
+    // 검증용(임시): 상단 벨 탭으로 주간 비교 리포트 도착 모달 토글. 실제 트리거는 summary.hasNewWeeklyReport.
+    var showWeekly by remember { mutableStateOf(summary.hasNewWeeklyReport) }
+    // 콘텐츠가 떠 있는 하단 네비(118 몫) 위로 다 들어가게 "필요한 만큼만" 균등 축소.
+    // 짧은 미션이면 자연 높이가 여유에 들어가 축소 0 = 피그마 그대로. 넘치면 넘치는 만큼만.
+    // 축소는 그리기 단계(graphicsLayer)만 → 레이아웃 크기 불변 → 측정 안정(진동/깜빡임 없음).
+    // scale을 여기서 val로 계산 → 홈·팝업이 같은 값을 써서 팝업도 같은 비율로 줄어듦(뒤 화면과 한 세트).
+    BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
+        val availPx = constraints.maxHeight - with(LocalDensity.current) { 118.dp.roundToPx() }
+        var naturalPx by remember { mutableIntStateOf(0) }
+        val scale = if (naturalPx > 0 && naturalPx > availPx) {
+            (availPx.toFloat() / naturalPx).coerceIn(0.8f, 1f) // 하한 0.8 (과축소 방지)
+        } else 1f
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .graphicsLayer {
+                    scaleX = scale
+                    scaleY = scale
+                    transformOrigin = TransformOrigin(0.5f, 0f) // 위쪽 기준(상단 고정, 아래로만 당겨 올림)
+                }
+                .onGloballyPositioned { naturalPx = it.size.height }, // graphicsLayer는 레이아웃 크기 불변 → 안정
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .statusBarsPadding()
+                    // CSS: 카드 묶음 Frame 430 left 16, 폭 362 → 우측 여백 15 (좌우 비대칭)
+                    .padding(start = 16.dp, end = 15.dp),
+            ) {
+                HomeHeader(
+                    nickname = summary.nickname,
+                    hasNewNotification = summary.hasNewNotification,
+                    onNotificationClick = onNotificationClick, // 상단 벨 → 알림창
+                )
+                Spacer(Modifier.height(16.dp)) // CSS Frame427321631 gap 16 (인사 블록 → 카드 스택)
+                HomeLevelCard(
+                    level = summary.level,
+                    currentXp = summary.currentXp,
+                    nextLevelXp = summary.nextLevelXp,
+                    tierName = summary.tierName,
+                    tierStars = summary.tierStars,
+                )
+                Spacer(Modifier.height(12.dp)) // CSS 카드 스택 gap 12
+                summary.todayMission?.let { mission ->
+                    HomeMissionCard(mission = mission, onStartClick = { onStartMissionClick(mission.id) })
+                }
+                Spacer(Modifier.height(12.dp)) // CSS 카드 스택 gap 12
+                OtherMissionsCard(onClick = onOtherMissionsClick)
+                Spacer(Modifier.height(12.dp)) // CSS 카드 스택 gap 12 (다른 미션 보기 → 배지)
+                BadgeCollectionCard()
+            }
         }
-        Spacer(Modifier.height(16.dp))
-        OtherMissionsCard(onClick = onOtherMissionsClick)
-        Spacer(Modifier.height(16.dp)) // 다른 미션 보기 → 배지 카드 (카드 간격 16, 스크린샷 균일)
-        BadgeCollectionCard()
-        // 떠 있는 하단 네비 가림 방지 여백. 네비 알약은 축소 대상 밖(MainScreen)이라
-        // 화면이 축소돼도 알약 크기는 그대로 → 여백은 축소분만큼 되돌려(/scale) 원래 픽셀을 확보.
-        Spacer(Modifier.height(100.dp / LocalDesignScale.current))
+
+        // 주간 비교 리포트 도착 모달 — 설계상 고정 크기(302dp 카드) 모달이라 피그마 원본 크기로 띄운다.
+        // 홈 축소(scale)는 실제 2줄 미션을 담기 위한 콘텐츠 대응일 뿐, 모달 오버레이는 그걸 따라가지 않는다.
+        if (showWeekly) {
+            WeeklyReportModal(
+                onConfirm = { showWeekly = false; onWeeklyReportClick() },
+                onDismiss = { showWeekly = false },
+            )
+        }
     }
 }
 
@@ -361,7 +400,7 @@ private fun HomeHeader(
 // XP가 바뀌면(미션 완료 후 복귀 등) 숫자·바가 부드럽게 차오르고, 레벨업이면
 // 미션 완료 화면과 같은 연출: 바 가득 → "Lv" 글자가 튀며 +1 → 새 레벨 바가 0부터 재충전.
 @Composable
-private fun HomeLevelCard(level: Int, currentXp: Int, nextLevelXp: Int) {
+private fun HomeLevelCard(level: Int, currentXp: Int, nextLevelXp: Int, tierName: String, tierStars: Int) {
     val xpShown = remember { Animatable(currentXp.toFloat()) }
     var displayLevel by remember { mutableIntStateOf(level) }
     val levelScale = remember { Animatable(1f) } // 레벨업 순간 Lv 글자가 튀는 배율
@@ -433,8 +472,88 @@ private fun HomeLevelCard(level: Int, currentXp: Int, nextLevelXp: Int) {
                     .background(Primary600),
             )
         }
+        // 진행바 → 구분선 gap 12 (CSS Frame427321765 gap)
+        Spacer(Modifier.height(12.dp))
+        // 구분선 (Frame 427321759: 폭 330 = full, 높이 1, Gray/200)
+        Box(Modifier.fillMaxWidth().height(1.dp).background(Gray200))
+        // 구분선 → 티어 행 gap 4 (CSS 카드 Frame427321766 gap)
+        Spacer(Modifier.height(4.dp))
+        HomeTierRow(tierName = tierName, tierStars = tierStars)
     }
 }
+
+// 실전 티어 행 (Frame 427321763, 높이 40, space-between).
+// 좌: 티어 휘장 40x40 + 티어명 + 별 3개 / 우: "실전 티어" + info-circle.
+@Composable
+private fun HomeTierRow(tierName: String, tierStars: Int) {
+    Row(
+        modifier = Modifier.fillMaxWidth().height(40.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        // 좌측 그룹 (Frame 427321762, gap 7)
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(7.dp),
+        ) {
+            // 티어 휘장 (사용자_티어 40x40) — PNG(512x512 정사각) 그대로 축소
+            Image(
+                painter = painterResource(tierEmblemRes(tierName)),
+                contentDescription = "$tierName 티어",
+                contentScale = ContentScale.Fit,
+                modifier = Modifier.size(40.dp),
+            )
+            // 티어명 + 별 (Frame 427321761, gap 4)
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(4.dp),
+            ) {
+                Text(text = tierName, style = TqType.BodyL.figma().copy(fontWeight = FontWeight.Medium), color = Gray600)
+                // 별 3개 (Frame 427321742, gap 4) — 채움 #F9AC17 / 빈칸 Gray300
+                Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                    repeat(3) { idx ->
+                        Icon(
+                            painter = painterResource(R.drawable.ic_tier_star),
+                            contentDescription = null,
+                            tint = if (idx < tierStars) StarYellow else Gray300,
+                            modifier = Modifier.size(15.dp),
+                        )
+                    }
+                }
+            }
+        }
+        // 우측 그룹 (Frame 427321760, gap 2)
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(2.dp),
+        ) {
+            Text(text = "실전 티어", style = TqType.BodyM.figma(), color = Gray500)
+            // information-circle (24x24 슬롯 안 글리프 ~14 → 18dp 벡터 중앙 배치, tint Gray400)
+            Box(Modifier.size(24.dp), contentAlignment = Alignment.Center) {
+                Icon(
+                    painter = painterResource(R.drawable.ic_notification_info),
+                    contentDescription = "실전 티어 안내",
+                    tint = Gray400,
+                    modifier = Modifier.size(18.dp),
+                )
+            }
+        }
+    }
+}
+
+// 티어 이름 → 휘장 drawable (홈용 큰 PNG). 성장 리포트는 별도 작은 'Xs' 버전 사용 예정.
+private fun tierEmblemRes(tierName: String): Int = when (tierName) {
+    "브론즈" -> R.drawable.img_tier_bronze
+    "실버" -> R.drawable.img_tier_silver
+    "골드" -> R.drawable.img_tier_gold
+    "플래티넘", "플레티넘" -> R.drawable.img_tier_platinum
+    "다이아", "다이아몬드" -> R.drawable.img_tier_dia
+    "마스터" -> R.drawable.img_tier_master
+    else -> R.drawable.img_tier_gold
+}
+
+// 실전 티어 별 채움색 (YELLOW_star, CSS #F9AC17) — 디자인 토큰 아님, 로컬.
+private val StarYellow = Color(0xFFF9AC17)
 
 // 오늘의 미션 카드.
 @Composable

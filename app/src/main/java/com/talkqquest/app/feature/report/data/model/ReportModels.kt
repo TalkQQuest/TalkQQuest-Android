@@ -6,7 +6,7 @@ import kotlin.math.roundToInt
 // 리포트 화면 모델 (명세 E102 — 응답 필드가 명세에 없어 화면(UI CSS) 기준으로 정의.
 // TODO(서버 연동): GET /api/v1/reports/monthly · weekly-compare 응답 확정되면 필드 맞춤)
 
-// 성장 리포트 탭
+// ── 성장 리포트(보관함에서 진입, C 담당 ArchiveReportScreen 재사용) — 옛 레벨/추이/카테고리 형태 ──
 data class GrowthReport(
     val prevLevel: Int,                     // 저번 주 레벨
     val currentLevel: Int,                  // 이번 주 레벨
@@ -20,6 +20,28 @@ data class GrowthReport(
 data class CategoryRank(
     val name: String,  // 카테고리 이름 (여행/음식/…)
     val count: Int,    // 완료 횟수
+)
+
+// ── 성장 리포트(B 담당, UI-14 신규) — 실전 티어 + 핵심 역량(마름모 4축). 성장 티어 시스템 시각화 ──
+// TODO(서버 growthTotals merge 후): kindness/initiative/empathy/questionLink 누적값 → 티어·별·역량 점수 계산.
+data class GrowthTierReport(
+    val tierName: String,                    // 현재 티어 이름 ("골드")
+    val tierStars: Int,                      // 채운 별 수 0..3 (티어 내 단계)
+    val nextStarsNeeded: Int,                // 다음 티어까지 남은 별 수 ("별 N개")
+    val nextTierName: String,                // 다음 티어 이름 ("플래티넘")
+    val competencies: List<Competency>,      // 핵심 역량 4축 (친절/주도/공감/질문)
+)
+
+// 핵심 역량 4축 — 레이더(마름모) 위치·범례·체크 계산에 씀.
+enum class CompetencyAxis { KINDNESS, INITIATIVE, EMPATHY, QUESTION_LINK }
+
+data class Competency(
+    val axis: CompetencyAxis,   // 마름모 축 매핑(위=친절/오른=주도/아래=공감/왼=질문)
+    val label: String,          // 레이더 축 라벨 ("친절한 태도")
+    val legendLabel: String,    // 범례 라벨 (CSS상 공감은 축="공감 표현"/범례="공감 능력"로 달라 분리)
+    val score: Int,             // 현재 점수 0..maxScore
+    val gain: Int,              // 이번에 획득한 점수 ("+70")
+    val maxScore: Int = 300,    // 축당 만점(300점 = 별 1개)
 )
 
 // 주간 비교 리포트 탭
@@ -100,9 +122,12 @@ data class WeeklyMetricChangeDto(
     val delta: Int = 0,
 )
 
-// POST /api/v1/reports (리포트 저장 시트) — type: growth | weekly_compare
+// POST /api/v1/reports (리포트 저장 시트)
+// 2026-08-10 백엔드 변경: 바디가 `type` → `conversationId`. 성장 리포트 전용이 됐다.
+// 스웨거 확인(2026-08-11): SaveReportRequestDto = { conversationId: string } (required).
+// conversationId는 피드백 응답(FeedbackDetailResponse.conversationId)에서 받아 route로 넘어온다.
 @Serializable
-data class SaveReportRequest(val type: String)
+data class SaveReportRequest(val conversationId: String)
 
 @Serializable
 data class SaveReportResponse(
@@ -135,6 +160,7 @@ data class DeleteReportResponse(
 )
 
 // ── 매퍼: 서버 → 화면 모델 ──
+// (보관함 성장 리포트용 옛 매퍼 — 아카이브가 씀)
 fun GrowthReportResponse.toGrowthReport() = GrowthReport(
     prevLevel = levelBefore,
     currentLevel = levelAfter,
@@ -144,6 +170,7 @@ fun GrowthReportResponse.toGrowthReport() = GrowthReport(
     completedMissions = missionProgress.completed,
     totalMissions = missionProgress.total,
 )
+// B 성장 리포트(GrowthTierReport)는 growthTotals 대개편 전이라 서버 매퍼 없이 stub(ReportRepository).
 
 fun WeeklyCompareResponse.toWeeklyCompareReport() = WeeklyCompareReport(
     metrics = metricChanges.map {

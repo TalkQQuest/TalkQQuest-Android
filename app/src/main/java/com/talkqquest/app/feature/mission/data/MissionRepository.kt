@@ -136,15 +136,19 @@ class MissionRepository @Inject constructor(
     // ── 대화 진행 — 실서버 연동 (2026-07-22 실측 규격) + 오프라인 stub 폴백 ──
 
     // 대화 시작: 서버에 대화 세션 생성(POST /conversations, selectedTopic 옵션 — 없이 생성 확인).
-    // 서버는 첫 인사말(AI 발화)을 안 주므로 인트로 문구는 로컬 유지(목업 그대로).
-    // 세션 생성 실패(오프라인 등) 시에도 인트로는 그대로 진행 — 이후 응답이 stub으로 폴백됨.
+    // ★2026-08-10부터 서버가 첫 인사말(openingMessage)을 함께 준다 — 그 값을 인트로로 쓴다.
+    //   비어 오거나(생성 실패·오프라인) 옛 서버면 기존 로컬 문구로 폴백해 대화가 끊기지 않게 한다.
     suspend fun getConversationIntro(missionId: String): ApiResult<List<String>> {
         activeConversationId = null
         val r = serverCall {
             missionApi.createConversation(ConversationCreateRequest(missionId = missionId, mode = "text"))
         }
-        if (r is ApiResult.Success) activeConversationId = r.data.conversationId
-        return ApiResult.Success(listOf("안녕하세요! 처음 뵙네요 🙂", "오늘 여기 처음 오셨어요?"))
+        if (r is ApiResult.Success) {
+            activeConversationId = r.data.conversationId
+            val opening = r.data.openingMessage.trim()
+            if (opening.isNotEmpty()) return ApiResult.Success(listOf(opening))
+        }
+        return ApiResult.Success(stubIntroLines)
     }
 
     // 사용자 발화 전송 → AI 응답. 서버 POST /conversations/{id}/messages
@@ -504,4 +508,10 @@ private val stubBenefits = mapOf(
 private val defaultBenefits = listOf(
     "대화에 자신감이 생겨요",
     "자연스럽게 대화를 이어갈 수 있어요",
+)
+
+// 서버가 openingMessage를 못 줄 때만 쓰는 인트로 폴백 (기존 목업 문구 그대로)
+private val stubIntroLines = listOf(
+    "안녕하세요! 처음 뵙네요 🙂",
+    "오늘 여기 처음 오셨어요?",
 )

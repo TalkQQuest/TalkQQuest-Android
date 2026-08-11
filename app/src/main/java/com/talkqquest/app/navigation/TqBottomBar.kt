@@ -63,7 +63,8 @@ private fun tabRouteOf(route: String?): String? = when (route) {
     // 미션 목록은 이제 독립 탭(else로 떨어져 자기 자신=미션 탭 선택). 하위 화면은 미션 탭 유지.
     Screen.MISSION_LIST_HOME -> Screen.HOME // 홈 "다른 미션 보기"로 띄운 목록은 홈 탭 유지
     Screen.MISSION_DETAIL -> Screen.MISSION_LIST
-    Screen.CONVERSATION_PREP -> Screen.MISSION_LIST
+    Screen.CONVERSATION_SETUP_1, Screen.CONVERSATION_SETUP_2,
+    Screen.CONVERSATION_SETUP_3, Screen.CONVERSATION_SETUP_4 -> Screen.MISSION_LIST
     Screen.CONVERSATION -> Screen.MISSION_LIST
     Screen.REPORT -> Screen.HOME
     Screen.PROFILE_BADGES -> Screen.PROFILE

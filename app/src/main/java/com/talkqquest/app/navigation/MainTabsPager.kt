@@ -65,6 +65,8 @@ private fun HomeTab(navController: NavHostController) {
                 navController.navigate(Screen.NOTIFICATION)
             }
         },
+        // 주간 비교 리포트 도착 모달 "보러가기" → 주간 비교 리포트 (알림창 화살표와 같은 화면)
+        onWeeklyReportClick = { navController.navigate(Screen.WEEKLY_COMPARE) },
     )
 }
 

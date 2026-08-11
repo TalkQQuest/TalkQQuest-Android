@@ -1,0 +1,19 @@
+<!-- 개선 하이라이트 반짝이 (Figma export "Icon-6" 18x18, Gray/300 fill+stroke 1.5) -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="18dp"
+    android:height="18dp"
+    android:viewportWidth="18"
+    android:viewportHeight="18">
+    <path
+        android:pathData="M11.1029,0.75L12.6282,4.87184L16.75,6.39706L12.6282,7.92228L11.1029,12.0441L9.57772,7.92228L5.45588,6.39706L9.57772,4.87184L11.1029,0.75Z"
+        android:fillColor="#CBD5E1"
+        android:strokeColor="#CBD5E1"
+        android:strokeWidth="1.5"
+        android:strokeLineJoin="round" />
+    <path
+        android:pathData="M4.04412,10.1618L5.37647,12.1235L7.33824,13.4559L5.37647,14.7882L4.04412,16.75L2.71176,14.7882L0.75,13.4559L2.71176,12.1235L4.04412,10.1618Z"
+        android:fillColor="#CBD5E1"
+        android:strokeColor="#CBD5E1"
+        android:strokeWidth="1.5"
+        android:strokeLineJoin="round" />
+</vector>

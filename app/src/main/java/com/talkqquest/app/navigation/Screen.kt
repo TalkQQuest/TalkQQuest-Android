@@ -54,7 +54,11 @@ object Screen {
     const val MISSION_LIST = "mission_list"                       // MissionListScreen (하단 미션 탭)
     const val MISSION_LIST_HOME = "mission_list_home"             // MissionListScreen (홈 "다른 미션 보기" — 예전 헤더, 홈 탭 유지)
     const val MISSION_DETAIL = "mission_detail/{missionId}"       // MissionDetailScreen
-    const val CONVERSATION_PREP = "conversation_prep/{missionId}" // ConversationPrepScreen
+    // 미션 진입 · 대화 설정 4스텝 (ConversationSetupScreens). 옛 CONVERSATION_PREP 대체.
+    const val CONVERSATION_SETUP_1 = "conversation_setup_1/{missionId}" // 장소
+    const val CONVERSATION_SETUP_2 = "conversation_setup_2/{missionId}" // 상대
+    const val CONVERSATION_SETUP_3 = "conversation_setup_3/{missionId}" // 성별·나이
+    const val CONVERSATION_SETUP_4 = "conversation_setup_4/{missionId}" // 친밀도·말투
     const val CONVERSATION = "conversation/{conversationId}"      // ConversationScreen
     const val CONVERSATION_COMPLETE = "conversation_complete/{conversationId}" // ConversationCompleteScreen (????붿빟)
     const val MISSION_COMPLETE = "mission_complete/{missionId}"   // MissionCompleteScreen (XP ?띾뱷)
@@ -71,7 +75,13 @@ object Screen {
     const val MY_GROUPS = "my_groups"                            // MyGroupsScreen
     // ReportScreen (?깆옣 由ы룷??二쇨컙 鍮꾧탳 ???듯빀).
     // missionTitle = ??由ы룷?멸? ?섏삩 誘몄뀡 ?쒕ぉ (????쒗듃 移대뱶 ?쒕ぉ???곗엫). ?놁쑝硫?鍮?媛?
-    const val REPORT = "report?missionTitle={missionTitle}"
+    // conversationId = 이 리포트가 나온 대화 id. POST /reports가 2026-08-10부터 이 값을 받는다.
+    const val REPORT = "report?missionTitle={missionTitle}&conversationId={conversationId}"
+
+    // WeeklyCompareScreen — 주간 비교 리포트(홈/알림창에서 진입).
+    // ReportScreen(성장 리포트)과 다른 화면이다: 주차 이동·자주 연습한 주제·미션 진행률이 있고
+    // 탭이 없다. 주가 끝나면 알림으로 안내되고 그 알림에서 들어온다.
+    const val WEEKLY_COMPARE = "weekly_compare"
 }
 
 

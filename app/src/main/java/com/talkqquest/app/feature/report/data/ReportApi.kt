@@ -6,7 +6,10 @@ import com.talkqquest.app.feature.report.data.model.GrowthReportResponse
 import com.talkqquest.app.feature.report.data.model.ReportListResponse
 import com.talkqquest.app.feature.report.data.model.SaveReportRequest
 import com.talkqquest.app.feature.report.data.model.SaveReportResponse
+import com.talkqquest.app.feature.report.data.model.WeeklyCompareDetailResponse
+import com.talkqquest.app.feature.report.data.model.WeeklyCompareListResponse
 import com.talkqquest.app.feature.report.data.model.WeeklyCompareResponse
+import com.talkqquest.app.feature.report.data.model.WeeklyCompareSaveResponse
 import retrofit2.http.Body
 import retrofit2.http.DELETE
 import retrofit2.http.GET
@@ -24,6 +27,31 @@ interface ReportApi {
     // 주간 비교 리포트 (주간 비교 탭)
     @GET("api/v1/reports/weekly-compare")
     suspend fun getWeeklyCompare(): ApiResponse<WeeklyCompareResponse>
+
+    // ── 주간 비교 리포트(홈/알림창에서 진입) — 2026-08-10 백엔드 개편분 ──
+    // 목록/상세로 분리됐다. "이번 주" 개념이 없어지고 가입일 기준으로 완전히 끝난 주끼리만 비교한다.
+    // 실서버 실호출로 응답 확인(2026-08-11): 목록 3건(weekIndex 2·3·4), 상세에 metricChanges·highlights.
+
+    // 목록 — 주차 이동에 쓴다. 최신이 앞.
+    @GET("api/v1/reports/weekly-compare")
+    suspend fun getWeeklyCompareList(): ApiResponse<WeeklyCompareListResponse>
+
+    // 상세 — 지표 4축 변화·하이라이트. 목록의 id로 조회.
+    @GET("api/v1/reports/weekly-compare/{reportId}")
+    suspend fun getWeeklyCompareDetail(
+        @Path("reportId") reportId: String,
+    ): ApiResponse<WeeklyCompareDetailResponse>
+
+    // 저장 / 저장 해제 — 성장 리포트와 달리 원본은 안 지워지고 isSaved만 바뀐다(백엔드 보고).
+    @POST("api/v1/reports/weekly-compare/{reportId}/save")
+    suspend fun saveWeeklyCompare(
+        @Path("reportId") reportId: String,
+    ): ApiResponse<WeeklyCompareSaveResponse>
+
+    @DELETE("api/v1/reports/weekly-compare/{reportId}")
+    suspend fun unsaveWeeklyCompare(
+        @Path("reportId") reportId: String,
+    ): ApiResponse<WeeklyCompareSaveResponse>
 
     // 리포트 저장 (리포트 저장 시트) — type: growth | weekly_compare
     @POST("api/v1/reports")

@@ -1,0 +1,13 @@
+<!-- 주간 비교 리포트 주차 이동 왼쪽 (Figma export "Icon-1" 8x13, Purple/600, stroke 2 round) -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="8dp"
+    android:height="13dp"
+    android:viewportWidth="8"
+    android:viewportHeight="13">
+    <path
+        android:pathData="M7,12L1,6.5L7,1"
+        android:strokeColor="#6353F0"
+        android:strokeWidth="2"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round" />
+</vector>

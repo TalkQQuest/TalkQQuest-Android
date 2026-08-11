@@ -42,13 +42,23 @@ class ArchiveSavedPhraseViewModel @Inject constructor(
         }
     }
 
-    // 💡 추가됨: 서버의 ISO 시간 포맷을 yyyy.MM.dd로 변환하는 함수
     private fun formatIsoDate(isoString: String): String {
         return try {
             val zdt = ZonedDateTime.parse(isoString)
             zdt.format(DateTimeFormatter.ofPattern("yyyy.MM.dd"))
         } catch (e: Exception) {
             isoString.substringBefore("T").replace("-", ".")
+        }
+    }
+
+    // 💡 추가됨: 시간 파싱 함수
+    private fun formatIsoTime(isoString: String): String {
+        return try {
+            val zdt = ZonedDateTime.parse(isoString)
+            zdt.format(DateTimeFormatter.ofPattern("HH:mm"))
+        } catch (e: Exception) {
+            val timePart = isoString.substringAfter("T").substringBefore("+").substringBefore("Z")
+            if (timePart.length >= 5) timePart.substring(0, 5) else ""
         }
     }
 
@@ -60,14 +70,14 @@ class ArchiveSavedPhraseViewModel @Inject constructor(
                 is ApiResult.Success -> {
                     val data = result.data
 
-                    // API 응답에 있는 conversationId와 missionTitle을 활용해 연관 대화 객체(RecentActivity) 생성
                     val relatedConv = if (data.conversationId != null && data.missionTitle != null) {
                         RecentActivity(
                             id = data.conversationId,
                             type = ActivityType.CONVERSATION,
                             title = data.missionTitle,
                             status = "대화 완료",
-                            date = formatIsoDate(data.createdAt) // 💡 수정됨: 포맷팅 적용
+                            date = formatIsoDate(data.createdAt),
+                            time = formatIsoTime(data.createdAt) // 💡 시간 파싱 적용
                         )
                     } else null
 
@@ -77,7 +87,7 @@ class ArchiveSavedPhraseViewModel @Inject constructor(
                             phraseId = data.id,
                             phraseText = data.content,
                             isBookmarked = true,
-                            memoKeywords = data.summaryChips, // 서버에서 내려준 summaryChips를 칩 뷰에 매핑
+                            memoKeywords = data.summaryChips,
                             memoText = data.memo ?: "",
                             relatedConversation = relatedConv
                         )
@@ -93,7 +103,6 @@ class ArchiveSavedPhraseViewModel @Inject constructor(
         }
     }
 
-    // 💡 수정됨: 상세 페이지에서는 "해제(DELETE)"만 통신하도록 강제하여 ID 꼬임 방지
     fun toggleBookmark() {
         val state = _uiState.value
         val id = state.phraseId
@@ -102,7 +111,6 @@ class ArchiveSavedPhraseViewModel @Inject constructor(
         val isCurrentlySaved = state.isBookmarked
 
         if (isCurrentlySaved) {
-            // 즉각적인 UI 선반영 (Optimistic UI)
             _uiState.update { it.copy(isBookmarked = false) }
 
             viewModelScope.launch {
@@ -113,22 +121,11 @@ class ArchiveSavedPhraseViewModel @Inject constructor(
                     content = state.phraseText,
                     memo = state.memoText
                 )) {
-                    is ApiResult.Success -> {
-                        // 서버 반영 성공, 선반영한 상태 그대로 유지
-                    }
-                    is ApiResult.Error -> {
-                        android.util.Log.e("ArchiveTest", "문장 저장 해제 에러: ${result.message}")
-                        _uiState.update { it.copy(isBookmarked = true) } // 실패 시 원상복구
-                    }
-                    is ApiResult.Exception -> {
-                        android.util.Log.e("ArchiveTest", "문장 저장 해제 통신 예외")
-                        _uiState.update { it.copy(isBookmarked = true) } // 실패 시 원상복구
-                    }
+                    is ApiResult.Success -> {}
+                    is ApiResult.Error -> _uiState.update { it.copy(isBookmarked = true) }
+                    is ApiResult.Exception -> _uiState.update { it.copy(isBookmarked = true) }
                 }
             }
-        } else {
-            // 이미 해제된 상태에서 하트를 다시 눌렀을 때는 서버 POST를 치지 않음
-            // (새로운 ID가 발급되는 것을 방지)
         }
     }
 }

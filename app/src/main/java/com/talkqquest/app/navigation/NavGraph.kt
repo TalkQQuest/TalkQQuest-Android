@@ -61,7 +61,10 @@ import com.talkqquest.app.feature.profile.ui.PrivacyPolicySections
 import com.talkqquest.app.feature.profile.ui.ProfileTermsDetailScreen
 import com.talkqquest.app.feature.profile.ui.ProfileTermsScreen
 import com.talkqquest.app.feature.profile.ui.ServiceTermsSections
-import com.talkqquest.app.feature.mission.ui.ConversationPrepScreen
+import com.talkqquest.app.feature.mission.ui.ConversationSetup1Screen
+import com.talkqquest.app.feature.mission.ui.ConversationSetup2Screen
+import com.talkqquest.app.feature.mission.ui.ConversationSetup3Screen
+import com.talkqquest.app.feature.mission.ui.ConversationSetup4Screen
 import com.talkqquest.app.feature.mission.ui.ConversationScreen
 import com.talkqquest.app.feature.mission.ui.FeedbackDetailScreen
 import com.talkqquest.app.feature.mission.ui.FeedbackScreen
@@ -69,6 +72,7 @@ import com.talkqquest.app.feature.mission.ui.MissionCompleteScreen
 import com.talkqquest.app.feature.mission.ui.MissionDetailScreen
 import com.talkqquest.app.feature.mission.ui.MissionListScreen
 import com.talkqquest.app.feature.report.ui.ReportScreen
+import com.talkqquest.app.feature.report.ui.WeeklyCompareScreen
 import com.talkqquest.app.feature.archive.ui.ArchiveListScreen
 import com.talkqquest.app.feature.archive.ui.ArchiveSearchScreen
 import com.talkqquest.app.feature.archive.ui.ArchiveConversationDetailScreen
@@ -569,7 +573,21 @@ fun NavGraph(
         }
         // 알림 화면 진입. 디자인 미완성으로 현재는 빈 상태 placeholder입니다.
         composable(Screen.NOTIFICATION) {
-            NotificationScreen(onBack = { navController.popBackStack() })
+            NotificationScreen(
+                onBack = { navController.popBackStack() },
+                // 주간 비교 리포트 알림(화살표가 붙는 유일한 알림) → 주간 비교 리포트 화면.
+                // Screen.REPORT는 성장 리포트라 다른 화면이다.
+                onWeeklyReportClick = { navController.navigate(Screen.WEEKLY_COMPARE) },
+            )
+        }
+        // 주간 비교 리포트(홈/알림창에서 진입) — 닫기로 빠져나온다(뒤로가기 아님).
+        composable(Screen.WEEKLY_COMPARE) {
+            WeeklyCompareScreen(
+                onClose = { navController.popBackStack() },
+                // TODO(연결): "완료한 미션 >"은 보관함 미션 목록(C 담당)으로 가는 자리.
+                //   해당 화면이 생기면 그 route로 연결할 것.
+                onCompletedMissionsClick = {},
+            )
         }
         // C담당: 아카이브 홈 화면(하단 탭 = MainTabsPager의 페이저 페이지).
         composable(Screen.ARCHIVE_HOME) {
@@ -675,21 +693,51 @@ fun NavGraph(
         ) {
             MissionDetailScreen(
                 onBack = { navController.popBackStack() },
-                onNextClick = { missionId -> navController.navigate("conversation_prep/$missionId") },
+                onNextClick = { missionId -> navController.navigate("conversation_setup_1/$missionId") },
                 onMissionClick = { missionId -> navController.navigate("mission_detail/$missionId") },
                 onSheetTopChange = onOverlaySheetTop,
                 onSavedListClick = { navController.navigate("${Screen.ARCHIVE_LIST}/0") },
             )
         }
-        // B담당: 대화 준비 화면. 대화 시작 버튼 클릭 시 대화 진행 화면으로 이동합니다.
+        // B담당: 미션 진입 · 대화 설정 4스텝. 상세 "다음" → 1(장소)→2(상대)→3(성별·나이)→4(친밀도·말투) → 대화.
         composable(
-            route = Screen.CONVERSATION_PREP,
+            route = Screen.CONVERSATION_SETUP_1,
             arguments = listOf(navArgument("missionId") { type = NavType.StringType }),
         ) { backStackEntry ->
             val missionId = backStackEntry.arguments?.getString("missionId").orEmpty()
-            ConversationPrepScreen(
+            ConversationSetup1Screen(
                 onBack = { navController.popBackStack() },
-                onStartClick = { navController.navigate("conversation/$missionId") },
+                onNext = { navController.navigate("conversation_setup_2/$missionId") },
+            )
+        }
+        composable(
+            route = Screen.CONVERSATION_SETUP_2,
+            arguments = listOf(navArgument("missionId") { type = NavType.StringType }),
+        ) { backStackEntry ->
+            val missionId = backStackEntry.arguments?.getString("missionId").orEmpty()
+            ConversationSetup2Screen(
+                onBack = { navController.popBackStack() },
+                onNext = { navController.navigate("conversation_setup_3/$missionId") },
+            )
+        }
+        composable(
+            route = Screen.CONVERSATION_SETUP_3,
+            arguments = listOf(navArgument("missionId") { type = NavType.StringType }),
+        ) { backStackEntry ->
+            val missionId = backStackEntry.arguments?.getString("missionId").orEmpty()
+            ConversationSetup3Screen(
+                onBack = { navController.popBackStack() },
+                onNext = { navController.navigate("conversation_setup_4/$missionId") },
+            )
+        }
+        composable(
+            route = Screen.CONVERSATION_SETUP_4,
+            arguments = listOf(navArgument("missionId") { type = NavType.StringType }),
+        ) { backStackEntry ->
+            val missionId = backStackEntry.arguments?.getString("missionId").orEmpty()
+            ConversationSetup4Screen(
+                onBack = { navController.popBackStack() },
+                onNext = { navController.navigate("conversation/$missionId") },
             )
         }
         // B담당: 대화 진행 화면. 종료 시 미션 완료 및 XP 화면으로 이동합니다.
@@ -699,12 +747,14 @@ fun NavGraph(
         ) { backStackEntry ->
             val missionId = backStackEntry.arguments?.getString("conversationId").orEmpty()
             ConversationScreen(
+                // 헤더 "대화 완료" → 확인 팝업 → 미션 완료·저장. 소요 시간을 미션 완료 화면에 전달합니다.
                 onExitConfirm = { durationSec ->
-                    // 대화 종료 후 소요 시간을 파라미터로 넘겨 미션 완료 화면에 전달합니다.
                     navController.navigate("mission_complete/$missionId?durationSec=$durationSec") {
                         popUpTo(Screen.HOME)
                     }
                 },
+                // 헤더 뒤로가기 → 미션을 저장하지 않고 종료(완료 처리 없이 이전 화면으로).
+                onBack = { navController.popBackStack() },
             )
         }
         // B담당: 미션 완료 및 XP 화면. 이후 AI 피드백 화면으로 진입합니다.
@@ -722,7 +772,7 @@ fun NavGraph(
             )
         }
         // B담당: AI 피드백 화면. 항목 클릭 시 피드백 상세 화면으로 이동합니다.
-        // 상세 리포트 버튼은 리포트 화면으로, 다음 버튼은 홈으로 이동합니다.
+        // 성장 리포트 버튼은 리포트 화면으로, 다음 버튼은 홈으로 이동합니다.
         composable(
             route = Screen.FEEDBACK,
             arguments = listOf(navArgument("feedbackId") { type = NavType.StringType }),
@@ -733,17 +783,22 @@ fun NavGraph(
                 onItemClick = { index -> navController.navigate("feedback_detail/$feedbackId?item=$index") },
                 // 피드백 진입 전 기존 ViewModel 선택 상태를 위한 백업 처리입니다.
                 // URI 인코딩을 통해 파라미터를 전달합니다.
-                onDetailReport = { missionTitle ->
-                    navController.navigate("report?missionTitle=${Uri.encode(missionTitle)}")
+                // conversationId는 리포트 저장(POST /reports)이 요구하는 값이라 함께 넘긴다.
+                onDetailReport = { missionTitle, conversationId ->
+                    navController.navigate(
+                        "report?missionTitle=${Uri.encode(missionTitle)}" +
+                            "&conversationId=${Uri.encode(conversationId)}",
+                    )
                 },
                 onHome = { navController.popBackStack(Screen.HOME, inclusive = false) },
             )
         }
-        // B담당: 리포트 성장/주간 화면. 피드백 화면에서 상세 리포트 클릭 시 진입합니다.
+        // B담당: 성장 리포트 화면. 피드백 화면에서 "성장 리포트" 클릭 시 진입합니다.
         composable(
             route = Screen.REPORT,
             arguments = listOf(
                 navArgument("missionTitle") { type = NavType.StringType; defaultValue = "" },
+                navArgument("conversationId") { type = NavType.StringType; defaultValue = "" },
             ),
         ) {
             ReportScreen(

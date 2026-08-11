@@ -71,14 +71,29 @@ class HomeRepository @Inject constructor(
     // ★실측(2026-07-22): 온보딩 미완료 계정은 MISSION_PROFILE_NOT_FOUND 에러
     //   → 미션 목록 첫 항목으로 폴백(실서버 UUID 유지 — 카드를 눌러도 실제 상세로 이어짐).
     //   카드 부제(description)는 목록 응답에 없어 상세 조회로 채움(실패 시 생략).
+    // ★2026-08-11: 오늘의 미션 응답에 description이 함께 오므로 상세를 한 번 더 부르지 않는다.
+    //   재추천 횟수를 다 쓴 계정은 429(MISSION_REFRESH_LIMIT_EXCEEDED)가 오는데, 이때도 화면이
+    //   비지 않도록 기존처럼 목록 첫 항목으로 폴백한다(실서버 UUID라 카드를 눌러도 상세로 이어짐).
     private suspend fun fetchTodayMission(): TodayMission? {
-        val item = when (val today = serverCall { missionApi.getTodayMission() }) {
-            is ApiResult.Success -> today.data
-            else -> {
-                val list = serverCall { missionApi.getMissions() }
-                (list as? ApiResult.Success)?.data?.missions?.firstOrNull() ?: return null
+        when (val today = serverCall { missionApi.getTodayMission() }) {
+            is ApiResult.Success -> {
+                val d = today.data
+                if (d.missionId.isNotBlank()) {
+                    return TodayMission(
+                        id = d.missionId,
+                        title = d.title,
+                        description = d.description.takeIf { it.isNotBlank() },
+                        difficulty = d.difficulty,
+                        estimatedMinutes = d.estimatedMinutes,
+                        rewardXp = d.rewardXp,
+                    )
+                }
             }
+            else -> Unit
         }
+        // 폴백: 목록 첫 항목 (부제는 목록 응답에 없어 상세로 채움 — 실패하면 생략)
+        val list = serverCall { missionApi.getMissions() }
+        val item = (list as? ApiResult.Success)?.data?.missions?.firstOrNull() ?: return null
         val description = (serverCall { missionApi.getMissionDetail(item.id) } as? ApiResult.Success)
             ?.data?.description?.takeIf { it.isNotBlank() }
         return TodayMission(

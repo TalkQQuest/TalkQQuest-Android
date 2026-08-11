@@ -20,13 +20,31 @@ data class NotificationItemDto(
 )
 
 // GET/PATCH /api/v1/notifications/settings — dev NotificationSettingsResponseDto.
-// ※ 알림 설정 화면이 아직 디자인에 없어 UI 미연결. API 계약만 코드에 확보.
+// ※ 이 화면(알림창)에는 설정 UI가 없다. 설정 행은 프로필 설정 화면(A담당)에 있고,
+//   여기는 API 계약만 보관한다.
 @Serializable
 data class NotificationSettings(
     val missionReminder: Boolean = false,
     val communityApproved: Boolean = false,
     val reportReady: Boolean = false,
     val marketing: Boolean = false,
+    // 미션 리마인드를 보낼 시각. "HH:mm" 24시간 표기, 서버 기본값 "09:00" (백엔드 보고 2026-08-11).
+    // 앱은 저장만 하면 되고 그 시각에 실제로 알림을 보내는 건 서버가 한다 — 따로 부를 API가 없다.
+    // ★형식이 어긋나면 400(VALIDATION_ERROR "missionReminderTime은 HH:mm 형식이어야 합니다")이다.
+    //   실서버 호출로 확인함. "9:00"·"09:00:00"·"9시" 전부 거절되니 두 자리로 맞춰 보낼 것.
+    val missionReminderTime: String = "09:00",
+)
+
+// PATCH 본문 — 부분 업데이트라 바꿀 항목만 담는다(나머지는 null이면 안 보냄).
+// 응답 DTO(NotificationSettings)를 그대로 본문에 쓰면 손대지 않은 항목까지 기본값으로 덮어써서,
+// 시각 하나 바꾸려다 알림 스위치가 전부 꺼진다.
+@Serializable
+data class NotificationSettingsUpdateRequest(
+    val missionReminder: Boolean? = null,
+    val communityApproved: Boolean? = null,
+    val reportReady: Boolean? = null,
+    val marketing: Boolean? = null,
+    val missionReminderTime: String? = null,
 )
 
 // 화면용 모델 — 알림 카드 1장 (디자인: 위 작은 회색 줄 + 아래 굵은 줄 + 시간 + 안읽음 점).

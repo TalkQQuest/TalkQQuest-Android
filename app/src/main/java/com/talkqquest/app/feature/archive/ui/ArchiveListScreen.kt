@@ -81,7 +81,8 @@ fun ArchiveListScreen(
     onMissionClick: (String) -> Unit = {},
     onConversationClick: (String) -> Unit = {},
     onSentenceClick: (String) -> Unit = {},
-    onReportClick: (String) -> Unit = {}
+    // 💡 수정됨: Boolean 파라미터(isWeeklyCompare) 추가
+    onReportClick: (String, Boolean) -> Unit = { _, _ -> }
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val lifecycleOwner = LocalLifecycleOwner.current
@@ -125,17 +126,16 @@ private fun ArchiveListScreenContent(
     onConversationClick: (String) -> Unit,
     onSentenceClick: (String) -> Unit,
     onToggleSentenceSave: (String) -> Unit,
-    onReportClick: (String) -> Unit,
+    // 💡 수정됨: Boolean 파라미터(isWeeklyCompare) 추가
+    onReportClick: (String, Boolean) -> Unit,
     onToggleReportSave: (String) -> Unit
 ) {
     val tabs = listOf("미션", "대화", "문장", "리포트")
     val pagerState = rememberPagerState(initialPage = initialTabIndex, pageCount = { tabs.size })
     val coroutineScope = rememberCoroutineScope()
 
-    // 💡 바텀시트 노출 상태 관리
     var showReportFilterSheet by remember { mutableStateOf(false) }
 
-    // 💡 탭 이동 시 선택된 필터를 "전체"로 깔끔하게 초기화
     LaunchedEffect(pagerState.currentPage) {
         onFilterSelect("전체")
     }
@@ -211,10 +211,9 @@ private fun ArchiveListScreenContent(
                     }
                 }
 
-                // [3] 필터 영역 (미션 탭 vs 리포트 탭)
+                // [3] 필터 영역
                 when (pagerState.currentPage) {
                     0 -> {
-                        // 💡 미션 탭: 기존의 가로 스크롤 칩 필터
                         Spacer(modifier = Modifier.height(27.dp))
                         Row(
                             modifier = Modifier
@@ -233,7 +232,6 @@ private fun ArchiveListScreenContent(
                         }
                     }
                     3 -> {
-                        // 💡 리포트 탭: CSS 명세에 맞춘 바텀시트 트리거(드롭다운 형태)
                         Spacer(modifier = Modifier.height(16.dp))
                         Row(
                             modifier = Modifier
@@ -268,7 +266,6 @@ private fun ArchiveListScreenContent(
                     }
                 }
 
-                // 리포트 필터링 로직
                 val displayReports = when (uiState.selectedFilter) {
                     "성장 리포트" -> uiState.reports.filter { !it.title.contains("주간 비교") }
                     "주간 비교 리포트" -> uiState.reports.filter { it.title.contains("주간 비교") }
@@ -349,14 +346,15 @@ private fun ArchiveListScreenContent(
                                 }
                                 3 -> { // 리포트 탭
                                     items(displayReports, key = { it.id }) { report ->
-                                        // 💡 BookmarkCard 재활용 로직
-                                        val reportTypeLabel = if (report.title.contains("주간 비교")) "주간 비교 리포트" else "성장 리포트"
+                                        val isWeeklyCompare = report.title.contains("주간 비교")
+                                        val reportTypeLabel = if (isWeeklyCompare) "주간 비교 리포트" else "성장 리포트"
                                         val displayItem = report.copy(status = reportTypeLabel)
 
                                         BookmarkCard(
                                             item = displayItem,
                                             isSentence = false,
-                                            onClick = { onReportClick(report.id) },
+                                            // 💡 수정됨: report.id 와 isWeeklyCompare를 함께 전달
+                                            onClick = { onReportClick(report.id, isWeeklyCompare) },
                                             onToggleSave = { onToggleReportSave(report.id) },
                                             modifier = Modifier.animateItem()
                                         )
@@ -368,7 +366,6 @@ private fun ArchiveListScreenContent(
                 }
             }
 
-            // [5] 💡 방금 분리해서 만든 별도의 바텀시트 컴포넌트 호출
             ArchiveReportBottomSheet(
                 isVisible = showReportFilterSheet,
                 currentFilter = uiState.selectedFilter,
@@ -438,27 +435,7 @@ private val previewUiState = ArchiveUiState(
 private fun ArchiveListMissionPreview() {
     TalkQQuestTheme {
         ArchiveListScreenContent(
-            initialTabIndex = 0, uiState = previewUiState, onBackClick = {}, onFilterSelect = {}, onMissionClick = {}, onToggleMissionSave = {}, onConversationClick = {}, onSentenceClick = {}, onToggleSentenceSave = {}, onReportClick = {}, onToggleReportSave = {}
-        )
-    }
-}
-
-@Preview(name = "2. 보관함 리스트 [대화]", showSystemUi = true, device = "spec:width=393dp,height=852dp")
-@Composable
-private fun ArchiveListConversationPreview() {
-    TalkQQuestTheme {
-        ArchiveListScreenContent(
-            initialTabIndex = 1, uiState = previewUiState, onBackClick = {}, onFilterSelect = {}, onMissionClick = {}, onToggleMissionSave = {}, onConversationClick = {}, onSentenceClick = {}, onToggleSentenceSave = {}, onReportClick = {}, onToggleReportSave = {}
-        )
-    }
-}
-
-@Preview(name = "3. 보관함 리스트 [문장]", showSystemUi = true, device = "spec:width=393dp,height=852dp")
-@Composable
-private fun ArchiveListSentencePreview() {
-    TalkQQuestTheme {
-        ArchiveListScreenContent(
-            initialTabIndex = 2, uiState = previewUiState, onBackClick = {}, onFilterSelect = {}, onMissionClick = {}, onToggleMissionSave = {}, onConversationClick = {}, onSentenceClick = {}, onToggleSentenceSave = {}, onReportClick = {}, onToggleReportSave = {}
+            initialTabIndex = 0, uiState = previewUiState, onBackClick = {}, onFilterSelect = {}, onMissionClick = {}, onToggleMissionSave = {}, onConversationClick = {}, onSentenceClick = {}, onToggleSentenceSave = {}, onReportClick = { _, _ -> }, onToggleReportSave = {}
         )
     }
 }
@@ -468,7 +445,7 @@ private fun ArchiveListSentencePreview() {
 private fun ArchiveListReportPreview() {
     TalkQQuestTheme {
         ArchiveListScreenContent(
-            initialTabIndex = 3, uiState = previewUiState, onBackClick = {}, onFilterSelect = {}, onMissionClick = {}, onToggleMissionSave = {}, onConversationClick = {}, onSentenceClick = {}, onToggleSentenceSave = {}, onReportClick = {}, onToggleReportSave = {}
+            initialTabIndex = 3, uiState = previewUiState, onBackClick = {}, onFilterSelect = {}, onMissionClick = {}, onToggleMissionSave = {}, onConversationClick = {}, onSentenceClick = {}, onToggleSentenceSave = {}, onReportClick = { _, _ -> }, onToggleReportSave = {}
         )
     }
 }

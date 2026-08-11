@@ -1,5 +1,12 @@
 package com.talkqquest.app.navigation
 
+import android.content.Context
+import android.net.Uri
+import android.widget.Toast
+import androidx.compose.animation.AnimatedContentTransitionScope
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.PagerState
@@ -7,12 +14,20 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
-import android.widget.Toast
+import androidx.compose.ui.unit.IntOffset
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.navigation.NavBackStackEntry
 import androidx.navigation.NavHostController
+import androidx.navigation.NavType
+import androidx.navigation.compose.NavHost
+import androidx.navigation.compose.composable
+import androidx.navigation.navArgument
 import com.talkqquest.app.feature.archive.ui.ArchiveHomeScreen
 import com.talkqquest.app.feature.archive.viewmodel.ActivityType
 import com.talkqquest.app.feature.home.ui.HomeScreen
@@ -94,12 +109,18 @@ private fun ArchiveTab(navController: NavHostController) {
         onNavigateToList = { tabIndex: Int ->
             navController.navigate("${Screen.ARCHIVE_LIST}/$tabIndex")
         },
-        // 💡 C담당: 전달 파라미터 타입 명시 유지
-        onNavigateToDetail = { activityId: String, type: ActivityType ->
+        // 💡 [수정됨] isWeeklyCompare 파라미터 추가 및 라우팅 분기 처리 적용
+        onNavigateToDetail = { activityId: String, type: ActivityType, isWeeklyCompare: Boolean ->
             when (type) {
                 ActivityType.CONVERSATION -> navController.navigate("archive_conversation_detail/$activityId")
                 ActivityType.SENTENCE -> navController.navigate("archive_saved_phrase/$activityId")
-                ActivityType.REPORT -> navController.navigate("archive_report/$activityId")
+                ActivityType.REPORT -> {
+                    if (isWeeklyCompare) {
+                        navController.navigate("archive_weekly_compare_report/$activityId")
+                    } else {
+                        navController.navigate("archive_report/$activityId")
+                    }
+                }
                 ActivityType.MISSION -> navController.navigate("mission_detail/$activityId")
             }
         }

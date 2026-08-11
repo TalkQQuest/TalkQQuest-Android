@@ -16,22 +16,21 @@ data class ArchiveConversationDetailResponse(
 
 @Serializable
 data class ArchiveConversationMessageDto(
-    val id: String? = null, // 💡 API 명세 추가됨
-    val role: String? = null, // 💡 JSON 명세 기준
-    val sender: String? = null, // 💡 표 명세 기준
+    val id: String? = null,
+    val role: String? = null,
+    val sender: String? = null,
     val content: String,
-    val createdAt: String? = null, // 💡 JSON 명세 기준
-    val sentAt: String? = null // 💡 표 명세 기준
+    val createdAt: String? = null,
+    val sentAt: String? = null
 ) {
-    // 💡 ViewModel에서 에러 나던 헬퍼 프로퍼티들을 여기에 정의합니다!
     val actualRole: String get() = role ?: sender ?: "bot"
     val actualTime: String get() = createdAt ?: sentAt ?: ""
 }
 
 @Serializable
 data class ArchiveConversationFeedbackDto(
-    val id: String? = null, // 💡 JSON 명세 기준
-    val feedbackId: String? = null, // 💡 표 명세 기준
+    val id: String? = null,
+    val feedbackId: String? = null,
     val kindnessScore: Int = 0,
     val initiativeScore: Int = 0,
     val empathyScore: Int = 0,
@@ -271,4 +270,52 @@ data class ConversationDetailMock(
     val mainContentText: String,
     val feedbacks: List<Pair<String, Int>>,
     val messages: List<ReviewChatMessage>
+)
+
+// ==========================================
+// 💡 아카이브 전용 리포트 UI 데이터 모델
+// ==========================================
+enum class CompetencyAxis { KINDNESS, INITIATIVE, EMPATHY, QUESTION_LINK }
+
+data class Competency(
+    val axis: CompetencyAxis,
+    val label: String,
+    val legendLabel: String,
+    val maxScore: Int,
+    val score: Int,
+    val gain: Int = score
+)
+
+data class GrowthReport(
+    val tierName: String,
+    val tierStars: Int,
+    val nextStarsNeeded: Int,
+    val nextTierName: String,
+    val competencies: List<Competency>
+)
+
+data class MetricChange(
+    val name: String,
+    val lastWeek: Int,
+    val thisWeek: Int
+)
+
+data class HighlightItem(
+    val emphasis: String,
+    val rest: String
+)
+
+// 💡 [추가] 주제 랭킹 모델 추가
+data class CategoryRank(
+    val name: String,
+    val count: Int
+)
+
+// 💡 [수정] 주간 비교 리포트에 미션 진행도 및 카테고리 랭크 추가
+data class WeeklyCompareReport(
+    val metrics: List<MetricChange>,
+    val highlights: List<HighlightItem>,
+    val completedMissions: Int = 0,
+    val totalMissions: Int = 0,
+    val topCategories: List<CategoryRank> = emptyList()
 )

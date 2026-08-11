@@ -6,6 +6,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -24,10 +25,15 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -36,6 +42,8 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.TextStyle
@@ -48,6 +56,8 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import com.talkqquest.app.R
 import com.talkqquest.app.core.designsystem.Error
 import com.talkqquest.app.core.designsystem.FitDesign
@@ -263,19 +273,81 @@ private fun TierCard(
             .padding(start = 16.dp, top = 12.dp, bottom = 12.dp),
     ) {
         // "실전 티어" + info
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Text(text = "실전 티어", style = TqType.LabelL.figma(), color = Gray500) // 14/500
+        val tierInfoInteraction = remember { MutableInteractionSource() }
+        val tierInfoPressed by tierInfoInteraction.collectIsPressedAsState()
+        var tierInfoClickAnimating by remember { mutableStateOf(false) }
+        val tierInfoCoroutineScope = rememberCoroutineScope()
+        val tierInfoVisuallyPressed = tierInfoPressed || tierInfoClickAnimating
+        val tierInfoScale by animateFloatAsState(
+            targetValue = if (tierInfoVisuallyPressed) 0.88f else 1f,
+            animationSpec = tween(
+                durationMillis = if (tierInfoVisuallyPressed) 90 else 140,
+                easing = FastOutSlowInEasing,
+            ),
+            label = "tierInfoPressScale",
+        )
+        val tierInfoDepth by animateFloatAsState(
+            targetValue = if (tierInfoVisuallyPressed) 2f else 0f,
+            animationSpec = tween(
+                durationMillis = if (tierInfoVisuallyPressed) 90 else 140,
+                easing = FastOutSlowInEasing,
+            ),
+            label = "tierInfoPressDepth",
+        )
+        val tierInfoColor by animateColorAsState(
+            targetValue = if (tierInfoVisuallyPressed) Gray700 else Gray500,
+            animationSpec = tween(
+                durationMillis = if (tierInfoVisuallyPressed) 90 else 140,
+                easing = FastOutSlowInEasing,
+            ),
+            label = "tierInfoPressTextColor",
+        )
+        val tierInfoIconColor by animateColorAsState(
+            targetValue = if (tierInfoVisuallyPressed) Gray600 else Gray400,
+            animationSpec = tween(
+                durationMillis = if (tierInfoVisuallyPressed) 90 else 140,
+                easing = FastOutSlowInEasing,
+            ),
+            label = "tierInfoPressIconColor",
+        )
+        val tierInfoDepthPx = with(LocalDensity.current) { tierInfoDepth.dp.toPx() }
+
+        Row(
+            modifier = Modifier
+                .graphicsLayer {
+                    scaleX = tierInfoScale
+                    scaleY = tierInfoScale
+                    translationY = tierInfoDepthPx
+                }
+                .clickable(
+                    interactionSource = tierInfoInteraction,
+                    indication = null,
+                    onClick = {
+                        if (!tierInfoClickAnimating) {
+                            tierInfoClickAnimating = true
+                            tierInfoCoroutineScope.launch {
+                                delay(100)
+                                onInfoClick()
+                                tierInfoClickAnimating = false
+                            }
+                        }
+                    },
+                ),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(
+                text = "실전 티어",
+                style = TqType.LabelL.figma(),
+                color = tierInfoColor,
+            ) // 14/500
             Box(
-                modifier = Modifier
-                    .size(24.dp)
-                    .clip(CircleShape)
-                    .clickable(onClick = onInfoClick),
+                modifier = Modifier.size(24.dp),
                 contentAlignment = Alignment.Center,
             ) {
                 Icon(
                     painter = painterResource(R.drawable.ic_notification_info),
                     contentDescription = "실전 티어 안내",
-                    tint = Gray400, // information-circle Gray/400
+                    tint = tierInfoIconColor,
                     modifier = Modifier.size(18.dp),
                 )
             }

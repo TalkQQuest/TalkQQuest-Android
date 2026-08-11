@@ -11,12 +11,14 @@ import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
@@ -169,8 +171,10 @@ private fun NotificationScreen(
             else -> LazyColumn(
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(start = 16.dp, end = 13.dp), // CSS left 16 · 폭 364 → 오른쪽 13 (비대칭)
+                    .padding(start = 16.dp, end = 13.dp)
+                    .navigationBarsPadding(), // 마지막 알림 항목이 시스템 네비게이션 바 위에서 끝나도록 확보
                 verticalArrangement = Arrangement.spacedBy(16.dp), // CSS gap 16
+                contentPadding = PaddingValues(bottom = 16.dp), // 마지막 알림 항목과 시스템 네비게이션 바 사이 여백
             ) {
                 if (showNotificationSettingsBanner) {
                     item { NotificationSettingBanner(onClick = onNotificationSettingsClick) }

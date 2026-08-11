@@ -78,12 +78,15 @@ private val FullLeading = LineHeightStyle(
  *
  * @param message 가운데 문구. 시안이 2줄이라 줄바꿈(\n)을 직접 넣어 쓴다.
  * @param onBack 뒤로가기를 둘 화면만 넘긴다. null이면 버튼을 그리지 않는다.
+ * @param compensateStatusBar 이미 FitDesign 안에서 부를 땐 false. 상태바 보정이 두 번 먹어
+ *        좌표계가 어긋나는 걸 막는다(다른 화면의 로딩 상태로 끼워 쓸 때).
  */
 @Composable
 fun TqLoadingScreen(
     message: String,
     onBack: (() -> Unit)? = null,
-) = FitDesign {
+    compensateStatusBar: Boolean = true,
+) = FitDesign(compensateStatusBar = compensateStatusBar) {
     Box(
         modifier = Modifier
             .fillMaxSize()

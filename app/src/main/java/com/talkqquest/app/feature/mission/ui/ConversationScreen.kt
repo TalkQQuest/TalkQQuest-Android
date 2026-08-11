@@ -53,7 +53,6 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowUp
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -202,7 +201,13 @@ private fun ConversationScreen(
         contentAlignment = Alignment.Center,
     ) {
         when {
-            uiState.isLoading -> CircularProgressIndicator(color = Primary600)
+            // 대화 세션이 만들어질 때까지 시안의 "대화 진입 애니메이션" 화면을 그대로 띄운다.
+            // 별도 destination으로 끼우면 이 화면이 끝난 뒤 여기서 또 로딩이 돌아 두 번 기다리게 된다.
+            // compensateStatusBar = false — 이 화면이 이미 FitDesign 안이라 보정이 두 번 먹지 않게.
+            uiState.isLoading -> ConversationIntroScreen(
+                onBack = onBackClick,
+                compensateStatusBar = false,
+            )
 
             uiState.errorMessage != null -> {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {

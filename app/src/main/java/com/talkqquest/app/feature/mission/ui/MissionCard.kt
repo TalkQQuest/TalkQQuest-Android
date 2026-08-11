@@ -103,9 +103,17 @@ internal fun MissionCard(
             verticalArrangement = Arrangement.spacedBy(7.dp), // 제목 ↔ 메타줄 (CSS Frame 350 gap)
         ) {
             Text(
-                text = mission.title.glueShortWords().keepWordsIntact(),
-                // CSS: Body/L Medium (16/24, 굵기 500)
-                style = TqType.BodyL.figma().copy(fontWeight = FontWeight.Medium, lineBreak = LineBreak.Heading),
+                text = mission.title.glueShortWords(),
+                // CSS: Body/L Medium (16/24, 굵기 500). AI 피드백 상세와 같은 어절 단위 줄바꿈:
+                // 문장 전체를 균형 있게 배치하고, 한 글자 어절이 줄 끝에 홀로 남지 않게 한다.
+                style = TqType.BodyL.figma().copy(
+                    fontWeight = FontWeight.Medium,
+                    lineBreak = LineBreak(
+                        strategy = LineBreak.Strategy.HighQuality,
+                        strictness = LineBreak.Strictness.Strict,
+                        wordBreak = LineBreak.WordBreak.Phrase,
+                    ),
+                ),
                 color = Gray900,
             )
             Row(

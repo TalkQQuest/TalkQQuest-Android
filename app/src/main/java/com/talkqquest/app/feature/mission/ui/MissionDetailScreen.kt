@@ -40,6 +40,8 @@ import androidx.compose.ui.layout.positionInRoot
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.text.style.LineBreak
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
@@ -71,6 +73,7 @@ import com.talkqquest.app.feature.mission.data.model.MissionDetail
 import com.talkqquest.app.feature.mission.data.model.MissionListItem
 import com.talkqquest.app.feature.mission.viewmodel.MissionDetailUiState
 import com.talkqquest.app.feature.mission.viewmodel.MissionDetailViewModel
+import kotlin.math.abs
 
 // ── 미션 상세 (UI 1차 v2.css "미션 상세"/"미션 상세에서 북마크" 전사) ──
 // 화면 = 2단 분리(state hoisting): (1) viewModel 연결용 / (2) 값만 받아 그리는 부분(Preview용). 홈 패턴 동일.
@@ -87,6 +90,84 @@ private val detailGradientStops: Array<Pair<Float, Color>> = Array(21) { i ->
         green = (247f + (159f - 247f) * t) / 255f,
         blue = (255f + (244f - 255f) * t) / 255f,
         alpha = 0.8f + (0.01f - 0.8f) * t,
+    )
+}
+
+// 홈 미션 제목과 동일한 줄바꿈: 한 줄이면 유지하고, 넘치면 필요한 최소 줄 수를 구한 뒤
+// 어절 경계에서 각 줄의 실제 폭이 최대한 균등해지도록 나눈다.
+@Composable
+private fun MissionDetailTitleText(title: String) {
+    val style = TqType.HeadingL.figma()
+    val measurer = rememberTextMeasurer()
+    val density = LocalDensity.current
+    val displayTitle = remember(title) {
+        val maxWidthPx = with(density) { 260.dp.toPx() }
+        fun width(text: String): Int = measurer.measure(AnnotatedString(text), style = style).size.width
+        val rawWords = title.trim().split(Regex("\\s+")).filter(String::isNotEmpty)
+        val words = buildList {
+            var index = 0
+            while (index < rawWords.size) {
+                if (rawWords[index].length == 1 && index + 1 < rawWords.size) {
+                    add("${rawWords[index]} ${rawWords[index + 1]}")
+                    index += 2
+                } else {
+                    add(rawWords[index])
+                    index++
+                }
+            }
+        }
+        val oneLine = words.joinToString(" ")
+        if (width(oneLine) <= maxWidthPx || words.size <= 1) return@remember oneLine
+        val minimumLines = buildList {
+            var current = ""
+            words.forEach { word ->
+                val candidate = if (current.isEmpty()) word else "$current $word"
+                if (current.isNotEmpty() && width(candidate) > maxWidthPx) {
+                    add(current)
+                    current = word
+                } else current = candidate
+            }
+            if (current.isNotEmpty()) add(current)
+        }
+        val lineCount = minimumLines.size
+        val targetWidth = minimumLines.sumOf { width(it) }.toFloat() / lineCount
+        data class Partition(val lines: List<String>, val score: Float)
+        val memo = mutableMapOf<Pair<Int, Int>, Partition?>()
+        fun choose(start: Int, linesLeft: Int): Partition? {
+            if (start >= words.size) return null
+            if (linesLeft == 1) {
+                val last = words.subList(start, words.size).joinToString(" ")
+                val lastWidth = width(last)
+                return if (lastWidth <= maxWidthPx || start == words.lastIndex) {
+                    Partition(listOf(last), abs(lastWidth - targetWidth))
+                } else null
+            }
+            val key = start to linesLeft
+            memo[key]?.let { return it }
+            var current = ""
+            var best: Partition? = null
+            for (end in start until words.size - (linesLeft - 1)) {
+                current = if (current.isEmpty()) words[end] else "$current ${words[end]}"
+                val currentWidth = width(current)
+                if (currentWidth > maxWidthPx && end > start) break
+                val tail = choose(end + 1, linesLeft - 1) ?: continue
+                val candidate = Partition(
+                    lines = listOf(current) + tail.lines,
+                    score = abs(currentWidth - targetWidth) + tail.score,
+                )
+                if (best == null || candidate.score < best!!.score) best = candidate
+            }
+            memo[key] = best
+            return best
+        }
+        choose(0, lineCount)?.lines?.joinToString("\n") ?: minimumLines.joinToString("\n")
+    }
+    Text(
+        text = displayTitle,
+        style = style,
+        color = Gray700,
+        textAlign = TextAlign.Center,
+        modifier = Modifier.widthIn(max = 260.dp),
     )
 }
 
@@ -272,15 +353,8 @@ private fun MissionDetailContent(
                 // 피그마 틀과 같은 비율로 그대로 있음(상8.5%/하4.7%) → 틀 기준이 동일하므로 CSS 값 2를 그대로 쓴다.
                 // (구 주석 "PNG는 잘라냄→눈대조 16"은 오판이었음 — 16이면 제목·칩이 6px 내려감, 2026-07-19 전수검증)
                 Spacer(Modifier.height(2.dp * shrink))
-                Text(
-                    // 서버 가변 제목: 어절 보호 + 한 글자 어절 고아 방지 + 줄 균형 (홈과 동일 규칙)
-                    text = detail.title.glueShortWords().keepWordsIntact(),
-                    style = TqType.HeadingL.figma().copy(lineBreak = LineBreak.Heading),
-                    color = Gray700,
-                    textAlign = TextAlign.Center,
-                    // 디자인은 폭 186에 2줄 — 가변 제목 대응으로 최대 260까지 허용, 길면 3줄 (합의됨)
-                    modifier = Modifier.widthIn(max = 260.dp),
-                )
+                // 홈 미션 제목과 같은 최소 줄 수·어절 경계·줄 폭 균형 규칙.
+                MissionDetailTitleText(title = detail.title)
                 Spacer(Modifier.height(16.dp)) // 제목 → 칩 (CSS Frame 434 gap)
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) { // 칩 간격 (CSS Frame 349 gap)
                     DetailDifficultyChip(difficulty = detail.difficulty)

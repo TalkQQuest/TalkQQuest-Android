@@ -581,6 +581,32 @@ private fun HomeLevelCard(
     var levelTapRunning by remember { mutableStateOf(false) }
     val levelTapScope = rememberCoroutineScope()
     var lastXpAnimationTrigger by rememberSaveable { mutableIntStateOf(0) }
+    val levelTitleInteraction = remember { MutableInteractionSource() }
+    val levelTitlePressed by levelTitleInteraction.collectIsPressedAsState()
+    var levelTitleClickAnimating by remember { mutableStateOf(false) }
+    val levelTitleScope = rememberCoroutineScope()
+    val levelTitleVisuallyPressed = levelTitlePressed || levelTitleClickAnimating
+    val levelTitleScale by animateFloatAsState(
+        targetValue = if (levelTitleVisuallyPressed) 0.94f else 1f,
+        animationSpec = tween(
+            durationMillis = if (levelTitleVisuallyPressed) 90 else 140,
+            easing = FastOutSlowInEasing,
+        ),
+        label = "levelTitlePressScale",
+    )
+    val levelXpInteraction = remember { MutableInteractionSource() }
+    val levelXpPressed by levelXpInteraction.collectIsPressedAsState()
+    var levelXpClickAnimating by remember { mutableStateOf(false) }
+    val levelXpScope = rememberCoroutineScope()
+    val levelXpVisuallyPressed = levelXpPressed || levelXpClickAnimating
+    val levelXpScale by animateFloatAsState(
+        targetValue = if (levelXpVisuallyPressed) 0.94f else 1f,
+        animationSpec = tween(
+            durationMillis = if (levelXpVisuallyPressed) 90 else 140,
+            easing = FastOutSlowInEasing,
+        ),
+        label = "levelXpPressScale",
+    )
     // 티어 전환/광택 단계는 화면 복귀 때 복원하면 안 되는 일회성 애니메이션 상태다.
     // 저장 상태로 두면 다른 화면으로 이동 중의 phase=1이 복원되어 게이지보다 먼저 재생된다.
     var tierTextTrigger by remember { mutableIntStateOf(0) }
@@ -641,7 +667,29 @@ private fun HomeLevelCard(
         modifier = Modifier.fillMaxWidth(),
         contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp),
     ) {
-        Text(text = "대화 진행 레벨", style = TqType.LabelL.figma().copy(fontSize = 16.sp), color = Gray700) // 16 medium / Gray700 (UI 10차)
+        Text(
+            text = "대화 진행 레벨",
+            style = TqType.LabelL.figma().copy(fontSize = 16.sp),
+            color = Gray700,
+            modifier = Modifier
+                .graphicsLayer {
+                    scaleX = levelTitleScale
+                    scaleY = levelTitleScale
+                }
+                .clickable(
+                    interactionSource = levelTitleInteraction,
+                    indication = null,
+                    onClick = {
+                        if (!levelTitleClickAnimating) {
+                            levelTitleClickAnimating = true
+                            levelTitleScope.launch {
+                                delay(100)
+                                levelTitleClickAnimating = false
+                            }
+                        }
+                    },
+                ),
+        ) // 16 medium / Gray700 (UI 10차)
         Spacer(Modifier.height(4.dp)) // CSS Frame428 gap 5→4 (UI 10차)
         Row(
             // CSS Frame 333 높이 22 (Lv 배지 틀 22, 텍스트 18) — 없으면 행이 18로 줄어 카드가 4px 낮아짐
@@ -704,6 +752,24 @@ private fun HomeLevelCard(
                     withStyle(SpanStyle(color = Gray400)) { append(" / ${nextLevelXp}XP") }
                 },
                 style = TqType.LabelM.figma(),
+                modifier = Modifier
+                    .graphicsLayer {
+                        scaleX = levelXpScale
+                        scaleY = levelXpScale
+                    }
+                    .clickable(
+                        interactionSource = levelXpInteraction,
+                        indication = null,
+                        onClick = {
+                            if (!levelXpClickAnimating) {
+                                levelXpClickAnimating = true
+                                levelXpScope.launch {
+                                    delay(100)
+                                    levelXpClickAnimating = false
+                                }
+                            }
+                        },
+                    ),
             )
         }
         Spacer(Modifier.height(4.dp))

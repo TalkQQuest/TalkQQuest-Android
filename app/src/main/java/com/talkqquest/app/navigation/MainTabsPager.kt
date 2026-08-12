@@ -3,6 +3,7 @@ package com.talkqquest.app.navigation
 import android.content.Context
 import android.net.Uri
 import android.widget.Toast
+import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedContentTransitionScope
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
@@ -36,6 +37,8 @@ import com.talkqquest.app.feature.archive.viewmodel.ActivityType
 import com.talkqquest.app.feature.home.ui.HomeScreen
 import com.talkqquest.app.feature.mission.ui.MissionListScreen
 import com.talkqquest.app.feature.profile.ui.ProfileScreen
+import com.talkqquest.app.feature.profile.ui.ProfileBadgesScreen
+import com.talkqquest.app.feature.profile.ui.ProfileBadgeUi
 import com.talkqquest.app.feature.profile.viewmodel.ProfileViewModel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -56,7 +59,18 @@ fun MainTabsPager(
     // 홈의 티어 승급 안내 시트처럼 딤이 깔린 모달이 떠 있는 동안은 탭 스와이프를 끈다.
     // (시트가 페이저 페이지 안에 들어 있어서, 안 끄면 모달 위에서 쓸었을 때 옆 탭으로 넘어가 버림)
     var modalSheetOpen by remember { mutableStateOf(false) }
+    var showHomeBadgeCollection by remember { mutableStateOf(false) }
     var homeResumeAnimationTrigger by remember { mutableIntStateOf(0) }
+    val pagerScope = rememberCoroutineScope()
+    val homePage = BottomNavItem.entries.indexOf(BottomNavItem.Home)
+    val profilePage = BottomNavItem.entries.indexOf(BottomNavItem.Profile)
+    val returnFromHomeBadgeCollection: () -> Unit = {
+        pagerScope.launch {
+            pagerState.animateScrollToPage(homePage)
+            showHomeBadgeCollection = false
+        }
+    }
+    BackHandler(enabled = showHomeBadgeCollection, onBack = returnFromHomeBadgeCollection)
     LifecycleEventEffect(Lifecycle.Event.ON_RESUME) {
         if (pagerState.currentPage == BottomNavItem.entries.indexOf(BottomNavItem.Home)) {
             homeResumeAnimationTrigger++
@@ -75,10 +89,18 @@ fun MainTabsPager(
                 navController = navController,
                 resumeAnimationTrigger = homeResumeAnimationTrigger,
                 onOverlaySheetTop = onOverlaySheetTop,
+                onBadgeCollectionClick = {
+                    showHomeBadgeCollection = true
+                    pagerScope.launch { pagerState.animateScrollToPage(profilePage) }
+                },
             ) { modalSheetOpen = it }
             BottomNavItem.Mission -> MissionTab(navController, pagerState, onOverlaySheetTop)
             BottomNavItem.Archive -> ArchiveTab(navController)
-            BottomNavItem.Profile -> ProfileTab(navController)
+            BottomNavItem.Profile -> ProfileTab(
+                navController = navController,
+                showHomeBadgeCollection = showHomeBadgeCollection,
+                onHomeBadgeCollectionBack = returnFromHomeBadgeCollection,
+            )
         }
     }
 }
@@ -88,6 +110,7 @@ private fun HomeTab(
     navController: NavHostController,
     resumeAnimationTrigger: Int,
     onOverlaySheetTop: (Float?) -> Unit,
+    onBadgeCollectionClick: () -> Unit,
     onModalSheetChange: (Boolean) -> Unit,
 ) {
     val homeScope = rememberCoroutineScope()
@@ -105,7 +128,7 @@ private fun HomeTab(
         },
         // 주간 비교 리포트 도착 모달 "보러가기" → 주간 비교 리포트 (알림창 화살표와 같은 화면)
         onWeeklyReportClick = { navController.navigate(Screen.WEEKLY_COMPARE) },
-        onBadgeCollectionClick = { navController.navigate(Screen.PROFILE_BADGES) },
+        onBadgeCollectionClick = onBadgeCollectionClick,
         // 티어 승급 안내 시트가 하단 네비를 덮는 동안 네비를 가림.
         onSheetTopChange = onOverlaySheetTop,
         // 그 시트가 떠 있는 동안 탭 스와이프를 끔(모달이라 뒤 화면으로 못 넘어가야 함).
@@ -164,7 +187,11 @@ private fun ArchiveTab(navController: NavHostController) {
 }
 
 @Composable
-private fun ProfileTab(navController: NavHostController) {
+private fun ProfileTab(
+    navController: NavHostController,
+    showHomeBadgeCollection: Boolean = false,
+    onHomeBadgeCollectionBack: () -> Unit = {},
+) {
     val context = LocalContext.current
     val profileViewModel: ProfileViewModel = hiltViewModel()
     val profileUiState by profileViewModel.uiState.collectAsState()
@@ -179,8 +206,9 @@ private fun ProfileTab(navController: NavHostController) {
         ?: 5
     val weeklyMissionStatus = dashboard?.weeklyMissionStatus
 
-    LaunchedEffect(Unit) {
+    LaunchedEffect(showHomeBadgeCollection) {
         profileViewModel.loadDashboard()
+        if (showHomeBadgeCollection) profileViewModel.loadBadges()
     }
 
     profileUiState.errorMessage?.let { message ->
@@ -188,7 +216,23 @@ private fun ProfileTab(navController: NavHostController) {
         profileViewModel.clearError()
     }
 
-    ProfileScreen(
+    if (showHomeBadgeCollection) {
+        val badges = profileUiState.badges.map { badge ->
+            ProfileBadgeUi(
+                id = badge.id,
+                name = badge.name,
+                description = badge.description,
+                isEarned = badge.isEarned,
+                earnedAt = badge.earnedAt,
+                current = badge.progress?.current,
+                target = badge.progress?.target,
+            )
+        }
+        ProfileBadgesScreen(
+            badges = badges,
+            onBack = onHomeBadgeCollectionBack,
+        )
+    } else ProfileScreen(
         nickname = nickname,
         level = dashboard?.level ?: profile?.level ?: 2,
         xp = dashboard?.xp ?: profile?.xp ?: 30,

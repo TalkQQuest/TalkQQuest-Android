@@ -206,6 +206,18 @@ private fun MissionListScreen(
                             onBack = onBack,
                             homeContext = homeContext,
                         )
+                        if (uiState.filteredMissions.isEmpty()) {
+                            Box(
+                                modifier = Modifier.fillMaxSize(),
+                                contentAlignment = Alignment.Center,
+                            ) {
+                                Text(
+                                    text = "해당하는 미션이 없어요",
+                                    style = TqType.BodyM.figma(),
+                                    color = Gray500,
+                                )
+                            }
+                        }
                         // 스크롤 유도 마스크 (CSS "스크롤 유도 마스크"): left 16 · 폭 360 · top 670 · 높이 68
                         // = 하단 네비 알약 위에서 목록이 배경색으로 사라짐 (투명→Gray50).
                         // ★재대조(2026-07-22): 예전엔 화면 맨 밑(852)에 전체폭으로 붙여 알약 뒤에 가려
@@ -332,20 +344,6 @@ private fun MissionListContent(
                     onFilterSelect = onFilterSelect,
                 )
                 Spacer(Modifier.height(10.dp)) // 칩 → 목록 24 = 10 + 카드간격 14
-            }
-        }
-
-        if (targetMissions.isEmpty() && animatedSlots.isEmpty()) {
-            item(key = "mission-filter-empty") {
-                // 빈 목록 화면이 피그마에 없음 → 임시 문구. TODO(디자인): 빈 상태 디자인 확정 시 교체.
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(vertical = 80.dp),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Text(text = "해당하는 미션이 없어요", style = TqType.BodyM.figma(), color = Gray500)
-                }
             }
         }
 

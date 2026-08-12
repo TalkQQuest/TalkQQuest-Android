@@ -1,16 +1,14 @@
-package com.talkqquest.app.feature.profile.ui
+﻿package com.talkqquest.app.feature.profile.ui
 
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
@@ -25,6 +23,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -32,6 +31,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
@@ -53,7 +53,6 @@ import com.talkqquest.app.core.designsystem.PretendardFamily
 import com.talkqquest.app.core.designsystem.Primary50
 import com.talkqquest.app.core.designsystem.Primary600
 import com.talkqquest.app.core.designsystem.TalkQQuestTheme
-import com.talkqquest.app.core.designsystem.TqType
 import com.talkqquest.app.core.designsystem.White
 import com.talkqquest.app.core.designsystem.softShadow
 
@@ -92,8 +91,10 @@ fun ProfileSettingsScreen(
     connectedAccount: String = "이메일 정보 없음",
     initialPushEnabled: Boolean = true,
     initialReminderEnabled: Boolean = false,
+    initialReminderTime: String = "09:00",
     onPushEnabledChange: (Boolean) -> Unit = {},
     onReminderEnabledChange: (Boolean) -> Unit = {},
+    onReminderTimeChange: (String) -> Unit = {},
     onBack: () -> Unit = {},
     onEditProfileClick: () -> Unit = {},
     onTermsClick: () -> Unit = {},
@@ -101,6 +102,7 @@ fun ProfileSettingsScreen(
     onWithdrawClick: () -> Unit = {},
 ) = FitDesign(contentAlignment = Alignment.TopCenter) {
     var showTimePicker by remember { mutableStateOf(false) }
+    var reminderTime by remember(initialReminderTime) { mutableStateOf(initialReminderTime.toReminderTime()) }
 
     Box(
         modifier = Modifier
@@ -149,6 +151,7 @@ fun ProfileSettingsScreen(
                     .size(width = 330.dp, height = 44.dp),
             )
             SettingsTimeRow(
+                time = reminderTime,
                 onClick = { showTimePicker = true },
                 modifier = Modifier
                     .offset(x = 16.dp, y = 158.dp)
@@ -225,8 +228,13 @@ fun ProfileSettingsScreen(
                     .clickable { showTimePicker = false },
             )
             ReminderTimeDialog(
+                selectedTime = reminderTime,
                 onCancel = { showTimePicker = false },
-                onSave = { showTimePicker = false },
+                onSave = { nextTime ->
+                    reminderTime = nextTime
+                    onReminderTimeChange(nextTime)
+                    showTimePicker = false
+                },
                 modifier = Modifier
                     .offset(x = 34.dp, y = 315.dp)
                     .size(width = 326.dp, height = 258.dp),
@@ -370,6 +378,7 @@ private fun SettingsSwitch(
 
 @Composable
 private fun SettingsTimeRow(
+    time: String,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -389,7 +398,7 @@ private fun SettingsTimeRow(
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Text(
-                text = "11:28:55",
+                text = time,
                 style = SettingsBodyLargeStyle,
                 color = Gray500,
                 modifier = Modifier.size(width = 61.dp, height = 24.dp),
@@ -451,10 +460,16 @@ private fun SettingsArrowRow(
 
 @Composable
 private fun ReminderTimeDialog(
+    selectedTime: String,
     onCancel: () -> Unit,
-    onSave: () -> Unit,
+    onSave: (String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    var hour by remember(selectedTime) { mutableIntStateOf(selectedTime.toHour()) }
+    var minute by remember(selectedTime) { mutableIntStateOf(selectedTime.toMinute()) }
+    val displayHour = if (hour % 12 == 0) 12 else hour % 12
+    val isPm = hour >= 12
+
     Box(
         modifier = modifier
             .softShadow(
@@ -469,51 +484,45 @@ private fun ReminderTimeDialog(
         Box(
             modifier = Modifier
                 .offset(x = 32.dp, y = 72.dp)
-                .size(width = 262.dp, height = 1.dp)
+                .size(width = 262.dp, height = 0.5.dp)
                 .background(Color(0xFF8B8B8B)),
         )
         Box(
             modifier = Modifier
                 .offset(x = 32.dp, y = 128.dp)
-                .size(width = 262.dp, height = 1.dp)
+                .size(width = 262.dp, height = 0.5.dp)
                 .background(Color(0xFF8B8B8B)),
         )
 
-        TimePickerNumberRow(
-            values = listOf("06", "27", "54"),
-            selected = false,
+        TimePickerWheelColumn(
+            previous = displayHour.minusWrapped(1, 12).twoDigits(),
+            current = displayHour.twoDigits(),
+            next = displayHour.plusWrapped(1, 12).twoDigits(),
+            onPrevious = { hour = (hour + 23) % 24 },
+            onNext = { hour = (hour + 1) % 24 },
             modifier = Modifier
-                .offset(x = 32.dp, y = 16.dp)
-                .size(width = 202.dp, height = 56.dp),
+                .offset(x = 80.dp, y = 16.dp)
+                .size(width = 38.dp, height = 168.dp),
         )
-        TimePickerNumberRow(
-            values = listOf("06", "28", "55"),
-            selected = true,
+        TimePickerWheelColumn(
+            previous = ((minute + 59) % 60).twoDigits(),
+            current = minute.twoDigits(),
+            next = ((minute + 1) % 60).twoDigits(),
+            onPrevious = { minute = (minute + 59) % 60 },
+            onNext = { minute = (minute + 1) % 60 },
             modifier = Modifier
-                .offset(x = 32.dp, y = 72.dp)
-                .size(width = 202.dp, height = 56.dp),
+                .offset(x = 145.dp, y = 16.dp)
+                .size(width = 38.dp, height = 168.dp),
         )
-        TimePickerNumberRow(
-            values = listOf("06", "27", "54"),
-            selected = false,
+        TimePickerWheelColumn(
+            previous = if (isPm) "AM" else "PM",
+            current = if (isPm) "PM" else "AM",
+            next = if (isPm) "AM" else "PM",
+            onPrevious = { hour = (hour + 12) % 24 },
+            onNext = { hour = (hour + 12) % 24 },
             modifier = Modifier
-                .offset(x = 32.dp, y = 128.dp)
-                .size(width = 202.dp, height = 56.dp),
-        )
-
-        TimePickerPeriod(
-            text = "PM",
-            selected = true,
-            modifier = Modifier
-                .offset(x = 234.dp, y = 72.dp)
-                .size(width = 60.dp, height = 56.dp),
-        )
-        TimePickerPeriod(
-            text = "AM",
-            selected = false,
-            modifier = Modifier
-                .offset(x = 234.dp, y = 128.dp)
-                .size(width = 60.dp, height = 56.dp),
+                .offset(x = 216.dp, y = 16.dp)
+                .size(width = 60.dp, height = 168.dp),
         )
 
         DialogButton(
@@ -527,7 +536,7 @@ private fun ReminderTimeDialog(
         DialogButton(
             text = "저장",
             primary = true,
-            onClick = onSave,
+            onClick = { onSave("${hour.twoDigits()}:${minute.twoDigits()}") },
             modifier = Modifier
                 .offset(x = 175.dp, y = 194.dp)
                 .size(width = 124.dp, height = 48.dp),
@@ -536,44 +545,61 @@ private fun ReminderTimeDialog(
 }
 
 @Composable
-private fun TimePickerNumberRow(
-    values: List<String>,
-    selected: Boolean,
+private fun TimePickerWheelColumn(
+    previous: String,
+    current: String,
+    next: String,
+    onPrevious: () -> Unit,
+    onNext: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    Row(
-        modifier = modifier.padding(horizontal = 10.dp, vertical = 16.dp),
-        horizontalArrangement = Arrangement.spacedBy(24.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        values.forEach { value ->
-            TimePickerValue(
-                text = value,
-                selected = selected,
-                modifier = Modifier.size(width = 38.dp, height = 24.dp),
-            )
-        }
-    }
-}
+    var dragOffset by remember { mutableStateOf(0f) }
 
-@Composable
-private fun TimePickerPeriod(
-    text: String,
-    selected: Boolean,
-    modifier: Modifier = Modifier,
-) {
     Box(
-        modifier = modifier,
-        contentAlignment = Alignment.Center,
+        modifier = modifier.pointerInput(Unit) {
+            detectVerticalDragGestures(
+                onDragEnd = { dragOffset = 0f },
+                onVerticalDrag = { _, dragAmount ->
+                    dragOffset += dragAmount
+                    when {
+                        dragOffset <= -18f -> {
+                            onNext()
+                            dragOffset = 0f
+                        }
+                        dragOffset >= 18f -> {
+                            onPrevious()
+                            dragOffset = 0f
+                        }
+                    }
+                },
+            )
+        },
     ) {
         TimePickerValue(
-            text = text,
-            selected = selected,
-            modifier = Modifier.size(width = 60.dp, height = 24.dp),
+            text = previous,
+            selected = false,
+            modifier = Modifier
+                .align(Alignment.TopCenter)
+                .offset(y = 16.dp)
+                .size(width = 60.dp, height = 24.dp),
+        )
+        TimePickerValue(
+            text = current,
+            selected = true,
+            modifier = Modifier
+                .align(Alignment.Center)
+                .size(width = 60.dp, height = 24.dp),
+        )
+        TimePickerValue(
+            text = next,
+            selected = false,
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .offset(y = (-16).dp)
+                .size(width = 60.dp, height = 24.dp),
         )
     }
 }
-
 @Composable
 private fun TimePickerValue(
     text: String,
@@ -594,15 +620,6 @@ private fun TimePickerValue(
     )
 }
 
-@Composable
-private fun TimeDivider() {
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(1.dp)
-            .background(Gray300),
-    )
-}
 @Composable
 private fun DialogButton(
     text: String,
@@ -625,6 +642,23 @@ private fun DialogButton(
     }
 }
 
+private fun String.toReminderTime(): String =
+    takeIf { it.matches(Regex("^\\d{2}:\\d{2}$")) } ?: "09:00"
+
+private fun String.toHour(): Int =
+    substringBefore(":").toIntOrNull()?.coerceIn(0, 23) ?: 9
+
+private fun String.toMinute(): Int =
+    substringAfter(":", "00").toIntOrNull()?.coerceIn(0, 59) ?: 0
+
+private fun Int.twoDigits(): String = toString().padStart(2, '0')
+
+private fun Int.plusWrapped(step: Int, max: Int): Int =
+    if (this + step > max) 1 else this + step
+
+private fun Int.minusWrapped(step: Int, max: Int): Int =
+    if (this - step < 1) max else this - step
+
 @Preview(showSystemUi = true, device = "spec:width=393dp,height=852dp")
 @Composable
 private fun ProfileSettingsScreenPreview() {
@@ -632,6 +666,8 @@ private fun ProfileSettingsScreenPreview() {
         ProfileSettingsScreen()
     }
 }
+
+
 
 
 

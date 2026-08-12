@@ -1,4 +1,4 @@
-package com.talkqquest.app.feature.profile.viewmodel
+﻿package com.talkqquest.app.feature.profile.viewmodel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -193,6 +193,13 @@ class ProfileViewModel @Inject constructor(
         )
     }
 
+    fun updateMissionReminderTime(time: String) {
+        val reminderTime = time.takeIf { it.matches(Regex("^\\d{2}:\\d{2}$")) } ?: return
+        updateSettings(
+            next = (_uiState.value.settings ?: UserSettings()).copy(missionReminderTime = reminderTime),
+            request = UserSettingsUpdateRequest(missionReminderTime = reminderTime),
+        )
+    }
     private fun updateSettings(next: UserSettings, request: UserSettingsUpdateRequest) {
         val previous = _uiState.value.settings
         viewModelScope.launch {
@@ -285,3 +292,4 @@ class ProfileViewModel @Inject constructor(
         const val networkErrorMessage = "\uB124\uD2B8\uC6CC\uD06C \uC5F0\uACB0\uC744 \uD655\uC778\uD574\uC8FC\uC138\uC694."
     }
 }
+

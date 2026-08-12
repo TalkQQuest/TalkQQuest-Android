@@ -1,4 +1,4 @@
-﻿package com.talkqquest.app.feature.onboarding.ui
+package com.talkqquest.app.feature.onboarding.ui
 
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -65,12 +65,15 @@ private const val CustomDifficultyMaxLength = 30
 @Composable
 fun OnboardingPersonalityScreen(
     nickname: String,
+    initialPersonalityType: String = "introvert",
     onBack: () -> Unit = {},
     onNextClick: (String) -> Unit = {},
 ) = FitDesign(compensateStatusBar = false) {
-    var selectedIndex by remember { mutableStateOf(0) }
-    val displayNickname = nickname.ifBlank { "\uB2E4\uBBFC" }
     val personalityTypes = listOf("introvert", "extrovert", "ambivert")
+    var selectedIndex by remember(initialPersonalityType) {
+        mutableStateOf(personalityTypes.indexOf(initialPersonalityType).takeIf { it >= 0 } ?: 0)
+    }
+    val displayNickname = nickname.ifBlank { "다민" }
 
     Box(
         modifier = Modifier
@@ -168,10 +171,11 @@ fun OnboardingPersonalityScreen(
 }
 @Composable
 fun OnboardingDifficultyScreen(
+    initialSelected: List<String> = emptyList(),
     onBack: () -> Unit = {},
     onNextClick: (List<String>) -> Unit = {},
 ) = FitDesign(compensateStatusBar = false) {
-    var selected by remember { mutableStateOf(emptySet<String>()) }
+    var selected by remember(initialSelected) { mutableStateOf(initialSelected.toSet()) }
     var customText by remember { mutableStateOf("") }
 
     Box(
@@ -330,10 +334,12 @@ fun OnboardingDifficultyScreen(
 }
 @Composable
 fun OnboardingGoalScreen(
+    initialSelected: List<String> = emptyList(),
+    completeButtonText: String = "완료",
     onBack: () -> Unit = {},
     onCompleteClick: (List<String>) -> Unit = {},
 ) = FitDesign(compensateStatusBar = false) {
-    var selected by remember { mutableStateOf(emptySet<String>()) }
+    var selected by remember(initialSelected) { mutableStateOf(initialSelected.toSet()) }
 
     Box(
         modifier = Modifier
@@ -448,7 +454,7 @@ fun OnboardingGoalScreen(
         }
 
         TqButton(
-            text = "\uC644\uB8CC",
+            text = completeButtonText,
             onClick = { onCompleteClick(selected.toList()) },
             modifier = Modifier
                 .fillMaxWidth()
@@ -854,9 +860,3 @@ private fun OnboardingGoalPreview() {
         OnboardingGoalScreen()
     }
 }
-
-
-
-
-
-

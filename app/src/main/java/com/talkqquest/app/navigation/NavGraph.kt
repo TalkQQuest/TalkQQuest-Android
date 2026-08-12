@@ -1,4 +1,4 @@
-package com.talkqquest.app.navigation
+﻿package com.talkqquest.app.navigation
 
 import android.content.Context
 import android.net.Uri
@@ -97,6 +97,10 @@ fun NavGraph(
     fun AnimatedContentTransitionScope<NavBackStackEntry>.isTabSwitch() =
         initialState.destination.route in tabRoutes && targetState.destination.route in tabRoutes
     val slideSpec = tween<IntOffset>(300)
+    var isConcernEditMode by remember { mutableStateOf(false) }
+    var concernPersonalityType by remember { mutableStateOf("introvert") }
+    var concernDifficultSituations by remember { mutableStateOf(listOf("주제고민", "말문 막힘")) }
+    var concernPurposes by remember { mutableStateOf(listOf("침묵 줄이기", "친해지는 대화")) }
 
     NavHost(
         navController = navController,
@@ -395,6 +399,7 @@ fun NavGraph(
             OnboardingWelcomeScreen(
                 nickname = nickname,
                 onFinished = { displayNickname ->
+                    isConcernEditMode = false
                     navController.navigate(Screen.ONBOARDING_PERSONALITY) {
                         popUpTo(Screen.ONBOARDING_WELCOME) { inclusive = true }
                         launchSingleTop = true
@@ -408,9 +413,8 @@ fun NavGraph(
             val context = LocalContext.current
             val authViewModel: AuthViewModel = hiltViewModel()
             val authUiState by authViewModel.uiState.collectAsState()
-            val isConcernEditMode = navController.previousBackStackEntry?.destination?.route == Screen.PROFILE_CONCERN
             val nickname = if (isConcernEditMode) {
-                "\uC18C\uB2E4123"
+                "소다123"
             } else {
                 navController.currentBackStackEntry?.savedStateHandle?.get<String>("onboarding_nickname").orEmpty()
             }
@@ -422,12 +426,22 @@ fun NavGraph(
 
             OnboardingPersonalityScreen(
                 nickname = nickname,
-                onBack = { navController.popBackStack() },
+                initialPersonalityType = if (isConcernEditMode) concernPersonalityType else "introvert",
+                onBack = {
+                    if (isConcernEditMode) isConcernEditMode = false
+                    navController.popBackStack()
+                },
                 onNextClick = { personalityType ->
-                    authViewModel.saveOnboardingStep(OnboardingStepSaveRequest(step = 1, personalityType = personalityType)) {
-                        if (isConcernEditMode) {
-                            navController.popBackStack(Screen.PROFILE_CONCERN, inclusive = false)
-                        } else {
+                    if (isConcernEditMode) {
+                        concernPersonalityType = personalityType
+                        navController.navigate(Screen.ONBOARDING_DIFFICULTY)
+                    } else {
+                        authViewModel.saveOnboardingStep(
+                            OnboardingStepSaveRequest(
+                                step = 1,
+                                personalityType = personalityType,
+                            ),
+                        ) {
                             navController.navigate(Screen.ONBOARDING_DIFFICULTY)
                         }
                     }
@@ -436,7 +450,6 @@ fun NavGraph(
         }
 
         composable(Screen.ONBOARDING_DIFFICULTY) {
-            val isConcernEditMode = navController.previousBackStackEntry?.destination?.route == Screen.PROFILE_CONCERN
             val context = LocalContext.current
             val authViewModel: AuthViewModel = hiltViewModel()
             val authUiState by authViewModel.uiState.collectAsState()
@@ -447,17 +460,22 @@ fun NavGraph(
             }
 
             OnboardingDifficultyScreen(
+                initialSelected = if (isConcernEditMode) concernDifficultSituations else emptyList(),
                 onBack = { navController.popBackStack() },
                 onNextClick = { difficultSituations ->
                     if (difficultSituations.isEmpty()) {
-                        Toast.makeText(context, "\uC5B4\uB824\uC6B4 \uC810\uC744 \uC120\uD0DD\uD574\uC8FC\uC138\uC694.", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(context, "어려운 점을 선택해주세요.", Toast.LENGTH_SHORT).show()
+                    } else if (isConcernEditMode) {
+                        concernDifficultSituations = difficultSituations
+                        navController.navigate(Screen.ONBOARDING_GOAL)
                     } else {
-                        authViewModel.saveOnboardingStep(OnboardingStepSaveRequest(step = 2, difficultSituations = difficultSituations)) {
-                            if (isConcernEditMode) {
-                                navController.popBackStack(Screen.PROFILE_CONCERN, inclusive = false)
-                            } else {
-                                navController.navigate(Screen.ONBOARDING_GOAL)
-                            }
+                        authViewModel.saveOnboardingStep(
+                            OnboardingStepSaveRequest(
+                                step = 2,
+                                difficultSituations = difficultSituations,
+                            ),
+                        ) {
+                            navController.navigate(Screen.ONBOARDING_GOAL)
                         }
                     }
                 },
@@ -465,7 +483,6 @@ fun NavGraph(
         }
 
         composable(Screen.ONBOARDING_GOAL) {
-            val isConcernEditMode = navController.previousBackStackEntry?.destination?.route == Screen.PROFILE_CONCERN
             val context = LocalContext.current
             val authViewModel: AuthViewModel = hiltViewModel()
             val authUiState by authViewModel.uiState.collectAsState()
@@ -476,17 +493,36 @@ fun NavGraph(
             }
 
             OnboardingGoalScreen(
+                initialSelected = if (isConcernEditMode) concernPurposes else emptyList(),
+                completeButtonText = if (isConcernEditMode) "저장" else "완료",
                 onBack = { navController.popBackStack() },
                 onCompleteClick = { purpose ->
                     if (purpose.isEmpty()) {
-                        Toast.makeText(context, "\uC5F0\uC2B5 \uBAA9\uD45C\uB97C \uC120\uD0DD\uD574\uC8FC\uC138\uC694.", Toast.LENGTH_SHORT).show()
-                    } else {
-                        authViewModel.saveOnboardingStep(OnboardingStepSaveRequest(step = 3, purpose = purpose)) {
-                            if (isConcernEditMode) {
-                                navController.popBackStack(Screen.PROFILE_CONCERN, inclusive = false)
-                            } else {
-                                navController.navigate(Screen.ONBOARDING_COMPLETE)
+                        Toast.makeText(context, "연습 목표를 선택해주세요.", Toast.LENGTH_SHORT).show()
+                    } else if (isConcernEditMode) {
+                        concernPurposes = purpose
+                        authViewModel.saveOnboardingStep(
+                            OnboardingStepSaveRequest(step = 1, personalityType = concernPersonalityType),
+                        ) {
+                            authViewModel.saveOnboardingStep(
+                                OnboardingStepSaveRequest(step = 2, difficultSituations = concernDifficultSituations),
+                            ) {
+                                authViewModel.saveOnboardingStep(
+                                    OnboardingStepSaveRequest(step = 3, purpose = concernPurposes),
+                                ) {
+                                    isConcernEditMode = false
+                                    navController.popBackStack(Screen.PROFILE_CONCERN, inclusive = false)
+                                }
                             }
+                        }
+                    } else {
+                        authViewModel.saveOnboardingStep(
+                            OnboardingStepSaveRequest(
+                                step = 3,
+                                purpose = purpose,
+                            ),
+                        ) {
+                            navController.navigate(Screen.ONBOARDING_COMPLETE)
                         }
                     }
                 },
@@ -851,8 +887,10 @@ fun NavGraph(
                 connectedAccount = connectedAccount,
                 initialPushEnabled = settings?.let { it.communityApproved || it.reportReady || it.marketing } ?: true,
                 initialReminderEnabled = settings?.missionReminder ?: false,
+                initialReminderTime = settings?.missionReminderTime ?: "09:00",
                 onPushEnabledChange = profileViewModel::updatePushNotifications,
                 onReminderEnabledChange = profileViewModel::updateMissionReminder,
+                onReminderTimeChange = profileViewModel::updateMissionReminderTime,
                 onBack = { navController.popBackStack() },
                 onEditProfileClick = { navController.navigate(Screen.PROFILE_INFO) },
                 onTermsClick = { navController.navigate(Screen.PROFILE_TERMS) },
@@ -887,6 +925,7 @@ fun NavGraph(
 
             ProfileInfoScreen(
                 nickname = nickname,
+                avatarUrl = dashboard?.avatarUrl ?: profile?.avatarUrl,
                 connectedAccount = connectedAccount,
                 onBack = { navController.popBackStack() },
                 onNicknameClick = { navController.navigate(Screen.PROFILE_NICKNAME_EDIT) },
@@ -1012,11 +1051,16 @@ fun NavGraph(
         }
 
         composable(Screen.PROFILE_CONCERN) {
+            fun startConcernEdit() {
+                isConcernEditMode = true
+                navController.navigate(Screen.ONBOARDING_PERSONALITY)
+            }
+
             ProfileConcernScreen(
                 onBack = { navController.popBackStack() },
-                onPersonalityClick = { navController.navigate(Screen.ONBOARDING_PERSONALITY) },
-                onDifficultyClick = { navController.navigate(Screen.ONBOARDING_DIFFICULTY) },
-                onGoalClick = { navController.navigate(Screen.ONBOARDING_GOAL) },
+                onPersonalityClick = { startConcernEdit() },
+                onDifficultyClick = { startConcernEdit() },
+                onGoalClick = { startConcernEdit() },
             )
         }
 
@@ -1109,3 +1153,4 @@ private fun Uri.toProfileImagePart(context: Context): MultipartBody.Part? {
     val requestBody = bytes.toRequestBody(mimeType.toMediaTypeOrNull())
     return MultipartBody.Part.createFormData("image", "profile_image.$extension", requestBody)
 }
+

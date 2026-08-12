@@ -1,4 +1,4 @@
-package com.talkqquest.app.feature.notification.data.model
+﻿package com.talkqquest.app.feature.notification.data.model
 
 import kotlinx.serialization.Serializable
 
@@ -47,7 +47,10 @@ data class NotificationSettingsUpdateRequest(
     val missionReminderTime: String? = null,
 )
 
+
 // 화면용 모델 — 알림 카드 1장 (디자인: 위 작은 회색 줄 + 아래 굵은 줄 + 시간 + 안읽음 점).
+
+
 data class NotificationUiItem(
     val id: String,
     val category: String,  // 위 작은 줄 (Body/S Gray500)
@@ -58,3 +61,4 @@ data class NotificationUiItem(
     // (CSS "알림창" Frame 427321769). 나머지 알림은 읽고 마는 것이라 화살표가 없다.
     val hasLink: Boolean = false,
 )
+

@@ -1,6 +1,7 @@
 package com.talkqquest.app.feature.mission.ui
 
 import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.SizeTransform
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.animateFloatAsState
@@ -15,6 +16,7 @@ import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.Image
@@ -103,10 +105,12 @@ import com.talkqquest.app.core.designsystem.Gray700
 import com.talkqquest.app.core.designsystem.Gray800
 import com.talkqquest.app.core.designsystem.Gray900
 import com.talkqquest.app.core.designsystem.LocalDesignScale
+import com.talkqquest.app.core.designsystem.LocalStatusBarCompensation
 import com.talkqquest.app.core.designsystem.Primary600
 import com.talkqquest.app.core.designsystem.TalkQQuestTheme
 import com.talkqquest.app.core.designsystem.TqType
 import com.talkqquest.app.core.designsystem.White
+import com.talkqquest.app.core.designsystem.coverStatusBarCompensation
 import com.talkqquest.app.core.designsystem.component.TqButton
 import com.talkqquest.app.core.designsystem.component.TqButtonSize
 import com.talkqquest.app.core.designsystem.softShadow
@@ -232,7 +236,30 @@ private fun ConversationScreen(
         // ★ 별도 FitDesign으로 감싸지 않는다: 이미 이 화면 전체가 바깥 FitDesign 안이라
         //   여기서 또 감싸면 팝업만 다른 좌표계가 돼 위치가 어긋남(살짝 아래로 밀렸던 원인).
         //   메인 콘텐츠와 같은 프레임에 두면 CSS top 313이 다른 요소들과 동일 규칙으로 맞음.
-        if (uiState.showCompleteDialog) {
+        androidx.compose.animation.AnimatedVisibility(
+            visible = uiState.showCompleteDialog || uiState.showLeaveDialog,
+            enter = fadeIn(tween(360, easing = FastOutSlowInEasing)),
+            exit = fadeOut(tween(360, easing = FastOutSlowInEasing)),
+            modifier = Modifier.coverStatusBarCompensation(LocalStatusBarCompensation.current),
+        ) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(Gray700.copy(alpha = 0.23f))
+                    .clickable(
+                        interactionSource = remember { MutableInteractionSource() },
+                        indication = null,
+                        onClick = if (uiState.showCompleteDialog) onCompleteDismiss else onLeaveDismiss,
+                    ),
+            )
+        }
+        AnimatedVisibility(
+            visible = uiState.showCompleteDialog,
+            enter = fadeIn(tween(360, easing = FastOutSlowInEasing)) +
+                scaleIn(initialScale = 0.86f, animationSpec = tween(360, easing = FastOutSlowInEasing)),
+            exit = fadeOut(tween(360, easing = FastOutSlowInEasing)) +
+                scaleOut(targetScale = 0.86f, animationSpec = tween(360, easing = FastOutSlowInEasing)),
+        ) {
             // CSS "대화 종료 팝업(완료 버튼)" — 헤더 "대화 완료"에서 열림
             ConversationConfirmDialog(
                 title = "대화를 종료하시겠어요?",
@@ -243,7 +270,13 @@ private fun ConversationScreen(
                 onConfirm = onCompleteConfirm,
             )
         }
-        if (uiState.showLeaveDialog) {
+        AnimatedVisibility(
+            visible = uiState.showLeaveDialog,
+            enter = fadeIn(tween(360, easing = FastOutSlowInEasing)) +
+                scaleIn(initialScale = 0.86f, animationSpec = tween(360, easing = FastOutSlowInEasing)),
+            exit = fadeOut(tween(360, easing = FastOutSlowInEasing)) +
+                scaleOut(targetScale = 0.86f, animationSpec = tween(360, easing = FastOutSlowInEasing)),
+        ) {
             // CSS "대화 이탈 팝업(뒤로가기)" — 헤더 뒤로가기에서 열림. 확인 버튼만 RED
             ConversationConfirmDialog(
                 title = "정말 나가시겠습니까?",
@@ -1034,13 +1067,7 @@ private fun ConversationConfirmDialog(
 ) {
     Box(
         modifier = Modifier
-            .fillMaxSize()
-            .background(Gray700.copy(alpha = 0.23f)) // CSS op bg #334155 opacity 0.23
-            .clickable(
-                interactionSource = remember { MutableInteractionSource() },
-                indication = null,
-                onClick = onContinue, // 카드 밖 터치 = 계속하기와 동일(닫기)
-            ),
+            .fillMaxSize(),
         contentAlignment = Alignment.TopCenter, // CSS는 화면 top 기준 절대 위치 → 위에서부터 정렬
     ) {
         Column(

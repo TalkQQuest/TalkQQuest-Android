@@ -10,6 +10,7 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.PagerDefaults
 import androidx.compose.foundation.pager.PagerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -66,6 +67,12 @@ fun MainTabsPager(
     // 이때는 HomeLevelCard가 자체적으로 0 → XP를 재생하므로 복귀 신호를 추가하지 않는다.
     var hasConsumedInitialHomeResume by remember { mutableStateOf(false) }
     val pagerScope = rememberCoroutineScope()
+    // 기본값(화면 폭의 50%)은 천천히 드래그할 때 이동 거리가 길게 느껴진다.
+    // 짧은 스와이프에도 반응하되 실수로 탭이 바뀌지 않는 25% 지점에서 다음 페이지로 스냅한다.
+    val tabFlingBehavior = PagerDefaults.flingBehavior(
+        state = pagerState,
+        snapPositionalThreshold = 0.25f,
+    )
     val homePage = BottomNavItem.entries.indexOf(BottomNavItem.Home)
     val profilePage = BottomNavItem.entries.indexOf(BottomNavItem.Profile)
     val returnFromHomeBadgeCollection: () -> Unit = {
@@ -96,6 +103,7 @@ fun MainTabsPager(
         // 인접 탭을 미리 구성해 스와이프 중 빈 화면 없이 콘텐츠가 따라오게 한다.
         beyondViewportPageCount = 1,
         userScrollEnabled = !modalSheetOpen,
+        flingBehavior = tabFlingBehavior,
         key = { BottomNavItem.entries[it].route },
     ) { page ->
         when (BottomNavItem.entries[page]) {

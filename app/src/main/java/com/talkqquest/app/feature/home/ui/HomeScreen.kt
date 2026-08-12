@@ -38,7 +38,6 @@ import androidx.compose.material3.ripple
 import androidx.compose.material3.Text
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.CubicBezierEasing
@@ -886,10 +885,10 @@ private fun HomeTierRow(
     val tierBadgeContentOffset = if (tierName == "브론즈" || tierName == "실버") (-6).dp else 0.dp
     // 날개가 없는 뱃지의 왼쪽 투명 여백 때문에 전체 그룹이 안쪽으로 보이지 않게 기준선에 맞춘다.
     val tierBadgeGroupOffset = if (tierName == "브론즈" || tierName == "실버") (-6).dp else 0.dp
-    var tierTextPhase by remember { mutableIntStateOf(0) } // 0=한글, 1=삭제, 2=입력, 3=광택, 4=크로스페이드
-    var tierTextCharCount by remember { mutableIntStateOf(tierName.length) }
+    var tierTextPhase by remember { mutableIntStateOf(0) } // 0=한글, 3=광택, 4=크로스페이드, 5=글자 띠 전환
     var tierTextRunning by remember { mutableStateOf(false) }
     val tierTextFadeProgress = remember { Animatable(0f) }
+    val tierTextWipeProgress = remember { Animatable(0f) }
     val tierTextScope = rememberCoroutineScope()
 
     suspend fun playTierGroupShine() {
@@ -924,16 +923,18 @@ private fun HomeTierRow(
         tierTextRunning = true
         try {
             tierTextFadeProgress.snapTo(0f)
-            tierTextPhase = 1
-            for (count in (tierName.length - 1) downTo 0) {
-                tierTextCharCount = count
-                delay(110)
-            }
-            tierTextPhase = 2
-            for (count in 1..tierEnglish.length) {
-                tierTextCharCount = count
-                delay(110)
-            }
+            tierTextWipeProgress.snapTo(0f)
+            tierTextPhase = 5
+            tierTextWipeProgress.animateTo(
+                targetValue = 1f,
+                animationSpec = tween(
+                    // 이름 길이와 무관하게 기존 골드 → Gold 전환 속도로 통일한다.
+                    durationMillis = 660,
+                    easing = LinearEasing,
+                ),
+            )
+            // 영문 전체가 그려진 프레임을 먼저 노출한 뒤 광선 단계로 넘어간다.
+            withFrameNanos { }
             tierTextPhase = 3
             // Gold 광택이 시작되는 순간, 휘장·글자·별을 한 줄 광선으로 함께 훑는다.
             playTierGroupShine()
@@ -947,8 +948,8 @@ private fun HomeTierRow(
                 animationSpec = tween(400, easing = LinearOutSlowInEasing),
             )
             tierTextPhase = 0
-            tierTextCharCount = tierName.length
             tierTextFadeProgress.snapTo(0f)
+            tierTextWipeProgress.snapTo(0f)
         } finally {
             tierTextRunning = false
         }
@@ -1144,27 +1145,42 @@ private fun HomeTierRow(
                     val titleStyle = TqType.BodyL.figma().copy(fontWeight = FontWeight.Medium)
                     val titleMeasurer = rememberTextMeasurer()
                     val density = LocalDensity.current
-                    val koreanText = tierName.take(tierTextCharCount)
-                    val englishText = tierEnglish.take(tierTextCharCount)
-                    val displayedText = if (tierTextPhase <= 1) koreanText else englishText
+                    val displayedText = if (tierTextPhase == 0) tierName else tierEnglish
                     fun textWidth(text: String): Int =
                         titleMeasurer.measure(AnnotatedString(text), style = titleStyle).size.width
-                    val targetWidthDp = with(density) {
-                        (if (tierTextPhase == 4) textWidth(tierName) else textWidth(displayedText)).toDp()
+                    fun progressiveTextWidth(text: String, progress: Float): Float {
+                        val scaledProgress = progress.coerceIn(0f, 1f) * text.length
+                        val completedCharacters = scaledProgress.toInt().coerceAtMost(text.length)
+                        val characterProgress = scaledProgress - completedCharacters
+                        val easedProgress = characterProgress * characterProgress * (3f - 2f * characterProgress)
+                        val startWidth = textWidth(text.take(completedCharacters)).toFloat()
+                        val endWidth = textWidth(text.take((completedCharacters + 1).coerceAtMost(text.length))).toFloat()
+                        return startWidth + (endWidth - startWidth) * easedProgress
                     }
-                    val animatedWidth by animateDpAsState(
-                        targetValue = targetWidthDp,
-                        animationSpec = tween(
-                            durationMillis = if (tierTextPhase == 4) 400 else 90,
-                            easing = FastOutSlowInEasing,
-                        ),
-                        label = "tierTextWidth",
-                    )
+                    val wipeSplit = tierName.length.toFloat() / (tierName.length + tierEnglish.length)
+                    val wipeWidth = if (tierTextWipeProgress.value <= wipeSplit) {
+                        val eraseProgress = tierTextWipeProgress.value / wipeSplit
+                        progressiveTextWidth(tierName, 1f - eraseProgress)
+                    } else {
+                        val writeProgress = (tierTextWipeProgress.value - wipeSplit) / (1f - wipeSplit)
+                        progressiveTextWidth(tierEnglish, writeProgress)
+                    }
+                    val targetWidthDp = with(density) {
+                        (when (tierTextPhase) {
+                            4 -> {
+                                val englishWidth = textWidth(tierEnglish).toFloat()
+                                val koreanWidth = textWidth(tierName).toFloat()
+                                englishWidth + (koreanWidth - englishWidth) * tierTextFadeProgress.value
+                            }
+                            5 -> wipeWidth
+                            else -> textWidth(displayedText).toFloat()
+                        }).toDp()
+                    }
                     Box(
                         modifier = Modifier
                             // 한글 티어명의 왼쪽 시작점을 고정하고, 영문이 길어지는 만큼만
                             // 오른쪽 폭을 늘려 별 묶음을 밀어낸다. 크로스페이드 때는 원래 폭으로 복귀.
-                            .width(animatedWidth)
+                            .width(targetWidthDp)
                             .height(24.dp)
                             .clickable(
                                 interactionSource = remember { MutableInteractionSource() },
@@ -1197,6 +1213,15 @@ private fun HomeTierRow(
                                     .graphicsLayer {
                                         alpha = tierTextFadeProgress.value
                                     },
+                            )
+                        } else if (tierTextPhase == 5) {
+                            HomeTierNameWipeText(
+                                koreanName = tierName,
+                                englishName = tierEnglish,
+                                progress = tierTextWipeProgress.value,
+                                style = titleStyle,
+                                koreanColor = Gray600,
+                                englishColor = tierPalette.base,
                             )
                         } else {
                             val isEnglish = tierTextPhase >= 2
@@ -1422,6 +1447,63 @@ private fun tierTextPalette(tierName: String): TierTextPalette = when (tierName)
     "다이아", "다이아몬드" -> TierTextPalette(Color(0xFF087E9B), Color(0xFF45C4E8), Color(0xFFD6F7FF))
     "마스터" -> TierTextPalette(Color(0xFF5B2B8A), Color(0xFFA05CDA), Color(0xFFF0D7FF))
     else -> TierTextPalette(Gray700, Gray600, Gray400)
+}
+
+@Composable
+private fun HomeTierNameWipeText(
+    koreanName: String,
+    englishName: String,
+    progress: Float,
+    style: TextStyle,
+    koreanColor: Color,
+    englishColor: Color,
+) {
+    val split = koreanName.length.toFloat() / (koreanName.length + englishName.length)
+    Box {
+        HomeTierNameWipeLayer(
+            text = koreanName,
+            progress = (progress / split).coerceIn(0f, 1f),
+            appearing = false,
+            style = style,
+            color = koreanColor,
+        )
+        HomeTierNameWipeLayer(
+            text = englishName,
+            progress = ((progress - split) / (1f - split)).coerceIn(0f, 1f),
+            appearing = true,
+            style = style,
+            color = englishColor,
+        )
+    }
+}
+
+@Composable
+private fun HomeTierNameWipeLayer(
+    text: String,
+    progress: Float,
+    appearing: Boolean,
+    style: TextStyle,
+    color: Color,
+) {
+    val timeline = progress.coerceIn(0f, 1f) * text.length
+    val animatedText = buildAnnotatedString {
+        text.forEachIndexed { index, character ->
+            val animationOrder = if (appearing) index else text.lastIndex - index
+            val localProgress = (timeline - animationOrder).coerceIn(0f, 1f)
+            val easedProgress = localProgress * localProgress * (3f - 2f * localProgress)
+            val alpha = if (appearing) easedProgress else 1f - easedProgress
+            withStyle(SpanStyle(color = color.copy(alpha = alpha))) {
+                append(character)
+            }
+        }
+    }
+    Text(
+        text = animatedText,
+        style = style,
+        softWrap = false,
+        maxLines = 1,
+        modifier = Modifier.wrapContentWidth(Alignment.Start, unbounded = true),
+    )
 }
 
 private fun TierTextPalette.brush(progress: Float): Brush {

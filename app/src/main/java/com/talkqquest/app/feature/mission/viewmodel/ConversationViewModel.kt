@@ -108,7 +108,14 @@ class ConversationViewModel @Inject constructor(
     // 추천 답변 조회. 실패해도 대화엔 지장 없어 조용히 무시.
     private fun loadRecommendations() {
         viewModelScope.launch {
+            val requestedAt = System.currentTimeMillis()
             val result = missionRepository.getRecommendedReplies(turnIndex)
+            // 응답이 지나치게 빠르면 접힌 바와 문구 등장 모션이 한 프레임에 합쳐져
+            // 렉처럼 보인다. 빠른 경우에만 최소 노출 시간을 채운 뒤 반영한다.
+            val elapsed = System.currentTimeMillis() - requestedAt
+            if (elapsed < MIN_RECOMMENDATION_RESPONSE_MILLIS) {
+                delay(MIN_RECOMMENDATION_RESPONSE_MILLIS - elapsed)
+            }
             if (result is ApiResult.Success) {
                 _uiState.update { it.copy(recommendations = result.data) }
             }
@@ -174,3 +181,4 @@ class ConversationViewModel @Inject constructor(
 
 // 대화 진입 대기 화면 최소 노출 시간(사용자 결정).
 private const val MIN_INTRO_MILLIS = 1_000L
+private const val MIN_RECOMMENDATION_RESPONSE_MILLIS = 600L

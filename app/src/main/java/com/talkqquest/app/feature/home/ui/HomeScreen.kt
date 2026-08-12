@@ -90,7 +90,6 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.Lifecycle
-import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -137,6 +136,7 @@ import com.talkqquest.app.feature.home.viewmodel.HomeViewModel
 @Composable
 fun HomeScreen(
     viewModel: HomeViewModel = hiltViewModel(),
+    resumeAnimationTrigger: Int = 0,
     onStartMissionClick: (String) -> Unit = {}, // 오늘의 미션 "미션 시작하기" → 미션 상세
     onOtherMissionsClick: () -> Unit = {},    // "다른 미션 보기" → 미션 목록
     onNotificationClick: () -> Unit = {},     // 상단 벨 → 알림창
@@ -146,15 +146,12 @@ fun HomeScreen(
     onModalSheetChange: (Boolean) -> Unit = {}, // 티어 시트가 떠 있는 동안 탭 스와이프를 끄기 위한 신호
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
-    var xpAnimationTrigger by rememberSaveable { mutableIntStateOf(0) }
-    // 화면 복귀 시(미션 완료 후 등) XP·레벨 최신값 조용히 재조회 — 미션 목록과 같은 패턴
-    LifecycleEventEffect(Lifecycle.Event.ON_RESUME) {
-        xpAnimationTrigger++
-        viewModel.loadHome(showLoading = false)
+    LaunchedEffect(resumeAnimationTrigger) {
+        if (resumeAnimationTrigger > 0) viewModel.loadHome(showLoading = false)
     }
     HomeScreen(
         uiState = uiState,
-        xpAnimationTrigger = xpAnimationTrigger,
+        xpAnimationTrigger = resumeAnimationTrigger,
         onRetry = viewModel::loadHome,
         onStartMissionClick = onStartMissionClick,
         onOtherMissionsClick = onOtherMissionsClick,

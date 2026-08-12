@@ -18,6 +18,9 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.IntOffset
@@ -53,6 +56,12 @@ fun MainTabsPager(
     // 홈의 티어 승급 안내 시트처럼 딤이 깔린 모달이 떠 있는 동안은 탭 스와이프를 끈다.
     // (시트가 페이저 페이지 안에 들어 있어서, 안 끄면 모달 위에서 쓸었을 때 옆 탭으로 넘어가 버림)
     var modalSheetOpen by remember { mutableStateOf(false) }
+    var homeResumeAnimationTrigger by remember { mutableIntStateOf(0) }
+    LifecycleEventEffect(Lifecycle.Event.ON_RESUME) {
+        if (pagerState.currentPage == BottomNavItem.entries.indexOf(BottomNavItem.Home)) {
+            homeResumeAnimationTrigger++
+        }
+    }
     HorizontalPager(
         state = pagerState,
         modifier = modifier.fillMaxSize(),
@@ -62,7 +71,11 @@ fun MainTabsPager(
         key = { BottomNavItem.entries[it].route },
     ) { page ->
         when (BottomNavItem.entries[page]) {
-            BottomNavItem.Home -> HomeTab(navController, onOverlaySheetTop) { modalSheetOpen = it }
+            BottomNavItem.Home -> HomeTab(
+                navController = navController,
+                resumeAnimationTrigger = homeResumeAnimationTrigger,
+                onOverlaySheetTop = onOverlaySheetTop,
+            ) { modalSheetOpen = it }
             BottomNavItem.Mission -> MissionTab(navController, pagerState, onOverlaySheetTop)
             BottomNavItem.Archive -> ArchiveTab(navController)
             BottomNavItem.Profile -> ProfileTab(navController)
@@ -73,11 +86,13 @@ fun MainTabsPager(
 @Composable
 private fun HomeTab(
     navController: NavHostController,
+    resumeAnimationTrigger: Int,
     onOverlaySheetTop: (Float?) -> Unit,
     onModalSheetChange: (Boolean) -> Unit,
 ) {
     val homeScope = rememberCoroutineScope()
     HomeScreen(
+        resumeAnimationTrigger = resumeAnimationTrigger,
         onStartMissionClick = { missionId -> navController.navigate("mission_detail/$missionId") },
         // "다른 미션 보기" → 홈 소속 미션 목록(예전 헤더). 미션 탭으로 전환하지 않고 홈 탭 유지.
         onOtherMissionsClick = { navController.navigate(Screen.MISSION_LIST_HOME) },

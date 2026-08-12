@@ -8,8 +8,13 @@ import androidx.compose.animation.shrinkVertically
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.animateIntOffsetAsState
+import androidx.compose.animation.core.animateIntSizeAsState
+import androidx.compose.animation.core.snap
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -51,11 +56,21 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.drawscope.clipRect
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.unit.IntSize
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.positionInWindow
+import androidx.compose.ui.platform.LocalDensity
+import kotlin.math.roundToInt
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
@@ -375,16 +390,122 @@ private fun MissionFilterChips(
     selectedFilter: String,
     onFilterSelect: (String) -> Unit,
 ) {
-    FlowRow(
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-        verticalArrangement = Arrangement.spacedBy(10.dp),
+    var bounds by remember { mutableStateOf<Map<String, Pair<IntOffset, IntSize>>>(emptyMap()) }
+    var parentOffset by remember { mutableStateOf(IntOffset.Zero) }
+    var hasMovedSelection by remember { mutableStateOf(false) }
+    val density = LocalDensity.current
+    val selectedBounds = bounds[selectedFilter]
+    val animatedOffset by animateIntOffsetAsState(
+        targetValue = selectedBounds?.first ?: IntOffset.Zero,
+        animationSpec = if (hasMovedSelection) tween(260, easing = FastOutSlowInEasing) else snap(),
+        label = "missionFilterSelectionOffset",
+    )
+    val animatedSize by animateIntSizeAsState(
+        targetValue = selectedBounds?.second ?: IntSize.Zero,
+        animationSpec = if (hasMovedSelection) tween(260, easing = FastOutSlowInEasing) else snap(),
+        label = "missionFilterSelectionSize",
+    )
+    val selectionAlpha by animateFloatAsState(
+        targetValue = if (selectedBounds != null) 1f else 0f,
+        animationSpec = tween(220, easing = FastOutSlowInEasing),
+        label = "missionFilterSelectionAlpha",
+    )
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .onGloballyPositioned { coordinates ->
+                val position = coordinates.positionInWindow()
+                parentOffset = IntOffset(position.x.roundToInt(), position.y.roundToInt())
+            },
     ) {
-        missionFilters.forEach { filter ->
-            MissionFilterChip(
-                label = filter,
-                selected = filter == selectedFilter,
-                onClick = { onFilterSelect(filter) },
+        bounds.values.forEach { (offset, size) ->
+            Box(
+                Modifier
+                    .offset { offset }
+                    .size(
+                        with(density) { size.width.toDp() },
+                        with(density) { size.height.toDp() },
+                    )
+                    .softShadow(
+                        color = Gray1000.copy(alpha = 0.01f),
+                        offsetY = 8.dp,
+                        blur = 24.dp,
+                        cornerRadius = 20.dp,
+                    )
+                    .clip(RoundedCornerShape(20.dp))
+                    .background(White),
             )
+        }
+        if (animatedSize != IntSize.Zero) {
+            Box(
+                Modifier
+                    .offset { animatedOffset }
+                    .size(
+                        with(density) { animatedSize.width.toDp() },
+                        with(density) { animatedSize.height.toDp() },
+                    )
+                    .graphicsLayer { alpha = selectionAlpha }
+                    .clip(RoundedCornerShape(20.dp))
+                    .background(Primary600),
+            )
+        }
+        FlowRow(
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp),
+        ) {
+            missionFilters.forEach { filter ->
+                MissionFilterChip(
+                    label = filter,
+                    selected = filter == selectedFilter,
+                    selectionOverlay = true,
+                    onClick = {
+                        if (filter != selectedFilter) hasMovedSelection = true
+                        onFilterSelect(filter)
+                    },
+                    modifier = Modifier.onGloballyPositioned { coordinates ->
+                        val position = coordinates.positionInWindow()
+                        bounds = bounds + (
+                            filter to (
+                                IntOffset(
+                                    position.x.roundToInt() - parentOffset.x,
+                                    position.y.roundToInt() - parentOffset.y,
+                                ) to coordinates.size
+                            )
+                        )
+                    },
+                )
+            }
+        }
+        // 기본 글자는 회색으로 유지하고 보라색 선택판과 실제로 겹치는 부분에만
+        // 같은 위치의 흰 글자를 드러내 선택판이 지나가는 속도대로 색이 채워지게 한다.
+        FlowRow(
+            modifier = Modifier.drawWithContent {
+                clipRect(
+                    left = animatedOffset.x.toFloat(),
+                    top = animatedOffset.y.toFloat(),
+                    right = (animatedOffset.x + animatedSize.width).toFloat(),
+                    bottom = (animatedOffset.y + animatedSize.height).toFloat(),
+                ) {
+                    this@drawWithContent.drawContent()
+                }
+            },
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp),
+        ) {
+            missionFilters.forEach { filter ->
+                Box(
+                    modifier = Modifier
+                        .height(34.dp)
+                        .padding(horizontal = 18.dp),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Text(
+                        text = filter,
+                        style = TqType.BodyM.copy(fontWeight = FontWeight.Medium).figma(),
+                        color = Primary50,
+                    )
+                }
+            }
         }
     }
 }
@@ -396,28 +517,41 @@ internal fun MissionFilterChip( // 저장 목록 화면에서도 재사용 (완�
     label: String,
     selected: Boolean,
     onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    selectionOverlay: Boolean = false,
 ) {
     val shape = RoundedCornerShape(20.dp)
     val base = if (selected) {
-        Modifier.clip(shape).background(Primary600)
-    } else {
         Modifier
-            .softShadow(color = Gray1000.copy(alpha = 0.01f), offsetY = 8.dp, blur = 24.dp, cornerRadius = 20.dp)
             .clip(shape)
-            .background(White)
+            .background(if (selectionOverlay) Color.Transparent else Primary600)
+    } else {
+        if (selectionOverlay) {
+            Modifier.clip(shape).background(Color.Transparent)
+        } else {
+            Modifier
+                .softShadow(color = Gray1000.copy(alpha = 0.01f), offsetY = 8.dp, blur = 24.dp, cornerRadius = 20.dp)
+                .clip(shape)
+                .background(White)
+        }
     }
     Box(
-        modifier = base
-            .clickable(onClick = onClick)
+        modifier = modifier.then(base)
+            .clickable(
+                interactionSource = remember { MutableInteractionSource() },
+                indication = null,
+                onClick = onClick,
+            )
             .height(34.dp)
             .padding(horizontal = 18.dp),
         contentAlignment = Alignment.Center,
     ) {
         Text(
             text = label,
-            // CSS: 선택 = 14/22 굵기 500, 미선택 = 14/22 굵기 400 (Body/M)
-            style = if (selected) TqType.BodyM.copy(fontWeight = FontWeight.Medium).figma() else TqType.BodyM.figma(),
-            color = if (selected) Primary50 else Gray900,
+            // 선택 전환 때 굵기가 바뀌면 hug 너비와 뒤 칩 위치가 흔들리므로
+            // 피그마 선택 칩 기준인 14/22 Medium으로 고정하고 색상만 전환한다.
+            style = TqType.BodyM.copy(fontWeight = FontWeight.Medium).figma(),
+            color = if (selectionOverlay) Gray900 else if (selected) Primary50 else Gray900,
         )
     }
 }

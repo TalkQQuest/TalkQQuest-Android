@@ -20,6 +20,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.CircularProgressIndicator
@@ -40,6 +41,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -113,6 +115,17 @@ private fun tierEmblemSmallRes(name: String): Int = when (name) {
     "다이아" -> R.drawable.img_tier_dia_s
     "마스터" -> R.drawable.img_tier_master_s
     else -> R.drawable.img_tier_gold_s
+}
+
+// 영문 티어 전환도 현재 휘장의 금속색 계열을 쓴다. 홈 티어와 같은 기준값이다.
+private fun tierEnglishColor(name: String): Color = when (name) {
+    "브론즈" -> Color(0xFFB87333)
+    "실버" -> Color(0xFFC0C7D1)
+    "골드" -> Color(0xFFD4A72C)
+    "플래티넘", "플레티넘" -> Color(0xFF8B7FF0)
+    "다이아", "다이아몬드" -> Color(0xFF45C4E8)
+    "마스터" -> Color(0xFFA05CDA)
+    else -> Gray600
 }
 
 @Composable
@@ -465,12 +478,13 @@ private fun TierNameAnimation(
         "마스터" -> "Master"
         else -> null
     }
-    var phase by remember { mutableStateOf(0) } // 0=한글, 1=삭제, 2=영문 입력, 3=광택
-    var charCount by remember { mutableStateOf(tierName.length) }
+    var phase by remember { mutableStateOf(0) } // 0=한글, 3=광택, 4=한글 복귀, 5=한영 전환
     var running by remember { mutableStateOf(false) }
     val restoreProgress = remember { Animatable(0f) }
+    val textWipeProgress = remember { Animatable(0f) }
     val scope = rememberCoroutineScope()
     val titleStyle = TqType.BodyL.figma().copy(fontWeight = FontWeight.Medium)
+    val englishColor = tierEnglishColor(tierName)
     val restoreOffsetPx = with(LocalDensity.current) { 5.dp.toPx() }
 
     fun play() {
@@ -478,16 +492,18 @@ private fun TierNameAnimation(
         scope.launch {
             running = true
             try {
-                phase = 1
-                for (count in (tierName.length - 1) downTo 0) {
-                    charCount = count
-                    delay(90)
-                }
-                phase = 2
-                for (count in 1..englishName.length) {
-                    charCount = count
-                    delay(90)
-                }
+                textWipeProgress.snapTo(0f)
+                phase = 5
+                textWipeProgress.animateTo(
+                    targetValue = 1f,
+                    animationSpec = tween(
+                        // 이름 길이와 무관하게 기존 골드 → Gold 전환 속도로 통일한다.
+                        durationMillis = 540,
+                        easing = LinearEasing,
+                    ),
+                )
+                // 영문 전체가 그려진 프레임을 먼저 노출한 뒤 광선 단계로 넘어간다.
+                withFrameNanos { }
                 phase = 3
                 // Gold 완성 즉시 300ms 광선을 실행한 뒤 200ms를 더 유지한다.
                 onShineStart()
@@ -500,8 +516,8 @@ private fun TierNameAnimation(
                     animationSpec = tween(220, easing = FastOutSlowInEasing),
                 )
                 phase = 0
-                charCount = tierName.length
                 restoreProgress.snapTo(0f)
+                textWipeProgress.snapTo(0f)
             } finally {
                 running = false
             }
@@ -520,17 +536,16 @@ private fun TierNameAnimation(
         ),
     ) {
         when (phase) {
-            1 -> Text(text = tierName.take(charCount), style = titleStyle, color = Gray800)
-            2, 3 -> Text(
-                text = englishName?.take(charCount).orEmpty(),
+            3 -> Text(
+                text = englishName.orEmpty(),
                 style = titleStyle,
-                color = Color(0xFFD4A72C),
+                color = englishColor,
             )
             4 -> {
                 Text(
                     text = englishName.orEmpty(),
                     style = titleStyle,
-                    color = Color(0xFFD4A72C),
+                    color = englishColor,
                     modifier = Modifier.graphicsLayer {
                         alpha = 1f - restoreProgress.value
                         translationY = -restoreOffsetPx * restoreProgress.value
@@ -546,9 +561,74 @@ private fun TierNameAnimation(
                     },
                 )
             }
+            5 -> TierNameWipeText(
+                koreanName = tierName,
+                englishName = englishName.orEmpty(),
+                progress = textWipeProgress.value,
+                style = titleStyle,
+                koreanColor = Gray800,
+                englishColor = englishColor,
+            )
             else -> Text(text = tierName, style = titleStyle, color = Gray800)
         }
     }
+}
+
+@Composable
+private fun TierNameWipeText(
+    koreanName: String,
+    englishName: String,
+    progress: Float,
+    style: TextStyle,
+    koreanColor: Color,
+    englishColor: Color,
+) {
+    val split = koreanName.length.toFloat() / (koreanName.length + englishName.length)
+    Box {
+        TierNameWipeLayer(
+            text = koreanName,
+            progress = (progress / split).coerceIn(0f, 1f),
+            appearing = false,
+            style = style,
+            color = koreanColor,
+        )
+        TierNameWipeLayer(
+            text = englishName,
+            progress = ((progress - split) / (1f - split)).coerceIn(0f, 1f),
+            appearing = true,
+            style = style,
+            color = englishColor,
+        )
+    }
+}
+
+@Composable
+private fun TierNameWipeLayer(
+    text: String,
+    progress: Float,
+    appearing: Boolean,
+    style: TextStyle,
+    color: Color,
+) {
+    val timeline = progress.coerceIn(0f, 1f) * text.length
+    val animatedText = buildAnnotatedString {
+        text.forEachIndexed { index, character ->
+            val animationOrder = if (appearing) index else text.lastIndex - index
+            val localProgress = (timeline - animationOrder).coerceIn(0f, 1f)
+            val easedProgress = localProgress * localProgress * (3f - 2f * localProgress)
+            val alpha = if (appearing) easedProgress else 1f - easedProgress
+            withStyle(SpanStyle(color = color.copy(alpha = alpha))) {
+                append(character)
+            }
+        }
+    }
+    Text(
+        text = animatedText,
+        style = style,
+        softWrap = false,
+        maxLines = 1,
+        modifier = Modifier.wrapContentWidth(Alignment.Start, unbounded = true),
+    )
 }
 
 // ── 핵심 역량 카드 (361x484) ──

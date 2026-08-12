@@ -66,4 +66,23 @@ class NotificationViewModel @Inject constructor(
         }
         notificationRepository.markRead(unreadIds)
     }
+
+    // 알림창에서 롱프레스 후 삭제를 누르면 현재 목록에서 즉시 제거한다.
+    // 서버에 삭제 계약이 없어 이번 동작은 현재 화면 목록에만 적용한다.
+    fun removeNotification(notificationId: String) {
+        _uiState.update { state ->
+            state.copy(items = state.items.filterNot { it.id == notificationId })
+        }
+        viewModelScope.launch {
+            notificationRepository.deleteNotification(notificationId)
+        }
+    }
+
+    fun removeAllNotifications() {
+        val ids = _uiState.value.items.map { it.id }
+        _uiState.update { it.copy(items = emptyList()) }
+        viewModelScope.launch {
+            notificationRepository.deleteAllNotifications(ids)
+        }
+    }
 }

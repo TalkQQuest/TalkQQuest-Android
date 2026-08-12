@@ -7,6 +7,17 @@ import android.provider.Settings
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.EnterTransition
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
+import androidx.compose.animation.shrinkVertically
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.Animatable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -19,12 +30,15 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.ui.input.pointer.PointerEventPass
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.CircularProgressIndicator
@@ -32,17 +46,23 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.material3.ripple
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.zIndex
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.LineBreak
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -52,19 +72,26 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.talkqquest.app.R
 import com.talkqquest.app.core.designsystem.FitDesign
 import com.talkqquest.app.core.designsystem.Gray100
+import com.talkqquest.app.core.designsystem.Gray200
 import com.talkqquest.app.core.designsystem.Gray400
 import com.talkqquest.app.core.designsystem.Gray50
 import com.talkqquest.app.core.designsystem.Gray500
 import com.talkqquest.app.core.designsystem.Gray600
+import com.talkqquest.app.core.designsystem.Gray700
 import com.talkqquest.app.core.designsystem.Gray800
 import com.talkqquest.app.core.designsystem.Gray900
+import com.talkqquest.app.core.designsystem.LocalStatusBarCompensation
+import com.talkqquest.app.core.designsystem.Error
 import com.talkqquest.app.core.designsystem.Primary600
 import com.talkqquest.app.core.designsystem.TalkQQuestTheme
 import com.talkqquest.app.core.designsystem.TqType
 import com.talkqquest.app.core.designsystem.White
+import com.talkqquest.app.core.designsystem.coverStatusBarCompensation
 import com.talkqquest.app.feature.notification.data.model.NotificationUiItem
 import com.talkqquest.app.feature.notification.viewmodel.NotificationUiState
 import com.talkqquest.app.feature.notification.viewmodel.NotificationViewModel
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
 // ── 알림창 (최신 시안 "알림창" 프레임 전사, 2026-07-22) ──
 // 홈 상단 벨 → 이 화면. 배너(알림 설정 유도) + 알림 카드 목록.
@@ -93,7 +120,6 @@ fun NotificationScreen(
         onBack()
     }
 
-    BackHandler(onBack = closeNotifications)
     NotificationScreen(
         uiState = uiState,
         onBack = closeNotifications,
@@ -115,6 +141,8 @@ fun NotificationScreen(
                 onWeeklyReportClick()
             }
         },
+        onNotificationDelete = viewModel::removeNotification,
+        onDeleteAllNotifications = viewModel::removeAllNotifications,
     )
 }
 
@@ -125,16 +153,44 @@ private fun NotificationScreen(
     showNotificationSettingsBanner: Boolean = true,
     onNotificationSettingsClick: () -> Unit = {},
     onNotificationClick: (NotificationUiItem) -> Unit = {},
+    onNotificationDelete: (String) -> Unit = {},
+    onDeleteAllNotifications: () -> Unit = {},
 ) = FitDesign { // 다른 화면들과 동일: 작은 화면에선 디자인(393x852) 통째 축소
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(Gray50)
-            .statusBarsPadding(),
-    ) {
+    var deleteTargetId by remember { mutableStateOf<String?>(null) }
+    var showDeleteAllDialog by remember { mutableStateOf(false) }
+    val leaveScreen: () -> Unit = {
+        // 화면 전환과 삭제 팝업의 되감기 모션을 같은 프레임에 시작한다.
+        deleteTargetId = null
+        onBack()
+    }
+    BackHandler(onBack = leaveScreen)
+    Box(modifier = Modifier.fillMaxSize()) {
+        if (deleteTargetId != null && !showDeleteAllDialog) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(top = 80.dp)
+                    .clickable(
+                        interactionSource = remember { MutableInteractionSource() },
+                        indication = null,
+                        onClick = { deleteTargetId = null },
+                    ),
+            )
+        }
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(Gray50)
+                .statusBarsPadding(),
+        ) {
         Spacer(Modifier.height(8.dp)) // 상태바(40) → 헤더(top 48) (CSS Frame 427321597)
         // 헤더: 뒤로가기 44 왼끝 + 제목 "알림" 화면 정중앙 (CSS: Body/L Regular Gray800)
-        Box(modifier = Modifier.fillMaxWidth().height(44.dp)) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(44.dp)
+                .zIndex(if (deleteTargetId != null) 2f else 0f),
+        ) {
             val backInteraction = remember { MutableInteractionSource() }
             Box(
                 modifier = Modifier
@@ -143,7 +199,7 @@ private fun NotificationScreen(
                     .clickable(
                         interactionSource = backInteraction,
                         indication = ripple(bounded = true, color = Primary600),
-                        onClick = onBack,
+                        onClick = leaveScreen,
                     ),
                 contentAlignment = Alignment.Center,
             ) {
@@ -159,6 +215,30 @@ private fun NotificationScreen(
                 color = Gray800,
                 modifier = Modifier.align(Alignment.Center),
             )
+            androidx.compose.animation.AnimatedVisibility(
+                visible = deleteTargetId != null,
+                enter = fadeIn(tween(260, easing = FastOutSlowInEasing)),
+                exit = fadeOut(tween(260, easing = FastOutSlowInEasing)),
+                modifier = Modifier
+                    .align(Alignment.CenterEnd)
+                    .padding(end = 8.dp),
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(width = 88.dp, height = 44.dp)
+                        .clip(RoundedCornerShape(12.dp))
+                        .clickable {
+                            showDeleteAllDialog = true
+                        },
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Text(
+                        text = "전체 삭제",
+                        style = TqType.BodyS.copy(fontWeight = FontWeight.Medium),
+                        color = Gray600,
+                    )
+                }
+            }
         }
         Spacer(Modifier.height(8.dp)) // 헤더 끝(92) → 콘텐츠(top 100)
 
@@ -172,7 +252,17 @@ private fun NotificationScreen(
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(start = 16.dp, end = 13.dp)
-                    .navigationBarsPadding(), // 마지막 알림 항목이 시스템 네비게이션 바 위에서 끝나도록 확보
+                    .navigationBarsPadding() // 마지막 알림 항목이 시스템 네비게이션 바 위에서 끝나도록 확보
+                    .pointerInput(deleteTargetId) {
+                        awaitPointerEventScope {
+                            while (deleteTargetId != null) {
+                                val event = awaitPointerEvent(PointerEventPass.Final)
+                                if (event.changes.none { it.isConsumed }) {
+                                    deleteTargetId = null
+                                }
+                            }
+                        }
+                    },
                 verticalArrangement = Arrangement.spacedBy(16.dp), // CSS gap 16
                 contentPadding = PaddingValues(bottom = 16.dp), // 마지막 알림 항목과 시스템 네비게이션 바 사이 여백
             ) {
@@ -180,7 +270,20 @@ private fun NotificationScreen(
                     item { NotificationSettingBanner(onClick = onNotificationSettingsClick) }
                 }
                 items(uiState.items, key = { it.id }) { item ->
-                    NotificationCard(item, onClick = { onNotificationClick(item) })
+                    NotificationCard(
+                        item = item,
+                        showDeleteAction = deleteTargetId == item.id,
+                        onClick = {
+                            deleteTargetId = null
+                            onNotificationClick(item)
+                        },
+                        onLongClick = { deleteTargetId = item.id },
+                        onDismissDelete = { deleteTargetId = null },
+                        onDeleteClick = {
+                            onNotificationDelete(item.id)
+                            deleteTargetId = null
+                        },
+                    )
                 }
                 if (uiState.items.isEmpty()) {
                     // 빈 상태 — 시안에 빈 화면 정의가 없어 기존 문구 유지 (디자인 나오면 교체)
@@ -190,6 +293,117 @@ private fun NotificationScreen(
                             contentAlignment = Alignment.Center,
                         ) {
                             Text(text = "새로운 알림이 없어요", style = TqType.BodyM, color = Gray500)
+                        }
+                    }
+                }
+            }
+        }
+        }
+        NotificationDeleteAllDialog(
+            visible = showDeleteAllDialog,
+            onDismiss = { showDeleteAllDialog = false },
+            onConfirm = {
+                onDeleteAllNotifications()
+                showDeleteAllDialog = false
+                deleteTargetId = null
+            },
+        )
+    }
+}
+
+@Composable
+private fun NotificationDeleteAllDialog(
+    visible: Boolean,
+    onDismiss: () -> Unit,
+    onConfirm: () -> Unit,
+) {
+    val scaleProgress = remember { Animatable(0f) }
+    LaunchedEffect(visible) {
+        scaleProgress.animateTo(
+            targetValue = if (visible) 1f else 0f,
+            animationSpec = tween(360, easing = FastOutSlowInEasing),
+        )
+    }
+    Box(modifier = Modifier.fillMaxSize()) {
+        AnimatedVisibility(
+            visible = visible,
+            enter = fadeIn(tween(360, easing = FastOutSlowInEasing)),
+            exit = fadeOut(tween(360, easing = FastOutSlowInEasing)),
+            modifier = Modifier.coverStatusBarCompensation(LocalStatusBarCompensation.current),
+        ) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(Gray700.copy(alpha = 0.23f))
+                    .clickable(
+                        interactionSource = remember { MutableInteractionSource() },
+                        indication = null,
+                        onClick = onDismiss,
+                    ),
+            )
+        }
+        AnimatedVisibility(
+            visible = visible,
+            enter = fadeIn(tween(360, easing = FastOutSlowInEasing)),
+            exit = fadeOut(tween(360, easing = FastOutSlowInEasing)),
+        ) {
+            Box(
+                modifier = Modifier.fillMaxSize(),
+                contentAlignment = Alignment.TopCenter,
+            ) {
+                Column(
+                    modifier = Modifier
+                        // 알림 본문이 상태바 inset을 이미 소비하므로 대화 화면의 최종 y=313dp를 직접 적용한다.
+                        .offset(y = 313.dp)
+                        .width(336.dp)
+                        .clip(RoundedCornerShape(16.dp))
+                        .background(White)
+                        .clickable(
+                            interactionSource = remember { MutableInteractionSource() },
+                            indication = null,
+                            onClick = {},
+                        )
+                        .graphicsLayer {
+                            val scale = 0.86f + (0.14f * scaleProgress.value)
+                            scaleX = scale
+                            scaleY = scale
+                        }
+                        .padding(start = 24.dp, end = 24.dp, top = 24.dp, bottom = 20.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(16.dp),
+                ) {
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(4.dp),
+                    ) {
+                        Text(text = "알림을 전체 삭제하시겠어요?", style = TqType.HeadingM, color = Gray900)
+                        Text(
+                            text = "삭제한 알림은 다시 복구할 수 없어요.",
+                            style = TqType.BodyM,
+                            color = Gray600,
+                            textAlign = TextAlign.Center,
+                        )
+                    }
+                    Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                        Box(
+                            modifier = Modifier
+                                .size(width = 138.dp, height = 48.dp)
+                                .clip(RoundedCornerShape(8.dp))
+                                .background(Gray200)
+                                .clickable(onClick = onDismiss),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            Text(text = "취소하기", style = TqType.TitleL, color = Gray500)
+                        }
+                        Box(
+                            modifier = Modifier
+                                .size(width = 138.dp, height = 48.dp)
+                                .clip(RoundedCornerShape(8.dp))
+                                .background(Error)
+                                .clickable(onClick = onConfirm),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            Text(text = "삭제하기", style = TqType.TitleL, color = Gray50)
                         }
                     }
                 }
@@ -263,9 +477,29 @@ private fun NotificationSettingBanner(onClick: () -> Unit = {}) {
 //   치수 주의: 그 프레임은 텍스트 열이 46인데 화살표 자리는 44로 적혀 있어 합이 안 맞는다
 //   (46 = 20 + 2 + 24 여야 카드 78이 성립). 화살표는 줄 높이를 늘리지 않고 옆에 얹는다.
 @Composable
-private fun NotificationCard(item: NotificationUiItem, onClick: () -> Unit = {}) {
-    Row(
-        modifier = Modifier
+private fun NotificationCard(
+    item: NotificationUiItem,
+    showDeleteAction: Boolean = false,
+    onClick: () -> Unit = {},
+    onLongClick: () -> Unit = {},
+    onDismissDelete: () -> Unit = {},
+    onDeleteClick: () -> Unit = {},
+) {
+    var isDeleting by remember { mutableStateOf(false) }
+    val deleteScope = rememberCoroutineScope()
+    AnimatedVisibility(
+        visible = !isDeleting,
+        enter = EnterTransition.None,
+        exit = fadeOut(tween(260, easing = FastOutSlowInEasing)) +
+            shrinkVertically(
+                animationSpec = tween(260, easing = FastOutSlowInEasing),
+                shrinkTowards = Alignment.Top,
+            ),
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+        Box(modifier = Modifier.fillMaxWidth()) {
+            Row(
+            modifier = Modifier
             .fillMaxWidth()
             // CSS는 78 고정이지만 그 목업 문구가 전부 한 줄짜리였다("이전 기기에서는 로그아웃 됩니다.").
             // 서버 실제 문구는 더 길어 두 줄이 되고, 78로 잠그면 아랫줄이 카드 밖으로 잘린다(실기기 확인).
@@ -274,10 +508,10 @@ private fun NotificationCard(item: NotificationUiItem, onClick: () -> Unit = {})
             .clip(RoundedCornerShape(24.dp))
             .background(White)
             // 홈의 "다른 미션 보기"와 같은 기본 눌림 애니메이션을 사용한다.
-            .clickable(onClick = onClick)
+            .combinedClickable(onClick = onClick, onLongClick = onLongClick)
             .padding(16.dp),
         verticalAlignment = Alignment.Top,
-    ) {
+        ) {
         Column(
             modifier = Modifier.weight(1f),
             verticalArrangement = Arrangement.spacedBy(2.dp), // CSS gap 2
@@ -311,19 +545,78 @@ private fun NotificationCard(item: NotificationUiItem, onClick: () -> Unit = {})
             }
         }
         // CSS Frame 427321606/427321608: align-items: flex-start · gap 3 → 점도 상단 정렬
-        Row(verticalAlignment = Alignment.Top) {
+        Column(horizontalAlignment = Alignment.End) {
             Text(text = item.timeText, style = TqType.BodyS, color = Gray400)
             if (item.isUnread) {
-                Spacer(Modifier.width(3.dp)) // CSS gap 3
-                Box(
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Spacer(Modifier.width(3.dp)) // CSS gap 3
+                    Box(
+                        modifier = Modifier
+                            .size(7.dp)
+                            .clip(CircleShape)
+                            .background(Primary600),
+                    )
+                }
+            }
+        }
+        }
+        AnimatedVisibility(
+            visible = showDeleteAction,
+            enter = fadeIn(tween(180, easing = FastOutSlowInEasing)) +
+                scaleIn(
+                    initialScale = 0.88f,
+                    animationSpec = tween(180, easing = FastOutSlowInEasing),
+                ),
+            exit = fadeOut(tween(140, easing = FastOutSlowInEasing)) +
+                scaleOut(
+                    targetScale = 0.88f,
+                    animationSpec = tween(140, easing = FastOutSlowInEasing),
+                ),
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .zIndex(2f),
+        ) {
+            Box(
+                modifier = Modifier
+                    .width(214.dp)
+                    .height(64.dp)
+                    .shadow(8.dp, RoundedCornerShape(16.dp))
+                    .clip(RoundedCornerShape(16.dp))
+                    .background(White)
+                    .clickable {
+                        if (!isDeleting) {
+                            isDeleting = true
+                            deleteScope.launch {
+                                delay(260)
+                                onDeleteClick()
+                            }
+                        }
+                    },
+                contentAlignment = Alignment.Center,
+            ) {
+                Row(
                     modifier = Modifier
-                        .size(7.dp)
-                        .clip(CircleShape)
-                        .background(Primary600),
-                )
+                        .fillMaxWidth()
+                        .padding(horizontal = 24.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                ) {
+                    Icon(
+                        painter = painterResource(R.drawable.ic_notification_delete),
+                        contentDescription = null,
+                        tint = Gray800,
+                        modifier = Modifier.size(22.dp),
+                    )
+                    Text(
+                        text = "삭제",
+                        style = TqType.BodyL.copy(fontWeight = FontWeight.Medium),
+                        color = Gray800,
+                    )
+                }
             }
         }
     }
+}
 }
 
 @Preview(showSystemUi = true, device = "spec:width=393dp,height=852dp")

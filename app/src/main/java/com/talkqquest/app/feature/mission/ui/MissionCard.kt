@@ -1,5 +1,13 @@
 package com.talkqquest.app.feature.mission.ui
 
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -69,6 +77,7 @@ internal fun MissionCard(
     onToggleSave: () -> Unit,
     modifier: Modifier = Modifier,
     showTarget: Boolean = false,
+    animateContentChanges: Boolean = false,
 ) {
     Row(
         modifier = modifier
@@ -98,6 +107,47 @@ internal fun MissionCard(
             }
             Spacer(Modifier.width(8.dp)) // 과녁 ↔ 텍스트 (CSS Frame 427321225 gap 8)
         }
+        if (animateContentChanges) {
+            AnimatedContent(
+                targetState = mission,
+                transitionSpec = {
+                    (fadeIn(tween(260, easing = FastOutSlowInEasing)) +
+                        slideInVertically(
+                            animationSpec = tween(260, easing = FastOutSlowInEasing),
+                            initialOffsetY = { it / 12 },
+                        )) togetherWith
+                        (fadeOut(tween(260, easing = FastOutSlowInEasing)) +
+                            slideOutVertically(
+                                animationSpec = tween(260, easing = FastOutSlowInEasing),
+                                targetOffsetY = { -it / 12 },
+                            ))
+                },
+                modifier = Modifier.weight(1f),
+                label = "missionCardContent",
+            ) { animatedMission ->
+                MissionCardBody(
+                    mission = animatedMission,
+                    onToggleSave = onToggleSave,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+            }
+        } else {
+            MissionCardBody(
+                mission = mission,
+                onToggleSave = onToggleSave,
+                modifier = Modifier.weight(1f),
+            )
+        }
+    }
+}
+
+@Composable
+private fun MissionCardBody(
+    mission: MissionListItem,
+    onToggleSave: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Row(modifier = modifier, verticalAlignment = Alignment.CenterVertically) {
         Column(
             modifier = Modifier.weight(1f),
             verticalArrangement = Arrangement.spacedBy(7.dp), // 제목 ↔ 메타줄 (CSS Frame 350 gap)

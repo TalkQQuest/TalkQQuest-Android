@@ -1,5 +1,11 @@
 package com.talkqquest.app.feature.mission.ui
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
+import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
@@ -33,9 +39,14 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
@@ -68,6 +79,7 @@ import com.talkqquest.app.feature.mission.data.model.MissionListItem
 import com.talkqquest.app.feature.mission.viewmodel.MissionListUiState
 import com.talkqquest.app.feature.mission.viewmodel.MissionListViewModel
 import com.talkqquest.app.feature.mission.viewmodel.missionFilters
+import kotlinx.coroutines.delay
 
 // ── 미션 목록 (UI 1차 v2.css 전사) ──
 // 화면 = 2단 분리(state hoisting): (1) viewModel 연결용 / (2) 값만 받아 그리는 부분(Preview용). 홈 패턴 동일.
@@ -210,6 +222,28 @@ private fun MissionListContent(
     onBack: () -> Unit,
     homeContext: Boolean,
 ) {
+    val targetMissions = uiState.filteredMissions
+    var animatedSlots by remember { mutableStateOf(targetMissions) }
+    var visibleSlotCount by remember { mutableIntStateOf(targetMissions.size) }
+
+    // 미션 id가 아니라 화면 위에서부터의 카드 슬롯을 유지한다. 결과가 줄면 위쪽 슬롯은
+    // 제자리에 둔 채 내용만 새 결과로 바꾸고, 초과한 아래 슬롯만 접는다. 결과가 늘면 기존
+    // 슬롯은 그대로 두고 새 아래 슬롯만 사라짐의 역순으로 펼친다.
+    LaunchedEffect(targetMissions) {
+        val previousSlots = animatedSlots
+        val transitionSlotCount = maxOf(previousSlots.size, targetMissions.size)
+        animatedSlots = List(transitionSlotCount) { index ->
+            targetMissions.getOrNull(index) ?: previousSlots[index]
+        }
+
+        // 늘어나는 슬롯이 먼저 0 높이로 목록에 들어간 뒤 visible이 되어야 펼침이 보인다.
+        withFrameNanos { }
+        visibleSlotCount = targetMissions.size
+
+        delay(MissionFilterAnimationMillis.toLong())
+        animatedSlots = targetMissions
+    }
+
     // 화면 좌우 스와이프로도 필터 전환 (칩 탭 선택은 그대로 유지). FlowRow가 칩을 missionFilters
     // 순서(왼→오, 위→아래)로 깔므로 인덱스 ±1 = 읽기 순서 이동 — 줄 오른쪽 끝이면 다음 줄 왼쪽으로 순환.
     // 목록 끝 여백. ⚠️ CSS(Frame 431)는 뷰포트 padding:0 + 스크롤 리스트라 "스크롤 끝 여백"을
@@ -286,8 +320,8 @@ private fun MissionListContent(
             }
         }
 
-        if (uiState.filteredMissions.isEmpty()) {
-            item {
+        if (targetMissions.isEmpty() && animatedSlots.isEmpty()) {
+            item(key = "mission-filter-empty") {
                 // 빈 목록 화면이 피그마에 없음 → 임시 문구. TODO(디자인): 빈 상태 디자인 확정 시 교체.
                 Box(
                     modifier = Modifier
@@ -298,13 +332,32 @@ private fun MissionListContent(
                     Text(text = "해당하는 미션이 없어요", style = TqType.BodyM.figma(), color = Gray500)
                 }
             }
-        } else {
-            items(uiState.filteredMissions, key = { it.id }) { mission ->
+        }
+
+        items(
+            count = animatedSlots.size,
+            key = { index -> "mission-filter-slot-$index" },
+        ) { index ->
+            val mission = animatedSlots[index]
+            AnimatedVisibility(
+                visible = index < visibleSlotCount,
+                enter = fadeIn(tween(MissionFilterAnimationMillis, easing = FastOutSlowInEasing)) +
+                    expandVertically(
+                        animationSpec = tween(MissionFilterAnimationMillis, easing = FastOutSlowInEasing),
+                        expandFrom = Alignment.Top,
+                    ),
+                exit = fadeOut(tween(MissionFilterAnimationMillis, easing = FastOutSlowInEasing)) +
+                    shrinkVertically(
+                        animationSpec = tween(MissionFilterAnimationMillis, easing = FastOutSlowInEasing),
+                        shrinkTowards = Alignment.Top,
+                    ),
+            ) {
                 MissionCard(
                     mission = mission,
                     onClick = { onMissionClick(mission.id) },
                     onToggleSave = { onToggleSave(mission.id) },
                     modifier = Modifier.padding(horizontal = 16.dp),
+                    animateContentChanges = true,
                 )
             }
         }
@@ -312,6 +365,8 @@ private fun MissionListContent(
         item { Spacer(Modifier.height(bottomBarClearance)) } // 목록 끝 여백 (네비바 위로 카드 간격만큼)
     }
 }
+
+private const val MissionFilterAnimationMillis = 260
 
 // 필터 칩 2줄 (CSS Frame 341: 줄 간격 10, 칩 간격 8). 폭 넘치면 자동 줄바꿈(FlowRow) — 디자인과 동일 배치.
 @OptIn(ExperimentalLayoutApi::class)

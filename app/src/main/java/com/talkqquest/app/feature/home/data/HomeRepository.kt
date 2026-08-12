@@ -7,6 +7,7 @@ import com.talkqquest.app.core.util.TierProgress
 import com.talkqquest.app.feature.home.data.model.HomeSummary
 import com.talkqquest.app.feature.home.data.model.TodayMission
 import com.talkqquest.app.feature.mission.data.MissionApi
+import com.talkqquest.app.feature.mission.data.model.TodayMissionResponse
 import com.talkqquest.app.feature.notification.data.NotificationRepository
 import javax.inject.Inject
 
@@ -47,7 +48,9 @@ class HomeRepository @Inject constructor(
                         level = userXpStore.level,
                         currentXp = userXpStore.currentXp,
                         nextLevelXp = userXpStore.nextLevelXp,
-                        todayMission = d.todayMission ?: fetchTodayMission() ?: stubHomeSummary.todayMission,
+                        // 홈 요약의 todayMission에는 재추천 횟수가 없을 수 있으므로 전용 응답을 우선한다.
+                        // 전용 조회가 실패할 때만 홈 요약 값으로 돌아가 카드 자체는 유지한다.
+                        todayMission = fetchTodayMission() ?: d.todayMission ?: stubHomeSummary.todayMission,
                         questionOfDay = d.questionOfDay ?: stubHomeSummary.questionOfDay,
                         // /home/summary엔 알림 필드가 없어(실측) 알림 API로 별도 계산
                         hasNewNotification = hasUnreadNotification(),
@@ -83,23 +86,17 @@ class HomeRepository @Inject constructor(
     // ★2026-08-11: 오늘의 미션 응답에 description이 함께 오므로 상세를 한 번 더 부르지 않는다.
     //   재추천 횟수를 다 쓴 계정은 429(MISSION_REFRESH_LIMIT_EXCEEDED)가 오는데, 이때도 화면이
     //   비지 않도록 기존처럼 목록 첫 항목으로 폴백한다(실서버 UUID라 카드를 눌러도 상세로 이어짐).
-    private suspend fun fetchTodayMission(): TodayMission? {
-        when (val today = serverCall { missionApi.getTodayMission() }) {
+    private suspend fun fetchTodayMission(refresh: Boolean? = null): TodayMission? {
+        when (val today = serverCall { missionApi.getTodayMission(refresh = refresh) }) {
             is ApiResult.Success -> {
                 val d = today.data
                 if (d.missionId.isNotBlank()) {
-                    return TodayMission(
-                        id = d.missionId,
-                        title = d.title,
-                        description = d.description.takeIf { it.isNotBlank() },
-                        difficulty = d.difficulty,
-                        estimatedMinutes = d.estimatedMinutes,
-                        rewardXp = d.rewardXp,
-                    )
+                    return d.toHomeMission()
                 }
             }
             else -> Unit
         }
+        if (refresh == true) return null
         // 폴백: 목록 첫 항목 (부제는 목록 응답에 없어 상세로 채움 — 실패하면 생략)
         val list = serverCall { missionApi.getMissions() }
         val item = (list as? ApiResult.Success)?.data?.missions?.firstOrNull() ?: return null
@@ -114,6 +111,26 @@ class HomeRepository @Inject constructor(
             rewardXp = item.rewardXp,
         )
     }
+
+    // 홈의 "추천" 배지 — 서버에 오늘의 미션 재추천을 요청한다.
+    // 실패하거나 일일 한도를 넘기면 null을 돌려 기존 카드를 그대로 유지한다.
+    suspend fun refreshTodayMission(): ApiResult<TodayMission> {
+        val mission = fetchTodayMission(refresh = true)
+            ?: return ApiResult.Error(code = null, message = "오늘의 미션을 다시 추천받지 못했어요.")
+        return ApiResult.Success(mission)
+    }
+
+    private fun TodayMissionResponse.toHomeMission() = TodayMission(
+        id = missionId,
+        title = title,
+        description = description.takeIf { it.isNotBlank() },
+        difficulty = difficulty,
+        estimatedMinutes = estimatedMinutes,
+        rewardXp = rewardXp,
+        refreshCount = refreshCount,
+        refreshLimit = refreshLimit,
+        remainingRefreshes = remainingRefreshes,
+    )
 }
 
 // 서버 없이 에뮬에서 홈 화면 확인용 임시 데이터. 서버 연동 시 이 값째로 삭제.

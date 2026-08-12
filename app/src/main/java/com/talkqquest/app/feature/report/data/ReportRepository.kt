@@ -7,14 +7,10 @@ import com.talkqquest.app.feature.report.data.model.Competency
 import com.talkqquest.app.feature.report.data.model.CompetencyAxis
 import com.talkqquest.app.feature.report.data.model.DeleteReportResponse
 import com.talkqquest.app.feature.report.data.model.GrowthTierReport
-import com.talkqquest.app.feature.report.data.model.HighlightItem
-import com.talkqquest.app.feature.report.data.model.MetricChange
 import com.talkqquest.app.feature.report.data.model.SaveReportRequest
 import com.talkqquest.app.feature.report.data.model.SaveReportResponse
 import com.talkqquest.app.feature.report.data.model.SavedReportItem
-import com.talkqquest.app.feature.report.data.model.WeeklyCompareReport
 import com.talkqquest.app.feature.report.data.model.toGrowthTierReport
-import com.talkqquest.app.feature.report.data.model.toWeeklyCompareReport
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -32,13 +28,6 @@ class ReportRepository @Inject constructor(
         val r = serverCall { reportApi.getGrowth() }
         return if (r is ApiResult.Success) ApiResult.Success(r.data.toGrowthTierReport(gains))
         else ApiResult.Success(stubGrowth)
-    }
-
-    // 주간 비교 리포트 — GET /api/v1/reports/weekly-compare.
-    suspend fun getWeeklyCompare(): ApiResult<WeeklyCompareReport> {
-        val r = serverCall { reportApi.getWeeklyCompare() }
-        return if (r is ApiResult.Success) ApiResult.Success(r.data.toWeeklyCompareReport())
-        else ApiResult.Success(stubWeekly)
     }
 
     // 리포트 저장 (리포트 저장 시트) — POST /api/v1/reports.
@@ -93,17 +82,4 @@ class ReportRepository @Inject constructor(
         ),
     )
 
-    private val stubWeekly = WeeklyCompareReport(
-        metrics = listOf(
-            MetricChange(name = "친절한 태도", lastWeek = 88, thisWeek = 92),
-            MetricChange(name = "대화 주도", lastWeek = 86, thisWeek = 88),
-            MetricChange(name = "공감 표현", lastWeek = 82, thisWeek = 85),
-            MetricChange(name = "질문 연결성", lastWeek = 74, thisWeek = 78),
-        ),
-        highlights = listOf(
-            HighlightItem(emphasis = "전체 점수", rest = "가 78점에서 86점으로 상승했어요"),
-            HighlightItem(emphasis = "친절한 태도", rest = "가 가장 많이 상승되었어요"),
-            HighlightItem(emphasis = "질문 연결성", rest = "을 꾸준히 개선하고 있어요"),
-        ),
-    )
 }

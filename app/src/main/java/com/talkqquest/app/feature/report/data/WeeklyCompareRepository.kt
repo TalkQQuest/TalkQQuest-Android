@@ -78,7 +78,8 @@ class WeeklyCompareRepository @Inject constructor(
         val r = if (saved) serverCall { reportApi.saveWeeklyCompare(reportId) }
         else serverCall { reportApi.unsaveWeeklyCompare(reportId) }
         return when (r) {
-            is ApiResult.Success -> ApiResult.Success(r.data.isSaved)
+            // 저장 응답과 해제 응답의 필드 구성이 다르므로 HTTP 성공 여부로 요청 상태를 확정한다.
+            is ApiResult.Success -> ApiResult.Success(saved)
             is ApiResult.Error -> r
             is ApiResult.Exception -> r
         }

@@ -1,10 +1,10 @@
-package com.talkqquest.app.feature.auth.data
+﻿package com.talkqquest.app.feature.auth.data
 
 import com.talkqquest.app.core.datastore.TokenDataStore
 import com.talkqquest.app.core.network.ApiResponse
 import com.talkqquest.app.core.network.ApiResult
 import com.talkqquest.app.core.network.safeApiCall
-import com.talkqquest.app.core.push.FcmTokenRegistrar
+import com.talkqquest.app.core.push.PushTokenRegistrar
 import com.talkqquest.app.feature.home.data.HomeApi
 import com.talkqquest.app.feature.home.data.model.LegalDocument
 import com.talkqquest.app.feature.home.data.model.UserUpdateRequest
@@ -23,7 +23,7 @@ class AuthRepository @Inject constructor(
     private val authApi: AuthApi,
     private val tokenDataStore: TokenDataStore,
     private val homeApi: HomeApi,
-    private val fcmTokenRegistrar: FcmTokenRegistrar,
+    private val pushTokenRegistrar: PushTokenRegistrar,
 ) {
     suspend fun getServiceTerms(): ApiResult<LegalDocument> =
         safeApiCall { homeApi.getServiceTerms() }
@@ -95,7 +95,7 @@ class AuthRepository @Inject constructor(
                 accessToken = result.data.accessToken,
                 refreshToken = result.data.refreshToken,
             )
-            fcmTokenRegistrar.registerCurrentTokenIfAuthenticated()
+            pushTokenRegistrar.registerCurrentToken()
         }
         return if (result is ApiResult.Error && result.code != null) {
             result.copy(message = emailLoginErrorMessage(result.code))
@@ -135,7 +135,7 @@ class AuthRepository @Inject constructor(
                 tokenDataStore.clear()
                 ApiResult.Success(Unit)
             } else {
-                ApiResult.Error(code = null, message = response.message ?: "로그아웃에 실패했어요.")
+                ApiResult.Error(code = null, message = response.message ?: "濡쒓렇?꾩썐???ㅽ뙣?덉뼱??")
             }
         } catch (e: HttpException) {
             ApiResult.Error(code = e.code(), message = logoutErrorMessage(e.code()))
@@ -154,7 +154,7 @@ class AuthRepository @Inject constructor(
                 tokenDataStore.clear()
                 ApiResult.Success(Unit)
             } else {
-                ApiResult.Error(code = null, message = response.message ?: "회원 탈퇴에 실패했어요.")
+                ApiResult.Error(code = null, message = response.message ?: "?뚯썝 ?덊눜???ㅽ뙣?덉뼱??")
             }
         } catch (e: HttpException) {
             ApiResult.Error(code = e.code(), message = withdrawErrorMessage(e.code()))
@@ -188,7 +188,7 @@ class AuthRepository @Inject constructor(
                 accessToken = result.data.accessToken,
                 refreshToken = result.data.refreshToken,
             )
-            fcmTokenRegistrar.registerCurrentTokenIfAuthenticated()
+            pushTokenRegistrar.registerCurrentToken()
         }
         return if (result is ApiResult.Error && result.code != null) {
             result.copy(message = emailSignupErrorMessage(result.code))
@@ -214,7 +214,7 @@ class AuthRepository @Inject constructor(
                 accessToken = result.data.accessToken,
                 refreshToken = result.data.refreshToken,
             )
-            fcmTokenRegistrar.registerCurrentTokenIfAuthenticated()
+            pushTokenRegistrar.registerCurrentToken()
         }
         return if (result is ApiResult.Error && result.code != null) {
             result.copy(message = socialLoginErrorMessage(result.code))
@@ -240,23 +240,23 @@ class AuthRepository @Inject constructor(
         }
 
     private fun withdrawErrorMessage(code: Int): String = when (code) {
-        401 -> "로그인이 필요합니다."
-        500 -> "서버 내부 오류가 발생했습니다. 잠시 후 다시 시도해주세요."
-        else -> "회원 탈퇴에 실패했어요."
+        401 -> "濡쒓렇?몄씠 ?꾩슂?⑸땲??"
+        500 -> "?쒕쾭 ?대? ?ㅻ쪟媛 諛쒖깮?덉뒿?덈떎. ?좎떆 ???ㅼ떆 ?쒕룄?댁＜?몄슂."
+        else -> "?뚯썝 ?덊눜???ㅽ뙣?덉뼱??"
     }
 
     private fun logoutErrorMessage(code: Int): String = when (code) {
-        401 -> "로그인이 필요합니다."
-        500 -> "서버 내부 오류가 발생했습니다. 잠시 후 다시 시도해주세요."
-        else -> "로그아웃에 실패했어요."
+        401 -> "濡쒓렇?몄씠 ?꾩슂?⑸땲??"
+        500 -> "?쒕쾭 ?대? ?ㅻ쪟媛 諛쒖깮?덉뒿?덈떎. ?좎떆 ???ㅼ떆 ?쒕룄?댁＜?몄슂."
+        else -> "濡쒓렇?꾩썐???ㅽ뙣?덉뼱??"
     }
 
     private fun socialLoginErrorMessage(code: Int): String = when (code) {
-        400 -> "소셜 로그인 정보를 확인해주세요."
-        401 -> "소셜 로그인 인증이 만료되었습니다. 다시 시도해주세요."
-        403 -> "탈퇴한 계정은 일정 기간 다시 가입할 수 없어요."
-        500 -> "서버 내부 오류가 발생했습니다. 잠시 후 다시 시도해주세요."
-        else -> "소셜 로그인에 실패했어요."
+        400 -> "?뚯뀥 濡쒓렇???뺣낫瑜??뺤씤?댁＜?몄슂."
+        401 -> "?뚯뀥 濡쒓렇???몄쬆??留뚮즺?섏뿀?듬땲?? ?ㅼ떆 ?쒕룄?댁＜?몄슂."
+        403 -> "?덊눜??怨꾩젙? ?쇱젙 湲곌컙 ?ㅼ떆 媛?낇븷 ???놁뼱??"
+        500 -> "?쒕쾭 ?대? ?ㅻ쪟媛 諛쒖깮?덉뒿?덈떎. ?좎떆 ???ㅼ떆 ?쒕룄?댁＜?몄슂."
+        else -> "?뚯뀥 濡쒓렇?몄뿉 ?ㅽ뙣?덉뼱??"
     }
 
     private fun emailLoginErrorMessage(code: Int): String = when (code) {
@@ -297,3 +297,4 @@ class AuthRepository @Inject constructor(
         else -> "\uC628\uBCF4\uB529 \uC644\uB8CC \uCC98\uB9AC\uC5D0 \uC2E4\uD328\uD588\uC5B4\uC694."
     }
 }
+

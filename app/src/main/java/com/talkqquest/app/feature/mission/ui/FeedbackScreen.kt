@@ -82,7 +82,9 @@ import kotlinx.coroutines.launch
 fun FeedbackScreen(
     onBack: () -> Unit = {},
     onItemClick: (Int) -> Unit = {},
-    onDetailReport: (String, String) -> Unit = { _, _ -> }, // 미션 제목(저장 카드 제목) + 대화 id(POST /reports 바디)
+    // 미션 제목(저장 카드 제목) + 대화 id(POST /reports 바디) + 4항목 점수(성장 리포트 마름모의 "+N").
+    // 점수는 서버 성장 리포트 응답에 증가분이 없어서 넘긴다 — 서버가 누적에 그대로 더하는 값이라 같은 수다.
+    onDetailReport: (String, String, List<Int>) -> Unit = { _, _, _ -> },
     onHome: () -> Unit = {},
     viewModel: FeedbackViewModel = hiltViewModel(),
 ) {
@@ -93,7 +95,9 @@ fun FeedbackScreen(
         onItemClick = onItemClick,
         onDetailReport = onDetailReport,
         onHome = onHome,
-        onRetry = viewModel::loadFeedback,
+        // 재시도는 서버에 피드백 재생성을 요청한 뒤 다시 조회한다(regenerate = true).
+        // 조회만 다시 하면 서버 생성이 깨진 경우엔 같은 실패가 반복된다.
+        onRetry = { viewModel.loadFeedback(regenerate = true) },
     )
 }
 
@@ -102,7 +106,7 @@ private fun FeedbackScreen(
     uiState: FeedbackUiState,
     onBack: () -> Unit = {},
     onItemClick: (Int) -> Unit = {},
-    onDetailReport: (String, String) -> Unit = { _, _ -> },
+    onDetailReport: (String, String, List<Int>) -> Unit = { _, _, _ -> },
     onHome: () -> Unit = {},
     onRetry: () -> Unit = {},
 ) = FitDesign { // 작은 화면에선 디자인(393x852) 통째 축소 — 다른 화면들과 동일
@@ -140,7 +144,7 @@ private fun FeedbackContent(
     result: FeedbackResult,
     onBack: () -> Unit,
     onItemClick: (Int) -> Unit,
-    onDetailReport: (String, String) -> Unit,
+    onDetailReport: (String, String, List<Int>) -> Unit,
     onHome: () -> Unit,
     initialStage: Int = 0, // 프리뷰용: 1이면 연출 끝 상태로 그림
 ) {
@@ -243,7 +247,16 @@ private fun FeedbackContent(
         ) {
             TqButton(
                 text = "성장 리포트",
-                onClick = { if (stage >= 1) onDetailReport(result.missionTitle, result.conversationId.orEmpty()) },
+                // items는 화면 카드 순서(친절·주도·공감·질문) — 성장 리포트 마름모 축 순서와 같다.
+                onClick = {
+                    if (stage >= 1) {
+                        onDetailReport(
+                            result.missionTitle,
+                            result.conversationId.orEmpty(),
+                            items.map { it.second },
+                        )
+                    }
+                },
                 modifier = Modifier.fillMaxWidth(),
             )
             Spacer(Modifier.height(8.dp)) // 버튼 사이 (CSS gap 8)
@@ -417,7 +430,7 @@ private fun FeedbackBandPreview(k: Int, i: Int, e: Int, q: Int) {
                 ),
                 onBack = {},
                 onItemClick = {},
-                onDetailReport = { _, _ -> },
+                onDetailReport = { _, _, _ -> },
                 onHome = {},
                 initialStage = 1,
             )

@@ -38,7 +38,7 @@ class NotificationViewModel @Inject constructor(
                 is ApiResult.Success -> _uiState.update {
                     it.copy(isLoading = false, items = result.data)
                 }
-                else -> _uiState.update { it.copy(isLoading = false) } // 폴백이 있어 실패해도 조용히
+                else -> _uiState.update { it.copy(isLoading = false) }
             }
         }
     }

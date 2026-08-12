@@ -6,6 +6,8 @@ import com.talkqquest.app.core.network.serverCall
 import com.talkqquest.app.core.util.toSavedDate
 import com.talkqquest.app.feature.home.data.HomeApi
 import com.talkqquest.app.feature.mission.data.model.ConversationCreateRequest
+import com.talkqquest.app.feature.mission.data.model.ConversationDetailResponse
+import com.talkqquest.app.feature.mission.data.model.ConversationFinishRequest
 import com.talkqquest.app.feature.mission.data.model.ConversationMessageRequest
 import com.talkqquest.app.feature.mission.data.model.ConversationPrep
 import com.talkqquest.app.feature.mission.data.model.CreateFeedbackRequest
@@ -19,6 +21,8 @@ import com.talkqquest.app.feature.mission.data.model.MissionCompleteRequest
 import com.talkqquest.app.feature.mission.data.model.MissionCompleteResult
 import com.talkqquest.app.feature.mission.data.model.MissionDetail
 import com.talkqquest.app.feature.mission.data.model.MissionListItem
+import com.talkqquest.app.feature.mission.data.model.MissionSetupRequest
+import com.talkqquest.app.feature.mission.data.model.MissionSetupResponse
 import com.talkqquest.app.feature.mission.data.model.SavedPhraseItem
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -48,6 +52,12 @@ class MissionRepository @Inject constructor(
 
     // 현재 진행 중인 서버 대화 세션. 화면 route는 missionId를 쓰므로 세션 id는 여기 보관.
     private var activeConversationId: String? = null
+
+    // 대화 설정 4단계에서 저장한 준비 정보 id (missionId to missionSetupId).
+    // 바로 이어서 만드는 대화 세션에 실어 보내야 고른 값이 대화에 반영된다.
+    // 화면 route가 missionId만 들고 다녀서 세션 id와 같은 이유로 여기 보관한다.
+    // missionId를 같이 들고 있는 건 다른 미션으로 들어갔을 때 지난 설정을 잘못 붙이지 않기 위해서다.
+    private var pendingMissionSetup: Pair<String, String>? = null
 
     // toggleSave가 non-suspend(클릭 즉시 UI 반영)라 서버 반영은 백그라운드로.
     private val ioScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
@@ -140,8 +150,13 @@ class MissionRepository @Inject constructor(
     //   비어 오거나(생성 실패·오프라인) 옛 서버면 기존 로컬 문구로 폴백해 대화가 끊기지 않게 한다.
     suspend fun getConversationIntro(missionId: String): ApiResult<List<String>> {
         activeConversationId = null
+        // 방금 저장한 대화 설정이 있으면 그 id를 함께 보낸다 — 서버가 이걸 받아야
+        // 고른 장소·상대·친밀도·말투가 이 대화에 반영된다. 미션이 다르면 붙이지 않는다.
+        val setupId = pendingMissionSetup?.takeIf { it.first == missionId }?.second
         val r = serverCall {
-            missionApi.createConversation(ConversationCreateRequest(missionId = missionId, mode = "text"))
+            missionApi.createConversation(
+                ConversationCreateRequest(missionId = missionId, mode = "text", missionSetupId = setupId),
+            )
         }
         if (r is ApiResult.Success) {
             activeConversationId = r.data.conversationId
@@ -168,7 +183,10 @@ class MissionRepository @Inject constructor(
         return ApiResult.Success(stubAiReplies[turnIndex % stubAiReplies.size])
     }
 
-    // 추천 답변 — 서버 GET /conversations/{id}/suggestions. 비거나 실패면 stub 묶음 순환.
+    // 추천 답변 — 서버 GET /conversations/{id}/suggestions를 먼저 보고,
+    // 비어 오면 GET /conversations/{id}/guide의 suggestedReplies를 한 번 더 본다(2026-08-13 추가).
+    // 두 API가 답변 목록을 겹쳐 주는데 서버 사정에 따라 한쪽만 채워질 수 있어 둘 다 훑는다.
+    // 그래도 비면 stub 묶음 순환 — 카드가 빈 채로 뜨지 않게.
     suspend fun getRecommendedReplies(turnIndex: Int): ApiResult<List<String>> {
         val cid = activeConversationId
         if (cid != null) {
@@ -176,8 +194,50 @@ class MissionRepository @Inject constructor(
             if (r is ApiResult.Success && r.data.suggestions.isNotEmpty()) {
                 return ApiResult.Success(r.data.suggestions)
             }
+            val g = serverCall { missionApi.getConversationGuide(cid) }
+            if (g is ApiResult.Success && g.data.suggestedReplies.isNotEmpty()) {
+                return ApiResult.Success(g.data.suggestedReplies)
+            }
         }
         return ApiResult.Success(stubRecommendationSets[turnIndex % stubRecommendationSets.size])
+    }
+
+    // 대화 가이드 카드 — GET /conversations/{id}/guide (2026-08-13 연동).
+    // 대화 중 "이렇게 해보세요" 안내 문구. 비면 빈 목록을 준다(화면에서 섹션 자체를 감추면 됨).
+    suspend fun getConversationGuideCards(): List<String> {
+        val cid = activeConversationId ?: return emptyList()
+        val g = serverCall { missionApi.getConversationGuide(cid) }
+        return (g as? ApiResult.Success)?.data?.guideCards.orEmpty()
+    }
+
+    // 대화 이탈 — POST /conversations/{id}/finish (status=abandoned), 2026-08-13 연동.
+    // 사용자가 "정말 나가시겠습니까?"에서 나가기를 고른 경우. 지금까지는 아무것도 안 보내서
+    // 서버엔 대화가 in_progress로 남아 있었다.
+    // ★성공 완료 경로에선 부르지 않는다 — completeMission이 종료를 겸하고, 먼저 부르면 완료가 막힌다.
+    // ★suspend가 아닌 이유: 나가기를 누르면 화면이 즉시 사라져 ViewModel 스코프가 취소된다.
+    //   거기서 띄우면 요청이 나가기 전에 잘린다. @Singleton인 이 Repository의 ioScope로 보낸다.
+    fun abandonConversation() {
+        val cid = activeConversationId ?: return
+        activeConversationId = null // 실패해도 다시 쓰지 않는다(이미 화면을 떠난 대화)
+        ioScope.launch {
+            serverCall { missionApi.finishConversation(cid, ConversationFinishRequest(status = "abandoned")) }
+        }
+    }
+
+    // 지난 대화 통째 조회 — GET /conversations/{id} (2026-08-13 연동).
+    // ※호출하는 화면이 아직 없다. 앱을 껐다 켜고 진행 중이던 대화를 이어가는 흐름이 생기면 여기서 쓴다.
+    suspend fun getConversationDetail(conversationId: String): ApiResult<ConversationDetailResponse> =
+        serverCall { missionApi.getConversation(conversationId) }
+
+    // 대화 설정 6축 저장 — POST /missions/{id}/setups (2026-08-13 연동).
+    // 설정 4단계 "대화 시작하기"에서 부른다. 실패해도 대화는 시작시킨다 —
+    // 준비 정보는 AI가 참고하는 값이지 대화의 전제가 아니라, 여기서 막으면 사용자만 못 들어간다.
+    suspend fun saveMissionSetup(missionId: String, request: MissionSetupRequest): ApiResult<MissionSetupResponse> {
+        val r = serverCall { missionApi.createMissionSetup(missionId, request) }
+        if (r is ApiResult.Success && r.data.missionSetupId.isNotBlank()) {
+            pendingMissionSetup = missionId to r.data.missionSetupId
+        }
+        return r
     }
 
     // 미션 완료 — 실서버 POST /missions/{missionId}/complete (2026-07-22 실호출 검증).
@@ -291,6 +351,14 @@ class MissionRepository @Inject constructor(
                 itemTexts = stubItemTexts,
             ),
         )
+    }
+
+    // 피드백 재생성 — POST /feedback/{id}/retry (2026-08-13 연동).
+    // "다시 시도"가 조회만 다시 하면 서버 생성이 failed로 끝난 피드백은 영원히 안 살아난다.
+    // 서버에 다시 돌려달라고 한 뒤 getFeedback의 폴링에 맡긴다.
+    // 재시도 자체가 실패해도 조용히 넘어간다 — 이어지는 조회가 어차피 목업으로 폴백한다.
+    suspend fun retryFeedback(feedbackId: String) {
+        serverCall { missionApi.retryFeedback(feedbackId) }
     }
 
     // 미션 목록 헤더 "OO님을 위한 미션" · 피드백 화면 닉네임 공용 (같은 캐시 재사용).

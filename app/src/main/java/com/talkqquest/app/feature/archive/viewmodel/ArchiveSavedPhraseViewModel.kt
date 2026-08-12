@@ -51,17 +51,6 @@ class ArchiveSavedPhraseViewModel @Inject constructor(
         }
     }
 
-    // 💡 추가됨: 시간 파싱 함수
-    private fun formatIsoTime(isoString: String): String {
-        return try {
-            val zdt = ZonedDateTime.parse(isoString)
-            zdt.format(DateTimeFormatter.ofPattern("HH:mm"))
-        } catch (e: Exception) {
-            val timePart = isoString.substringAfter("T").substringBefore("+").substringBefore("Z")
-            if (timePart.length >= 5) timePart.substring(0, 5) else ""
-        }
-    }
-
     private fun loadPhraseData(id: String) {
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true, errorMessage = null) }
@@ -77,7 +66,8 @@ class ArchiveSavedPhraseViewModel @Inject constructor(
                             title = data.missionTitle,
                             status = "대화 완료",
                             date = formatIsoDate(data.createdAt),
-                            time = formatIsoTime(data.createdAt) // 💡 시간 파싱 적용
+                            duration = data.duration ?: "00:00",
+                            summary = data.description // 💡 추가됨: AI 요약을 대화 카드에 매핑
                         )
                     } else null
 

@@ -327,7 +327,7 @@ private fun ArchiveListScreenContent(
                                             tags = conversation.tags,
                                             summary = conversation.summary ?: "",
                                             date = conversation.date,
-                                            time = conversation.time,
+                                            time = conversation.duration,
                                             onClick = { onConversationClick(conversation.id) },
                                             modifier = Modifier.animateItem()
                                         )

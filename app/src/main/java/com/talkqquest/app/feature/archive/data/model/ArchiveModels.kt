@@ -8,7 +8,7 @@ data class ArchiveConversationDetailResponse(
     val conversationId: String,
     val missionTitle: String? = null,
     val summary: String? = null,
-    val durationMinutes: Int? = null,
+    val duration: String? = null,
     val summaryChips: List<String> = emptyList(),
     val messages: List<ArchiveConversationMessageDto> = emptyList(),
     val feedback: ArchiveConversationFeedbackDto? = null
@@ -48,19 +48,19 @@ data class ArchivePhraseDetailResponse(
     val missionTitle: String? = null,
     val conversationId: String? = null,
     val folderId: String? = null,
+    val duration: String? = null,
+    val description: String? = null,
     val summaryChips: List<String> = emptyList(),
     val createdAt: String
 )
 
-// --- 리포트 상세 조회 응답 DTO ---
+// --- 성장 리포트 상세 조회 응답 DTO ---
 @Serializable
 data class ArchiveReportDetailResponse(
     val id: String,
     val period: String? = null,
-    val weeklyComparePeriod: String? = null,
     val title: String? = null,
     val growth: ReportGrowthDto? = null,
-    val weeklyCompare: ReportWeeklyCompareDto? = null,
     val createdAt: String
 )
 
@@ -71,7 +71,17 @@ data class ReportGrowthDto(
     val weeklyTrend: List<ReportWeeklyTrendDto>,
     val trendChangeRate: Double,
     val topCategories: List<ReportTopCategoryDto>,
-    val missionProgress: ReportMissionProgressDto
+    val missionProgress: ReportMissionProgressDto,
+    val growthTotals: ReportGrowthTotalsDto? = null,
+    val recentScores: ReportMetricsDto? = null
+)
+
+@Serializable
+data class ReportGrowthTotalsDto(
+    val kindnessTotal: Int = 0,
+    val initiativeTotal: Int = 0,
+    val empathyTotal: Int = 0,
+    val questionLinkTotal: Int = 0
 )
 
 @Serializable
@@ -92,8 +102,20 @@ data class ReportMissionProgressDto(
     val total: Int
 )
 
+// --- 주간 비교 리포트 전용 상세 조회 응답 DTO (신규) ---
 @Serializable
-data class ReportWeeklyCompareDto(
+data class WeeklyCompareReportDetailResponse(
+    val id: String,
+    val weekIndex: Int,
+    val isSaved: Boolean,
+    val data: WeeklyCompareDataDto,
+    val createdAt: String,
+    val previousReportId: String? = null,
+    val nextReportId: String? = null
+)
+
+@Serializable
+data class WeeklyCompareDataDto(
     val thisWeek: ReportWeeklyDataDto,
     val lastWeek: ReportWeeklyDataDto,
     val xpChangeRate: Double,
@@ -119,18 +141,18 @@ data class ReportMetricsDto(
 
 @Serializable
 data class ReportScoreChangeDto(
-    val from: Int,
-    val to: Int,
-    val delta: Int
+    val from: Double,
+    val to: Double,
+    val delta: Double
 )
 
 @Serializable
 data class ReportMetricChangeDto(
     val key: String,
     val label: String,
-    val from: Int,
-    val to: Int,
-    val delta: Int
+    val from: Double,
+    val to: Double,
+    val delta: Double
 )
 
 // --- 아카이브 검색 및 필터 응답 DTO ---
@@ -158,6 +180,7 @@ data class ArchiveSearchItem(
     val title: String,
     val tags: List<String> = emptyList(),
     val description: String? = null,
+    val duration: String? = null,
     val folderId: String? = null,
     val isBookmarked: Boolean = false,
     val missionStatus: String? = null,
@@ -190,6 +213,7 @@ data class ArchiveRecentActivity(
     val title: String,
     val tags: List<String> = emptyList(),
     val description: String? = null,
+    val duration: String? = null,
     val isBookmarked: Boolean = false,
     val missionId: String? = null,
     val conversationId: String? = null,
@@ -305,17 +329,25 @@ data class HighlightItem(
     val rest: String
 )
 
-// 💡 [추가] 주제 랭킹 모델 추가
 data class CategoryRank(
     val name: String,
     val count: Int
 )
 
-// 💡 [수정] 주간 비교 리포트에 미션 진행도 및 카테고리 랭크 추가
 data class WeeklyCompareReport(
     val metrics: List<MetricChange>,
     val highlights: List<HighlightItem>,
     val completedMissions: Int = 0,
     val totalMissions: Int = 0,
     val topCategories: List<CategoryRank> = emptyList()
+)
+
+// 💡 뷰모델에서 사용하기 편하게 묶어주는 UI 래퍼 클래스
+data class WeeklyCompareReportUiModel(
+    val id: String,
+    val title: String,
+    val isSaved: Boolean,
+    val report: WeeklyCompareReport,
+    val prevReportId: String?,
+    val nextReportId: String?
 )

@@ -241,7 +241,7 @@ private fun ArchiveHomeScreen(
                             tags = activity.tags,
                             summary = activity.summary ?: "",
                             date = activity.date,
-                            time = activity.time,
+                            time = activity.duration,
                             onClick = { onActivityClick(activity.id, activity.type, false) },
                             modifier = Modifier.padding(horizontal = 16.dp)
                         )
@@ -330,7 +330,7 @@ private fun ArchiveHomeScreenPreview() {
             title = "처음 보는 사람에게 짧게 인사하기",
             status = "미션 완료",
             date = "2026.08.20",
-            time = "14:35",
+            duration = "14:35",
             difficulty = "쉬움",
             category = "짧은 대화",
             estimatedMinutes = 2,
@@ -342,7 +342,7 @@ private fun ArchiveHomeScreenPreview() {
             title = "처음 보는 사람에게 짧게 인사하기",
             status = "대화 완료",
             date = "2026.08.20",
-            time = "14:35",
+            duration = "14:35",
             tags = listOf("자기 성장", "첫 만남"),
             summary = "간단한 인사와 자기소개를 나누며 첫 만남의 어색함을 줄이고 대화를 시작했어요."
         ),
@@ -352,7 +352,7 @@ private fun ArchiveHomeScreenPreview() {
             title = "\"그렇군요! 저도 편해서 놀랐습니다.\"",
             status = "문장 저장",
             date = "2026.08.20",
-            time = "14:35"
+            duration = "14:35"
         ),
         RecentActivity(
             id = "4",
@@ -360,7 +360,7 @@ private fun ArchiveHomeScreenPreview() {
             title = "8월 2-3주차 주간 비교 리포트",
             status = "리포트 열람",
             date = "2026.08.20",
-            time = "14:35"
+            duration = "14:35"
         )
     )
 

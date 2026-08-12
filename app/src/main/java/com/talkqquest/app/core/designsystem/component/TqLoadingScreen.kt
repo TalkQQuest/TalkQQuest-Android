@@ -2,8 +2,10 @@ package com.talkqquest.app.core.designsystem.component
 
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.keyframes
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
@@ -22,16 +24,26 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.BlurEffect
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ColorFilter
+import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.TileMode
+import androidx.compose.ui.graphics.drawscope.clipPath
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.drawscope.translate
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.text.style.LineHeightStyle
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
@@ -43,6 +55,8 @@ import com.talkqquest.app.core.designsystem.Gray500
 import com.talkqquest.app.core.designsystem.Gray800
 import com.talkqquest.app.core.designsystem.Primary500
 import com.talkqquest.app.core.designsystem.TqType
+import kotlin.math.PI
+import kotlin.math.sin
 
 // ── 공용 대기 화면 ──
 // 시안의 "대화 진입 애니메이션"(B담당)과 "온보딩->홈 애니메이션"(A담당)이 같은 프레임을 쓴다.
@@ -55,14 +69,7 @@ import com.talkqquest.app.core.designsystem.TqType
 //  · 문구 167x80, Heading/XL 28/40 Bold, 자간 -0.02em, 가운데, Gray/800 → 위에서 442
 //  · 뒤로가기 44x44, left 0 / top 48 (상태바 40 + 8)
 //
-// ★그림은 시안 일러스트 대신 도는 스피너를 쓴다(사용자 결정). CSS에 패스 좌표가 없고
-//   시안 렌더도 이미지를 잘라 붙인 상태였다. 색은 시안 그대로 #7264F8.
-// ★CSS는 일러스트(152)와 문구(80)를 -10 겹쳐 222를 만드는데, 그 -10은 이미지 안쪽 빈 여백을
-//   상쇄하려던 값이다. 여백 없이 꽉 찬 스피너에 그대로 쓰면 글자와 달라붙는다. 그래서
-//   문구 위치(442)만 시안과 똑같이 맞추고 스피너를 108로 줄여 위에 24를 띄웠다.
-
-// 스피너 지름과 문구 사이 간격, 그리고 그 둘로 역산한 블록 시작 y (442 - 24 - 108 = 310).
-private val SPINNER_SIZE = 108.dp
+// 망치 표시 높이와 문구 사이 간격으로 문구의 CSS y=442를 맞춘다(310 + 108 + 24).
 private val SPINNER_TEXT_GAP = 24.dp
 private val CONTENT_TOP = 310.dp
 private val TEXT_BLOCK_WIDTH = 167.dp
@@ -78,6 +85,7 @@ private val FullLeading = LineHeightStyle(
  *
  * @param message 가운데 문구. 시안이 2줄이라 줄바꿈(\n)을 직접 넣어 쓴다.
  * @param onBack 뒤로가기를 둘 화면만 넘긴다. null이면 버튼을 그리지 않는다.
+ * @param onAnimationFinished 망치 애니메이션 한 사이클이 끝난 뒤 필요한 화면만 넘기는 콜백.
  * @param compensateStatusBar 이미 FitDesign 안에서 부를 땐 false. 상태바 보정이 두 번 먹어
  *        좌표계가 어긋나는 걸 막는다(다른 화면의 로딩 상태로 끼워 쓸 때).
  */
@@ -85,6 +93,7 @@ private val FullLeading = LineHeightStyle(
 fun TqLoadingScreen(
     message: String,
     onBack: (() -> Unit)? = null,
+    onAnimationFinished: () -> Unit = {},
     compensateStatusBar: Boolean = true,
 ) = FitDesign(compensateStatusBar = compensateStatusBar) {
     Box(
@@ -118,7 +127,7 @@ fun TqLoadingScreen(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(SPINNER_TEXT_GAP),
         ) {
-            TqLoadingSpinner(diameter = SPINNER_SIZE, strokeWidth = 9.dp)
+            TqLoadingHammer(onFinished = onAnimationFinished)
             Text(
                 text = message,
                 style = TqType.HeadingXL.copy(lineHeightStyle = FullLeading),
@@ -126,6 +135,84 @@ fun TqLoadingScreen(
                 textAlign = TextAlign.Center,
                 modifier = Modifier.height(TEXT_BLOCK_HEIGHT),
             )
+        }
+    }
+}
+
+@Composable
+private fun TqLoadingHammer(onFinished: () -> Unit) {
+    val fillProgress = remember { Animatable(0f) }
+    LaunchedEffect(Unit) {
+        fillProgress.snapTo(0f)
+        fillProgress.animateTo(
+            targetValue = 1f,
+            animationSpec = keyframes {
+                durationMillis = 1_500
+                0f at 0
+                1f at 1_000 using FastOutSlowInEasing
+                1f at 1_300
+                1f at 1_500
+            },
+        )
+        onFinished()
+    }
+
+    val progress = fillProgress.value
+    val glowStart = ((progress - 0.08f) / 0.92f).coerceIn(0f, 1f)
+    val glowAlpha = sin(glowStart * PI).toFloat().coerceAtLeast(0f) * 0.9f
+
+    Box(modifier = Modifier.size(width = 156.dp, height = 108.dp)) {
+        TqLoadingHammerCanvas(
+            fillProgress = progress,
+            modifier = Modifier.graphicsLayer {
+                alpha = glowAlpha
+                scaleX = 1.04f
+                scaleY = 1.04f
+                renderEffect = BlurEffect(18f, 18f, TileMode.Decal)
+            },
+        )
+        TqLoadingHammerCanvas(fillProgress = progress)
+    }
+}
+
+@Composable
+private fun TqLoadingHammerCanvas(
+    fillProgress: Float,
+    modifier: Modifier = Modifier,
+) {
+    val body = painterResource(R.drawable.img_onboarding_complete_logo_body)
+    val head = painterResource(R.drawable.img_onboarding_complete_logo_head)
+
+    Canvas(modifier = modifier.size(width = 156.dp, height = 108.dp)) {
+        val scale = size.width / 156f
+        val bodyTopLeft = Offset(37f * scale, 4f * scale)
+        val bodySize = Size(75f * scale, 97f * scale)
+        val headTopLeft = Offset(107f * scale, 32f * scale)
+        val headSize = Size(24f * scale, 27f * scale)
+
+        fun drawHammer(colorFilter: ColorFilter) {
+            translate(bodyTopLeft.x, bodyTopLeft.y) {
+                with(body) { draw(size = bodySize, colorFilter = colorFilter) }
+            }
+            translate(headTopLeft.x, headTopLeft.y) {
+                with(head) { draw(size = headSize, colorFilter = colorFilter) }
+            }
+        }
+
+        val center = Offset(54f * scale, 96f * scale)
+        val radius = 116f * scale * fillProgress
+        val reveal = Path().apply {
+            addOval(
+                Rect(
+                    left = center.x - radius,
+                    top = center.y - radius,
+                    right = center.x + radius,
+                    bottom = center.y + radius,
+                ),
+            )
+        }
+        clipPath(reveal) {
+            drawHammer(ColorFilter.tint(Primary500))
         }
     }
 }

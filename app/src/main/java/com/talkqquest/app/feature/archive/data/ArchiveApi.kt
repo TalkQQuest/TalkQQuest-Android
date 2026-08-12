@@ -13,6 +13,7 @@ import com.talkqquest.app.feature.archive.data.model.SavePhraseRequest
 import com.talkqquest.app.feature.archive.data.model.SavePhraseResponse
 import com.talkqquest.app.feature.archive.data.model.SaveReportRequest
 import com.talkqquest.app.feature.archive.data.model.SaveReportResponse
+import com.talkqquest.app.feature.archive.data.model.WeeklyCompareReportDetailResponse
 import retrofit2.http.Body
 import retrofit2.http.DELETE
 import retrofit2.http.GET
@@ -31,7 +32,7 @@ interface ArchiveApi {
         @Query("startDate") startDate: String? = null,
         @Query("endDate") endDate: String? = null,
         @Query("sort") sort: String? = null,
-        @Query("missionFilter") missionFilter: String? = null, // 💡 API 명세 변경: 미션 필터 파라미터 추가
+        @Query("missionFilter") missionFilter: String? = null,
         @Query("folderId") folderId: String? = null,
         @Query("tag") tag: String? = null,
         @Query("page") page: Int? = null,
@@ -48,10 +49,17 @@ interface ArchiveApi {
         @Path("phraseId") phraseId: String
     ): ApiResponse<ArchivePhraseDetailResponse>
 
+    // 💡 기존의 공용 리포트 엔드포인트는 이제 성장 리포트 전용으로 사용
     @GET("api/v1/reports/{reportId}")
     suspend fun getReportDetail(
         @Path("reportId") reportId: String
     ): ApiResponse<ArchiveReportDetailResponse>
+
+    // 💡 신규 주간 비교 리포트 전용 상세 조회 API
+    @GET("api/v1/reports/weekly-compare/{weeklyCompareReportId}")
+    suspend fun getWeeklyCompareReportDetail(
+        @Path("weeklyCompareReportId") weeklyCompareReportId: String
+    ): ApiResponse<WeeklyCompareReportDetailResponse>
 
     @POST("api/v1/missions/{missionId}/save")
     suspend fun saveMissionArchive(

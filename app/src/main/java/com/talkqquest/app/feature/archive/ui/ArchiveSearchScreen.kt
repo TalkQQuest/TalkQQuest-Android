@@ -379,7 +379,7 @@ private fun ArchiveSearchScreenContent(
                                                 tags = item.tags,
                                                 summary = item.summary ?: "",
                                                 date = item.date,
-                                                time = item.time,
+                                                time = item.duration,
                                                 onClick = { onNavigateToDetail(item.id, item.type, false) },
                                                 modifier = Modifier.animateItem()
                                             )

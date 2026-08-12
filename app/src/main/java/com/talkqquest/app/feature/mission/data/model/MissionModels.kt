@@ -38,11 +38,12 @@ data class TodayMissionResponse(
     val isSaved: Boolean = false,
     val recommendationLogId: String = "",
     val date: String = "",           // YYYY-MM-DD
-    // 하루 새로고침 정보 (백엔드 2026-08-10). refreshLimit 기본 3.
+    // 하루 새로고침 정보 (백엔드 2026-08-10).
+    // 필드가 누락된 응답과 실제 0회를 구분하기 위해 nullable로 받는다.
     // remainingRefreshes == 0 이면 재추천 요청 시 429 MISSION_REFRESH_LIMIT_EXCEEDED.
     val refreshCount: Int = 0,
-    val refreshLimit: Int = 0,
-    val remainingRefreshes: Int = 0,
+    val refreshLimit: Int? = null,
+    val remainingRefreshes: Int? = null,
     val isNew: Boolean = false,
 )
 
@@ -75,6 +76,7 @@ data class MissionDetail(
     val preparationTip: String? = null,
     val caution: String? = null,
     val isSaved: Boolean = false,
+    val setupGuideline: MissionSetupGuideline? = null,
     val benefits: List<String> = emptyList(), // 로컬 전용(위 주석 참고) — 개수 가변(디자인은 2개)
 ) {
     // 저장 시트(MissionSaveSheet)가 목록 카드 형태를 쓰기 때문에 변환용.

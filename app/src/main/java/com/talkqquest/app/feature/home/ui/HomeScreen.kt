@@ -1535,7 +1535,9 @@ private fun HomeMissionCard(
                     ),
             )
             // 추천 뱃지: 컴포넌트.css 그대로 (고정 40x22, Primary100, radius 4, 텍스트 중앙)
-            val canRefresh = mission.remainingRefreshes > 0 && !isRefreshing
+            // 횟수 정보가 없는 폴백 미션은 활성 상태로 유지하고,
+            // 서버가 명시적으로 0회를 내려준 경우에만 비활성화한다.
+            val canRefresh = mission.remainingRefreshes != 0 && !isRefreshing
             Box(
                 modifier = Modifier
                     .height(22.dp)
@@ -1568,7 +1570,11 @@ private fun HomeMissionCard(
                 contentAlignment = Alignment.Center,
             ) {
                 Text(
-                    text = if (mission.refreshLimit > 0) "추천 ${mission.remainingRefreshes}" else "추천",
+                    text = if (mission.refreshLimit != null && mission.remainingRefreshes != null) {
+                        "추천 ${mission.remainingRefreshes}"
+                    } else {
+                        "추천"
+                    },
                     style = TqType.LabelM.figma(),
                     color = if (canRefresh) Primary600 else Gray400,
                 )

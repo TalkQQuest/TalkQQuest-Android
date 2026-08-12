@@ -256,7 +256,10 @@ private fun MissionListContent(
     // 미션 id가 아니라 화면 위에서부터의 카드 슬롯을 유지한다. 결과가 줄면 위쪽 슬롯은
     // 제자리에 둔 채 내용만 새 결과로 바꾸고, 초과한 아래 슬롯만 접는다. 결과가 늘면 기존
     // 슬롯은 그대로 두고 새 아래 슬롯만 사라짐의 역순으로 펼친다.
-    LaunchedEffect(targetMissions) {
+    // 북마크 변경은 필터 전환이 아니다. 저장 여부까지 포함한 MissionListItem 목록을 key로
+    // 쓰면 북마크를 누를 때도 카드 슬롯 전환이 다시 실행된다. 필터와 카드 구성(id)이
+    // 실제로 바뀔 때만 전환을 시작한다.
+    LaunchedEffect(uiState.selectedFilter, targetMissions.map { it.id }) {
         val previousSlots = animatedSlots
         val transitionSlotCount = maxOf(previousSlots.size, targetMissions.size)
         animatedSlots = List(transitionSlotCount) { index ->
@@ -351,7 +354,10 @@ private fun MissionListContent(
             count = animatedSlots.size,
             key = { index -> "mission-filter-slot-$index" },
         ) { index ->
-            val mission = animatedSlots[index]
+            val slotMission = animatedSlots[index]
+            // 슬롯의 제목·메타 전환 상태는 유지하되, 북마크는 최신 목록 값을 바로 사용한다.
+            // 따라서 저장 여부만 바뀌었을 때 카드 슬롯 애니메이션은 재실행되지 않는다.
+            val mission = targetMissions.firstOrNull { it.id == slotMission.id } ?: slotMission
             AnimatedVisibility(
                 visible = index < visibleSlotCount,
                 enter = fadeIn(tween(MissionFilterAnimationMillis, easing = FastOutSlowInEasing)) +

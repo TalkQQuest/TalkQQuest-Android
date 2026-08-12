@@ -40,9 +40,49 @@ class NotificationViewModel @Inject constructor(
                 }
                 else -> _uiState.update { it.copy(isLoading = false) } // 폴백이 있어 실패해도 조용히
             }
-            // 알림창을 봤으니 전체 읽음 처리(PATCH /notifications/all/read) — 홈 벨 빨간 점이 꺼지는 근거.
-            // 목록을 받은 "뒤"에 호출해 이번 화면에선 안읽음 강조가 그대로 보이고, 홈 복귀 시부터 반영됨.
-            notificationRepository.markAllRead()
+        }
+    }
+
+    fun readNotification(notificationId: String) {
+        val isUnread = _uiState.value.items.firstOrNull { it.id == notificationId }?.isUnread == true
+        if (!isUnread) return
+
+        _uiState.update { state ->
+            state.copy(
+                items = state.items.map { item ->
+                    if (item.id == notificationId) item.copy(isUnread = false) else item
+                },
+            )
+        }
+        notificationRepository.markRead(listOf(notificationId))
+    }
+
+    fun readVisibleNotifications() {
+        val unreadIds = _uiState.value.items.filter { it.isUnread }.map { it.id }
+        if (unreadIds.isEmpty()) return
+
+        _uiState.update { state ->
+            state.copy(items = state.items.map { it.copy(isUnread = false) })
+        }
+        notificationRepository.markRead(unreadIds)
+    }
+
+    // 알림창에서 롱프레스 후 삭제를 누르면 현재 목록에서 즉시 제거한다.
+    // 서버에 삭제 계약이 없어 이번 동작은 현재 화면 목록에만 적용한다.
+    fun removeNotification(notificationId: String) {
+        _uiState.update { state ->
+            state.copy(items = state.items.filterNot { it.id == notificationId })
+        }
+        viewModelScope.launch {
+            notificationRepository.deleteNotification(notificationId)
+        }
+    }
+
+    fun removeAllNotifications() {
+        val ids = _uiState.value.items.map { it.id }
+        _uiState.update { it.copy(items = emptyList()) }
+        viewModelScope.launch {
+            notificationRepository.deleteAllNotifications(ids)
         }
     }
 }

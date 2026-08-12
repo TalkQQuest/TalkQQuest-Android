@@ -58,8 +58,10 @@ import com.talkqquest.app.core.designsystem.Gray600
 import com.talkqquest.app.core.designsystem.Gray700
 import com.talkqquest.app.core.designsystem.Gray800
 import com.talkqquest.app.core.designsystem.Gray1000
+import com.talkqquest.app.core.designsystem.LocalStatusBarCompensation
 import com.talkqquest.app.core.designsystem.Primary600
 import com.talkqquest.app.core.designsystem.TqType
+import com.talkqquest.app.core.designsystem.coverStatusBarCompensation
 import com.talkqquest.app.core.designsystem.softShadow
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -202,6 +204,7 @@ fun TierPromotionSheet(
             Box(
                 modifier = Modifier
                     .fillMaxSize()
+                    .coverStatusBarCompensation(LocalStatusBarCompensation.current)
                     .background(Gray700.copy(alpha = 0.23f * dimFraction))
                     .clickable(
                         interactionSource = remember { MutableInteractionSource() },

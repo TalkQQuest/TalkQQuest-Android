@@ -1,5 +1,6 @@
 package com.talkqquest.app.feature.notification.data
 
+import com.talkqquest.app.core.datastore.NotificationDataStore
 import com.talkqquest.app.core.network.ApiResult
 import com.talkqquest.app.core.network.serverCall
 import com.talkqquest.app.feature.notification.data.model.NotificationItemDto
@@ -8,27 +9,82 @@ import java.time.Duration
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
+import java.util.Collections
 import javax.inject.Inject
 import javax.inject.Singleton
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.launch
 
 // 알림 Repository. 서버 → 실패/빈 목록이면 목업 폴백 (미션 패턴과 동일).
 // 서버가 알림 생성을 시작하면(목록이 비지 않으면) 자동으로 실데이터로 전환되는 구조.
 @Singleton
 class NotificationRepository @Inject constructor(
     private val notificationApi: NotificationApi,
+    private val notificationDataStore: NotificationDataStore,
 ) {
+    // 화면에서 읽은 상태는 서버 응답을 기다리지 않고 바로 반영한다.
+    // 서버 동기화가 늦거나 실패해도 같은 앱 실행 중 다시 들어왔을 때 점이 되살아나지 않게 한다.
+    private val locallyReadIds = Collections.synchronizedSet(mutableSetOf<String>())
+    private val locallyDeletedIds = Collections.synchronizedSet(mutableSetOf<String>())
+    private val readSyncScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+
     suspend fun getNotifications(): ApiResult<List<NotificationUiItem>> {
+        locallyDeletedIds.addAll(notificationDataStore.deletedNotificationIds())
         val r = serverCall { notificationApi.getNotifications() } // 데모 스위치(DemoConfig.USE_MOCK) 시 서버 건너뛰고 목업
         if (r is ApiResult.Success && r.data.notifications.isNotEmpty()) {
-            return ApiResult.Success(r.data.notifications.map { it.toUiItem() })
+            return ApiResult.Success(
+                r.data.notifications
+                    .filterNot { it.id in locallyDeletedIds }
+                    .map { it.toUiItem().withLocalReadState() },
+            )
         }
-        return ApiResult.Success(stubNotifications) // 서버 빈 배열/실패 → 목업 (디자인 목업 그대로)
+        return ApiResult.Success(
+            stubNotifications.filterNot { it.id in locallyDeletedIds }.map { it.withLocalReadState() },
+        ) // 서버 빈 배열/실패 → 목업
     }
 
-    // 읽음 처리 — 목업 폴백 중엔 서버에 지울 대상이 없어 실패해도 무시(조용히).
-    suspend fun markAllRead() {
-        serverCall { notificationApi.markAllRead() }
+    // 홈 종의 점도 알림창과 같은 읽음 상태를 사용한다.
+    // 서버 읽음 반영이 아직 끝나지 않았더라도 방금 로컬에서 읽은 알림은 제외한다.
+    suspend fun hasUnreadNotification(): Boolean {
+        locallyDeletedIds.addAll(notificationDataStore.deletedNotificationIds())
+        // 실서버의 isRead=false 필터 응답은 읽은 알림까지 false로 내려주는 문제가 있어 사용하지 않는다.
+        // 알림창과 동일한 일반 목록을 받고 각 항목의 실제 isRead 값을 직접 검사한다.
+        val result = serverCall { notificationApi.getNotifications() }
+        return (result as? ApiResult.Success)
+            ?.data
+            ?.notifications
+            ?.any { !it.isRead && it.id !in locallyReadIds && it.id !in locallyDeletedIds } == true
     }
+
+    // 클릭한 알림 또는 화면을 닫을 때 현재 불러온 알림만 읽음 처리한다.
+    // 전체 읽음 API는 새로 도착했지만 아직 화면에 없던 알림까지 지울 수 있어 사용하지 않는다.
+    fun markRead(notificationIds: Collection<String>) {
+        val ids = notificationIds.distinct()
+        if (ids.isEmpty()) return
+
+        locallyReadIds.addAll(ids)
+        readSyncScope.launch {
+            ids.filterNot { it.startsWith("stub-") }.forEach { id ->
+                // 읽음 API는 data=null 성공 응답이라 serverCall 결과는 쓰지 않고 요청 수행만 보장한다.
+                serverCall { notificationApi.markRead(id) }
+            }
+        }
+    }
+
+    suspend fun deleteNotification(notificationId: String) {
+        locallyDeletedIds.add(notificationId)
+        notificationDataStore.addDeletedNotificationIds(listOf(notificationId))
+    }
+
+    suspend fun deleteAllNotifications(notificationIds: Collection<String>) {
+        locallyDeletedIds.addAll(notificationIds)
+        notificationDataStore.addDeletedNotificationIds(notificationIds)
+    }
+
+    private fun NotificationUiItem.withLocalReadState(): NotificationUiItem =
+        if (id in locallyReadIds) copy(isUnread = false) else this
 
     private fun NotificationItemDto.toUiItem() = NotificationUiItem(
         id = id,

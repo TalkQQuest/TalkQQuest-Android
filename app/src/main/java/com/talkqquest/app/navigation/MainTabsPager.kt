@@ -63,7 +63,7 @@ fun MainTabsPager(
     ) { page ->
         when (BottomNavItem.entries[page]) {
             BottomNavItem.Home -> HomeTab(navController, onOverlaySheetTop) { modalSheetOpen = it }
-            BottomNavItem.Mission -> MissionTab(navController, onOverlaySheetTop)
+            BottomNavItem.Mission -> MissionTab(navController, pagerState, onOverlaySheetTop)
             BottomNavItem.Archive -> ArchiveTab(navController)
             BottomNavItem.Profile -> ProfileTab(navController)
         }
@@ -90,6 +90,7 @@ private fun HomeTab(
         },
         // 주간 비교 리포트 도착 모달 "보러가기" → 주간 비교 리포트 (알림창 화살표와 같은 화면)
         onWeeklyReportClick = { navController.navigate(Screen.WEEKLY_COMPARE) },
+        onBadgeCollectionClick = { navController.navigate(Screen.PROFILE_BADGES) },
         // 티어 승급 안내 시트가 하단 네비를 덮는 동안 네비를 가림.
         onSheetTopChange = onOverlaySheetTop,
         // 그 시트가 떠 있는 동안 탭 스와이프를 끔(모달이라 뒤 화면으로 못 넘어가야 함).
@@ -100,15 +101,23 @@ private fun HomeTab(
 @Composable
 private fun MissionTab(
     navController: NavHostController,
+    pagerState: PagerState,
     onOverlaySheetTop: (Float?) -> Unit,
 ) {
+    val missionScope = rememberCoroutineScope()
+    val archivePage = BottomNavItem.entries.indexOf(BottomNavItem.Archive)
     MissionListScreen(
         onBack = { navController.popBackStack() },
         onMissionClick = { missionId -> navController.navigate("mission_detail/$missionId") },
         onSheetTopChange = onOverlaySheetTop, // 바텀시트가 올라올 때 오버레이 처리를 위한 콜백
         onSavedListClick = { navController.navigate("${Screen.ARCHIVE_LIST}/0") },
-        // 헤더 폴더 → 보관함 탭(ARCHIVE_HOME). 탭 route라 페이저가 보관함 페이지로 슬라이드된다.
-        onArchiveClick = { navController.navigate(Screen.ARCHIVE_HOME) },
+        // 헤더 폴더도 하단 보관함 탭을 누른 것과 같은 페이저 전환을 사용한다.
+        // 선택 칩은 pagerState를 따라 오른쪽으로 이동하고 화면은 인접 페이지로 함께 슬라이드된다.
+        onArchiveClick = {
+            if (archivePage >= 0 && archivePage != pagerState.currentPage) {
+                missionScope.launch { pagerState.animateScrollToPage(archivePage) }
+            }
+        },
     )
 }
 

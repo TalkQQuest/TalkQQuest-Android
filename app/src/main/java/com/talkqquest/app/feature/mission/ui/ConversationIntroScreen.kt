@@ -16,6 +16,7 @@ import com.talkqquest.app.core.designsystem.component.TqLoadingScreen
 fun ConversationIntroScreen(
     onBack: () -> Unit = {},
     compensateStatusBar: Boolean = true, // 대화 화면의 로딩 상태로 끼워 쓸 땐 false
+    onAnimationFinished: () -> Unit = {},
 ) {
     // CSS 문구 블록 167x80 — 높이 80 ÷ 행간 40 = 2줄.
     // 블록 폭 167이 "대화를 시작할"(6글자+공백)의 폭과 맞아떨어져(28x6 - 자간 ≈ 165)
@@ -23,6 +24,7 @@ fun ConversationIntroScreen(
     TqLoadingScreen(
         message = "대화를 시작할\n준비가 됐어요",
         onBack = onBack,
+        onAnimationFinished = onAnimationFinished,
         compensateStatusBar = compensateStatusBar,
     )
 }

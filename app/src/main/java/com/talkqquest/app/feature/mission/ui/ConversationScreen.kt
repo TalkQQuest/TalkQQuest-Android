@@ -198,6 +198,7 @@ private fun ConversationScreen(
     onLeaveDismiss: () -> Unit = {},
     onLeaveConfirm: () -> Unit = {},
 ) = FitDesign { // 작은 화면에선 디자인(393x852) 통째 축소 — 다른 화면들과 크기감 통일
+    var introAnimationFinished by remember { mutableStateOf(false) }
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -208,9 +209,10 @@ private fun ConversationScreen(
             // 대화 세션이 만들어질 때까지 시안의 "대화 진입 애니메이션" 화면을 그대로 띄운다.
             // 별도 destination으로 끼우면 이 화면이 끝난 뒤 여기서 또 로딩이 돌아 두 번 기다리게 된다.
             // compensateStatusBar = false — 이 화면이 이미 FitDesign 안이라 보정이 두 번 먹지 않게.
-            uiState.isLoading -> ConversationIntroScreen(
+            uiState.isLoading || !introAnimationFinished -> ConversationIntroScreen(
                 onBack = onBackClick,
                 compensateStatusBar = false,
+                onAnimationFinished = { introAnimationFinished = true },
             )
 
             uiState.errorMessage != null -> {

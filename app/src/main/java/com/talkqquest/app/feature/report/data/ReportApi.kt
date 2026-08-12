@@ -8,7 +8,6 @@ import com.talkqquest.app.feature.report.data.model.SaveReportRequest
 import com.talkqquest.app.feature.report.data.model.SaveReportResponse
 import com.talkqquest.app.feature.report.data.model.WeeklyCompareDetailResponse
 import com.talkqquest.app.feature.report.data.model.WeeklyCompareListResponse
-import com.talkqquest.app.feature.report.data.model.WeeklyCompareResponse
 import com.talkqquest.app.feature.report.data.model.WeeklyCompareSaveResponse
 import retrofit2.http.Body
 import retrofit2.http.DELETE
@@ -23,10 +22,6 @@ interface ReportApi {
     // 성장 리포트 (성장 탭)
     @GET("api/v1/reports/growth")
     suspend fun getGrowth(): ApiResponse<GrowthReportResponse>
-
-    // 주간 비교 리포트 (주간 비교 탭)
-    @GET("api/v1/reports/weekly-compare")
-    suspend fun getWeeklyCompare(): ApiResponse<WeeklyCompareResponse>
 
     // ── 주간 비교 리포트(홈/알림창에서 진입) — 2026-08-10 백엔드 개편분 ──
     // 목록/상세로 분리됐다. "이번 주" 개념이 없어지고 가입일 기준으로 완전히 끝난 주끼리만 비교한다.

@@ -7,7 +7,6 @@ import com.talkqquest.app.core.network.ApiResult
 import com.talkqquest.app.feature.report.data.ReportRepository
 import com.talkqquest.app.feature.report.data.model.GrowthTierReport
 import com.talkqquest.app.feature.report.data.model.SavedReportItem
-import com.talkqquest.app.feature.report.data.model.WeeklyCompareReport
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -22,7 +21,6 @@ import kotlinx.coroutines.launch
 data class ReportUiState(
     val isLoading: Boolean = true,
     val growth: GrowthTierReport? = null,      // 성장 리포트(B, 실전 티어 + 핵심 역량)
-    val weekly: WeeklyCompareReport? = null,   // 주간 비교 리포트 탭
     val errorMessage: String? = null,
     // 이 리포트가 나온 미션의 제목 — 저장 카드의 제목으로 들어감(CSS 목업이 미션명).
     // 리포트는 미션 대화의 AI 피드백에서 진입하므로, 피드백 화면이 route 인자로 넘겨준다.
@@ -166,19 +164,17 @@ class ReportViewModel @Inject constructor(
         }
     }
 
-    // 두 탭 데이터를 한 번에 로드 — 탭 전환 때마다 다시 불러오지 않게.
+    // 성장 리포트 데이터 로드. 주간 비교는 별도 화면·ViewModel에서 목록→상세로 조회한다.
     fun loadReports() {
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true, errorMessage = null) }
             val growth = reportRepository.getGrowthReport(gains)
-            val weekly = reportRepository.getWeeklyCompare()
-            if (growth is ApiResult.Success && weekly is ApiResult.Success) {
+            if (growth is ApiResult.Success) {
                 _uiState.update {
-                    it.copy(isLoading = false, growth = growth.data, weekly = weekly.data)
+                    it.copy(isLoading = false, growth = growth.data)
                 }
             } else {
                 val message = (growth as? ApiResult.Error)?.message
-                    ?: (weekly as? ApiResult.Error)?.message
                 _uiState.update {
                     it.copy(isLoading = false, errorMessage = message ?: "리포트를 불러오지 못했어요.")
                 }

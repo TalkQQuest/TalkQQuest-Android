@@ -49,6 +49,9 @@ data class WeeklyCompareDetailData(
 data class WeeklyCompareSaveResponse(
     val id: String = "",
     val isSaved: Boolean = false,
+    val weeklyCompareReportId: String = "",
+    val savedAt: String? = null,
+    val deleted: Boolean = false,
 )
 
 // ── 주간 비교 리포트(홈/알림창에서 진입) 화면 모델 ──

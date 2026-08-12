@@ -172,6 +172,7 @@ fun HomeScreen(
         xpAnimationTrigger = resumeAnimationTrigger,
         xpResetToken = xpResetToken + lifecycleXpResetToken,
         onRetry = viewModel::loadHome,
+        onRefreshTodayMission = viewModel::refreshTodayMission,
         onStartMissionClick = onStartMissionClick,
         onOtherMissionsClick = onOtherMissionsClick,
         onNotificationClick = onNotificationClick,
@@ -188,6 +189,7 @@ private fun HomeScreen(
     xpAnimationTrigger: Int = 0,
     xpResetToken: Int = 0,
     onRetry: () -> Unit,
+    onRefreshTodayMission: () -> Unit = {},
     onStartMissionClick: (String) -> Unit = {},
     onOtherMissionsClick: () -> Unit = {},
     onNotificationClick: () -> Unit = {},
@@ -218,9 +220,11 @@ private fun HomeScreen(
             uiState.summary != null -> {
                 HomeContent(
                     summary = uiState.summary,
+                    isRefreshingMission = uiState.isRefreshingMission,
                     xpAnimationTrigger = xpAnimationTrigger,
                     xpResetToken = xpResetToken,
                     onStartMissionClick = onStartMissionClick,
+                    onRefreshTodayMission = onRefreshTodayMission,
                     onOtherMissionsClick = onOtherMissionsClick,
                     onNotificationClick = onNotificationClick,
                     onWeeklyReportClick = onWeeklyReportClick,
@@ -261,9 +265,11 @@ private fun HomeCard(
 @Composable
 private fun HomeContent(
     summary: HomeSummary,
+    isRefreshingMission: Boolean = false,
     xpAnimationTrigger: Int = 0,
     xpResetToken: Int = 0,
     onStartMissionClick: (String) -> Unit = {},
+    onRefreshTodayMission: () -> Unit = {},
     onOtherMissionsClick: () -> Unit = {},
     onNotificationClick: () -> Unit = {},
     onWeeklyReportClick: () -> Unit = {},
@@ -331,6 +337,8 @@ private fun HomeContent(
                 summary.todayMission?.let { mission ->
                     HomeMissionCard(
                         mission = mission,
+                        isRefreshing = isRefreshingMission,
+                        onRefreshClick = onRefreshTodayMission,
                         onStartClick = { onStartMissionClick(mission.id) },
                         onTextLineCountChanged = { titleLines, descriptionLines ->
                             missionHasLongText = titleLines >= 3 || descriptionLines >= 3
@@ -1433,6 +1441,8 @@ private val StarHighlight = Color(0xFFFFE7A3)
 @Composable
 private fun HomeMissionCard(
     mission: TodayMission,
+    isRefreshing: Boolean = false,
+    onRefreshClick: () -> Unit = {},
     onStartClick: () -> Unit = {},
     onTextLineCountChanged: (titleLines: Int, descriptionLines: Int) -> Unit = { _, _ -> },
 ) {
@@ -1525,9 +1535,11 @@ private fun HomeMissionCard(
                     ),
             )
             // 추천 뱃지: 컴포넌트.css 그대로 (고정 40x22, Primary100, radius 4, 텍스트 중앙)
+            val canRefresh = mission.remainingRefreshes > 0 && !isRefreshing
             Box(
                 modifier = Modifier
-                    .size(width = 40.dp, height = 22.dp)
+                    .height(22.dp)
+                    .widthIn(min = 40.dp)
                     .graphicsLayer {
                         scaleX = recommendationScale
                         scaleY = recommendationScale
@@ -1536,12 +1548,15 @@ private fun HomeMissionCard(
                         translationY = 0f
                     }
                     .clip(RoundedCornerShape(4.dp))
-                    .background(Primary100)
+                    .background(if (canRefresh) Primary100 else Gray100)
+                    .padding(horizontal = 7.dp)
                     .clickable(
+                        enabled = canRefresh,
                         interactionSource = recommendationInteraction,
                         indication = null,
                         onClick = {
                             if (!recommendationClickAnimating) {
+                                onRefreshClick()
                                 recommendationClickAnimating = true
                                 recommendationScope.launch {
                                     delay(100)
@@ -1552,7 +1567,11 @@ private fun HomeMissionCard(
                     ),
                 contentAlignment = Alignment.Center,
             ) {
-                Text(text = "추천", style = TqType.LabelM.figma(), color = Primary600)
+                Text(
+                    text = if (mission.refreshLimit > 0) "추천 ${mission.remainingRefreshes}" else "추천",
+                    style = TqType.LabelM.figma(),
+                    color = if (canRefresh) Primary600 else Gray400,
+                )
             }
         }
         Spacer(Modifier.height(16.dp))

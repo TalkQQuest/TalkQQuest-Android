@@ -153,4 +153,7 @@ data class TodayMission(
     val difficulty: String,
     val estimatedMinutes: Int,
     val rewardXp: Int,
+    val refreshCount: Int = 0,
+    val refreshLimit: Int = 0,
+    val remainingRefreshes: Int = 0,
 )

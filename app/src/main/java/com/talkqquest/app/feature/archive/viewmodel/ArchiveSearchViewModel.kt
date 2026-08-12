@@ -162,17 +162,6 @@ class ArchiveSearchViewModel @Inject constructor(
         } catch (e: Exception) { isoString.substringBefore("T").replace("-", ".") }
     }
 
-    // 💡 추가됨: 시간 파싱 함수
-    private fun formatIsoTime(isoString: String): String {
-        return try {
-            val zdt = ZonedDateTime.parse(isoString)
-            zdt.format(DateTimeFormatter.ofPattern("HH:mm"))
-        } catch (e: Exception) {
-            val timePart = isoString.substringAfter("T").substringBefore("+").substringBefore("Z")
-            if (timePart.length >= 5) timePart.substring(0, 5) else ""
-        }
-    }
-
     fun refreshData() {
         viewModelScope.launch {
             when (val result = repository.searchArchives()) {
@@ -189,13 +178,27 @@ class ArchiveSearchViewModel @Inject constructor(
                             title = it.title,
                             status = "대화 완료",
                             date = formatIsoDate(it.createdAt),
-                            time = formatIsoTime(it.createdAt), // 💡 시간 파싱 적용
+                            duration = it.duration ?: "",
                             tags = it.tags,
                             summary = it.description
                         )
                     }
                     val allSentences = items.filter { it.type.lowercase() == "phrase" || it.type.lowercase() == "sentence" }.map { BookmarkArchiveItem(id = it.referenceId ?: it.id, title = it.title, status = "문장 저장", date = formatIsoDate(it.createdAt), isSaved = it.isBookmarked, memoKeywords = it.tags, memoText = "", relatedConversationId = "") }
-                    val allReports = items.filter { it.type.lowercase() == "report" }.map { BookmarkArchiveItem(id = it.referenceId ?: it.id, title = it.title, status = "리포트 열람", date = formatIsoDate(it.createdAt), isSaved = it.isBookmarked, memoKeywords = it.tags, memoText = "", relatedConversationId = "") }
+
+                    // 💡 [수정] 리포트 타입 판별 적용
+                    val allReports = items.filter { it.type.lowercase() == "report" }.map {
+                        val statusLabel = if (it.title.contains("주간 비교")) "주간 비교 리포트" else "성장 리포트"
+                        BookmarkArchiveItem(
+                            id = it.referenceId ?: it.id,
+                            title = it.title,
+                            status = statusLabel,
+                            date = formatIsoDate(it.createdAt),
+                            isSaved = it.isBookmarked,
+                            memoKeywords = it.tags,
+                            memoText = "",
+                            relatedConversationId = ""
+                        )
+                    }
 
                     _uiState.update { state -> state.copy(allMissions = allMissions, allConversations = allConversations, allSentences = allSentences, allReports = allReports) }
                 }

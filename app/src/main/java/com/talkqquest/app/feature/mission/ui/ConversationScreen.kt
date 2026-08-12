@@ -69,6 +69,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
@@ -121,6 +122,7 @@ import kotlin.math.PI
 import kotlin.math.cos
 import kotlin.math.roundToInt
 import kotlin.math.sin
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 // ── 대화 진행 (UI 1차 v3 "미션(대화 시작)/(대화 길어진 경우)/(추천 답변 선택함)/미션 종료 팝업" 전사) ──
@@ -198,6 +200,7 @@ private fun ConversationScreen(
     onLeaveDismiss: () -> Unit = {},
     onLeaveConfirm: () -> Unit = {},
 ) = FitDesign { // 작은 화면에선 디자인(393x852) 통째 축소 — 다른 화면들과 크기감 통일
+    var introAnimationFinished by remember { mutableStateOf(false) }
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -208,9 +211,10 @@ private fun ConversationScreen(
             // 대화 세션이 만들어질 때까지 시안의 "대화 진입 애니메이션" 화면을 그대로 띄운다.
             // 별도 destination으로 끼우면 이 화면이 끝난 뒤 여기서 또 로딩이 돌아 두 번 기다리게 된다.
             // compensateStatusBar = false — 이 화면이 이미 FitDesign 안이라 보정이 두 번 먹지 않게.
-            uiState.isLoading -> ConversationIntroScreen(
+            uiState.isLoading || !introAnimationFinished -> ConversationIntroScreen(
                 onBack = onBackClick,
                 compensateStatusBar = false,
+                onAnimationFinished = { introAnimationFinished = true },
             )
 
             uiState.errorMessage != null -> {
@@ -300,6 +304,53 @@ private fun ConversationContent(
     onBackClick: () -> Unit,
     onCompleteClick: () -> Unit,
 ) {
+    val recommendationTitleKorean = "톡깨의 추천 답변"
+    val recommendationTitleCollapsed = "답장이 고민되시나요?"
+    var recommendationTitle by remember {
+        mutableStateOf(
+            if (uiState.recommendationsExpanded) recommendationTitleKorean else recommendationTitleCollapsed,
+        )
+    }
+    var recommendationTitleAnimating by remember { mutableStateOf(false) }
+    val recommendationTitleShineProgress = remember { Animatable(0f) }
+    val recommendationTitleScope = rememberCoroutineScope()
+
+    fun toggleRecommendationsWithTitleAnimation() {
+        if (recommendationTitleAnimating) return
+        val targetTitle = if (uiState.recommendationsExpanded) {
+            recommendationTitleCollapsed
+        } else {
+            recommendationTitleKorean
+        }
+        recommendationTitleScope.launch {
+            recommendationTitleAnimating = true
+            try {
+                for (count in (recommendationTitle.length - 1) downTo 0) {
+                    recommendationTitle = recommendationTitle.take(count)
+                    delay(55)
+                }
+                for (count in 1..targetTitle.length) {
+                    recommendationTitle = targetTitle.take(count)
+                    delay(55)
+                }
+                // 펼친 제목이 완성될 때만 전구→제목 광택을 한 번 통과시킨다.
+                // 접힌 "답장이 고민되시나요?"는 타이핑으로만 끝낸다.
+                if (targetTitle == recommendationTitleKorean) {
+                    recommendationTitleShineProgress.snapTo(0f)
+                    recommendationTitleShineProgress.animateTo(
+                        targetValue = 1f,
+                        animationSpec = tween(durationMillis = 420, easing = LinearEasing),
+                    )
+                }
+            } finally {
+                recommendationTitle = targetTitle
+                recommendationTitleShineProgress.snapTo(0f)
+                recommendationTitleAnimating = false
+            }
+        }
+        onToggleRecommendations()
+    }
+
     // ── 전송 비행 연출(카톡 신모션): 내 메시지가 입력창 왼쪽에서 출발해 오른쪽으로
     // 미끄러지다 벽 앞에서 회전하며 위로 빨려 올라가 제자리에 안착. 진짜 리스트 아이템은
     // 비행이 끝날 때까지 숨기고, 화면 위를 나는 오버레이 말풍선이 연기함. ──
@@ -602,12 +653,18 @@ private fun ConversationContent(
                             // (CSS: 카드 502~699, 입력창 672~716 — 27 겹침 + 17 삐져나옴)
                             RecommendationCard(
                                 recommendations = uiState.recommendations,
-                                onToggle = onToggleRecommendations,
+                                title = recommendationTitle,
+                                titleShineProgress = recommendationTitleShineProgress.value,
+                                onToggle = ::toggleRecommendationsWithTitleAnimation,
                                 onSelect = onSelectRecommendation,
                             )
                         } else {
                             Column {
-                                CollapsedRecommendationBar(onToggle = onToggleRecommendations)
+                                CollapsedRecommendationBar(
+                                    title = recommendationTitle,
+                                    titleShineProgress = recommendationTitleShineProgress.value,
+                                    onToggle = ::toggleRecommendationsWithTitleAnimation,
+                                )
                                 Spacer(Modifier.height(12.dp + 44.dp)) // 바→입력창 간격 12 + 아래 고정층(입력창 44) 자리
                             }
                         }
@@ -879,6 +936,8 @@ private fun TimeLabel(time: String) {
 @Composable
 private fun RecommendationCard(
     recommendations: List<String>,
+    title: String,
+    titleShineProgress: Float,
     onToggle: () -> Unit,
     onSelect: (String) -> Unit,
 ) {
@@ -899,16 +958,13 @@ private fun RecommendationCard(
         ) {
             // CSS Frame 427320989: padding 0 4px, gap 6, 전구 19x19
             Spacer(Modifier.width(4.dp))
-            Image(
-                painter = painterResource(R.drawable.ic_conversation_lightbulb),
-                contentDescription = null,
-                modifier = Modifier.size(19.dp),
-            )
-            Spacer(Modifier.width(6.dp))
             // ★13차 CSS는 펼침·접힘 모두 "답장이 고민되시나요?"로 통일했지만,
             //   펼친 카드는 "톡깨의 추천 답변"을 그대로 쓰기로 함(사용자 결정 2026-08-10).
             //   접힘 바는 CSS대로 "답장이 고민되시나요?" 유지 — 두 상태의 문구가 다른 것이 의도된 상태다.
-            Text(text = "톡깨의 추천 답변", style = TqType.BodyM.figma(), color = Primary600)
+            RecommendationHeaderLabel(
+                text = title,
+                shineProgress = titleShineProgress,
+            )
             Spacer(Modifier.width(4.dp))
             Spacer(Modifier.weight(1f))
             Box(
@@ -943,7 +999,11 @@ private fun RecommendationCard(
 
 // 접힘 바 (CSS "답변 추천"): 42 높이, r8, "답장이 고민되시나요?" + chevron-up
 @Composable
-private fun CollapsedRecommendationBar(onToggle: () -> Unit) {
+private fun CollapsedRecommendationBar(
+    title: String,
+    titleShineProgress: Float,
+    onToggle: () -> Unit,
+) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -956,13 +1016,10 @@ private fun CollapsedRecommendationBar(onToggle: () -> Unit) {
         verticalAlignment = Alignment.CenterVertically,
     ) {
         // CSS Frame 427320989: padding 0 4px 0 0(오른쪽만), gap 6, 전구 19x19
-        Image(
-            painter = painterResource(R.drawable.ic_conversation_lightbulb),
-            contentDescription = null,
-            modifier = Modifier.size(19.dp),
+        RecommendationHeaderLabel(
+            text = title,
+            shineProgress = titleShineProgress,
         )
-        Spacer(Modifier.width(6.dp))
-        Text(text = "답장이 고민되시나요?", style = TqType.BodyM.figma(), color = Primary600) // CSS #6353F0
         Spacer(Modifier.width(4.dp))
         Spacer(Modifier.weight(1f))
         Icon(
@@ -971,6 +1028,44 @@ private fun CollapsedRecommendationBar(onToggle: () -> Unit) {
             tint = Gray600, // CSS Gray/600 #475569
         )
     }
+}
+
+@Composable
+private fun RecommendationHeaderLabel(
+    text: String,
+    shineProgress: Float,
+) {
+    val titleShine = ((shineProgress - 0.20f) / 0.80f).coerceIn(0f, 1f)
+    Image(
+        painter = painterResource(R.drawable.ic_conversation_lightbulb),
+        contentDescription = null,
+        colorFilter = ColorFilter.tint(Primary600),
+        modifier = Modifier.size(19.dp),
+    )
+    Spacer(Modifier.width(6.dp))
+    RecommendationTitle(text = text, shineProgress = titleShine)
+}
+
+@Composable
+private fun RecommendationTitle(text: String, shineProgress: Float) {
+    if (shineProgress == 0f) {
+        Text(text = text, style = TqType.BodyM.figma(), color = Primary600)
+        return
+    }
+    var titleWidthPx by remember(text) { mutableStateOf(0) }
+    val sweepDistance = titleWidthPx.coerceAtLeast(1).toFloat() * 3f
+    val brush = Brush.linearGradient(
+        colors = listOf(Primary600, Primary600, Color.White, Primary600, Primary600),
+        // 광택 중심이 글자 시작 바깥(-0.5폭)에서 끝 바깥(1.5폭)까지 지나간다.
+        start = Offset((shineProgress * sweepDistance) - (titleWidthPx * 1.5f), 0f),
+        end = Offset((shineProgress * sweepDistance) - (titleWidthPx * 0.5f), 0f),
+    )
+    Text(
+        text = text,
+        style = TqType.BodyM.figma().copy(brush = brush),
+        color = Color.Unspecified,
+        modifier = Modifier.onSizeChanged { titleWidthPx = it.width },
+    )
 }
 
 // 입력창 (CSS Textbox): 44 높이, r24, 테두리 0.8 Gray100, 오른쪽 보내기 원(36)

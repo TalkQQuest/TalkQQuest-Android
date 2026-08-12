@@ -62,6 +62,8 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.LineBreak
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.style.LineHeightStyle
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -85,6 +87,7 @@ import com.talkqquest.app.core.designsystem.Error
 import com.talkqquest.app.core.designsystem.Primary600
 import com.talkqquest.app.core.designsystem.TalkQQuestTheme
 import com.talkqquest.app.core.designsystem.TqType
+
 import com.talkqquest.app.core.designsystem.White
 import com.talkqquest.app.core.designsystem.coverStatusBarCompensation
 import com.talkqquest.app.feature.notification.data.model.NotificationUiItem
@@ -92,6 +95,13 @@ import com.talkqquest.app.feature.notification.viewmodel.NotificationUiState
 import com.talkqquest.app.feature.notification.viewmodel.NotificationViewModel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+
+private val NotificationFullLeading = LineHeightStyle(
+    alignment = LineHeightStyle.Alignment.Center,
+    trim = LineHeightStyle.Trim.None,
+)
+
+private fun TextStyle.figma(): TextStyle = copy(lineHeightStyle = NotificationFullLeading)
 
 // ── 알림창 (최신 시안 "알림창" 프레임 전사, 2026-07-22) ──
 // 홈 상단 벨 → 이 화면. 배너(알림 설정 유도) + 알림 카드 목록.
@@ -248,7 +258,17 @@ private fun NotificationScreen(
                 contentAlignment = Alignment.Center,
             ) { CircularProgressIndicator(color = Primary600) }
 
-            else -> LazyColumn(
+            else -> if (uiState.items.isEmpty()) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(start = 16.dp, end = 13.dp),
+                ) {
+                    if (showNotificationSettingsBanner) {
+                        NotificationSettingBanner(onClick = onNotificationSettingsClick)
+                    }
+                }
+            } else LazyColumn(
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(start = 16.dp, end = 13.dp)
@@ -285,19 +305,20 @@ private fun NotificationScreen(
                         },
                     )
                 }
-                if (uiState.items.isEmpty()) {
-                    // 빈 상태 — 시안에 빈 화면 정의가 없어 기존 문구 유지 (디자인 나오면 교체)
-                    item {
-                        Box(
-                            modifier = Modifier.fillMaxWidth().padding(top = 200.dp),
-                            contentAlignment = Alignment.Center,
-                        ) {
-                            Text(text = "새로운 알림이 없어요", style = TqType.BodyM, color = Gray500)
-                        }
-                    }
-                }
             }
         }
+        }
+        if (!uiState.isLoading && uiState.items.isEmpty()) {
+            Box(
+                modifier = Modifier.fillMaxSize(),
+                contentAlignment = Alignment.Center,
+            ) {
+                Text(
+                    text = "새로운 알림이 없어요",
+                    style = TqType.BodyM.figma(),
+                    color = Gray500,
+                )
+            }
         }
         NotificationDeleteAllDialog(
             visible = showDeleteAllDialog,

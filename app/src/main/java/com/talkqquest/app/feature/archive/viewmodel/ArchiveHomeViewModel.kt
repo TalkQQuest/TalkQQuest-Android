@@ -24,7 +24,7 @@ data class RecentActivity(
     val title: String,
     val status: String,
     val date: String,
-    val time: String = "", // 💡 추가됨: 시간 데이터
+    val duration: String = "", // time 대신 API 명세인 duration으로 변경
     val difficulty: String? = null,
     val category: String? = null,
     val estimatedMinutes: Int? = null,
@@ -65,17 +65,6 @@ class ArchiveHomeViewModel @Inject constructor(
         }
     }
 
-    // 💡 추가됨: ISO 포맷에서 시간(HH:mm)만 추출하는 함수
-    private fun formatIsoTime(isoString: String): String {
-        return try {
-            val zdt = ZonedDateTime.parse(isoString)
-            zdt.format(DateTimeFormatter.ofPattern("HH:mm"))
-        } catch (e: Exception) {
-            val timePart = isoString.substringAfter("T").substringBefore("+").substringBefore("Z")
-            if (timePart.length >= 5) timePart.substring(0, 5) else ""
-        }
-    }
-
     fun refreshData() {
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true, errorMessage = null) }
@@ -101,7 +90,7 @@ class ArchiveHomeViewModel @Inject constructor(
                             title = dto.title,
                             status = statusText,
                             date = formatIsoDate(dto.createdAt),
-                            time = formatIsoTime(dto.createdAt), // 💡 시간 파싱 적용
+                            duration = dto.duration ?: "", // duration으로 매핑
                             difficulty = dto.difficulty,
                             category = dto.category,
                             estimatedMinutes = dto.estimatedMinutes,

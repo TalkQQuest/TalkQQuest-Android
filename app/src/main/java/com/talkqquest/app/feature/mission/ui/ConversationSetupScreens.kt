@@ -1,7 +1,16 @@
 package com.talkqquest.app.feature.mission.ui
 
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.animateIntOffsetAsState
+import androidx.compose.animation.core.animateIntSizeAsState
+import androidx.compose.animation.core.snap
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
@@ -15,6 +24,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
@@ -24,24 +34,36 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
 import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.graphics.toArgb
+import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.positionInParent
+import androidx.compose.ui.layout.positionInWindow
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.unit.IntSize
 import com.talkqquest.app.R
+import kotlin.math.roundToInt
+import kotlinx.coroutines.launch
 import com.talkqquest.app.core.designsystem.FitDesign
 import com.talkqquest.app.core.designsystem.Gray200
 import com.talkqquest.app.core.designsystem.Gray300
@@ -187,14 +209,34 @@ private fun cardLabelColor(selected: Boolean) = if (selected) Primary700 else Gr
 // 카드: 아이콘(40 원형) + 제목 + 선택적 세부설명. CSS 361x76, radius 16, gap 12.
 
 @Composable
-private fun PlaceCard(option: PlaceOption, selected: Boolean, onClick: () -> Unit) {
+private fun PlaceCard(
+    option: PlaceOption,
+    selected: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val iconCircleColor by animateColorAsState(
+        targetValue = if (selected) Primary200 else Gray200,
+        animationSpec = tween(220, easing = FastOutSlowInEasing),
+        label = "placeCardIconCircleColor",
+    )
+    val iconColor by animateColorAsState(
+        targetValue = cardIconTint(selected, Gray400),
+        animationSpec = tween(220, easing = FastOutSlowInEasing),
+        label = "placeCardIconColor",
+    )
+    val labelColor by animateColorAsState(
+        targetValue = cardLabelColor(selected),
+        animationSpec = tween(220, easing = FastOutSlowInEasing),
+        label = "placeCardLabelColor",
+    )
     Row(
-        modifier = Modifier
+        modifier = modifier
             .fillMaxWidth()
             .heightIn(min = 76.dp)
             .clip(RoundedCornerShape(16.dp))
-            .background(cardBg(selected, Gray50))
-            .border(1.dp, cardBorderColor(selected), RoundedCornerShape(16.dp))
+            .background(Color.Transparent)
+            .border(1.dp, Color.Transparent, RoundedCornerShape(16.dp))
             .clickable(
                 interactionSource = remember { MutableInteractionSource() },
                 indication = null,
@@ -209,7 +251,7 @@ private fun PlaceCard(option: PlaceOption, selected: Boolean, onClick: () -> Uni
                 .size(40.dp)
                 .clip(CircleShape)
                 // CSS Frame 427321657 배경 = 미선택 Gray/200(#E2E8F0) / 선택 Purple/200(#E4DFFF)
-                .background(if (selected) Primary200 else Gray200),
+                .background(iconCircleColor),
             contentAlignment = Alignment.Center,
         ) {
             Icon(
@@ -218,13 +260,13 @@ private fun PlaceCard(option: PlaceOption, selected: Boolean, onClick: () -> Uni
                 // 화면 CSS(ui_14) Vector 미선택 #94A3B8(Gray/400) / 선택 Purple/600.
                 // 컴포넌트 CSS엔 Gray/500으로 남아 있지만 화면 인스턴스 5개가 전부 Gray/400이고
                 // 상대 카드 아이콘도 Gray/400이라 화면 쪽(=최종 기준)으로 맞춘다.
-                tint = cardIconTint(selected, Gray400),
+                tint = iconColor,
                 // 크기 미지정 = 벡터 native(학교 27×20 등) 그대로 = CSS Vector 크기와 일치.
                 // 정사각 size()로 우기면 비정사각 글리프가 비율맞춤으로 작아짐(작게 보이던 원인)
             )
         }
         Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-            Text(text = option.label, style = TqType.TitleL.figma(), color = cardLabelColor(selected))
+            Text(text = option.label, style = TqType.TitleL.figma(), color = labelColor)
             if (option.subtitle != null) {
                 // 세부 설명 = Body/M Gray/700(#334155). 선택돼도 색이 안 바뀐다(filled 변형도 Gray/700 그대로)
                 Text(text = option.subtitle, style = TqType.BodyM.figma(), color = Gray700)
@@ -236,12 +278,90 @@ private fun PlaceCard(option: PlaceOption, selected: Boolean, onClick: () -> Uni
 @Composable
 fun ConversationSetup1Screen(onBack: () -> Unit = {}, onNext: () -> Unit = {}) {
     var selected by remember { mutableStateOf<Int?>(null) }
+    var hasMovedSelection by remember { mutableStateOf(false) }
     SetupStepScaffold(step = 1, onBack = onBack, nextEnabled = selected != null, onNext = onNext) {
         SetupHeader("어디에서 나눌 대화인가요?", "대화 장소를 선택해주세요.")
         Spacer(Modifier.height(24.dp))
-        Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            placeOptions.forEachIndexed { i, opt ->
-                PlaceCard(option = opt, selected = selected == i, onClick = { selected = i })
+        var bounds by remember { mutableStateOf<Map<Int, Pair<IntOffset, IntSize>>>(emptyMap()) }
+        var listOffset by remember { mutableStateOf(IntOffset.Zero) }
+        val selectedBounds = selected?.let { bounds[it] }
+        val density = LocalDensity.current
+        val animatedOffset by animateIntOffsetAsState(
+            targetValue = selectedBounds?.first ?: IntOffset.Zero,
+            animationSpec = if (hasMovedSelection) {
+                tween(240, easing = FastOutSlowInEasing)
+            } else {
+                snap()
+            },
+            label = "setup1SelectionOffset",
+        )
+        val animatedSize by animateIntSizeAsState(
+            targetValue = selectedBounds?.second ?: IntSize.Zero,
+            animationSpec = if (hasMovedSelection) {
+                tween(240, easing = FastOutSlowInEasing)
+            } else {
+                snap()
+            },
+            label = "setup1SelectionSize",
+        )
+        val selectionAlpha by animateFloatAsState(
+            targetValue = if (selected != null) 1f else 0f,
+            animationSpec = tween(220, easing = FastOutSlowInEasing),
+            label = "setup1SelectionAlpha",
+        )
+        Box(
+            modifier = Modifier.fillMaxWidth(),
+        ) {
+            bounds.values.forEach { (offset, size) ->
+                Box(
+                    modifier = Modifier
+                        .offset { offset }
+                        .size(
+                            with(density) { size.width.toDp() },
+                            with(density) { size.height.toDp() },
+                        )
+                        .clip(RoundedCornerShape(16.dp))
+                        .background(Gray50)
+                        .border(1.dp, Gray200, RoundedCornerShape(16.dp)),
+                )
+            }
+            if (animatedSize != IntSize.Zero) {
+                Box(
+                    modifier = Modifier
+                        .offset { animatedOffset }
+                        .size(
+                            with(density) { animatedSize.width.toDp() },
+                            with(density) { animatedSize.height.toDp() },
+                        )
+                        .graphicsLayer { alpha = selectionAlpha }
+                        .clip(RoundedCornerShape(16.dp))
+                        .background(Primary100)
+                        .border(1.dp, Primary600, RoundedCornerShape(16.dp)),
+                )
+            }
+            Column(
+                modifier = Modifier.onGloballyPositioned { coordinates ->
+                    val position = coordinates.positionInParent()
+                    listOffset = IntOffset(position.x.roundToInt(), position.y.roundToInt())
+                },
+                verticalArrangement = Arrangement.spacedBy(12.dp),
+            ) {
+                placeOptions.forEachIndexed { i, opt ->
+                    PlaceCard(
+                        option = opt,
+                        selected = selected == i,
+                        onClick = {
+                            if (selected != null && selected != i) hasMovedSelection = true
+                            selected = i
+                        },
+                        modifier = Modifier.onGloballyPositioned { coordinates ->
+                            val position = coordinates.positionInParent()
+                            bounds = bounds + (
+                                i to (listOffset + IntOffset(position.x.roundToInt(), position.y.roundToInt()) to coordinates.size)
+                            )
+                        },
+                    )
+                }
             }
         }
     }
@@ -252,13 +372,22 @@ fun ConversationSetup1Screen(onBack: () -> Unit = {}, onNext: () -> Unit = {}) {
 
 @Composable
 private fun PartnerCard(option: IconOption, selected: Boolean, onClick: () -> Unit, modifier: Modifier = Modifier) {
+    val iconColor by animateColorAsState(
+        targetValue = cardIconTint(selected, Gray400),
+        animationSpec = tween(220, easing = FastOutSlowInEasing),
+        label = "partnerCardIconColor",
+    )
+    val labelColor by animateColorAsState(
+        targetValue = cardLabelColor(selected),
+        animationSpec = tween(220, easing = FastOutSlowInEasing),
+        label = "partnerCardLabelColor",
+    )
     Column(
         modifier = modifier
             .height(90.dp)
             .clip(RoundedCornerShape(16.dp))
-            // 미선택은 CSS에 배경이 없다(= 화면 바탕 Gray/50이 그대로 비침) / 선택은 Purple/100
-            .background(cardBg(selected, Gray50))
-            .border(1.dp, cardBorderColor(selected), RoundedCornerShape(16.dp))
+            .background(Color.Transparent)
+            .border(1.dp, Color.Transparent, RoundedCornerShape(16.dp))
             .clickable(
                 interactionSource = remember { MutableInteractionSource() },
                 indication = null,
@@ -270,37 +399,116 @@ private fun PartnerCard(option: IconOption, selected: Boolean, onClick: () -> Un
         Icon(
             painter = painterResource(option.icon),
             contentDescription = null,
-            tint = cardIconTint(selected, Gray400), // CSS Vector 미선택 #94A3B8(Gray/400) / 선택 Purple/600
+            tint = iconColor, // CSS Vector 미선택 #94A3B8(Gray/400) / 선택 Purple/600
             // 크기 미지정 = 벡터 native(친구 25×19 등) = CSS Vector(30 슬롯 안 글리프). 정사각 size(30)이면 비율 왜곡
         )
         Spacer(Modifier.height(4.dp)) // CSS Frame 427321664 gap 4
         // CSS 상대 라벨 = 18/600 (Title/L)
-        Text(text = option.label, style = TqType.TitleL.figma(), color = cardLabelColor(selected))
+        Text(text = option.label, style = TqType.TitleL.figma(), color = labelColor)
     }
 }
 
 @Composable
 fun ConversationSetup2Screen(onBack: () -> Unit = {}, onNext: () -> Unit = {}) {
     var selected by remember { mutableStateOf<Int?>(null) }
+    var hasMovedSelection by remember { mutableStateOf(false) }
     SetupStepScaffold(step = 2, onBack = onBack, nextEnabled = selected != null, onNext = onNext) {
         SetupHeader("대화할 상대를 골라볼까요?", "누구와 대화할 지 선택해주세요.")
         Spacer(Modifier.height(24.dp))
-        Column(verticalArrangement = Arrangement.spacedBy(15.dp)) { // 행 gap 15(≈17)
-            partnerOptions.chunked(2).forEach { rowItems ->
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(15.dp),
-                ) {
-                    rowItems.forEach { opt ->
-                        val idx = partnerOptions.indexOf(opt)
-                        PartnerCard(
-                            option = opt,
-                            selected = selected == idx,
-                            onClick = { selected = idx },
-                            modifier = Modifier.weight(1f),
+        var bounds by remember { mutableStateOf<Map<Int, Pair<IntOffset, IntSize>>>(emptyMap()) }
+        var gridOffset by remember { mutableStateOf(IntOffset.Zero) }
+        var gridWindowOffset by remember { mutableStateOf(IntOffset.Zero) }
+        val selectedBounds = selected?.let { bounds[it] }
+        val density = LocalDensity.current
+        val animatedOffset by animateIntOffsetAsState(
+            targetValue = selectedBounds?.first ?: IntOffset.Zero,
+            animationSpec = if (hasMovedSelection) tween(240, easing = FastOutSlowInEasing) else snap(),
+            label = "setup2SelectionOffset",
+        )
+        val animatedSize by animateIntSizeAsState(
+            targetValue = selectedBounds?.second ?: IntSize.Zero,
+            animationSpec = if (hasMovedSelection) tween(240, easing = FastOutSlowInEasing) else snap(),
+            label = "setup2SelectionSize",
+        )
+        val selectionAlpha by animateFloatAsState(
+            targetValue = if (selected != null) 1f else 0f,
+            animationSpec = tween(220, easing = FastOutSlowInEasing),
+            label = "setup2SelectionAlpha",
+        )
+        Box(
+            Modifier
+                .fillMaxWidth()
+                .onGloballyPositioned { coordinates ->
+                    val position = coordinates.positionInWindow()
+                    gridWindowOffset = IntOffset(position.x.roundToInt(), position.y.roundToInt())
+                },
+        ) {
+            bounds.values.forEach { (offset, size) ->
+                Box(
+                    Modifier
+                        .offset { offset }
+                        .size(
+                            with(density) { size.width.toDp() },
+                            with(density) { size.height.toDp() },
                         )
+                        .clip(RoundedCornerShape(16.dp))
+                        .background(Gray50)
+                        .border(1.dp, Gray200, RoundedCornerShape(16.dp)),
+                )
+            }
+            if (animatedSize != IntSize.Zero) {
+                Box(
+                    Modifier
+                        .offset { animatedOffset }
+                        .size(
+                            with(density) { animatedSize.width.toDp() },
+                            with(density) { animatedSize.height.toDp() },
+                        )
+                        .graphicsLayer { alpha = selectionAlpha }
+                        .clip(RoundedCornerShape(16.dp))
+                        .background(Primary100)
+                        .border(1.dp, Primary600, RoundedCornerShape(16.dp)),
+                )
+            }
+            Column(
+                modifier = Modifier.onGloballyPositioned { coordinates ->
+                    val position = coordinates.positionInParent()
+                    gridOffset = IntOffset(position.x.roundToInt(), position.y.roundToInt())
+                },
+                verticalArrangement = Arrangement.spacedBy(15.dp),
+            ) {
+                partnerOptions.chunked(2).forEach { rowItems ->
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(15.dp),
+                    ) {
+                        rowItems.forEach { opt ->
+                            val idx = partnerOptions.indexOf(opt)
+                            PartnerCard(
+                                option = opt,
+                                selected = selected == idx,
+                                onClick = {
+                                    if (selected != null && selected != idx) hasMovedSelection = true
+                                    selected = idx
+                                },
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .onGloballyPositioned { coordinates ->
+                                        val position = coordinates.positionInWindow()
+                                        bounds = bounds + (
+                                            idx to (
+                                                IntOffset(
+                                                    position.x.roundToInt() - gridWindowOffset.x,
+                                                    position.y.roundToInt() - gridWindowOffset.y,
+                                                ) to
+                                                    coordinates.size
+                                            )
+                                        )
+                                    },
+                            )
+                        }
+                        if (rowItems.size == 1) Spacer(Modifier.weight(1f)) // 마지막 홀수 카드 반폭 유지
                     }
-                    if (rowItems.size == 1) Spacer(Modifier.weight(1f)) // 마지막 홀수 카드 반폭 유지
                 }
             }
         }
@@ -318,17 +526,18 @@ private fun PillOption(
     height: Int,
     radius: Int,
 ) {
+    val textColor by animateColorAsState(
+        targetValue = if (selected) Primary50 else Gray800,
+        animationSpec = tween(220, easing = FastOutSlowInEasing),
+        label = "pillOptionTextColor",
+    )
     // 칩만 카드와 반전 규칙이 다르다 — 선택 시 Purple/600으로 꽉 채우고 테두리를 없앤 뒤 글자를 Purple/50으로 뒤집는다.
     Box(
         modifier = modifier
             .height(height.dp)
             .clip(RoundedCornerShape(radius.dp))
-            .background(if (selected) Primary600 else Color.Transparent)
-            // 선택 상태엔 테두리 자체가 없다(CSS filled/Variant4에 border 선언 없음)
-            .then(
-                if (selected) Modifier
-                else Modifier.border(1.dp, Gray300, RoundedCornerShape(radius.dp)), // CSS 미선택 테두리 = Gray/300
-            )
+            .background(Color.Transparent)
+            .border(1.dp, Color.Transparent, RoundedCornerShape(radius.dp))
             .clickable(
                 interactionSource = remember { MutableInteractionSource() },
                 indication = null,
@@ -341,7 +550,7 @@ private fun PillOption(
             text = label,
             // 선택되면 Body/L → Body/L Medium (400→500)까지 같이 바뀐다
             style = if (selected) TqType.BodyL.copy(fontWeight = FontWeight.Medium).figma() else TqType.BodyL.figma(),
-            color = if (selected) Primary50 else Gray800,
+            color = textColor,
         )
     }
 }
@@ -358,28 +567,154 @@ fun ConversationSetup3Screen(onBack: () -> Unit = {}, onNext: () -> Unit = {}) {
     SetupStepScaffold(step = 3, onBack = onBack, nextEnabled = gender != null && age != null, onNext = onNext) {
         SetupHeader("어떤 상대와 대화해볼까요?", "대화할 상대의 성별과 나이대를 선택해주세요.")
         Spacer(Modifier.height(36.dp))
+        val density = LocalDensity.current
         Column(
             modifier = Modifier.padding(start = 6.dp),
             verticalArrangement = Arrangement.spacedBy(36.dp), // 성별 ↔ 나이 gap 36
         ) {
             Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
                 SectionTitle("성별")
-                Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                    genderOptions.forEachIndexed { i, label ->
-                        PillOption(label, gender == i, { gender = i }, Modifier.width(130.dp), height = 45, radius = 18)
+                var genderBounds by remember { mutableStateOf<Map<Int, Pair<IntOffset, IntSize>>>(emptyMap()) }
+                var genderMoved by remember { mutableStateOf(false) }
+                val genderParent = remember { mutableStateOf(IntOffset.Zero) }
+                val genderSelectedBounds = gender?.let { genderBounds[it] }
+                val genderOffset by animateIntOffsetAsState(
+                    genderSelectedBounds?.first ?: IntOffset.Zero,
+                    if (genderMoved) tween(240, easing = FastOutSlowInEasing) else snap(),
+                    label = "setup3GenderOffset",
+                )
+                val genderSize by animateIntSizeAsState(
+                    genderSelectedBounds?.second ?: IntSize.Zero,
+                    if (genderMoved) tween(240, easing = FastOutSlowInEasing) else snap(),
+                    label = "setup3GenderSize",
+                )
+                val genderAlpha by animateFloatAsState(
+                    if (gender != null) 1f else 0f,
+                    tween(220, easing = FastOutSlowInEasing),
+                    label = "setup3GenderAlpha",
+                )
+                Box(
+                    Modifier
+                        .fillMaxWidth()
+                        .onGloballyPositioned { c ->
+                            val p = c.positionInWindow()
+                            genderParent.value = IntOffset(p.x.roundToInt(), p.y.roundToInt())
+                        },
+                ) {
+                    genderBounds.values.forEach { (offset, size) ->
+                        Box(
+                            Modifier
+                                .offset { offset }
+                                .size(
+                                    with(density) { size.width.toDp() },
+                                    with(density) { size.height.toDp() },
+                                )
+                                .clip(RoundedCornerShape(18.dp))
+                                .border(1.dp, Gray300, RoundedCornerShape(18.dp)),
+                        )
+                    }
+                    if (genderSize != IntSize.Zero) {
+                        Box(
+                            Modifier
+                                .offset { genderOffset }
+                                .size(with(density) { genderSize.width.toDp() }, with(density) { genderSize.height.toDp() })
+                                .graphicsLayer { alpha = genderAlpha }
+                                .clip(RoundedCornerShape(18.dp))
+                                .background(Primary600),
+                        )
+                    }
+                    Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                        genderOptions.forEachIndexed { i, label ->
+                            PillOption(
+                                label,
+                                gender == i,
+                                {
+                                    if (gender != null && gender != i) genderMoved = true
+                                    gender = i
+                                },
+                                Modifier.width(130.dp).onGloballyPositioned { c ->
+                                    val p = c.positionInWindow()
+                                    genderBounds = genderBounds + (i to (IntOffset(p.x.roundToInt() - genderParent.value.x, p.y.roundToInt() - genderParent.value.y) to c.size))
+                                },
+                                height = 45,
+                                radius = 18,
+                            )
+                        }
                     }
                 }
             }
             Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
                 SectionTitle("나이대")
-                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                    ageOptions.chunked(3).forEach { rowItems ->
-                        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                            rowItems.forEach { label ->
-                                val idx = ageOptions.indexOf(label)
-                                // 10~50대는 최대폭(82) 고정으로 통일 → 열 정렬. 60대 이상(마지막)만 hug — 맨 끝이라 오른쪽으로 나가도 정렬 영향 없음
-                                val pillMod = if (idx == ageOptions.lastIndex) Modifier else Modifier.width(82.dp)
-                                PillOption(label, age == idx, { age = idx }, pillMod, height = 40, radius = 24)
+                var ageBounds by remember { mutableStateOf<Map<Int, Pair<IntOffset, IntSize>>>(emptyMap()) }
+                var ageMoved by remember { mutableStateOf(false) }
+                val ageParent = remember { mutableStateOf(IntOffset.Zero) }
+                val ageSelectedBounds = age?.let { ageBounds[it] }
+                val ageOffset by animateIntOffsetAsState(
+                    ageSelectedBounds?.first ?: IntOffset.Zero,
+                    if (ageMoved) tween(240, easing = FastOutSlowInEasing) else snap(),
+                    label = "setup3AgeOffset",
+                )
+                val ageSize by animateIntSizeAsState(
+                    ageSelectedBounds?.second ?: IntSize.Zero,
+                    if (ageMoved) tween(240, easing = FastOutSlowInEasing) else snap(),
+                    label = "setup3AgeSize",
+                )
+                val ageAlpha by animateFloatAsState(
+                    if (age != null) 1f else 0f,
+                    tween(220, easing = FastOutSlowInEasing),
+                    label = "setup3AgeAlpha",
+                )
+                Box(
+                    Modifier
+                        .fillMaxWidth()
+                        .onGloballyPositioned { c ->
+                            val p = c.positionInWindow()
+                            ageParent.value = IntOffset(p.x.roundToInt(), p.y.roundToInt())
+                        },
+                ) {
+                    ageBounds.values.forEach { (offset, size) ->
+                        Box(
+                            Modifier
+                                .offset { offset }
+                                .size(
+                                    with(density) { size.width.toDp() },
+                                    with(density) { size.height.toDp() },
+                                )
+                                .clip(RoundedCornerShape(24.dp))
+                                .border(1.dp, Gray300, RoundedCornerShape(24.dp)),
+                        )
+                    }
+                    if (ageSize != IntSize.Zero) {
+                        Box(
+                            Modifier
+                                .offset { ageOffset }
+                                .size(with(density) { ageSize.width.toDp() }, with(density) { ageSize.height.toDp() })
+                                .graphicsLayer { alpha = ageAlpha }
+                                .clip(RoundedCornerShape(24.dp))
+                                .background(Primary600),
+                        )
+                    }
+                    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                        ageOptions.chunked(3).forEach { rowItems ->
+                            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                                rowItems.forEach { label ->
+                                    val idx = ageOptions.indexOf(label)
+                                    val pillMod = if (idx == ageOptions.lastIndex) Modifier else Modifier.width(82.dp)
+                                    PillOption(
+                                        label,
+                                        age == idx,
+                                        {
+                                            if (age != null && age != idx) ageMoved = true
+                                            age = idx
+                                        },
+                                        pillMod.onGloballyPositioned { c ->
+                                            val p = c.positionInWindow()
+                                            ageBounds = ageBounds + (idx to (IntOffset(p.x.roundToInt() - ageParent.value.x, p.y.roundToInt() - ageParent.value.y) to c.size))
+                                        },
+                                        height = 40,
+                                        radius = 24,
+                                    )
+                                }
                             }
                         }
                     }
@@ -394,6 +729,17 @@ fun ConversationSetup3Screen(onBack: () -> Unit = {}, onNext: () -> Unit = {}) {
 
 @Composable
 private fun DotScale(value: Int, onValueChange: (Int) -> Unit, left: String, center: String, right: String) {
+    val progress = remember { Animatable(0f) }
+    val scope = rememberCoroutineScope()
+    var displayedValue by remember { mutableIntStateOf(value) }
+    var motionStart by remember { mutableIntStateOf(value) }
+    var motionTarget by remember { mutableIntStateOf(value) }
+    var isMoving by remember { mutableStateOf(false) }
+
+    LaunchedEffect(value) {
+        if (!isMoving) displayedValue = value
+    }
+
     Column(
         modifier = Modifier.fillMaxWidth(),
         horizontalAlignment = Alignment.CenterHorizontally, // CSS Frame 427321679 align center (트랙 313을 349 안 가운데)
@@ -406,42 +752,115 @@ private fun DotScale(value: Int, onValueChange: (Int) -> Unit, left: String, cen
             Text(center, style = labelStyle, color = Color(0xFF475569))
             Text(right, style = labelStyle, color = Color(0xFF475569))
         }
-        // 점·선 트랙 (높이 29 = 선택 점 기준)
-        Row(
-            modifier = Modifier.width(313.dp).height(29.dp), // CSS 척도 트랙 폭 313 (라벨 349보다 좁게, 가운데)
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            for (i in 0 until 5) {
-                val on = i == value
-                Box(
-                    modifier = Modifier
-                        .size(if (on) 29.dp else 25.dp)
-                        // 선택 dot 글로우 = CSS box-shadow: 0 0 12px rgba(114,100,248,0.6).
-                        // Modifier.shadow(입체 그림자)로는 못 그려서(색 안 먹고 방향성) BlurMaskFilter로 뒤에 번지는 보라 원을 직접 그림.
-                        .then(
-                            if (on) Modifier.drawBehind {
-                                val glow = android.graphics.Paint().apply {
-                                    isAntiAlias = true
-                                    color = GlowPurple.copy(alpha = 0.6f).toArgb()
-                                    maskFilter = android.graphics.BlurMaskFilter(12.dp.toPx(), android.graphics.BlurMaskFilter.Blur.NORMAL)
-                                }
-                                drawIntoCanvas { it.nativeCanvas.drawCircle(size.width / 2f, size.height / 2f, size.minDimension / 2f, glow) }
-                            } else Modifier,
-                        )
-                        .clip(CircleShape)
-                        .background(if (on) Primary600 else Gray300)
-                        .clickable(
-                            interactionSource = remember { MutableInteractionSource() },
-                            indication = null,
-                            onClick = { onValueChange(i) },
-                        ),
+        // 회색 척도는 고정하고 보라색 선택점 하나만 선을 따라 이동한다.
+        Box(modifier = Modifier.width(313.dp).height(29.dp)) {
+            Canvas(modifier = Modifier.fillMaxSize()) {
+                val selectedRadius = 14.5.dp.toPx()
+                val idleRadius = 12.5.dp.toPx()
+                val lineWidth = 3.dp.toPx()
+                val firstX = selectedRadius
+                val step = (size.width - selectedRadius * 2f) / 4f
+                val centerY = size.height / 2f
+
+                drawLine(
+                    color = Gray300,
+                    start = androidx.compose.ui.geometry.Offset(firstX, centerY),
+                    end = androidx.compose.ui.geometry.Offset(firstX + step * 4f, centerY),
+                    strokeWidth = lineWidth,
+                    cap = StrokeCap.Round,
                 )
-                if (i < 4) {
+                repeat(5) { index ->
+                    drawCircle(Gray300, idleRadius, androidx.compose.ui.geometry.Offset(firstX + step * index, centerY))
+                }
+
+                val sourceX = firstX + step * motionStart
+                val targetX = firstX + step * motionTarget
+                val displayedCenter = androidx.compose.ui.geometry.Offset(firstX + step * displayedValue, centerY)
+
+                if (isMoving) {
+                    val phase = progress.value
+                    val lineGrow = (phase / 0.55f).coerceIn(0f, 1f)
+                    val destinationGrow = ((phase - 0.55f) / 0.45f).coerceIn(0f, 1f)
+                    val direction = if (targetX > sourceX) 1f else -1f
+                    val sourceJointX = sourceX + direction * selectedRadius
+                    val targetJointX = targetX - direction * selectedRadius
+                    val lineHeadX = sourceJointX + (targetJointX - sourceJointX) * lineGrow
+                    val lineTailX = sourceJointX + (targetJointX - sourceJointX) * destinationGrow
+
+                    if (lineGrow > destinationGrow) {
+                        drawLine(
+                            color = Primary600,
+                            start = androidx.compose.ui.geometry.Offset(lineTailX, centerY),
+                            end = androidx.compose.ui.geometry.Offset(lineHeadX, centerY),
+                            strokeWidth = lineWidth,
+                            cap = StrokeCap.Round,
+                        )
+                    }
+
+                    // 선이 도착점에 닿는 순간 출발 원이 완전히 선 안으로 빨려 들어간다.
+                    val sourceRadius = selectedRadius * (1f - lineGrow)
+                    if (sourceRadius > 0f) {
+                        val sourceCenterX = sourceJointX - direction * sourceRadius
+                        drawCircle(
+                            Primary600,
+                            sourceRadius,
+                            androidx.compose.ui.geometry.Offset(sourceCenterX, centerY),
+                        )
+                    }
+
+                    // 도착 원이 채워지는 동안 선의 출발점이 떨어져 도착점으로 함께 흡수된다.
+                    val destinationRadius = selectedRadius * destinationGrow
+                    if (destinationRadius > 0f) {
+                        val destinationCenterX = targetJointX + direction * destinationRadius
+                        drawCircle(
+                            Primary600,
+                            destinationRadius,
+                            androidx.compose.ui.geometry.Offset(destinationCenterX, centerY),
+                        )
+                    }
+                } else {
+                    drawIntoCanvas { canvas ->
+                        val glow = android.graphics.Paint().apply {
+                            isAntiAlias = true
+                            color = GlowPurple.copy(alpha = 0.6f).toArgb()
+                            maskFilter = android.graphics.BlurMaskFilter(
+                                12.dp.toPx(),
+                                android.graphics.BlurMaskFilter.Blur.NORMAL,
+                            )
+                        }
+                        canvas.nativeCanvas.drawCircle(displayedCenter.x, displayedCenter.y, selectedRadius, glow)
+                    }
+                    drawCircle(Primary600, selectedRadius, displayedCenter)
+                }
+            }
+
+            Row(modifier = Modifier.fillMaxSize(), verticalAlignment = Alignment.CenterVertically) {
+                for (i in 0 until 5) {
                     Box(
                         modifier = Modifier
                             .weight(1f)
-                            .height(3.dp)
-                            .background(Gray300), // 연결선은 항상 Gray300 (CSS)
+                            .fillMaxSize()
+                            .clickable(
+                                interactionSource = remember { MutableInteractionSource() },
+                                indication = null,
+                                onClick = {
+                                    if (!isMoving && i != displayedValue) {
+                                        motionStart = displayedValue
+                                        motionTarget = i
+                                        isMoving = true
+                                        scope.launch {
+                                            progress.snapTo(0f)
+                                            progress.animateTo(
+                                                1f,
+                                                animationSpec = tween(300, easing = FastOutSlowInEasing),
+                                            )
+                                            displayedValue = i
+                                            onValueChange(i)
+                                            isMoving = false
+                                        }
+                                    }
+                                },
+                            ),
                     )
                 }
             }

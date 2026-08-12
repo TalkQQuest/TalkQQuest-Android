@@ -25,8 +25,8 @@ data class ArchiveConversationDetailUiState(
     val isLoading: Boolean = true,
     val title: String = "",
     val date: String = "",
-    val time: String = "", // 대화 프로필 카드에 들어갈 시간(HH:mm)
-    val duration: String = "",
+    val time: String = "", // 💡 UI 카드의 소요 시간("mm:ss")
+    val duration: String = "", // "MM분 ss초" 텍스트 데이터
     val summaryKeywords: List<String> = emptyList(),
     val summaryText: String = "",
     val mainContentText: String = "",
@@ -67,11 +67,10 @@ class ArchiveConversationDetailViewModel @Inject constructor(
                     }
 
                     val mappedMessages = data.messages.mapIndexed { index, msg ->
-                        // API 명세 변경 대응: actualRole과 actualTime 사용
                         val roleString = msg.actualRole
                         val timeString = msg.actualTime
 
-                        val parsedTime = try {
+                        val parsedMsgTime = try {
                             val zdt = ZonedDateTime.parse(timeString)
                             zdt.format(DateTimeFormatter.ofPattern("HH:mm"))
                         } catch (e: Exception) {
@@ -82,11 +81,10 @@ class ArchiveConversationDetailViewModel @Inject constructor(
                             id = msg.id ?: index.toString(),
                             text = msg.content,
                             isFromUser = roleString.equals("user", ignoreCase = true),
-                            time = parsedTime
+                            time = parsedMsgTime
                         )
                     }
 
-                    // 첫 번째 메시지의 시간을 기준으로 전체 대화의 날짜와 생성 시간을 추출
                     val firstMessageTimeStr = data.messages.firstOrNull()?.actualTime ?: ""
 
                     val parsedDate = try {
@@ -95,21 +93,24 @@ class ArchiveConversationDetailViewModel @Inject constructor(
                         } else ""
                     } catch (e: Exception) { "" }
 
-                    val parsedTime = try {
-                        if (firstMessageTimeStr.isNotBlank()) {
-                            ZonedDateTime.parse(firstMessageTimeStr).format(DateTimeFormatter.ofPattern("HH:mm"))
-                        } else ""
-                    } catch (e: Exception) { "" }
+                    // 💡 핵심 수정: UI의 time 변수에 첫 메시지 시간이 아닌 API의 소요 시간(duration)을 매핑합니다.
+                    val parsedTime = data.duration ?: "00:00"
 
-                    val parsedDuration = data.durationMinutes?.let { "${it}분" } ?: ""
+                    val parsedDuration = data.duration?.split(":")?.let { parts ->
+                        if (parts.size == 2) {
+                            "${parts[0].toIntOrNull() ?: 0}분 ${parts[1].toIntOrNull() ?: 0}초"
+                        } else {
+                            data.duration
+                        }
+                    } ?: ""
 
                     _uiState.update {
                         it.copy(
                             isLoading = false,
                             title = data.missionTitle ?: "대화 상세",
                             date = parsedDate,
-                            time = parsedTime,
-                            duration = parsedDuration,
+                            time = parsedTime, // <- 여기에 "05:30" 이 들어감
+                            duration = parsedDuration, // <- 여기에 "5분 30초"가 들어감
                             summaryKeywords = data.summaryChips,
                             summaryText = data.summary ?: "",
                             mainContentText = data.summary ?: "",

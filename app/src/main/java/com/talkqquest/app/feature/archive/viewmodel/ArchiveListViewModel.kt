@@ -116,17 +116,6 @@ class ArchiveViewModel @Inject constructor(
         } catch (e: Exception) { isoString.substringBefore("T").replace("-", ".") }
     }
 
-    // 💡 추가됨: 시간 파싱 함수
-    private fun formatIsoTime(isoString: String): String {
-        return try {
-            val zdt = ZonedDateTime.parse(isoString)
-            zdt.format(DateTimeFormatter.ofPattern("HH:mm"))
-        } catch (e: Exception) {
-            val timePart = isoString.substringAfter("T").substringBefore("+").substringBefore("Z")
-            if (timePart.length >= 5) timePart.substring(0, 5) else ""
-        }
-    }
-
     fun refreshData() {
         val currentCategory = _uiState.value.selectedCategory
         val currentFilter = _uiState.value.selectedFilter
@@ -173,7 +162,7 @@ class ArchiveViewModel @Inject constructor(
                             title = it.title,
                             status = "대화 완료",
                             date = formatIsoDate(it.createdAt),
-                            time = formatIsoTime(it.createdAt), // 💡 시간 파싱 적용
+                            duration = it.duration ?: "00:00", // API의 duration을 UI 모델의 time에 매핑
                             tags = it.tags,
                             summary = it.description
                         )

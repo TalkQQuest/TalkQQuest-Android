@@ -28,8 +28,13 @@ import androidx.compose.material3.Text
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.animateIntAsState
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.tween
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -38,9 +43,13 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalDensity
@@ -188,6 +197,7 @@ private fun ReportContent(
 ) {
     // info 아이콘 → 티어 승급 안내 바텀시트
     var showTierHelp by remember { mutableStateOf(false) }
+    var tierAutoTrigger by remember { mutableStateOf(0) }
 
     Box(modifier = Modifier.fillMaxSize()) {
         Column(
@@ -231,9 +241,13 @@ private fun ReportContent(
                     nextStarsNeeded = growth.nextStarsNeeded,
                     nextTierName = growth.nextTierName,
                     onInfoClick = { showTierHelp = true },
+                    autoTrigger = tierAutoTrigger,
                 )
                 Spacer(Modifier.height(13.dp))
-                CompetencyCard(competencies = growth.competencies)
+                CompetencyCard(
+                    competencies = growth.competencies,
+                    onCompletionAnimationFinished = { tierAutoTrigger++ },
+                )
             }
 
             Spacer(Modifier.height(9.dp)) // 카드 끝 → 버튼 top 728
@@ -264,7 +278,17 @@ private fun TierCard(
     nextStarsNeeded: Int,
     nextTierName: String,
     onInfoClick: () -> Unit,
+    autoTrigger: Int,
 ) {
+    val tierVisualShine = remember { Animatable(0f) }
+    var playTierAnimation by remember { mutableStateOf<() -> Unit>({}) }
+
+    suspend fun playTierVisualShine() {
+        tierVisualShine.snapTo(0f)
+        tierVisualShine.animateTo(1f, tween(300, easing = LinearEasing))
+        tierVisualShine.snapTo(0f)
+    }
+
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -353,8 +377,34 @@ private fun TierCard(
             }
         }
 
-        // 휘장 + (티어명 / 별 3)
+        // 휘장·티어명·별을 하나의 묶음으로 두고, 광선도 이 묶음을 한 번에 지난다.
         Row(
+            modifier = Modifier
+                .drawWithContent {
+                    drawContent()
+                    if (tierVisualShine.value > 0f) {
+                        val centerX = size.width * tierVisualShine.value
+                        val beamWidth = size.width * 0.19f
+                        drawRect(
+                            brush = Brush.linearGradient(
+                                colors = listOf(
+                                    Color.Transparent,
+                                    White.copy(alpha = 0.86f),
+                                    Color.Transparent,
+                                ),
+                                start = Offset(centerX - beamWidth, size.height),
+                                end = Offset(centerX + beamWidth, 0f),
+                            ),
+                            blendMode = BlendMode.SrcAtop,
+                        )
+                    }
+                }
+                // 휘장·티어명·별 어느 곳을 눌러도 같은 성장 모션을 실행한다.
+                .clickable(
+                    interactionSource = remember { MutableInteractionSource() },
+                    indication = null,
+                    onClick = { playTierAnimation() },
+                ),
             horizontalArrangement = Arrangement.spacedBy(8.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
@@ -364,10 +414,11 @@ private fun TierCard(
                 modifier = Modifier.size(55.dp),
             )
             Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
-                Text(
-                    text = tierName,
-                    style = TqType.BodyL.figma().copy(fontWeight = FontWeight.Medium), // 16/500
-                    color = Gray800,
+                TierNameAnimation(
+                    tierName = tierName,
+                    onShineStart = ::playTierVisualShine,
+                    onPlayReady = { playTierAnimation = it },
+                    autoTrigger = autoTrigger,
                 )
                 Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                     repeat(3) { i ->
@@ -396,14 +447,150 @@ private fun TierCard(
     }
 }
 
+@Composable
+private fun TierNameAnimation(
+    tierName: String,
+    onShineStart: suspend () -> Unit,
+    onPlayReady: ((() -> Unit) -> Unit),
+    autoTrigger: Int,
+) {
+    val englishName = when (tierName) {
+        "브론즈" -> "Bronze"
+        "실버" -> "Silver"
+        "골드" -> "Gold"
+        "플래티넘", "플레티넘" -> "Platinum"
+        "다이아", "다이아몬드" -> "Diamond"
+        "마스터" -> "Master"
+        else -> null
+    }
+    var phase by remember { mutableStateOf(0) } // 0=한글, 1=삭제, 2=영문 입력, 3=광택
+    var charCount by remember { mutableStateOf(tierName.length) }
+    var running by remember { mutableStateOf(false) }
+    val restoreProgress = remember { Animatable(0f) }
+    val scope = rememberCoroutineScope()
+    val titleStyle = TqType.BodyL.figma().copy(fontWeight = FontWeight.Medium)
+    val restoreOffsetPx = with(LocalDensity.current) { 5.dp.toPx() }
+
+    fun play() {
+        if (englishName == null || running) return
+        scope.launch {
+            running = true
+            try {
+                phase = 1
+                for (count in (tierName.length - 1) downTo 0) {
+                    charCount = count
+                    delay(90)
+                }
+                phase = 2
+                for (count in 1..englishName.length) {
+                    charCount = count
+                    delay(90)
+                }
+                phase = 3
+                // Gold 완성 즉시 300ms 광선을 실행한 뒤 200ms를 더 유지한다.
+                onShineStart()
+                delay(200)
+                // Gold가 사라지는 동안 골드는 아래에서 제자리로 올라온다.
+                phase = 4
+                restoreProgress.snapTo(0f)
+                restoreProgress.animateTo(
+                    targetValue = 1f,
+                    animationSpec = tween(220, easing = FastOutSlowInEasing),
+                )
+                phase = 0
+                charCount = tierName.length
+                restoreProgress.snapTo(0f)
+            } finally {
+                running = false
+            }
+        }
+    }
+    SideEffect { onPlayReady(::play) }
+    LaunchedEffect(autoTrigger) {
+        if (autoTrigger > 0) play()
+    }
+
+    Box(
+        modifier = Modifier.clickable(
+            interactionSource = remember { MutableInteractionSource() },
+            indication = null,
+            onClick = ::play,
+        ),
+    ) {
+        when (phase) {
+            1 -> Text(text = tierName.take(charCount), style = titleStyle, color = Gray800)
+            2, 3 -> Text(
+                text = englishName?.take(charCount).orEmpty(),
+                style = titleStyle,
+                color = Color(0xFFD4A72C),
+            )
+            4 -> {
+                Text(
+                    text = englishName.orEmpty(),
+                    style = titleStyle,
+                    color = Color(0xFFD4A72C),
+                    modifier = Modifier.graphicsLayer {
+                        alpha = 1f - restoreProgress.value
+                        translationY = -restoreOffsetPx * restoreProgress.value
+                    },
+                )
+                Text(
+                    text = tierName,
+                    style = titleStyle,
+                    color = Gray800,
+                    modifier = Modifier.graphicsLayer {
+                        alpha = restoreProgress.value
+                        translationY = restoreOffsetPx * (1f - restoreProgress.value)
+                    },
+                )
+            }
+            else -> Text(text = tierName, style = titleStyle, color = Gray800)
+        }
+    }
+}
+
 // ── 핵심 역량 카드 (361x484) ──
 @Composable
-private fun CompetencyCard(competencies: List<Competency>) {
+private fun CompetencyCard(
+    competencies: List<Competency>,
+    onCompletionAnimationFinished: () -> Unit,
+) {
     val byAxis = competencies.associateBy { it.axis }
     val top = byAxis[CompetencyAxis.KINDNESS]
     val right = byAxis[CompetencyAxis.INITIATIVE]
     val bottom = byAxis[CompetencyAxis.EMPATHY]
     val left = byAxis[CompetencyAxis.QUESTION_LINK]
+    var radarEntered by remember { mutableStateOf(false) }
+    var gainsVisible by remember { mutableStateOf(false) }
+    var legendScoresVisible by remember { mutableStateOf(false) }
+    var completionChecksVisible by remember { mutableStateOf(false) }
+    val radarScale by animateFloatAsState(
+        targetValue = if (radarEntered) 1f else 0f,
+        animationSpec = tween(durationMillis = 400, easing = FastOutSlowInEasing),
+        label = "competencyRadarEnter",
+    )
+    val gainAlpha by animateFloatAsState(
+        targetValue = if (gainsVisible) 1f else 0f,
+        animationSpec = tween(durationMillis = 180, easing = FastOutSlowInEasing),
+        label = "competencyGainsEnter",
+    )
+    val gainOffsetY by animateFloatAsState(
+        targetValue = if (gainsVisible) 0f else 10f,
+        animationSpec = tween(durationMillis = 260, easing = FastOutSlowInEasing),
+        label = "competencyGainsRise",
+    )
+
+    LaunchedEffect(Unit) {
+        radarEntered = true
+        delay(400) // 보라 데이터 마름모가 완성된 뒤 +획득 수치를 함께 표시한다.
+        gainsVisible = true
+        delay(360) // +70 네 개가 위로 올라와 멈출 때까지 기다린다.
+        legendScoresVisible = true
+        delay(720) // 아래 점수의 상승이 완전히 끝난 뒤에만 만점 체크를 보여 준다.
+        completionChecksVisible = true
+        delay(340) // 원 채움(240ms)과 체크 등장(140ms 지연 + 160ms)을 모두 마친다.
+        onCompletionAnimationFinished()
+    }
 
     Column(
         modifier = Modifier
@@ -427,23 +614,24 @@ private fun CompetencyCard(competencies: List<Competency>) {
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
-            if (top != null) AxisLabel(top.label, top.gain)
+            if (top != null) AxisLabel(top.label, top.gain, gainAlpha, gainOffsetY)
             Row(
                 modifier = Modifier.fillMaxWidth().padding(horizontal = 4.dp),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween,
             ) {
-                if (left != null) AxisLabel(left.label, left.gain)
+                if (left != null) AxisLabel(left.label, left.gain, gainAlpha, gainOffsetY)
                 RadarChart(
                     top = frac(top),
                     right = frac(right),
                     bottom = frac(bottom),
                     left = frac(left),
+                    dataScale = radarScale,
                     modifier = Modifier.size(176.dp),
                 )
-                if (right != null) AxisLabel(right.label, right.gain)
+                if (right != null) AxisLabel(right.label, right.gain, gainAlpha, gainOffsetY)
             }
-            if (bottom != null) AxisLabel(bottom.label, bottom.gain)
+            if (bottom != null) AxisLabel(bottom.label, bottom.gain, gainAlpha, gainOffsetY)
         }
 
         // 범례 4행
@@ -451,7 +639,13 @@ private fun CompetencyCard(competencies: List<Competency>) {
             modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
-            competencies.forEach { c -> LegendRow(c) }
+            competencies.forEach { c ->
+                LegendRow(
+                    competency = c,
+                    showFinalScore = legendScoresVisible,
+                    showCompletionCheck = completionChecksVisible,
+                )
+            }
         }
     }
 }
@@ -461,10 +655,23 @@ private fun frac(c: Competency?): Float =
 
 // 레이더 축 라벨: 라벨 + "+획득" (세로)
 @Composable
-private fun AxisLabel(label: String, gain: Int) {
+private fun AxisLabel(
+    label: String,
+    gain: Int,
+    gainAlpha: Float = 1f,
+    gainOffsetY: Float = 0f,
+) {
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
         Text(text = label, style = TqType.BodyM.figma(), color = Gray800) // 14/400
-        Text(text = "+$gain", style = TqType.LabelL.figma(), color = Primary600) // 14/500
+        Text(
+            text = "+$gain",
+            style = TqType.LabelL.figma(),
+            color = Primary600,
+            modifier = Modifier.graphicsLayer {
+                alpha = gainAlpha
+                translationY = gainOffsetY
+            },
+        ) // 14/500
     }
 }
 
@@ -475,6 +682,7 @@ private fun RadarChart(
     right: Float,
     bottom: Float,
     left: Float,
+    dataScale: Float = 1f,
     modifier: Modifier = Modifier,
 ) {
     Canvas(modifier = modifier) {
@@ -496,10 +704,11 @@ private fun RadarChart(
         drawLine(Gray300, Offset(cx - r, cy), Offset(cx + r, cy), strokeWidth = 1.dp.toPx()) // 수평 축선
 
         // 데이터 폴리곤 (Purple/200 채움 + Purple/600 선)
-        val pTop = Offset(cx, cy - r * top)
-        val pRight = Offset(cx + r * right, cy)
-        val pBottom = Offset(cx, cy + r * bottom)
-        val pLeft = Offset(cx - r * left, cy)
+        // 거미줄은 고정. 보라 데이터 마름모만 중심에서 각 축 값까지 자란다.
+        val pTop = Offset(cx, cy - r * top * dataScale)
+        val pRight = Offset(cx + r * right * dataScale, cy)
+        val pBottom = Offset(cx, cy + r * bottom * dataScale)
+        val pLeft = Offset(cx - r * left * dataScale, cy)
         val data = Path().apply {
             moveTo(pTop.x, pTop.y); lineTo(pRight.x, pRight.y)
             lineTo(pBottom.x, pBottom.y); lineTo(pLeft.x, pLeft.y); close()
@@ -509,46 +718,83 @@ private fun RadarChart(
         drawPath(data, color = Primary600.copy(alpha = 0.6f), style = Stroke(width = 1.dp.toPx()))
 
         // 꼭짓점 점 (Purple/600)
-        listOf(pTop, pRight, pBottom, pLeft).forEach { drawCircle(Primary600, radius = dot, center = it) }
+        listOf(pTop, pRight, pBottom, pLeft).forEach {
+            drawCircle(Primary600, radius = dot * dataScale, center = it)
+        }
     }
 }
 
 // 범례 행: [체크닷 + 라벨] ... [점수 / 만점]
 @Composable
-private fun LegendRow(c: Competency) {
-    val maxed = c.score >= c.maxScore
+private fun LegendRow(
+    competency: Competency,
+    showFinalScore: Boolean,
+    showCompletionCheck: Boolean,
+) {
+    val startScore = (competency.score - competency.gain).coerceAtLeast(0)
+    val displayedScore by animateIntAsState(
+        targetValue = if (showFinalScore) competency.score else startScore,
+        animationSpec = tween(durationMillis = 650, easing = FastOutSlowInEasing),
+        label = "competencyScore",
+    )
+    val becomesMaxed = competency.score >= competency.maxScore
+    val checkFillScale by animateFloatAsState(
+        targetValue = if (showCompletionCheck && becomesMaxed) 1f else 0f,
+        animationSpec = tween(durationMillis = 240, easing = FastOutSlowInEasing),
+        label = "competencyCheckFill",
+    )
+    val checkAlpha by animateFloatAsState(
+        targetValue = if (showCompletionCheck && becomesMaxed) 1f else 0f,
+        animationSpec = tween(durationMillis = 160, delayMillis = 140, easing = FastOutSlowInEasing),
+        label = "competencyCheckMark",
+    )
     Row(
         modifier = Modifier.fillMaxWidth(),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.SpaceBetween,
     ) {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            // 만점 달성 = Purple 채움 + 흰 체크 / 미달 = 빈 원(Gray/300 테두리, 체크 없음)
-            if (maxed) {
+            // 원의 자리는 항상 고정. 만점 항목만 점수 상승 뒤 중앙에서 채워지고 체크가 나타난다.
+            if (becomesMaxed) {
                 Box(
-                    modifier = Modifier.size(19.dp).clip(CircleShape).background(Primary600),
+                    modifier = Modifier
+                        .size(19.dp)
+                        .clip(CircleShape)
+                        .border(1.dp, Gray300, CircleShape),
                     contentAlignment = Alignment.Center,
                 ) {
+                    Box(
+                        modifier = Modifier
+                            .size(19.dp)
+                            .graphicsLayer {
+                                scaleX = checkFillScale
+                                scaleY = checkFillScale
+                            }
+                            .clip(CircleShape)
+                            .background(Primary600),
+                    )
                     Icon(
                         painter = painterResource(R.drawable.ic_benefit_check),
                         contentDescription = null,
                         tint = White,
-                        modifier = Modifier.size(13.dp),
+                        modifier = Modifier
+                            .size(13.dp)
+                            .graphicsLayer { alpha = checkAlpha },
                     )
                 }
             } else {
                 Box(modifier = Modifier.size(19.dp).clip(CircleShape).border(1.dp, Gray300, CircleShape))
             }
-            Text(text = c.legendLabel, style = TqType.BodyM.figma(), color = Gray800) // 14/400
+            Text(text = competency.legendLabel, style = TqType.BodyM.figma(), color = Gray800) // 14/400
         }
         // 점수 / 만점 — 슬래시 양쪽 균등 간격
         Text(
             text = buildAnnotatedString {
-                append(c.score.toString())
-                withStyle(SpanStyle(color = Gray400, fontWeight = FontWeight.Normal)) { append(" / ${c.maxScore}") }
+                append(displayedScore.toString())
+                withStyle(SpanStyle(color = Gray400, fontWeight = FontWeight.Normal)) { append(" / ${competency.maxScore}") }
             },
             style = TqType.LabelL.figma(), // 14/500 (점수), 슬래시부는 span으로 400
-            color = if (maxed) Primary600 else Gray600,
+            color = if (displayedScore >= competency.maxScore) Primary600 else Gray600,
         )
     }
 }

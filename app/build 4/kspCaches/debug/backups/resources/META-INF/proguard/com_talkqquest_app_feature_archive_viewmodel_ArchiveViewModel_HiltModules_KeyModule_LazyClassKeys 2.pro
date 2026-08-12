@@ -1,0 +1,1 @@
+-keep,allowobfuscation,allowshrinking class com.talkqquest.app.feature.archive.viewmodel.ArchiveViewModel

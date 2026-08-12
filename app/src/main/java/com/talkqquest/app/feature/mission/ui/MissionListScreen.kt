@@ -8,8 +8,13 @@ import androidx.compose.animation.shrinkVertically
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.animateIntOffsetAsState
+import androidx.compose.animation.core.animateIntSizeAsState
+import androidx.compose.animation.core.snap
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -51,11 +56,21 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.drawscope.clipRect
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.unit.IntSize
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.positionInWindow
+import androidx.compose.ui.platform.LocalDensity
+import kotlin.math.roundToInt
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
@@ -191,6 +206,18 @@ private fun MissionListScreen(
                             onBack = onBack,
                             homeContext = homeContext,
                         )
+                        if (uiState.filteredMissions.isEmpty()) {
+                            Box(
+                                modifier = Modifier.fillMaxSize(),
+                                contentAlignment = Alignment.Center,
+                            ) {
+                                Text(
+                                    text = "해당하는 미션이 없어요",
+                                    style = TqType.BodyM.figma(),
+                                    color = Gray500,
+                                )
+                            }
+                        }
                         // 스크롤 유도 마스크 (CSS "스크롤 유도 마스크"): left 16 · 폭 360 · top 670 · 높이 68
                         // = 하단 네비 알약 위에서 목록이 배경색으로 사라짐 (투명→Gray50).
                         // ★재대조(2026-07-22): 예전엔 화면 맨 밑(852)에 전체폭으로 붙여 알약 뒤에 가려
@@ -229,7 +256,10 @@ private fun MissionListContent(
     // 미션 id가 아니라 화면 위에서부터의 카드 슬롯을 유지한다. 결과가 줄면 위쪽 슬롯은
     // 제자리에 둔 채 내용만 새 결과로 바꾸고, 초과한 아래 슬롯만 접는다. 결과가 늘면 기존
     // 슬롯은 그대로 두고 새 아래 슬롯만 사라짐의 역순으로 펼친다.
-    LaunchedEffect(targetMissions) {
+    // 북마크 변경은 필터 전환이 아니다. 저장 여부까지 포함한 MissionListItem 목록을 key로
+    // 쓰면 북마크를 누를 때도 카드 슬롯 전환이 다시 실행된다. 필터와 카드 구성(id)이
+    // 실제로 바뀔 때만 전환을 시작한다.
+    LaunchedEffect(uiState.selectedFilter, targetMissions.map { it.id }) {
         val previousSlots = animatedSlots
         val transitionSlotCount = maxOf(previousSlots.size, targetMissions.size)
         animatedSlots = List(transitionSlotCount) { index ->
@@ -320,25 +350,14 @@ private fun MissionListContent(
             }
         }
 
-        if (targetMissions.isEmpty() && animatedSlots.isEmpty()) {
-            item(key = "mission-filter-empty") {
-                // 빈 목록 화면이 피그마에 없음 → 임시 문구. TODO(디자인): 빈 상태 디자인 확정 시 교체.
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(vertical = 80.dp),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Text(text = "해당하는 미션이 없어요", style = TqType.BodyM.figma(), color = Gray500)
-                }
-            }
-        }
-
         items(
             count = animatedSlots.size,
             key = { index -> "mission-filter-slot-$index" },
         ) { index ->
-            val mission = animatedSlots[index]
+            val slotMission = animatedSlots[index]
+            // 슬롯의 제목·메타 전환 상태는 유지하되, 북마크는 최신 목록 값을 바로 사용한다.
+            // 따라서 저장 여부만 바뀌었을 때 카드 슬롯 애니메이션은 재실행되지 않는다.
+            val mission = targetMissions.firstOrNull { it.id == slotMission.id } ?: slotMission
             AnimatedVisibility(
                 visible = index < visibleSlotCount,
                 enter = fadeIn(tween(MissionFilterAnimationMillis, easing = FastOutSlowInEasing)) +
@@ -375,16 +394,122 @@ private fun MissionFilterChips(
     selectedFilter: String,
     onFilterSelect: (String) -> Unit,
 ) {
-    FlowRow(
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-        verticalArrangement = Arrangement.spacedBy(10.dp),
+    var bounds by remember { mutableStateOf<Map<String, Pair<IntOffset, IntSize>>>(emptyMap()) }
+    var parentOffset by remember { mutableStateOf(IntOffset.Zero) }
+    var hasMovedSelection by remember { mutableStateOf(false) }
+    val density = LocalDensity.current
+    val selectedBounds = bounds[selectedFilter]
+    val animatedOffset by animateIntOffsetAsState(
+        targetValue = selectedBounds?.first ?: IntOffset.Zero,
+        animationSpec = if (hasMovedSelection) tween(260, easing = FastOutSlowInEasing) else snap(),
+        label = "missionFilterSelectionOffset",
+    )
+    val animatedSize by animateIntSizeAsState(
+        targetValue = selectedBounds?.second ?: IntSize.Zero,
+        animationSpec = if (hasMovedSelection) tween(260, easing = FastOutSlowInEasing) else snap(),
+        label = "missionFilterSelectionSize",
+    )
+    val selectionAlpha by animateFloatAsState(
+        targetValue = if (selectedBounds != null) 1f else 0f,
+        animationSpec = tween(220, easing = FastOutSlowInEasing),
+        label = "missionFilterSelectionAlpha",
+    )
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .onGloballyPositioned { coordinates ->
+                val position = coordinates.positionInWindow()
+                parentOffset = IntOffset(position.x.roundToInt(), position.y.roundToInt())
+            },
     ) {
-        missionFilters.forEach { filter ->
-            MissionFilterChip(
-                label = filter,
-                selected = filter == selectedFilter,
-                onClick = { onFilterSelect(filter) },
+        bounds.values.forEach { (offset, size) ->
+            Box(
+                Modifier
+                    .offset { offset }
+                    .size(
+                        with(density) { size.width.toDp() },
+                        with(density) { size.height.toDp() },
+                    )
+                    .softShadow(
+                        color = Gray1000.copy(alpha = 0.01f),
+                        offsetY = 8.dp,
+                        blur = 24.dp,
+                        cornerRadius = 20.dp,
+                    )
+                    .clip(RoundedCornerShape(20.dp))
+                    .background(White),
             )
+        }
+        if (animatedSize != IntSize.Zero) {
+            Box(
+                Modifier
+                    .offset { animatedOffset }
+                    .size(
+                        with(density) { animatedSize.width.toDp() },
+                        with(density) { animatedSize.height.toDp() },
+                    )
+                    .graphicsLayer { alpha = selectionAlpha }
+                    .clip(RoundedCornerShape(20.dp))
+                    .background(Primary600),
+            )
+        }
+        FlowRow(
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp),
+        ) {
+            missionFilters.forEach { filter ->
+                MissionFilterChip(
+                    label = filter,
+                    selected = filter == selectedFilter,
+                    selectionOverlay = true,
+                    onClick = {
+                        if (filter != selectedFilter) hasMovedSelection = true
+                        onFilterSelect(filter)
+                    },
+                    modifier = Modifier.onGloballyPositioned { coordinates ->
+                        val position = coordinates.positionInWindow()
+                        bounds = bounds + (
+                            filter to (
+                                IntOffset(
+                                    position.x.roundToInt() - parentOffset.x,
+                                    position.y.roundToInt() - parentOffset.y,
+                                ) to coordinates.size
+                            )
+                        )
+                    },
+                )
+            }
+        }
+        // 기본 글자는 회색으로 유지하고 보라색 선택판과 실제로 겹치는 부분에만
+        // 같은 위치의 흰 글자를 드러내 선택판이 지나가는 속도대로 색이 채워지게 한다.
+        FlowRow(
+            modifier = Modifier.drawWithContent {
+                clipRect(
+                    left = animatedOffset.x.toFloat(),
+                    top = animatedOffset.y.toFloat(),
+                    right = (animatedOffset.x + animatedSize.width).toFloat(),
+                    bottom = (animatedOffset.y + animatedSize.height).toFloat(),
+                ) {
+                    this@drawWithContent.drawContent()
+                }
+            },
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp),
+        ) {
+            missionFilters.forEach { filter ->
+                Box(
+                    modifier = Modifier
+                        .height(34.dp)
+                        .padding(horizontal = 18.dp),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Text(
+                        text = filter,
+                        style = TqType.BodyM.copy(fontWeight = FontWeight.Medium).figma(),
+                        color = Primary50,
+                    )
+                }
+            }
         }
     }
 }
@@ -396,28 +521,41 @@ internal fun MissionFilterChip( // 저장 목록 화면에서도 재사용 (완�
     label: String,
     selected: Boolean,
     onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    selectionOverlay: Boolean = false,
 ) {
     val shape = RoundedCornerShape(20.dp)
     val base = if (selected) {
-        Modifier.clip(shape).background(Primary600)
-    } else {
         Modifier
-            .softShadow(color = Gray1000.copy(alpha = 0.01f), offsetY = 8.dp, blur = 24.dp, cornerRadius = 20.dp)
             .clip(shape)
-            .background(White)
+            .background(if (selectionOverlay) Color.Transparent else Primary600)
+    } else {
+        if (selectionOverlay) {
+            Modifier.clip(shape).background(Color.Transparent)
+        } else {
+            Modifier
+                .softShadow(color = Gray1000.copy(alpha = 0.01f), offsetY = 8.dp, blur = 24.dp, cornerRadius = 20.dp)
+                .clip(shape)
+                .background(White)
+        }
     }
     Box(
-        modifier = base
-            .clickable(onClick = onClick)
+        modifier = modifier.then(base)
+            .clickable(
+                interactionSource = remember { MutableInteractionSource() },
+                indication = null,
+                onClick = onClick,
+            )
             .height(34.dp)
             .padding(horizontal = 18.dp),
         contentAlignment = Alignment.Center,
     ) {
         Text(
             text = label,
-            // CSS: 선택 = 14/22 굵기 500, 미선택 = 14/22 굵기 400 (Body/M)
-            style = if (selected) TqType.BodyM.copy(fontWeight = FontWeight.Medium).figma() else TqType.BodyM.figma(),
-            color = if (selected) Primary50 else Gray900,
+            // 선택 전환 때 굵기가 바뀌면 hug 너비와 뒤 칩 위치가 흔들리므로
+            // 피그마 선택 칩 기준인 14/22 Medium으로 고정하고 색상만 전환한다.
+            style = TqType.BodyM.copy(fontWeight = FontWeight.Medium).figma(),
+            color = if (selectionOverlay) Gray900 else if (selected) Primary50 else Gray900,
         )
     }
 }

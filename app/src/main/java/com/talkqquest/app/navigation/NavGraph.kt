@@ -752,7 +752,7 @@ fun NavGraph(
                         popUpTo(Screen.HOME)
                     }
                 },
-                onBack = { navController.popBackStack() },
+                onBack = { navController.popBackStack(Screen.HOME, inclusive = false) },
             )
         }
 
@@ -1158,4 +1158,3 @@ private fun Uri.toProfileImagePart(context: Context): MultipartBody.Part? {
     val requestBody = bytes.toRequestBody(mimeType.toMediaTypeOrNull())
     return MultipartBody.Part.createFormData("image", "profile_image.$extension", requestBody)
 }
-

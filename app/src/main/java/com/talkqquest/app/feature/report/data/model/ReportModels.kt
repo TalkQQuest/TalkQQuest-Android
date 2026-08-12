@@ -1,9 +1,12 @@
 package com.talkqquest.app.feature.report.data.model
 
+import kotlinx.serialization.Serializable
+import kotlin.math.roundToInt
+
 // 리포트 화면 모델 (명세 E102 — 응답 필드가 명세에 없어 화면(UI CSS) 기준으로 정의.
 // TODO(서버 연동): GET /api/v1/reports/monthly · weekly-compare 응답 확정되면 필드 맞춤)
 
-// 성장 리포트 탭
+// ── 성장 리포트(보관함에서 진입, C 담당 ArchiveReportScreen 재사용) — 옛 레벨/추이/카테고리 형태 ──
 data class GrowthReport(
     val prevLevel: Int,                     // 저번 주 레벨
     val currentLevel: Int,                  // 이번 주 레벨
@@ -17,6 +20,28 @@ data class GrowthReport(
 data class CategoryRank(
     val name: String,  // 카테고리 이름 (여행/음식/…)
     val count: Int,    // 완료 횟수
+)
+
+// ── 성장 리포트(B 담당, UI-14 신규) — 실전 티어 + 핵심 역량(마름모 4축). 성장 티어 시스템 시각화 ──
+// TODO(서버 growthTotals merge 후): kindness/initiative/empathy/questionLink 누적값 → 티어·별·역량 점수 계산.
+data class GrowthTierReport(
+    val tierName: String,                    // 현재 티어 이름 ("골드")
+    val tierStars: Int,                      // 채운 별 수 0..3 (티어 내 단계)
+    val nextStarsNeeded: Int,                // 다음 티어까지 남은 별 수 ("별 N개")
+    val nextTierName: String,                // 다음 티어 이름 ("플래티넘")
+    val competencies: List<Competency>,      // 핵심 역량 4축 (친절/주도/공감/질문)
+)
+
+// 핵심 역량 4축 — 레이더(마름모) 위치·범례·체크 계산에 씀.
+enum class CompetencyAxis { KINDNESS, INITIATIVE, EMPATHY, QUESTION_LINK }
+
+data class Competency(
+    val axis: CompetencyAxis,   // 마름모 축 매핑(위=친절/오른=주도/아래=공감/왼=질문)
+    val label: String,          // 레이더 축 라벨 ("친절한 태도")
+    val legendLabel: String,    // 범례 라벨 (CSS상 공감은 축="공감 표현"/범례="공감 능력"로 달라 분리)
+    val score: Int,             // 현재 점수 0..maxScore
+    val gain: Int,              // 이번에 획득한 점수 ("+70")
+    val maxScore: Int = 300,    // 축당 만점(300점 = 별 1개)
 )
 
 // 주간 비교 리포트 탭
@@ -36,4 +61,121 @@ data class MetricChange(
     val name: String,   // 지표 이름 (친절한 태도/대화 주도/…)
     val lastWeek: Int,  // 지난주 점수
     val thisWeek: Int,  // 이번 주 점수
+)
+
+// ── 서버 DTO — dev 백엔드 report.dto.ts 대조(2026-07-25) ──
+// GET /api/v1/reports/growth
+@Serializable
+data class GrowthReportResponse(
+    val levelBefore: Int = 0,
+    val levelAfter: Int = 0,
+    val weeklyTrend: List<WeeklyTrendPoint> = emptyList(),
+    val trendChangeRate: Double = 0.0, // 성장 추이 우측 "+N%" (rate라 소수 가능 → 표시 시 반올림)
+    val topCategories: List<TopCategoryDto> = emptyList(),
+    val missionProgress: MissionProgressDto = MissionProgressDto(),
+)
+
+@Serializable
+data class WeeklyTrendPoint(val week: String = "", val score: Int = 0)
+
+@Serializable
+data class TopCategoryDto(val category: String = "", val count: Int = 0)
+
+@Serializable
+data class MissionProgressDto(val completed: Int = 0, val total: Int = 0)
+
+// GET /api/v1/reports/weekly-compare
+@Serializable
+data class WeeklyCompareResponse(
+    val thisWeek: WeeklyActivityDto = WeeklyActivityDto(),
+    val lastWeek: WeeklyActivityDto = WeeklyActivityDto(),
+    val xpChangeRate: Double = 0.0,
+    val overallScoreChange: OverallScoreChangeDto = OverallScoreChangeDto(),
+    val metricChanges: List<WeeklyMetricChangeDto> = emptyList(),
+    val highlights: List<String> = emptyList(),
+)
+
+@Serializable
+data class WeeklyActivityDto(
+    val completedMissionCount: Int = 0,
+    val xpEarned: Int = 0,
+    val metrics: WeeklyMetricsDto = WeeklyMetricsDto(),
+)
+
+@Serializable
+data class WeeklyMetricsDto(
+    val kindness: Int = 0,
+    val initiative: Int = 0,
+    val empathy: Int = 0,
+    val questionLink: Int = 0,
+)
+
+@Serializable
+data class OverallScoreChangeDto(val from: Int = 0, val to: Int = 0, val delta: Int = 0)
+
+@Serializable
+data class WeeklyMetricChangeDto(
+    val key: String = "",
+    val label: String = "",
+    val from: Int = 0,
+    val to: Int = 0,
+    val delta: Int = 0,
+)
+
+// POST /api/v1/reports (리포트 저장 시트)
+// 2026-08-10 백엔드 변경: 바디가 `type` → `conversationId`. 성장 리포트 전용이 됐다.
+// 스웨거 확인(2026-08-11): SaveReportRequestDto = { conversationId: string } (required).
+// conversationId는 피드백 응답(FeedbackDetailResponse.conversationId)에서 받아 route로 넘어온다.
+@Serializable
+data class SaveReportRequest(val conversationId: String)
+
+@Serializable
+data class SaveReportResponse(
+    val reportId: String = "",
+    val type: String = "",
+    val period: String = "",
+    val createdAt: String = "",
+)
+
+// GET /api/v1/reports (저장한 리포트 목록) — 시트 "최근 저장한 리포트"용.
+@Serializable
+data class ReportListResponse(
+    val reports: List<ReportListItem> = emptyList(),
+)
+
+@Serializable
+data class ReportListItem(
+    val id: String = "",
+    val type: String = "", // growth | weekly_compare — 재저장 시 같은 종류로 다시 저장하려고 씀
+    val period: String = "",
+    val title: String = "",
+    val createdAt: String = "",
+)
+
+// DELETE /api/v1/reports/{reportId} (저장 해제)
+@Serializable
+data class DeleteReportResponse(
+    val reportId: String = "",
+    val deleted: Boolean = false,
+)
+
+// ── 매퍼: 서버 → 화면 모델 ──
+// (보관함 성장 리포트용 옛 매퍼 — 아카이브가 씀)
+fun GrowthReportResponse.toGrowthReport() = GrowthReport(
+    prevLevel = levelBefore,
+    currentLevel = levelAfter,
+    growthPercent = trendChangeRate.roundToInt(),
+    weekLabels = weeklyTrend.map { it.week },
+    categoryRanks = topCategories.map { CategoryRank(name = it.category, count = it.count) },
+    completedMissions = missionProgress.completed,
+    totalMissions = missionProgress.total,
+)
+// B 성장 리포트(GrowthTierReport)는 growthTotals 대개편 전이라 서버 매퍼 없이 stub(ReportRepository).
+
+fun WeeklyCompareResponse.toWeeklyCompareReport() = WeeklyCompareReport(
+    metrics = metricChanges.map {
+        MetricChange(name = it.label.ifBlank { it.key }, lastWeek = it.from, thisWeek = it.to)
+    },
+    // TODO(협의): 서버가 통문장으로 줘서 앞 키워드 보라 강조 분리를 못 함 — 전부 rest로(검정). 분리 규칙 정해지면 조정.
+    highlights = highlights.map { HighlightItem(emphasis = "", rest = it) },
 )

@@ -71,7 +71,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 // ── AI 피드백 요약 (CSS "AI 피드백" 프레임 전사) ──
-// 로봇(161x160) → 문구 → 분석 카드(4항목: 이름+바+점수+chevron) → "상세 리포트"/"홈으로" 버튼.
+// 로봇(161x160) → 문구 → 분석 카드(4항목: 이름+바+점수+chevron) → "성장 리포트"/"홈으로" 버튼.
 // 하단 네비 없음(CSS에 알약 없음) — bottomBarRoutes 미등록.
 // CSS와 다른 점(합의됨):
 //  - 버튼 열만 CSS가 left 17/폭 362로 콘텐츠(16/361)와 1px 어긋남 → 16/361 통일(디자이너 확인거리)
@@ -82,7 +82,7 @@ import kotlinx.coroutines.launch
 fun FeedbackScreen(
     onBack: () -> Unit = {},
     onItemClick: (Int) -> Unit = {},
-    onDetailReport: (String) -> Unit = {}, // 미션 제목을 함께 넘김 — 리포트 저장 카드 제목에 쓰임
+    onDetailReport: (String, String) -> Unit = { _, _ -> }, // 미션 제목(저장 카드 제목) + 대화 id(POST /reports 바디)
     onHome: () -> Unit = {},
     viewModel: FeedbackViewModel = hiltViewModel(),
 ) {
@@ -102,7 +102,7 @@ private fun FeedbackScreen(
     uiState: FeedbackUiState,
     onBack: () -> Unit = {},
     onItemClick: (Int) -> Unit = {},
-    onDetailReport: (String) -> Unit = {},
+    onDetailReport: (String, String) -> Unit = { _, _ -> },
     onHome: () -> Unit = {},
     onRetry: () -> Unit = {},
 ) = FitDesign { // 작은 화면에선 디자인(393x852) 통째 축소 — 다른 화면들과 동일
@@ -140,7 +140,7 @@ private fun FeedbackContent(
     result: FeedbackResult,
     onBack: () -> Unit,
     onItemClick: (Int) -> Unit,
-    onDetailReport: (String) -> Unit,
+    onDetailReport: (String, String) -> Unit,
     onHome: () -> Unit,
     initialStage: Int = 0, // 프리뷰용: 1이면 연출 끝 상태로 그림
 ) {
@@ -242,8 +242,8 @@ private fun FeedbackContent(
                 .graphicsLayer { alpha = buttonsAlpha },
         ) {
             TqButton(
-                text = "상세 리포트",
-                onClick = { if (stage >= 1) onDetailReport(result.missionTitle) },
+                text = "성장 리포트",
+                onClick = { if (stage >= 1) onDetailReport(result.missionTitle, result.conversationId.orEmpty()) },
                 modifier = Modifier.fillMaxWidth(),
             )
             Spacer(Modifier.height(8.dp)) // 버튼 사이 (CSS gap 8)
@@ -406,7 +406,7 @@ private fun FeedbackBandPreview(k: Int, i: Int, e: Int, q: Int) {
             FeedbackContent(
                 result = FeedbackResult(
                     missionTitle = "처음 보는 사람에게 짧게 인사하기",
-                    nickname = "다민",
+                    nickname = "소다123",
                     kindnessScore = k,
                     initiativeScore = i,
                     empathyScore = e,
@@ -417,7 +417,7 @@ private fun FeedbackBandPreview(k: Int, i: Int, e: Int, q: Int) {
                 ),
                 onBack = {},
                 onItemClick = {},
-                onDetailReport = {},
+                onDetailReport = { _, _ -> },
                 onHome = {},
                 initialStage = 1,
             )

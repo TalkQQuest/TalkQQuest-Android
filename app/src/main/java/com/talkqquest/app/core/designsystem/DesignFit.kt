@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.ime
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBars
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
@@ -14,9 +15,13 @@ import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.staticCompositionLocalOf
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.layout.layout
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.Density
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 
 // ── 작은 화면 대응: 디자인 통째 축소 (사용자 결정) ──
@@ -37,10 +42,36 @@ import androidx.compose.ui.unit.dp
 
 // 현재 적용된 축소 비율 (1 = 원본). 화면 밖 요소(하단 알약)와 맞닿는 여백 보정용.
 val LocalDesignScale = staticCompositionLocalOf { 1f }
+val LocalStatusBarCompensation = staticCompositionLocalOf { 0.dp }
+
+// FitDesign이 디자인 상태바 높이를 맞추려고 위에 보충한 띠까지 딤이 덮도록 영역을 확장한다.
+fun Modifier.coverStatusBarCompensation(compensation: Dp): Modifier = layout { measurable, constraints ->
+    val topPx = compensation.roundToPx()
+    if (topPx == 0) {
+        val placeable = measurable.measure(constraints)
+        layout(placeable.width, placeable.height) { placeable.placeRelative(0, 0) }
+    } else {
+        val expandedMaxHeight = if (constraints.maxHeight == Constraints.Infinity) {
+            Constraints.Infinity
+        } else {
+            constraints.maxHeight + topPx
+        }
+        val placeable = measurable.measure(
+            constraints.copy(
+                minHeight = constraints.minHeight + topPx,
+                maxHeight = expandedMaxHeight,
+            ),
+        )
+        layout(placeable.width, placeable.height - topPx) {
+            placeable.placeRelative(0, -topPx)
+        }
+    }
+}
 
 @Composable
 fun FitDesign(
     compensateStatusBar: Boolean = true, // false = 중첩 사용(팝업 등)에서 상태바 보정 이중 적용 방지
+    contentAlignment: Alignment? = null,
     content: @Composable () -> Unit,
 ) {
     BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
@@ -61,16 +92,32 @@ fun FitDesign(
         // 디자인 상태바(40 x 축소율)보다 실제 상태바가 낮은 만큼 위 여백으로 보충
         val statusShortfall =
             if (compensateStatusBar) (40.dp * scale - statusInset).coerceAtLeast(0.dp) else 0.dp
-        Box(modifier = Modifier.fillMaxSize().padding(top = statusShortfall)) {
-            if (scale < 1f) {
-                CompositionLocalProvider(
-                    LocalDensity provides Density(base.density * scale, base.fontScale),
-                    LocalDesignScale provides scale,
-                ) {
+        val contentSlot: @Composable () -> Unit = {
+            CompositionLocalProvider(LocalStatusBarCompensation provides statusShortfall) {
+                if (scale < 1f) {
+                    CompositionLocalProvider(
+                        LocalDensity provides Density(base.density * scale, base.fontScale),
+                        LocalDesignScale provides scale,
+                    ) {
+                        content()
+                    }
+                } else {
                     content()
                 }
+            }
+        }
+        Box(modifier = Modifier.fillMaxSize().padding(top = statusShortfall)) {
+            if (contentAlignment == null) {
+                contentSlot()
             } else {
-                content()
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = contentAlignment,
+                ) {
+                    Box(modifier = Modifier.size(width = 393.dp * scale, height = 852.dp * scale)) {
+                        contentSlot()
+                    }
+                }
             }
         }
     }

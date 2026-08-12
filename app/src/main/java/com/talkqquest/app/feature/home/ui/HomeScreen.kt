@@ -1,12 +1,15 @@
 package com.talkqquest.app.feature.home.ui
 
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.PaddingValues
@@ -18,10 +21,12 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.requiredSize
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -29,7 +34,14 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.ripple
 import androidx.compose.material3.Text
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.CubicBezierEasing
+import androidx.compose.animation.core.LinearOutSlowInEasing
+import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
@@ -37,17 +49,37 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ColorFilter
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.BlendMode
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.lerp
+import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.TransformOrigin
+import androidx.compose.ui.graphics.drawscope.clipPath
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.withStyle
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.sp
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.text.style.LineBreak
@@ -60,9 +92,16 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
+import kotlin.math.abs
 import com.talkqquest.app.R
 import com.talkqquest.app.core.designsystem.Error
 import com.talkqquest.app.core.designsystem.FitDesign
+import androidx.compose.foundation.border
+import androidx.compose.ui.draw.rotate
+import androidx.compose.ui.layout.ContentScale
+import com.talkqquest.app.core.designsystem.Gray100
 import com.talkqquest.app.core.designsystem.Gray1000
 import com.talkqquest.app.core.designsystem.Gray200
 import com.talkqquest.app.core.designsystem.Gray300
@@ -82,14 +121,13 @@ import com.talkqquest.app.core.designsystem.TqType
 import com.talkqquest.app.core.designsystem.White
 import com.talkqquest.app.core.designsystem.softShadow
 import com.talkqquest.app.core.designsystem.component.LevelUpBurst
+import com.talkqquest.app.core.designsystem.component.TierPromotionSheet
 import com.talkqquest.app.core.designsystem.component.TqButton
 import com.talkqquest.app.core.designsystem.component.TqButtonSize
 import com.talkqquest.app.feature.home.data.model.HomeSummary
 import com.talkqquest.app.feature.home.data.model.TodayMission
 import com.talkqquest.app.feature.home.viewmodel.HomeUiState
 import com.talkqquest.app.feature.home.viewmodel.HomeViewModel
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
 
 // ── 화면 = 2단으로 분리 (state hoisting) ──
 // (1) HomeScreen(viewModel): ViewModel과 연결하는 바깥 껍데기. 실제 앱에서 이걸 씀.
@@ -102,26 +140,44 @@ fun HomeScreen(
     onStartMissionClick: (String) -> Unit = {}, // 오늘의 미션 "미션 시작하기" → 미션 상세
     onOtherMissionsClick: () -> Unit = {},    // "다른 미션 보기" → 미션 목록
     onNotificationClick: () -> Unit = {},     // 상단 벨 → 알림창
+    onWeeklyReportClick: () -> Unit = {},     // 주간 비교 리포트 도착 모달 "보러가기" → 주간 비교 리포트
+    onBadgeCollectionClick: () -> Unit = {}, // 나의 배지 컬렉션 → 프로필 배지 목록
+    onSheetTopChange: (Float?) -> Unit = {},  // 티어 승급 안내 시트가 하단 네비를 덮는 동안 네비 가림
+    onModalSheetChange: (Boolean) -> Unit = {}, // 티어 시트가 떠 있는 동안 탭 스와이프를 끄기 위한 신호
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    var xpAnimationTrigger by rememberSaveable { mutableIntStateOf(0) }
     // 화면 복귀 시(미션 완료 후 등) XP·레벨 최신값 조용히 재조회 — 미션 목록과 같은 패턴
-    LifecycleEventEffect(Lifecycle.Event.ON_RESUME) { viewModel.loadHome(showLoading = false) }
+    LifecycleEventEffect(Lifecycle.Event.ON_RESUME) {
+        xpAnimationTrigger++
+        viewModel.loadHome(showLoading = false)
+    }
     HomeScreen(
         uiState = uiState,
+        xpAnimationTrigger = xpAnimationTrigger,
         onRetry = viewModel::loadHome,
         onStartMissionClick = onStartMissionClick,
         onOtherMissionsClick = onOtherMissionsClick,
         onNotificationClick = onNotificationClick,
+        onWeeklyReportClick = onWeeklyReportClick,
+        onBadgeCollectionClick = onBadgeCollectionClick,
+        onSheetTopChange = onSheetTopChange,
+        onModalSheetChange = onModalSheetChange,
     )
 }
 
 @Composable
 private fun HomeScreen(
     uiState: HomeUiState,
+    xpAnimationTrigger: Int = 0,
     onRetry: () -> Unit,
     onStartMissionClick: (String) -> Unit = {},
     onOtherMissionsClick: () -> Unit = {},
     onNotificationClick: () -> Unit = {},
+    onWeeklyReportClick: () -> Unit = {},
+    onBadgeCollectionClick: () -> Unit = {},
+    onSheetTopChange: (Float?) -> Unit = {},
+    onModalSheetChange: (Boolean) -> Unit = {},
 ) = FitDesign { // 작은 화면에선 디자인(393x852) 통째 축소 — 미션 화면들과 동일하게 스크롤 없이 한 화면에
     Box(
         modifier = Modifier
@@ -145,9 +201,14 @@ private fun HomeScreen(
             uiState.summary != null -> {
                 HomeContent(
                     summary = uiState.summary,
+                    xpAnimationTrigger = xpAnimationTrigger,
                     onStartMissionClick = onStartMissionClick,
                     onOtherMissionsClick = onOtherMissionsClick,
                     onNotificationClick = onNotificationClick,
+                    onWeeklyReportClick = onWeeklyReportClick,
+                    onBadgeCollectionClick = onBadgeCollectionClick,
+                    onSheetTopChange = onSheetTopChange,
+                    onModalSheetChange = onModalSheetChange,
                 )
             }
         }
@@ -182,38 +243,104 @@ private fun HomeCard(
 @Composable
 private fun HomeContent(
     summary: HomeSummary,
+    xpAnimationTrigger: Int = 0,
     onStartMissionClick: (String) -> Unit = {},
     onOtherMissionsClick: () -> Unit = {},
     onNotificationClick: () -> Unit = {},
+    onWeeklyReportClick: () -> Unit = {},
+    onBadgeCollectionClick: () -> Unit = {},
+    onSheetTopChange: (Float?) -> Unit = {},
+    onModalSheetChange: (Boolean) -> Unit = {},
 ) {
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .verticalScroll(rememberScrollState())
-            .statusBarsPadding()
-            // CSS: 카드 묶음 Frame 430 left 16, 폭 362 → 우측 여백 15 (좌우 비대칭)
-            .padding(start = 16.dp, end = 15.dp),
-    ) {
-        HomeHeader(
-            nickname = summary.nickname,
-            hasNewNotification = summary.hasNewNotification,
-            onNotificationClick = onNotificationClick,
-        )
-        Spacer(Modifier.height(18.dp)) // CSS: 인사(bottom ~132.67) → 콘텐츠(top 151) ≈ 18
-        HomeLevelCard(
-            level = summary.level,
-            currentXp = summary.currentXp,
-            nextLevelXp = summary.nextLevelXp,
-        )
-        Spacer(Modifier.height(16.dp))
-        summary.todayMission?.let { mission ->
-            HomeMissionCard(mission = mission, onStartClick = { onStartMissionClick(mission.id) })
+    // 검증용(임시): 상단 벨 탭으로 주간 비교 리포트 도착 모달 토글. 실제 트리거는 summary.hasNewWeeklyReport.
+    var showWeekly by remember { mutableStateOf(summary.hasNewWeeklyReport) }
+    var missionHasLongText by remember { mutableStateOf(false) }
+    val scrollState = rememberScrollState()
+    // 실전 티어 ⓘ 탭 → 티어 승급 안내 시트(성장 리포트와 동일 공용 시트).
+    var showTierHelp by remember { mutableStateOf(false) }
+    // 콘텐츠가 떠 있는 하단 네비(118 몫) 위로 다 들어가게 "필요한 만큼만" 균등 축소.
+    // 짧은 미션이면 자연 높이가 여유에 들어가 축소 0 = 피그마 그대로. 넘치면 넘치는 만큼만.
+    // 축소는 그리기 단계(graphicsLayer)만 → 레이아웃 크기 불변 → 측정 안정(진동/깜빡임 없음).
+    // scale을 여기서 val로 계산 → 홈·팝업이 같은 값을 써서 팝업도 같은 비율로 줄어듦(뒤 화면과 한 세트).
+    BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
+        val availPx = constraints.maxHeight - with(LocalDensity.current) { 118.dp.roundToPx() }
+        var naturalPx by remember { mutableIntStateOf(0) }
+        val scale = if (!missionHasLongText && naturalPx > 0 && naturalPx > availPx) {
+            (availPx.toFloat() / naturalPx).coerceIn(0.8f, 1f) // 하한 0.8 (과축소 방지)
+        } else 1f
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(bottom = 118.dp)
+                .verticalScroll(scrollState)
+        ) {
+            Column(modifier = Modifier.fillMaxWidth()) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .graphicsLayer {
+                            scaleX = scale
+                            scaleY = scale
+                            transformOrigin = TransformOrigin(0.5f, 0f) // 위쪽 기준(상단 고정, 아래로만 당겨 올림)
+                        }
+                        .onGloballyPositioned { naturalPx = it.size.height } // graphicsLayer는 레이아웃 크기 불변 → 안정
+                        .statusBarsPadding()
+                        // CSS: 카드 묶음 Frame 430 left 16, 폭 362 → 우측 여백 15 (좌우 비대칭)
+                        .padding(start = 16.dp, end = 15.dp),
+                ) {
+                HomeHeader(
+                    nickname = summary.nickname,
+                    hasNewNotification = summary.hasNewNotification,
+                    onNotificationClick = onNotificationClick, // 상단 벨 → 알림창
+                )
+                Spacer(Modifier.height(16.dp)) // CSS Frame427321631 gap 16 (인사 블록 → 카드 스택)
+                HomeLevelCard(
+                    level = summary.level,
+                    currentXp = summary.currentXp,
+                    nextLevelXp = summary.nextLevelXp,
+                    tierName = summary.tierName,
+                    tierStars = summary.tierStars,
+                    xpAnimationTrigger = xpAnimationTrigger,
+                    onTierInfoClick = { showTierHelp = true },
+                )
+                Spacer(Modifier.height(12.dp)) // CSS 카드 스택 gap 12
+                summary.todayMission?.let { mission ->
+                    HomeMissionCard(
+                        mission = mission,
+                        onStartClick = { onStartMissionClick(mission.id) },
+                        onTextLineCountChanged = { titleLines, descriptionLines ->
+                            missionHasLongText = titleLines >= 3 || descriptionLines >= 3
+                        },
+                    )
+                }
+                Spacer(Modifier.height(12.dp)) // CSS 카드 스택 gap 12
+                OtherMissionsCard(onClick = onOtherMissionsClick)
+                Spacer(Modifier.height(12.dp)) // CSS 카드 스택 gap 12 (다른 미션 보기 → 배지)
+                    BadgeCollectionCard(onClick = onBadgeCollectionClick)
+                }
+                // 콘텐츠가 화면에 모두 보여도 다른 미션 보기 카드 높이만큼 더 내려갈 수 있게 한다.
+                Spacer(Modifier.height(50.dp))
+            }
         }
-        Spacer(Modifier.height(16.dp))
-        OtherMissionsCard(onClick = onOtherMissionsClick)
-        // 떠 있는 하단 네비 가림 방지 여백. 네비 알약은 축소 대상 밖(MainScreen)이라
-        // 화면이 축소돼도 알약 크기는 그대로 → 여백은 축소분만큼 되돌려(/scale) 원래 픽셀을 확보.
-        Spacer(Modifier.height(100.dp / LocalDesignScale.current))
+
+        // 주간 비교 리포트 도착 모달 — 설계상 고정 크기(302dp 카드) 모달이라 피그마 원본 크기로 띄운다.
+        // 홈 축소(scale)는 실제 2줄 미션을 담기 위한 콘텐츠 대응일 뿐, 모달 오버레이는 그걸 따라가지 않는다.
+        if (showWeekly) {
+            WeeklyReportModal(
+                onConfirm = { showWeekly = false; onWeeklyReportClick() },
+                onDismiss = { showWeekly = false },
+            )
+        }
+
+        // 티어 승급 안내 시트(공용) — 홈 축소(scale)와 무관하게 전체 화면에 오버레이.
+        // onSheetTopChange로 시트가 덮는 동안 하단 네비를 가림(저장 시트와 동일).
+        // onModalChange는 시트가 떠 있는 동안 탭 스와이프를 끄는 신호 — 딤이 깔린 모달이라 뒤로 못 넘어가야 한다.
+        TierPromotionSheet(
+            visible = showTierHelp,
+            onDismiss = { showTierHelp = false },
+            onSheetTopChange = onSheetTopChange,
+            onModalChange = onModalSheetChange,
+        )
     }
 }
 
@@ -236,35 +363,89 @@ private fun String.keepWordsIntact(): String =
 private fun String.glueShortWords(): String =
     replace(Regex("(?<=(^|\\s)\\S) "), " ")
 
-// 한 줄에 담기더라도 제목이 영역 폭의 절반을 넘으면 2줄로 나눠 보여줌(디자인 목업의 2줄 형태).
-// 시스템 줄바꿈(Balanced)은 줄 수를 늘리지 않아서 이 규칙은 직접 처리:
-// 그리기 전에 폭을 재보고 → 절반 초과·한 줄이면 → 중간을 넘는 어절까지 첫 줄에 두고 그 다음 어절부터 둘째 줄로.
+// 제목은 먼저 필요한 최소 줄 수를 구한 뒤, 그 줄 수 안에서 실제 글자 폭이 가장 균등해지는
+// 어절 경계를 선택한다. 제목이 한 줄에 들어가면 디자인처럼 한 줄을 그대로 유지한다.
 private const val TITLE_MAX_WIDTH_DP = 256 // 디자인 Frame313 제목 영역 폭
-private const val TITLE_SPLIT_RATIO = 0.5f // 이 비율(폭의 절반)을 넘으면 2줄로
 
 @Composable
-private fun MissionTitleText(title: String, modifier: Modifier = Modifier) {
+private fun MissionTitleText(
+    title: String,
+    modifier: Modifier = Modifier,
+    onLineCountChanged: (Int) -> Unit = {},
+) {
     val style = TqType.TitleL.figma().copy(lineBreak = LineBreak.Heading)
     val measurer = rememberTextMeasurer()
     val density = LocalDensity.current
     val displayTitle = remember(title) {
-        val glued = title.glueShortWords()
         val maxWidthPx = with(density) { TITLE_MAX_WIDTH_DP.dp.toPx() }
-        val oneLineWidth = measurer.measure(AnnotatedString(glued.keepWordsIntact()), style = style).size.width
-        val needsSplit = oneLineWidth <= maxWidthPx && oneLineWidth > maxWidthPx * TITLE_SPLIT_RATIO
-        if (needsSplit) {
-            // 중간 지점 이후에 나오는 첫 일반 공백(NBSP 제외)에서 끊음
-            // → 중간에 걸친 어절은 첫 줄에 남고, 그 다음 어절부터 둘째 줄 시작.
-            val middle = glued.length / 2
-            val spaces = glued.indices.filter { glued[it] == ' ' }
-            val breakAt = spaces.firstOrNull { it >= middle } ?: spaces.lastOrNull()
-            if (breakAt != null) {
-                glued.replaceRange(breakAt, breakAt + 1, "\n").keepWordsIntact()
-            } else {
-                glued.keepWordsIntact()
+        fun width(text: String): Int =
+            measurer.measure(AnnotatedString(text.keepWordsIntact()), style = style).size.width
+
+        val rawWords = title.trim().split(Regex("\\s+")).filter(String::isNotEmpty)
+        val words = buildList {
+            var index = 0
+            while (index < rawWords.size) {
+                val word = rawWords[index]
+                if (word.length == 1 && index + 1 < rawWords.size) {
+                    add("$word ${rawWords[index + 1]}")
+                    index += 2
+                } else {
+                    add(word)
+                    index++
+                }
             }
+        }
+        val oneLine = words.joinToString(" ")
+        if (width(oneLine) <= maxWidthPx || words.size <= 1) {
+            oneLine
         } else {
-            glued.keepWordsIntact()
+            // Greedy packing으로 모든 어절을 담을 수 있는 최소 줄 수를 구한다.
+            val minimumLines = buildList {
+                var current = ""
+                words.forEach { word ->
+                    val candidate = if (current.isEmpty()) word else "$current $word"
+                    if (current.isNotEmpty() && width(candidate) > maxWidthPx) {
+                        add(current)
+                        current = word
+                    } else {
+                        current = candidate
+                    }
+                }
+                if (current.isNotEmpty()) add(current)
+            }
+            val lineCount = minimumLines.size
+            val targetWidth = minimumLines.sumOf { width(it) }.toFloat() / lineCount
+            data class Partition(val lines: List<String>, val score: Float)
+            val memo = mutableMapOf<Pair<Int, Int>, Partition?>()
+            fun choose(start: Int, linesLeft: Int): Partition? {
+                if (start >= words.size) return null
+                if (linesLeft == 1) {
+                    val last = words.subList(start, words.size).joinToString(" ")
+                    val lastWidth = width(last)
+                    return if (lastWidth <= maxWidthPx || start == words.lastIndex) {
+                        Partition(listOf(last), abs(lastWidth - targetWidth))
+                    } else null
+                }
+                val key = start to linesLeft
+                memo[key]?.let { return it }
+                var current = ""
+                var best: Partition? = null
+                for (end in start until words.size - (linesLeft - 1)) {
+                    current = if (current.isEmpty()) words[end] else "$current ${words[end]}"
+                    val currentWidth = width(current)
+                    if (currentWidth > maxWidthPx && end > start) break
+                    val tail = choose(end + 1, linesLeft - 1) ?: continue
+                    val candidate = Partition(
+                        lines = listOf(current) + tail.lines,
+                        score = abs(currentWidth - targetWidth) + tail.score,
+                    )
+                    if (best == null || candidate.score < best!!.score) best = candidate
+                }
+                memo[key] = best
+                return best
+            }
+            val chosen = choose(0, lineCount)?.lines ?: minimumLines
+            chosen.joinToString("\n")
         }
     }
     Text(
@@ -272,6 +453,7 @@ private fun MissionTitleText(title: String, modifier: Modifier = Modifier) {
         style = style,
         color = Gray900,
         modifier = modifier.widthIn(max = TITLE_MAX_WIDTH_DP.dp),
+        onTextLayout = { onLineCountChanged(it.lineCount) },
     )
 }
 
@@ -282,6 +464,28 @@ private fun HomeHeader(
     hasNewNotification: Boolean = false,
     onNotificationClick: () -> Unit = {},
 ) {
+    val handWaveRotation = remember { Animatable(0f) }
+    var handWaveRunning by remember { mutableStateOf(false) }
+    var handWaveInitialPlayed by rememberSaveable { mutableStateOf(false) }
+    val handWaveScope = rememberCoroutineScope()
+
+    suspend fun waveHand() {
+        handWaveRunning = true
+        handWaveRotation.animateTo(5f, tween(120, easing = FastOutSlowInEasing))
+        handWaveRotation.animateTo(-5f, tween(180, easing = FastOutSlowInEasing))
+        handWaveRotation.animateTo(3f, tween(150, easing = FastOutSlowInEasing))
+        handWaveRotation.animateTo(0f, tween(180, easing = LinearOutSlowInEasing))
+        handWaveRunning = false
+    }
+
+    LaunchedEffect(Unit) {
+        if (!handWaveInitialPlayed) {
+            handWaveInitialPlayed = true
+            delay(200)
+            waveHand()
+        }
+    }
+
     // CSS 절대위치 전사(상태바 40 기준): 인사 top 79 → 아래 39, 벨 top 50 → 아래 10 (벨이 29 위).
     // statusBarsPadding이 실제 상태바를 처리하고, 그 아래 이 오프셋만큼 배치.
     Box(modifier = Modifier.fillMaxWidth()) {
@@ -323,8 +527,8 @@ private fun HomeHeader(
         Column(
             modifier = Modifier
                 .align(Alignment.TopStart)
-                .padding(top = 39.dp),
-            verticalArrangement = Arrangement.spacedBy(2.dp),
+                .padding(start = 6.dp, top = 39.dp), // 인삿말 프레임 왼쪽 패딩 6 (UI 10차)
+            verticalArrangement = Arrangement.spacedBy(0.dp), // 인사 두 줄 간격 0 (UI 10차)
         ) {
             Row(
                 verticalAlignment = Alignment.CenterVertically,
@@ -336,11 +540,25 @@ private fun HomeHeader(
                     contentDescription = null,
                     // 손 흔들기: PNG(73x95)는 CSS "Frame 304"(24.27 x 31.67 = -5.5° 회전 후 경계)의 3배 export로,
                     // 회전까지 이미 구워져 있음(알파 실측: 내용이 캔버스를 꽉 채움) → 프레임 크기로만 그린다.
-                    // ⚠️ 여기에 .rotate(-5.5f)를 또 걸면 이중 회전(~11°)이 됨 — 사용자 제보로 제거 (2026-07-20)
-                    modifier = Modifier.size(width = 24.27.dp, height = 31.67.dp),
+                    // PNG의 -5.5°는 유지하고 손목을 중심으로 추가 흔들림만 준다.
+                    modifier = Modifier
+                        .size(width = 24.27.dp, height = 31.67.dp)
+                        .graphicsLayer {
+                            rotationZ = handWaveRotation.value
+                            transformOrigin = TransformOrigin(0.53f, 0.88f)
+                        }
+                        .clickable(
+                            interactionSource = remember { MutableInteractionSource() },
+                            indication = null,
+                            onClick = {
+                                if (!handWaveRunning) {
+                                    handWaveScope.launch { waveHand() }
+                                }
+                            },
+                        ),
                 )
             }
-            Text(text = "오늘도 좋은 대화를 시작해볼까요?", style = TqType.BodyS.figma(), color = Gray600)
+            Text(text = "오늘도 좋은 대화를 시작해볼까요?", style = TqType.BodyM.figma(), color = Gray600) // 13→14 regular (UI 10차)
         }
     }
 }
@@ -349,39 +567,127 @@ private fun HomeHeader(
 // XP가 바뀌면(미션 완료 후 복귀 등) 숫자·바가 부드럽게 차오르고, 레벨업이면
 // 미션 완료 화면과 같은 연출: 바 가득 → "Lv" 글자가 튀며 +1 → 새 레벨 바가 0부터 재충전.
 @Composable
-private fun HomeLevelCard(level: Int, currentXp: Int, nextLevelXp: Int) {
+private fun HomeLevelCard(
+    level: Int,
+    currentXp: Int,
+    nextLevelXp: Int,
+    tierName: String,
+    tierStars: Int,
+    xpAnimationTrigger: Int = 0,
+    onTierInfoClick: () -> Unit = {},
+) {
     val xpShown = remember { Animatable(currentXp.toFloat()) }
     var displayLevel by remember { mutableIntStateOf(level) }
     val levelScale = remember { Animatable(1f) } // 레벨업 순간 Lv 글자가 튀는 배율
     val levelBurst = remember { Animatable(0f) } // 레벨업 순간 Lv 글자 주변 작은 폭죽 (완료 화면과 동일)
-    LaunchedEffect(level, currentXp) {
-        if (level > displayLevel) {
-            xpShown.animateTo(nextLevelXp.toFloat(), tween(700))
+    val levelTapScale = remember { Animatable(1f) }
+    var levelTapRunning by remember { mutableStateOf(false) }
+    val levelTapScope = rememberCoroutineScope()
+    var lastXpAnimationTrigger by rememberSaveable { mutableIntStateOf(0) }
+    // 티어 전환/광택 단계는 화면 복귀 때 복원하면 안 되는 일회성 애니메이션 상태다.
+    // 저장 상태로 두면 다른 화면으로 이동 중의 phase=1이 복원되어 게이지보다 먼저 재생된다.
+    var tierTextTrigger by remember { mutableIntStateOf(0) }
+    var tierVisualPhase by remember { mutableIntStateOf(0) }
+    val tierVisualScope = rememberCoroutineScope()
+    val xpFillEasing = CubicBezierEasing(0.12f, 0.78f, 0.22f, 1f)
+    suspend fun playTierGrowthSequence() {
+        // animateTo가 마지막 값을 반영한 뒤 한 프레임을 실제로 그린 다음 티어 전환을 시작한다.
+        // 그래야 게이지가 끝까지 찬 화면을 건너뛰고 Gold가 먼저 보이는 일이 없다.
+        withFrameNanos { }
+        tierTextTrigger++ // 게이지 완료 후 티어명 전환 시작
+    }
+    suspend fun playTierVisualSequence() {
+        tierVisualPhase = 1 // 광택 시작 시 뱃지 + 별 동시
+        delay(720)
+        tierVisualPhase = 0
+    }
+    LaunchedEffect(level, currentXp, xpAnimationTrigger) {
+        if (xpAnimationTrigger == 0 && lastXpAnimationTrigger == 0) {
+            // 첫 데이터 렌더링은 이미 현재 XP를 가진 상태이므로 애니메이션 완료로 취급하지 않는다.
+            displayLevel = level
+            xpShown.snapTo(currentXp.toFloat())
+        } else if (xpAnimationTrigger != lastXpAnimationTrigger) {
+            lastXpAnimationTrigger = xpAnimationTrigger
+            displayLevel = level
+            xpShown.snapTo(0f)
+            xpShown.animateTo(
+                currentXp.toFloat(),
+                tween(durationMillis = 950, easing = xpFillEasing),
+            )
+            playTierGrowthSequence()
+        } else if (level > displayLevel) {
+            xpShown.animateTo(
+                nextLevelXp.toFloat(),
+                tween(durationMillis = 700, easing = xpFillEasing),
+            )
             displayLevel = level
             launch { levelBurst.snapTo(0f); levelBurst.animateTo(1f, tween(600)) } // 글자 튐과 동시 재생
             levelScale.animateTo(1.4f, tween(150))
             levelScale.animateTo(1f, spring(dampingRatio = Spring.DampingRatioMediumBouncy))
             delay(150)
             xpShown.snapTo(0f)
-            xpShown.animateTo(currentXp.toFloat(), tween(600))
+            xpShown.animateTo(
+                currentXp.toFloat(),
+                tween(durationMillis = 720, easing = xpFillEasing),
+            )
+            playTierGrowthSequence()
         } else {
             displayLevel = level
-            xpShown.animateTo(currentXp.toFloat(), tween(800))
+            xpShown.animateTo(
+                currentXp.toFloat(),
+                tween(durationMillis = 950, easing = xpFillEasing),
+            )
+            playTierGrowthSequence()
         }
     }
     HomeCard(
         modifier = Modifier.fillMaxWidth(),
         contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp),
     ) {
-        Text(text = "대화 진행 레벨", style = TqType.LabelL.figma(), color = Gray600)
-        Spacer(Modifier.height(5.dp)) // CSS Frame428 gap 5
+        Text(text = "대화 진행 레벨", style = TqType.LabelL.figma().copy(fontSize = 16.sp), color = Gray700) // 16 medium / Gray700 (UI 10차)
+        Spacer(Modifier.height(4.dp)) // CSS Frame428 gap 5→4 (UI 10차)
         Row(
             // CSS Frame 333 높이 22 (Lv 배지 틀 22, 텍스트 18) — 없으면 행이 18로 줄어 카드가 4px 낮아짐
             modifier = Modifier.fillMaxWidth().height(22.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Box {
+            Box(
+                modifier = Modifier
+                    .graphicsLayer {
+                        scaleX = levelTapScale.value
+                        scaleY = levelTapScale.value
+                        transformOrigin = TransformOrigin.Center
+                    }
+                    .clickable(
+                        interactionSource = remember { MutableInteractionSource() },
+                        indication = null,
+                        onClick = {
+                            if (!levelTapRunning) {
+                                levelTapRunning = true
+                                levelTapScope.launch {
+                                    levelTapScale.snapTo(1f)
+                                    levelTapScale.animateTo(
+                                        targetValue = 0.91f,
+                                        animationSpec = tween(70, easing = FastOutSlowInEasing),
+                                    )
+                                    levelTapScale.animateTo(
+                                        targetValue = 1.17f,
+                                        animationSpec = tween(120, easing = FastOutSlowInEasing),
+                                    )
+                                    levelTapScale.animateTo(
+                                        targetValue = 1f,
+                                        animationSpec = spring(
+                                            dampingRatio = Spring.DampingRatioMediumBouncy,
+                                            stiffness = Spring.StiffnessMedium,
+                                        ),
+                                    )
+                                    levelTapRunning = false
+                                }
+                            }
+                        },
+                    ),
+            ) {
                 LevelUpBurst(progress = levelBurst.value, modifier = Modifier.matchParentSize()) // 글자 뒤 폭죽
                 Text(
                     text = "Lv.$displayLevel",
@@ -394,7 +700,14 @@ private fun HomeLevelCard(level: Int, currentXp: Int, nextLevelXp: Int) {
                     },
                 )
             }
-            Text(text = "${xpShown.value.toInt()} / ${nextLevelXp}XP", style = TqType.LabelM.figma(), color = Gray400)
+            Text(
+                text = buildAnnotatedString {
+                    // 획득 XP 숫자만 Gray500, 나머지(" / nXP")는 Gray400 (UI 10차)
+                    withStyle(SpanStyle(color = Gray500)) { append("${xpShown.value.toInt()}") }
+                    withStyle(SpanStyle(color = Gray400)) { append(" / ${nextLevelXp}XP") }
+                },
+                style = TqType.LabelM.figma(),
+            )
         }
         Spacer(Modifier.height(4.dp))
         // 진행바: 트랙 Primary100 + 채움 Primary600 (currentXp/nextLevelXp 비율), 높이 10, radius 8
@@ -414,12 +727,634 @@ private fun HomeLevelCard(level: Int, currentXp: Int, nextLevelXp: Int) {
                     .background(Primary600),
             )
         }
+        // 진행바 → 구분선 gap 12 (CSS Frame427321765 gap)
+        Spacer(Modifier.height(12.dp))
+        // 구분선 (Frame 427321759: 폭 330 = full, 높이 1, Gray/200)
+        Box(Modifier.fillMaxWidth().height(1.dp).background(Gray200))
+        // 구분선 → 티어 행 gap 4 (CSS 카드 Frame427321766 gap)
+        Spacer(Modifier.height(4.dp))
+        HomeTierRow(
+            tierName = tierName,
+            tierStars = tierStars,
+            tierTextTrigger = tierTextTrigger,
+            tierVisualPhase = tierVisualPhase,
+            onTierVisualAnimation = {
+                if (tierVisualPhase == 0) {
+                    tierVisualScope.launch { playTierVisualSequence() }
+                }
+            },
+            onInfoClick = onTierInfoClick,
+        )
     }
 }
 
+// 실전 티어 행 (Frame 427321763, 높이 40, space-between).
+// 좌: 티어 휘장 40x40 + 티어명 + 별 3개 / 우: "실전 티어" + info-circle.
+@Composable
+private fun HomeTierRow(
+    tierName: String,
+    tierStars: Int,
+    tierTextTrigger: Int = 0,
+    tierVisualPhase: Int = 0,
+    onTierVisualAnimation: () -> Unit = {},
+    onInfoClick: () -> Unit = {},
+) {
+    val tierBadgeShineProgress = remember { Animatable(0f) }
+    var tierBadgeShineVisible by remember { mutableStateOf(false) }
+    val tierBadgeScope = rememberCoroutineScope()
+    val tierBadgeOuterShinePath = remember { Path() }
+    val tierBadgeInnerShinePath = remember { Path() }
+    val tierEnglish = tierEnglishName(tierName)
+    val tierPalette = tierTextPalette(tierName)
+    // 브론즈·실버 리소스는 투명 외곽 여백이 커서 같은 40dp로 그리면 글자와 멀어 보인다.
+    // 이미지 자체는 건드리지 않고 시각 영역만 확대해 두 뱃지의 외곽 여백을 맞춘다.
+    val tierBadgeScale = if (tierName == "브론즈" || tierName == "실버") 1.14f else 1f
+    // 확대 후에도 남는 투명 외곽만큼 티어명·별 묶음을 왼쪽으로 당겨 체감 간격을 맞춘다.
+    val tierBadgeContentOffset = if (tierName == "브론즈" || tierName == "실버") (-6).dp else 0.dp
+    // 날개가 없는 뱃지의 왼쪽 투명 여백 때문에 전체 그룹이 안쪽으로 보이지 않게 기준선에 맞춘다.
+    val tierBadgeGroupOffset = if (tierName == "브론즈" || tierName == "실버") (-6).dp else 0.dp
+    var tierTextPhase by remember { mutableIntStateOf(0) } // 0=한글, 1=삭제, 2=입력, 3=광택, 4=크로스페이드
+    var tierTextCharCount by remember { mutableIntStateOf(tierName.length) }
+    var tierTextRunning by remember { mutableStateOf(false) }
+    val tierTextShineProgress = remember { Animatable(0f) }
+    val tierTextFadeProgress = remember { Animatable(0f) }
+    val tierTextScope = rememberCoroutineScope()
+
+    suspend fun playBadgeShine() {
+        tierBadgeShineVisible = true
+        try {
+            tierBadgeShineProgress.snapTo(0f)
+            tierBadgeShineProgress.animateTo(
+                targetValue = 1f,
+                animationSpec = tween(
+                    durationMillis = 450,
+                    easing = LinearEasing,
+                ),
+            )
+        } finally {
+            tierBadgeShineVisible = false
+        }
+    }
+
+    suspend fun playTierTextAnimation() {
+        if (tierEnglish == null || tierTextRunning) return
+        tierTextRunning = true
+        try {
+            tierTextShineProgress.snapTo(0f)
+            tierTextFadeProgress.snapTo(0f)
+            tierTextPhase = 1
+            for (count in (tierName.length - 1) downTo 0) {
+                tierTextCharCount = count
+                delay(110)
+            }
+            tierTextPhase = 2
+            for (count in 1..tierEnglish.length) {
+                tierTextCharCount = count
+                delay(110)
+            }
+            delay(500)
+            tierTextPhase = 3
+            // 글자 광택 시작과 동시에 뱃지 광선·별 하이라이트를 함께 시작한다.
+            onTierVisualAnimation()
+            tierTextShineProgress.animateTo(
+                targetValue = 1f,
+                animationSpec = tween(650, easing = LinearOutSlowInEasing),
+            )
+            tierTextPhase = 4
+            tierTextFadeProgress.snapTo(0f)
+            tierTextFadeProgress.animateTo(
+                targetValue = 1f,
+                animationSpec = tween(400, easing = LinearOutSlowInEasing),
+            )
+            tierTextPhase = 0
+            tierTextCharCount = tierName.length
+            tierTextShineProgress.snapTo(0f)
+            tierTextFadeProgress.snapTo(0f)
+        } finally {
+            tierTextRunning = false
+        }
+    }
+
+    LaunchedEffect(tierTextTrigger) {
+        if (tierTextTrigger > 0) {
+            // 게이지 완료 기준에서는 텍스트 전환부터 시작한다. 뱃지·별은 광택 시점에 별도 트리거된다.
+            tierTextScope.launch { playTierTextAnimation() }
+        }
+    }
+
+    LaunchedEffect(tierVisualPhase) {
+        if (tierVisualPhase == 1) launch { playBadgeShine() }
+    }
+
+    Row(
+        modifier = Modifier.fillMaxWidth().height(40.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        // 좌측 그룹 (Frame 427321762, gap 7)
+        Row(
+            modifier = Modifier.offset(x = tierBadgeGroupOffset),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(7.dp),
+        ) {
+            // 티어 휘장 (사용자_티어 40x40) — 남서쪽 점에서 북동쪽 점으로 이동하는 광선
+            Box(
+                modifier = Modifier
+                    .size(40.dp)
+                    .clickable(
+                        interactionSource = remember { MutableInteractionSource() },
+                        indication = null,
+                        onClick = {
+                            tierTextScope.launch { playTierTextAnimation() }
+                        },
+                    ),
+                contentAlignment = Alignment.Center,
+            ) {
+                Image(
+                    painter = painterResource(tierEmblemRes(tierName)),
+                    contentDescription = "$tierName 티어",
+                    contentScale = ContentScale.Fit,
+                    modifier = Modifier.size(40.dp).graphicsLayer {
+                        scaleX = tierBadgeScale
+                        scaleY = tierBadgeScale
+                    },
+                )
+                if (tierBadgeShineVisible) {
+                    // 기존 뱃지 전용 타원 광선 모션.
+                    /*
+                    Image(
+                        painter = painterResource(tierEmblemRes(tierName)),
+                        contentDescription = null,
+                        contentScale = ContentScale.Fit,
+                        colorFilter = ColorFilter.tint(White.copy(alpha = 0.12f)),
+                        modifier = Modifier
+                            .size(40.dp)
+                            .graphicsLayer {
+                                scaleX = tierBadgeScale
+                                scaleY = tierBadgeScale
+                            }
+                            .drawWithContent {
+                                drawContent()
+                                val progress = tierBadgeShineProgress.value
+                                val spread = 1f - abs((progress * 2f) - 1f)
+                                val center = Offset(
+                                    x = size.width * progress,
+                                    y = size.height * (1f - progress),
+                                )
+                                val width = (3f + (29f * spread)).dp.toPx()
+                                val height = (3f + (13f * spread)).dp.toPx()
+                                tierBadgeOuterShinePath.reset()
+                                tierBadgeOuterShinePath.addOval(
+                                    Rect(
+                                        left = center.x - (width / 2f),
+                                        top = center.y - (height / 2f),
+                                        right = center.x + (width / 2f),
+                                        bottom = center.y + (height / 2f),
+                                    ),
+                                )
+                                clipPath(tierBadgeOuterShinePath) {
+                                    this@drawWithContent.drawContent()
+                                }
+                            },
+                    )
+                    Image(
+                        painter = painterResource(tierEmblemRes(tierName)),
+                        contentDescription = null,
+                        contentScale = ContentScale.Fit,
+                        colorFilter = ColorFilter.tint(White.copy(alpha = 0.2f)),
+                        modifier = Modifier
+                            .size(40.dp)
+                            .graphicsLayer {
+                                scaleX = tierBadgeScale
+                                scaleY = tierBadgeScale
+                            }
+                            .drawWithContent {
+                                val progress = tierBadgeShineProgress.value
+                                val spread = 1f - abs((progress * 2f) - 1f)
+                                val center = Offset(
+                                    x = size.width * progress,
+                                    y = size.height * (1f - progress),
+                                )
+                                val width = (2f + (15f * spread)).dp.toPx()
+                                val height = (2f + (7f * spread)).dp.toPx()
+                                tierBadgeInnerShinePath.reset()
+                                tierBadgeInnerShinePath.addOval(
+                                    Rect(
+                                        left = center.x - (width / 2f),
+                                        top = center.y - (height / 2f),
+                                        right = center.x + (width / 2f),
+                                        bottom = center.y + (height / 2f),
+                                    ),
+                                )
+                                clipPath(tierBadgeInnerShinePath) {
+                                    this@drawWithContent.drawContent()
+                                }
+                        },
+                    )
+                    */
+                    // Gold 글자와 같은 방향의 빛이 뱃지 표면을 왼쪽에서 오른쪽으로 통과한다.
+                    Image(
+                        painter = painterResource(tierEmblemRes(tierName)),
+                        contentDescription = null,
+                        contentScale = ContentScale.Fit,
+                        colorFilter = ColorFilter.tint(White.copy(alpha = 0.18f)),
+                        modifier = Modifier
+                            .size(40.dp)
+                            .graphicsLayer {
+                                scaleX = tierBadgeScale
+                                scaleY = tierBadgeScale
+                            }
+                            .drawWithContent {
+                                val progress = tierBadgeShineProgress.value
+                                // 뱃지 리소스의 투명 외곽 때문에 빛이 늦게 보이는 것을 보정한다.
+                                // 시작 위치만 앞당기고 종료점은 1.0에 고정해 글자 광택과 맞춘다.
+                                val lead = when (tierName) {
+                                    "브론즈", "실버" -> 0.16f
+                                    "플래티넘", "플레티넘", "다이아", "다이아몬드", "마스터" -> 0.10f
+                                    else -> 0.08f
+                                }
+                                val adjustedProgress = lead + (progress * (1f - lead))
+                                val centerX = size.width * adjustedProgress
+                                val shineWidth = size.width * 0.24f
+                                val shine = Brush.linearGradient(
+                                    colors = listOf(
+                                        Color.Transparent,
+                                        White.copy(alpha = 0.82f),
+                                        Color.Transparent,
+                                    ),
+                                    start = Offset(centerX - shineWidth, size.height),
+                                    end = Offset(centerX + shineWidth, 0f),
+                                )
+                                drawRect(
+                                    brush = shine,
+                                    blendMode = BlendMode.SrcAtop,
+                                )
+                            },
+                    )
+                }
+            }
+            // 티어명 + 별 (Frame 427321761, gap 4)
+            Row(
+                modifier = Modifier.offset(x = tierBadgeContentOffset),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(4.dp),
+            ) {
+                if (tierEnglish != null) {
+                    val titleStyle = TqType.BodyL.figma().copy(fontWeight = FontWeight.Medium)
+                    val titleMeasurer = rememberTextMeasurer()
+                    val density = LocalDensity.current
+                    val koreanText = tierName.take(tierTextCharCount)
+                    val englishText = tierEnglish.take(tierTextCharCount)
+                    val displayedText = if (tierTextPhase <= 1) koreanText else englishText
+                    fun textWidth(text: String): Int =
+                        titleMeasurer.measure(AnnotatedString(text), style = titleStyle).size.width
+                    val targetWidthDp = with(density) {
+                        (if (tierTextPhase == 4) textWidth(tierName) else textWidth(displayedText)).toDp()
+                    }
+                    val animatedWidth by animateDpAsState(
+                        targetValue = targetWidthDp,
+                        animationSpec = tween(
+                            durationMillis = if (tierTextPhase == 4) 400 else 90,
+                            easing = FastOutSlowInEasing,
+                        ),
+                        label = "tierTextWidth",
+                    )
+                    Box(
+                        modifier = Modifier
+                            // 한글 티어명의 왼쪽 시작점을 고정하고, 영문이 길어지는 만큼만
+                            // 오른쪽 폭을 늘려 별 묶음을 밀어낸다. 크로스페이드 때는 원래 폭으로 복귀.
+                            .width(animatedWidth)
+                            .height(24.dp)
+                            .clickable(
+                                interactionSource = remember { MutableInteractionSource() },
+                                indication = null,
+                                onClick = { tierTextScope.launch { playTierTextAnimation() } },
+                            ),
+                        contentAlignment = Alignment.CenterStart,
+                    ) {
+                        if (tierTextPhase == 4) {
+                            Text(
+                                text = tierEnglish,
+                                style = titleStyle.copy(brush = tierPalette.brush(tierTextShineProgress.value)),
+                                softWrap = false,
+                                maxLines = 1,
+                                modifier = Modifier
+                                    .wrapContentWidth(Alignment.Start, unbounded = true)
+                                    .graphicsLayer { alpha = 1f - tierTextFadeProgress.value },
+                            )
+                            Text(
+                                text = tierName,
+                                style = titleStyle,
+                                color = Gray600,
+                                softWrap = false,
+                                maxLines = 1,
+                                modifier = Modifier
+                                    .wrapContentWidth(Alignment.Start, unbounded = true)
+                                    .graphicsLayer { alpha = tierTextFadeProgress.value },
+                            )
+                        } else {
+                            val isEnglish = tierTextPhase >= 2
+                            Text(
+                                text = displayedText,
+                                style = if (isEnglish) {
+                                    titleStyle.copy(brush = tierPalette.brush(tierTextShineProgress.value))
+                                } else titleStyle,
+                                color = if (isEnglish) Color.Unspecified else Gray600,
+                                softWrap = false,
+                                maxLines = 1,
+                                modifier = Modifier
+                                    .wrapContentWidth(Alignment.Start, unbounded = true),
+                            )
+                        }
+                    }
+                } else {
+                    Text(text = tierName, style = TqType.BodyL.figma().copy(fontWeight = FontWeight.Medium), color = Gray600)
+                }
+                // 별 3개 (Frame 427321742, gap 4) — 채움 #F9AC17 / 빈칸 Gray300
+                TierProgressStars(
+                    tierStars = tierStars,
+                    growthPhase = tierVisualPhase,
+                    onClick = { tierTextScope.launch { playTierTextAnimation() } },
+                )
+            }
+        }
+        // 우측 그룹 (Frame 427321760, gap 2)
+        Row(
+            modifier = Modifier,
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(2.dp),
+        ) {
+            val tierInfoInteraction = remember { MutableInteractionSource() }
+            val tierInfoPressed by tierInfoInteraction.collectIsPressedAsState()
+            var tierInfoClickAnimating by remember { mutableStateOf(false) }
+            val tierInfoCoroutineScope = rememberCoroutineScope()
+            val tierInfoVisuallyPressed = tierInfoPressed || tierInfoClickAnimating
+            val tierInfoScale by animateFloatAsState(
+                targetValue = if (tierInfoVisuallyPressed) 0.88f else 1f,
+                animationSpec = tween(
+                    durationMillis = if (tierInfoVisuallyPressed) 90 else 140,
+                    easing = FastOutSlowInEasing,
+                ),
+                label = "tierInfoPressScale",
+            )
+            val tierInfoDepth by animateFloatAsState(
+                targetValue = if (tierInfoVisuallyPressed) 2f else 0f,
+                animationSpec = tween(
+                    durationMillis = if (tierInfoVisuallyPressed) 90 else 140,
+                    easing = FastOutSlowInEasing,
+                ),
+                label = "tierInfoPressDepth",
+            )
+            val tierInfoColor by animateColorAsState(
+                targetValue = if (tierInfoVisuallyPressed) Gray700 else Gray500,
+                animationSpec = tween(
+                    durationMillis = if (tierInfoVisuallyPressed) 90 else 140,
+                    easing = FastOutSlowInEasing,
+                ),
+                label = "tierInfoPressTextColor",
+            )
+            val tierInfoIconColor by animateColorAsState(
+                targetValue = if (tierInfoVisuallyPressed) Gray600 else Gray400,
+                animationSpec = tween(
+                    durationMillis = if (tierInfoVisuallyPressed) 90 else 140,
+                    easing = FastOutSlowInEasing,
+                ),
+                label = "tierInfoPressIconColor",
+            )
+            val tierInfoDepthPx = with(LocalDensity.current) { tierInfoDepth.dp.toPx() }
+
+            Row(
+                modifier = Modifier
+                    .graphicsLayer {
+                        scaleX = tierInfoScale
+                        scaleY = tierInfoScale
+                        translationY = tierInfoDepthPx
+                    }
+                    .clickable(
+                        interactionSource = tierInfoInteraction,
+                        indication = null,
+                        onClick = {
+                            if (!tierInfoClickAnimating) {
+                                tierInfoClickAnimating = true
+                                tierInfoCoroutineScope.launch {
+                                    delay(100)
+                                    onInfoClick()
+                                    tierInfoClickAnimating = false
+                                }
+                            }
+                        },
+                    ),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(2.dp),
+            ) {
+                Text(
+                    text = "실전 티어",
+                    style = TqType.BodyM.figma(),
+                    color = tierInfoColor,
+                )
+                // information-circle (24x24 슬롯 안 글리프 ~14 → 18dp 벡터 중앙 배치, tint Gray400).
+                // 글자와 하나의 탭 영역으로 묶어 같은 눌림 피드백과 시트를 공유한다.
+                Box(
+                    modifier = Modifier.size(24.dp),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Icon(
+                        painter = painterResource(R.drawable.ic_notification_info),
+                        contentDescription = "실전 티어 안내",
+                        tint = tierInfoIconColor,
+                        modifier = Modifier.size(18.dp),
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun TierProgressStars(
+    tierStars: Int,
+    growthPhase: Int = 0,
+    onClick: () -> Unit = {},
+) {
+    val progress = remember { Animatable(0f) }
+    var animationRunning by remember { mutableStateOf(false) }
+    val scope = rememberCoroutineScope()
+    val filledCount = tierStars.coerceIn(0, 3)
+
+    suspend fun playStarSequence() {
+        if (filledCount > 0 && !animationRunning) {
+            animationRunning = true
+            try {
+                progress.snapTo(0f)
+                progress.animateTo(1f, tween(650, easing = FastOutSlowInEasing))
+                delay(70)
+                progress.snapTo(0f)
+            } finally {
+                animationRunning = false
+            }
+        }
+    }
+
+    LaunchedEffect(growthPhase) {
+        if (growthPhase == 1) playStarSequence()
+    }
+
+    Row(
+        modifier = Modifier
+            .width(53.dp)
+            .height(32.dp)
+            .clickable(
+                interactionSource = remember { MutableInteractionSource() },
+                indication = null,
+                onClick = {
+                    onClick()
+                },
+            ),
+        horizontalArrangement = Arrangement.spacedBy(4.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        repeat(3) { index ->
+            val filled = index < filledCount
+            val starPhase = ((progress.value * (filledCount + 0.8f)) - index).coerceIn(0f, 1f)
+            val pulse = if (!filled) 0f else {
+                if (starPhase < 0.5f) starPhase * 2f else (1f - starPhase) * 2f
+            }.coerceIn(0f, 1f)
+            val starScale = 1f + (0.16f * pulse)
+            val starColor = if (filled) lerp(StarYellow, StarHighlight, pulse) else Gray300
+
+            Box(Modifier.size(15.dp), contentAlignment = Alignment.Center) {
+                Icon(
+                    painter = painterResource(R.drawable.ic_tier_star),
+                    contentDescription = if (filled) "획득한 별" else "잠긴 별",
+                    tint = starColor,
+                    modifier = Modifier.size(15.dp).graphicsLayer {
+                        scaleX = starScale
+                        scaleY = starScale
+                    },
+                )
+                if (filled && pulse > 0.45f) {
+                    Canvas(Modifier.size(22.dp)) {
+                        val alpha = ((pulse - 0.45f) / 0.55f).coerceIn(0f, 1f) * 0.75f
+                        val center = Offset(size.width / 2f, size.height / 2f)
+                        val radius = 3.dp.toPx() + (2.dp.toPx() * pulse)
+                        drawLine(White.copy(alpha = alpha), center.copy(x = center.x - radius), center.copy(x = center.x + radius), 1.5.dp.toPx(), StrokeCap.Round)
+                        drawLine(White.copy(alpha = alpha), center.copy(y = center.y - radius), center.copy(y = center.y + radius), 1.5.dp.toPx(), StrokeCap.Round)
+                    }
+                }
+            }
+        }
+    }
+}
+
+// 티어 이름 → 휘장 drawable (홈용 큰 PNG). 성장 리포트는 별도 작은 'Xs' 버전 사용 예정.
+private fun tierEmblemRes(tierName: String): Int = when (tierName) {
+    "브론즈" -> R.drawable.img_tier_bronze
+    "실버" -> R.drawable.img_tier_silver
+    "골드" -> R.drawable.img_tier_gold
+    "플래티넘", "플레티넘" -> R.drawable.img_tier_platinum
+    "다이아", "다이아몬드" -> R.drawable.img_tier_dia
+    "마스터" -> R.drawable.img_tier_master
+    else -> R.drawable.img_tier_gold
+}
+
+private data class TierTextPalette(val dark: Color, val base: Color, val highlight: Color)
+
+private fun tierEnglishName(tierName: String): String? = when (tierName) {
+    "브론즈" -> "Bronze"
+    "실버" -> "Silver"
+    "골드" -> "Gold"
+    "플래티넘", "플레티넘" -> "Platinum"
+    "다이아", "다이아몬드" -> "Diamond"
+    "마스터" -> "Master"
+    else -> null
+}
+
+// 각 뱃지의 어두운 외곽·기본 금속·밝은 하이라이트 계열을 글자에 그대로 대응시킨다.
+private fun tierTextPalette(tierName: String): TierTextPalette = when (tierName) {
+    "브론즈" -> TierTextPalette(Color(0xFF7A431F), Color(0xFFB87333), Color(0xFFFFD3A8))
+    "실버" -> TierTextPalette(Color(0xFF64748B), Color(0xFFC0C7D1), Color(0xFFF8FAFC))
+    "골드" -> TierTextPalette(Color(0xFF9A6700), Color(0xFFD4A72C), Color(0xFFFFE69A))
+    "플래티넘", "플레티넘" -> TierTextPalette(Color(0xFF4C3F9B), Color(0xFF8B7FF0), Color(0xFFDCD8FF))
+    "다이아", "다이아몬드" -> TierTextPalette(Color(0xFF087E9B), Color(0xFF45C4E8), Color(0xFFD6F7FF))
+    "마스터" -> TierTextPalette(Color(0xFF5B2B8A), Color(0xFFA05CDA), Color(0xFFF0D7FF))
+    else -> TierTextPalette(Gray700, Gray600, Gray400)
+}
+
+private fun TierTextPalette.brush(progress: Float): Brush {
+    val shift = (progress * 2f) - 1f
+    return Brush.linearGradient(
+        colors = listOf(dark, base, highlight, base, dark),
+        start = Offset(shift * 180f, 0f),
+        end = Offset((shift * 180f) + 180f, 0f),
+    )
+}
+
+// 실전 티어 별 채움색 (YELLOW_star, CSS #F9AC17) — 디자인 토큰 아님, 로컬.
+private val StarYellow = Color(0xFFF9AC17)
+private val StarHighlight = Color(0xFFFFE7A3)
+
 // 오늘의 미션 카드.
 @Composable
-private fun HomeMissionCard(mission: TodayMission, onStartClick: () -> Unit = {}) {
+private fun HomeMissionCard(
+    mission: TodayMission,
+    onStartClick: () -> Unit = {},
+    onTextLineCountChanged: (titleLines: Int, descriptionLines: Int) -> Unit = { _, _ -> },
+) {
+    var titleLineCount by remember(mission.title) { mutableIntStateOf(1) }
+    var descriptionLineCount by remember(mission.description) { mutableIntStateOf(0) }
+    val targetImpactProgress = remember { Animatable(0f) }
+    var targetImpactRunning by remember { mutableStateOf(false) }
+    val targetImpactScope = rememberCoroutineScope()
+    val targetImpactOffsetPx = with(LocalDensity.current) { 3.dp.toPx() }
+    val recommendationInteraction = remember { MutableInteractionSource() }
+    val recommendationPressed by recommendationInteraction.collectIsPressedAsState()
+    var recommendationClickAnimating by remember { mutableStateOf(false) }
+    val recommendationScope = rememberCoroutineScope()
+    val recommendationVisuallyPressed = recommendationPressed || recommendationClickAnimating
+    val recommendationScale by animateFloatAsState(
+        targetValue = if (recommendationVisuallyPressed) 0.88f else 1f,
+        animationSpec = tween(
+            durationMillis = if (recommendationVisuallyPressed) 90 else 140,
+            easing = FastOutSlowInEasing,
+        ),
+        label = "recommendationPressScale",
+    )
+    val missionHeaderInteraction = remember { MutableInteractionSource() }
+    val missionHeaderPressed by missionHeaderInteraction.collectIsPressedAsState()
+    var missionHeaderClickAnimating by remember { mutableStateOf(false) }
+    val missionHeaderScope = rememberCoroutineScope()
+    val missionHeaderScale by animateFloatAsState(
+        targetValue = if (missionHeaderPressed || missionHeaderClickAnimating) 0.94f else 1f,
+        animationSpec = tween(
+            durationMillis = if (missionHeaderPressed || missionHeaderClickAnimating) 90 else 140,
+            easing = FastOutSlowInEasing,
+        ),
+        label = "missionHeaderPressScale",
+    )
+    val titleInteraction = remember { MutableInteractionSource() }
+    val titlePressed by titleInteraction.collectIsPressedAsState()
+    var titleClickAnimating by remember { mutableStateOf(false) }
+    val titleScope = rememberCoroutineScope()
+    val titleScale by animateFloatAsState(
+        targetValue = if (titlePressed || titleClickAnimating) 0.94f else 1f,
+        animationSpec = tween(
+            durationMillis = if (titlePressed || titleClickAnimating) 90 else 140,
+            easing = FastOutSlowInEasing,
+        ),
+        label = "missionTitlePressScale",
+    )
+    val descriptionInteraction = remember { MutableInteractionSource() }
+    val descriptionPressed by descriptionInteraction.collectIsPressedAsState()
+    var descriptionClickAnimating by remember { mutableStateOf(false) }
+    val descriptionScope = rememberCoroutineScope()
+    val descriptionScale by animateFloatAsState(
+        targetValue = if (descriptionPressed || descriptionClickAnimating) 0.94f else 1f,
+        animationSpec = tween(
+            durationMillis = if (descriptionPressed || descriptionClickAnimating) 90 else 140,
+            easing = FastOutSlowInEasing,
+        ),
+        label = "missionDescriptionPressScale",
+    )
     HomeCard(
         modifier = Modifier.fillMaxWidth(),
         contentPadding = PaddingValues(horizontal = 16.dp, vertical = 20.dp),
@@ -430,13 +1365,55 @@ private fun HomeMissionCard(mission: TodayMission, onStartClick: () -> Unit = {}
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Text(text = "오늘의 미션", style = TqType.BodyM.figma(), color = Gray800)
+            Text(
+                text = "오늘의 미션",
+                style = TqType.BodyM.figma(),
+                color = Gray800,
+                modifier = Modifier
+                    .graphicsLayer {
+                        scaleX = missionHeaderScale
+                        scaleY = missionHeaderScale
+                    }
+                    .clickable(
+                        interactionSource = missionHeaderInteraction,
+                        indication = null,
+                        onClick = {
+                            if (!missionHeaderClickAnimating) {
+                                missionHeaderClickAnimating = true
+                                missionHeaderScope.launch {
+                                    delay(100)
+                                    missionHeaderClickAnimating = false
+                                }
+                            }
+                        },
+                    ),
+            )
             // 추천 뱃지: 컴포넌트.css 그대로 (고정 40x22, Primary100, radius 4, 텍스트 중앙)
             Box(
                 modifier = Modifier
                     .size(width = 40.dp, height = 22.dp)
+                    .graphicsLayer {
+                        scaleX = recommendationScale
+                        scaleY = recommendationScale
+                        // 작은 배지는 아래 이동을 더하면 축소된 하단 여백이 상쇄되어
+                        // 위쪽만 줄어드는 것처럼 보이므로, 중심 기준 축소만 적용한다.
+                        translationY = 0f
+                    }
                     .clip(RoundedCornerShape(4.dp))
-                    .background(Primary100),
+                    .background(Primary100)
+                    .clickable(
+                        interactionSource = recommendationInteraction,
+                        indication = null,
+                        onClick = {
+                            if (!recommendationClickAnimating) {
+                                recommendationClickAnimating = true
+                                recommendationScope.launch {
+                                    delay(100)
+                                    recommendationClickAnimating = false
+                                }
+                            }
+                        },
+                    ),
                 contentAlignment = Alignment.Center,
             ) {
                 Text(text = "추천", style = TqType.LabelM.figma(), color = Primary600)
@@ -450,22 +1427,112 @@ private fun HomeMissionCard(mission: TodayMission, onStartClick: () -> Unit = {}
         ) {
             Image(
                 painter = painterResource(R.drawable.img_home_target),
-                contentDescription = null,
-                modifier = Modifier.size(width = 60.dp, height = 63.dp),
+                contentDescription = "오늘의 미션 과녁",
+                modifier = Modifier
+                    .size(width = 60.dp, height = 63.dp)
+                    .graphicsLayer {
+                        val progress = targetImpactProgress.value
+                        val impactScale = 1f - (0.07f * progress)
+                        scaleX = impactScale
+                        scaleY = impactScale
+                        translationX = targetImpactOffsetPx * progress
+                        translationY = targetImpactOffsetPx * progress
+                        transformOrigin = TransformOrigin(0.54f, 0.58f)
+                    }
+                    .clickable(
+                        interactionSource = remember { MutableInteractionSource() },
+                        indication = null,
+                        onClick = {
+                            if (!targetImpactRunning) {
+                                targetImpactRunning = true
+                                targetImpactScope.launch {
+                                    targetImpactProgress.snapTo(0f)
+                                    targetImpactProgress.animateTo(
+                                        targetValue = 1f,
+                                        animationSpec = tween(
+                                            durationMillis = 100,
+                                            easing = FastOutSlowInEasing,
+                                        ),
+                                    )
+                                    delay(50)
+                                    targetImpactProgress.animateTo(
+                                        targetValue = 0f,
+                                        animationSpec = tween(
+                                            durationMillis = 150,
+                                            easing = LinearOutSlowInEasing,
+                                        ),
+                                    )
+                                    targetImpactRunning = false
+                                }
+                            }
+                        },
+                    ),
             )
             Column(
                 modifier = Modifier.weight(1f),
                 verticalArrangement = Arrangement.spacedBy(4.dp),
             ) {
-                // 제목·설명 영역 256(디자인 Frame313) 상한. 줄바꿈 규칙은 MissionTitleText 참고:
-                // 어절 중간 끊김 방지 + 줄 길이 균형 + 한 글자 어절 고아 방지 + 반 넘는 한 줄은 2줄로.
-                MissionTitleText(title = mission.title)
+                // 제목·설명 영역 256(디자인 Frame313) 상한. 제목은 필요한 최소 줄 수 안에서
+                // 어절 경계를 균등하게 나누고, 설명은 AI 피드백 상세와 같은 Phrase 줄바꿈을 쓴다.
+                MissionTitleText(
+                    title = mission.title,
+                    modifier = Modifier
+                        .graphicsLayer {
+                            scaleX = titleScale
+                            scaleY = titleScale
+                        }
+                        .clickable(
+                            interactionSource = titleInteraction,
+                            indication = null,
+                            onClick = {
+                                if (!titleClickAnimating) {
+                                    titleClickAnimating = true
+                                    titleScope.launch {
+                                        delay(100)
+                                        titleClickAnimating = false
+                                    }
+                                }
+                            },
+                        ),
+                    onLineCountChanged = { lines ->
+                        titleLineCount = lines
+                        onTextLineCountChanged(lines, descriptionLineCount)
+                    },
+                )
                 mission.description?.let {
                     Text(
-                        text = it,
-                        style = TqType.BodyS.figma(),
+                        text = it.glueShortWords(),
+                        style = TqType.BodyS.figma().copy(
+                            lineBreak = LineBreak(
+                                strategy = LineBreak.Strategy.HighQuality,
+                                strictness = LineBreak.Strictness.Strict,
+                                wordBreak = LineBreak.WordBreak.Phrase,
+                            ),
+                        ),
                         color = Gray600,
-                        modifier = Modifier.widthIn(max = 256.dp),
+                        modifier = Modifier
+                            .widthIn(max = 256.dp)
+                            .graphicsLayer {
+                                scaleX = descriptionScale
+                                scaleY = descriptionScale
+                            }
+                            .clickable(
+                                interactionSource = descriptionInteraction,
+                                indication = null,
+                                onClick = {
+                                    if (!descriptionClickAnimating) {
+                                        descriptionClickAnimating = true
+                                        descriptionScope.launch {
+                                            delay(100)
+                                            descriptionClickAnimating = false
+                                        }
+                                    }
+                                },
+                            ),
+                        onTextLayout = { result ->
+                            descriptionLineCount = result.lineCount
+                            onTextLineCountChanged(titleLineCount, result.lineCount)
+                        },
                     )
                 }
             }
@@ -500,12 +1567,51 @@ private fun HomeMissionCard(mission: TodayMission, onStartClick: () -> Unit = {}
 
 @Composable
 private fun RowScope.MissionInfo(label: String, value: String, valueColor: Color) {
+    val interaction = remember { MutableInteractionSource() }
+    val pressed by interaction.collectIsPressedAsState()
+    var clickAnimating by remember { mutableStateOf(false) }
+    val scope = rememberCoroutineScope()
+    val visuallyPressed = pressed || clickAnimating
+    val scale by animateFloatAsState(
+        targetValue = if (visuallyPressed) 0.88f else 1f,
+        animationSpec = tween(
+            durationMillis = if (visuallyPressed) 90 else 140,
+            easing = FastOutSlowInEasing,
+        ),
+        label = "missionInfoPressScale",
+    )
+    val labelColor by animateColorAsState(
+        targetValue = if (visuallyPressed) Gray700 else Gray500,
+        animationSpec = tween(
+            durationMillis = if (visuallyPressed) 90 else 140,
+            easing = FastOutSlowInEasing,
+        ),
+        label = "missionInfoPressLabelColor",
+    )
     Column(
-        modifier = Modifier.weight(1f),
+        modifier = Modifier
+            .weight(1f)
+            .graphicsLayer {
+                scaleX = scale
+                scaleY = scale
+            }
+            .clickable(
+                interactionSource = interaction,
+                indication = null,
+                onClick = {
+                    if (!clickAnimating) {
+                        clickAnimating = true
+                        scope.launch {
+                            delay(100)
+                            clickAnimating = false
+                        }
+                    }
+                },
+            ),
         horizontalAlignment = Alignment.CenterHorizontally,
         // CSS Frame 316: 칸 38 = 라벨 18 + 값 20, 사이 gap 0
     ) {
-        Text(text = label, style = TqType.Caption.figma(), color = Gray500)
+        Text(text = label, style = TqType.Caption.figma(), color = labelColor)
         Text(text = value, style = TqType.LabelL.figma(), color = valueColor, textAlign = TextAlign.Center)
     }
 }
@@ -518,6 +1624,44 @@ private fun InfoDivider() {
             .height(30.dp) // 길이 26 → 30 (디자인 변경 2026-07)
             .background(Gray200), // Gray300 → Gray200 (디자인 변경 2026-07)
     )
+}
+
+// 나의 배지 컬렉션 카드 (UI 10차 신규). 흰 카드 radius 12 / 높이 64 (CSS: box-shadow 없음).
+// 좌: 제목 16 medium + 부제 13 regular / 우: 44×44 테두리 박스(Gray100) 안 배지 38×38(회전은 PNG에 구워짐).
+@Composable
+private fun BadgeCollectionCard(onClick: () -> Unit = {}) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(64.dp)
+            .clickable(onClick = onClick)
+            .clip(RoundedCornerShape(12.dp))
+            .background(White)
+            .padding(start = 20.dp, end = 16.dp), // CSS padding 10 16 10 20 (상하 10은 center로 흡수)
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Column {
+            Text(text = "나의 배지 컬렉션", style = TqType.BodyL.figma().copy(fontWeight = FontWeight.Medium), color = Gray700)
+            Text(text = "대화 경험이 쌓일 수록 새로운 배지를 획득해요!", style = TqType.BodyS.figma(), color = Gray600)
+        }
+        Box(
+            modifier = Modifier
+                .size(44.dp)
+                .border(1.dp, Gray100, RoundedCornerShape(8.dp)),
+            contentAlignment = Alignment.Center,
+        ) {
+            Image(
+                painter = painterResource(R.drawable.img_home_badge),
+                contentDescription = null,
+                // PNG(134px@3x) = 38×38 레이어를 11° 회전까지 포함해 export한 바운딩박스 = 134/3 ≈ 44.7dp.
+                // 그대로 44.7dp로 렌더해야 Figma와 1:1 (38dp로 넣으면 0.85배 축소됨). 회전·크기 보정 금지.
+                // 위치는 실렌더 기준 박스 중앙 (CSS left0/top0을 offset로 옮기면 좌상으로 치우침 — 금지).
+                contentScale = ContentScale.Fit,
+                modifier = Modifier.requiredSize((134f / 3).dp),
+            )
+        }
+    }
 }
 
 // 다른 미션 보기 카드. 흰 카드 radius 12 / 높이 50 (CSS 소프트 그림자).
@@ -550,7 +1694,7 @@ private fun OtherMissionsCard(onClick: () -> Unit) {
                 contentDescription = null,
                 modifier = Modifier.size(26.dp),
             )
-            Text(text = "다른 미션 보기", style = TqType.BodyL.figma(), color = Gray600)
+            Text(text = "다른 미션 보기", style = TqType.BodyL.figma().copy(fontWeight = FontWeight.Medium), color = Gray700) // 16 regular→medium / Gray700 (UI 10차)
         }
         Icon(
             // CSS: 뒤로가기와 같은 chevron(12x6·stroke2, 글리프 8x14)의 좌우반전 — 머티리얼 대신 실측 벡터
@@ -564,7 +1708,7 @@ private fun OtherMissionsCard(onClick: () -> Unit) {
 
 // ── Preview: 서버 없이 상태별로 확인. 배경 = 실제 앱 배경 Gray50(#F8FAFC). ──
 private val previewSummary = HomeSummary(
-    nickname = "다민",
+    nickname = "소다123",
     level = 2,
     currentXp = 30,
     nextLevelXp = 100,

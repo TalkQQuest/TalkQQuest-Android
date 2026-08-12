@@ -1,0 +1,13 @@
+<!-- 지표 상승 화살표 (Figma export "Icon-4" 9x10, Purple/600, stroke 1.33333 round) -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="9dp"
+    android:height="10dp"
+    android:viewportWidth="9"
+    android:viewportHeight="10">
+    <path
+        android:pathData="M7.66699,4.00008L4.16699,0.666748L0.666992,4.00008M4.16699,0.666748L4.16699,8.66675"
+        android:strokeColor="#6353F0"
+        android:strokeWidth="1.33333"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round" />
+</vector>

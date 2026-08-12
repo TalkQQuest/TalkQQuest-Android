@@ -26,6 +26,9 @@ object NetworkModule {
     fun provideJson(): Json = Json {
         ignoreUnknownKeys = true
         isLenient = true
+        // 서버가 non-null 필드에 null을 내려도(실측: /home/summary nickname:null)
+        // 파싱 전체를 버리지 말고 프로퍼티 기본값으로 대체 — 한 필드 때문에 화면이 목업으로 떨어지는 것 방지.
+        coerceInputValues = true
     }
 
     @Provides

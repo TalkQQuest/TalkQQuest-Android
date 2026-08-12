@@ -1,5 +1,13 @@
 package com.talkqquest.app.feature.mission.ui
 
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -69,6 +77,7 @@ internal fun MissionCard(
     onToggleSave: () -> Unit,
     modifier: Modifier = Modifier,
     showTarget: Boolean = false,
+    animateContentChanges: Boolean = false,
 ) {
     Row(
         modifier = modifier
@@ -90,22 +99,71 @@ internal fun MissionCard(
             // 과녁: 48 컨테이너 안에 40 이미지 중앙 (CSS Frame 427321186 48x48 / 이미지 40x40 left4 top4)
             Box(modifier = Modifier.size(48.dp), contentAlignment = Alignment.Center) {
                 Image(
-                    // small 별도 파일 — img_mission_target은 미션 상세의 다트판 일러스트(다른 이미지)
-                    painter = painterResource(R.drawable.img_mission_target_small),
+                    // 저장 시트 카드 과녁 = 보관함 아이콘과 동일(디자인: 시트·보관함 같은 04_21_46 아이콘)
+                    painter = painterResource(R.drawable.img_archive_mission),
                     contentDescription = null, // 장식 — 카드 제목이 이미 미션을 설명함
-                    modifier = Modifier.size(40.dp),
+                    modifier = Modifier.size(48.dp), // 디자인: 아이콘이 49px 슬롯을 꽉 채움(옛 40 → 48)
                 )
             }
             Spacer(Modifier.width(8.dp)) // 과녁 ↔ 텍스트 (CSS Frame 427321225 gap 8)
         }
+        if (animateContentChanges) {
+            AnimatedContent(
+                targetState = mission,
+                transitionSpec = {
+                    (fadeIn(tween(260, easing = FastOutSlowInEasing)) +
+                        slideInVertically(
+                            animationSpec = tween(260, easing = FastOutSlowInEasing),
+                            initialOffsetY = { it / 12 },
+                        )) togetherWith
+                        (fadeOut(tween(260, easing = FastOutSlowInEasing)) +
+                            slideOutVertically(
+                                animationSpec = tween(260, easing = FastOutSlowInEasing),
+                                targetOffsetY = { -it / 12 },
+                            ))
+                },
+                modifier = Modifier.weight(1f),
+                label = "missionCardContent",
+            ) { animatedMission ->
+                MissionCardBody(
+                    mission = animatedMission,
+                    onToggleSave = onToggleSave,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+            }
+        } else {
+            MissionCardBody(
+                mission = mission,
+                onToggleSave = onToggleSave,
+                modifier = Modifier.weight(1f),
+            )
+        }
+    }
+}
+
+@Composable
+private fun MissionCardBody(
+    mission: MissionListItem,
+    onToggleSave: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Row(modifier = modifier, verticalAlignment = Alignment.CenterVertically) {
         Column(
             modifier = Modifier.weight(1f),
             verticalArrangement = Arrangement.spacedBy(7.dp), // 제목 ↔ 메타줄 (CSS Frame 350 gap)
         ) {
             Text(
-                text = mission.title.glueShortWords().keepWordsIntact(),
-                // CSS: Body/L Medium (16/24, 굵기 500)
-                style = TqType.BodyL.figma().copy(fontWeight = FontWeight.Medium, lineBreak = LineBreak.Heading),
+                text = mission.title.glueShortWords(),
+                // CSS: Body/L Medium (16/24, 굵기 500). AI 피드백 상세와 같은 어절 단위 줄바꿈:
+                // 문장 전체를 균형 있게 배치하고, 한 글자 어절이 줄 끝에 홀로 남지 않게 한다.
+                style = TqType.BodyL.figma().copy(
+                    fontWeight = FontWeight.Medium,
+                    lineBreak = LineBreak(
+                        strategy = LineBreak.Strategy.HighQuality,
+                        strictness = LineBreak.Strictness.Strict,
+                        wordBreak = LineBreak.WordBreak.Phrase,
+                    ),
+                ),
                 color = Gray900,
             )
             Row(

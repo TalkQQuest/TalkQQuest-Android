@@ -32,7 +32,7 @@ import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -41,6 +41,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
@@ -48,6 +49,8 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 
 import com.talkqquest.app.R
@@ -79,13 +82,24 @@ import java.time.format.DateTimeFormatter
 @Composable
 fun ArchiveSearchScreen(
     onBackClick: () -> Unit = {},
-    onNavigateToDetail: (String, ActivityType) -> Unit = { _, _ -> },
+    // 💡 [수정됨] isWeeklyCompare 파라미터 추가
+    onNavigateToDetail: (String, ActivityType, Boolean) -> Unit = { _, _, _ -> },
     viewModel: ArchiveSearchViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val lifecycleOwner = LocalLifecycleOwner.current
 
-    LaunchedEffect(Unit) {
-        viewModel.refreshData()
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) {
+                viewModel.refreshData()
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+
+        onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
+        }
     }
 
     ArchiveSearchScreenContent(
@@ -127,11 +141,12 @@ private fun ArchiveSearchScreenContent(
     onClearSearch: () -> Unit,
     onClearDateFilter: () -> Unit,
     onClearCategoryFilter: () -> Unit,
-    onToggleMissionBookmark: (String) -> Unit, // 💡 Long -> String 변경
+    onToggleMissionBookmark: (String) -> Unit,
     onToggleSentenceBookmark: (String) -> Unit,
     onToggleReportBookmark: (String) -> Unit,
     onSortSelected: (ArchiveSortType) -> Unit,
-    onNavigateToDetail: (String, ActivityType) -> Unit
+    // 💡 [수정됨]
+    onNavigateToDetail: (String, ActivityType, Boolean) -> Unit
 ) {
     val dateFormatter = DateTimeFormatter.ofPattern("yyyy.MM.dd")
     val focusManager = LocalFocusManager.current
@@ -351,31 +366,51 @@ private fun ArchiveSearchScreenContent(
                                 when (item) {
                                     is ArchiveMissionItem -> ArchiveMissionCard(
                                         mission = item,
-                                        onClick = { onNavigateToDetail(item.id.toString(), ActivityType.MISSION) },
+                                        onClick = { onNavigateToDetail(item.id.toString(), ActivityType.MISSION, false) }, // 미션은 항상 false
                                         onToggleSave = { onToggleMissionBookmark(item.id) },
                                         modifier = Modifier.animateItem()
                                     )
-                                    is RecentActivity -> RecentActivityCard(
-                                        activity = item,
-                                        onClick = { onNavigateToDetail(item.id, item.type) },
-                                        modifier = Modifier.animateItem()
-                                    )
-                                    is SearchBookmarkWrapper -> BookmarkCard(
-                                        item = item.item,
-                                        isSentence = item.isSentence,
-                                        onClick = {
-                                            val type = if (item.isSentence) ActivityType.SENTENCE else ActivityType.REPORT
-                                            onNavigateToDetail(item.item.id, type)
-                                        },
-                                        onToggleSave = {
-                                            if (item.isSentence) {
-                                                onToggleSentenceBookmark(item.item.id)
-                                            } else {
-                                                onToggleReportBookmark(item.item.id)
-                                            }
-                                        },
-                                        modifier = Modifier.animateItem()
-                                    )
+                                    is RecentActivity -> {
+                                        // 💡 [수정됨] 제목으로 주간 비교 판단 후 넘김
+                                        val isWeeklyCompare = item.title.contains("주간 비교")
+                                        if (item.type == ActivityType.CONVERSATION) {
+                                            ArchiveConversationCard(
+                                                title = item.title,
+                                                tags = item.tags,
+                                                summary = item.summary ?: "",
+                                                date = item.date,
+                                                time = item.time,
+                                                onClick = { onNavigateToDetail(item.id, item.type, false) },
+                                                modifier = Modifier.animateItem()
+                                            )
+                                        } else {
+                                            RecentActivityCard(
+                                                activity = item,
+                                                onClick = { onNavigateToDetail(item.id, item.type, isWeeklyCompare) },
+                                                modifier = Modifier.animateItem()
+                                            )
+                                        }
+                                    }
+                                    is SearchBookmarkWrapper -> {
+                                        // 💡 [수정됨] 제목으로 주간 비교 판단 후 넘김
+                                        val isWeeklyCompare = item.item.title.contains("주간 비교")
+                                        BookmarkCard(
+                                            item = item.item,
+                                            isSentence = item.isSentence,
+                                            onClick = {
+                                                val type = if (item.isSentence) ActivityType.SENTENCE else ActivityType.REPORT
+                                                onNavigateToDetail(item.item.id, type, isWeeklyCompare)
+                                            },
+                                            onToggleSave = {
+                                                if (item.isSentence) {
+                                                    onToggleSentenceBookmark(item.item.id)
+                                                } else {
+                                                    onToggleReportBookmark(item.item.id)
+                                                }
+                                            },
+                                            modifier = Modifier.animateItem()
+                                        )
+                                    }
                                 }
                             }
                         }
@@ -401,9 +436,9 @@ private fun ArchiveSearchScreenContent(
 
                                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                                     DateInputBox(
-                                        dateText = uiState.leftDate.format(dateFormatter),
+                                        dateText = if (uiState.selectedDateTab != null) "직접 선택하기" else uiState.leftDate.format(dateFormatter),
                                         isActive = uiState.selectedDateTab == null,
-                                        modifier = Modifier.width(128.dp),
+                                        modifier = Modifier.width(133.dp),
                                         onClick = { isSelectingStartDate = true; showBottomSheet = true }
                                     )
                                     Box(modifier = Modifier.width(9.dp), contentAlignment = Alignment.Center) {
@@ -527,7 +562,7 @@ private fun DateInputBox(
     onClick: () -> Unit = {}
 ) {
     val borderColor = if (isActive) Primary600 else Gray300
-    val textColor = if (isActive) Primary600 else Gray500
+    val textColor = if (isActive) Primary600 else Gray400
     val iconColor = if (isActive) Primary600 else Gray400
 
     Row(
@@ -564,7 +599,6 @@ private val previewUiState = ArchiveSearchUiState(
     isCategoryChipVisible = true,
     sortType = ArchiveSortType.LATEST,
     allMissions = listOf(
-        // 💡 1L -> "1" 로 타입 변경
         ArchiveMissionItem("1", "처음 보는 사람에게 짧게 인사하기", "짧은 대화", "쉬움", 2, 20, isCompleted = true, isSaved = true, completedDate = "2026.07.16")
     ),
     allConversations = listOf(
@@ -573,7 +607,9 @@ private val previewUiState = ArchiveSearchUiState(
             title = "식당에서 메뉴 추천받고 주문하기",
             type = ActivityType.CONVERSATION,
             status = "대화 완료",
-            date = "2026.07.15"
+            date = "2026.07.15",
+            tags = listOf("상황극", "주문"),
+            summary = "직원에게 정중하게 메뉴를 묻고 주문하는 연습을 했습니다."
         )
     ),
     allSentences = listOf(
@@ -588,7 +624,7 @@ private val previewUiState = ArchiveSearchUiState(
     allReports = listOf(
         BookmarkArchiveItem(
             id = "2",
-            title = "자기소개와 취미 공유하기",
+            title = "8월 2-3주차 주간 비교 리포트",
             status = "리포트 열람",
             date = "2026.05.05",
             isSaved = true
@@ -607,7 +643,7 @@ private fun ArchiveSearchFilterPreview() {
             onSearchQueryChanged = {}, onSearchTriggered = {}, onClearSearch = {},
             onClearDateFilter = {}, onClearCategoryFilter = {},
             onToggleMissionBookmark = {}, onToggleSentenceBookmark = {}, onToggleReportBookmark = {},
-            onSortSelected = {}, onNavigateToDetail = { _, _ -> }
+            onSortSelected = {}, onNavigateToDetail = { _, _, _ -> }
         )
     }
 }
@@ -623,7 +659,7 @@ private fun ArchiveSearchResultsPreview() {
             onSearchQueryChanged = {}, onSearchTriggered = {}, onClearSearch = {},
             onClearDateFilter = {}, onClearCategoryFilter = {},
             onToggleMissionBookmark = {}, onToggleSentenceBookmark = {}, onToggleReportBookmark = {},
-            onSortSelected = {}, onNavigateToDetail = { _, _ -> }
+            onSortSelected = {}, onNavigateToDetail = { _, _, _ -> }
         )
     }
 }

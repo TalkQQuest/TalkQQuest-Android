@@ -5,7 +5,9 @@ import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.navigationBars
+import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -31,12 +33,33 @@ fun MainScreen() {
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route
 
+    // 하단 탭 4개(홈·미션·보관함·프로필)를 한 HorizontalPager에서 스와이프 전환. 상태는 여기서 호이스팅해
+    // 페이저 셸(MainTabsPager)과 전역 하단바(TqBottomBar)가 공유한다.
+    val pagerState = rememberPagerState(pageCount = { BottomNavItem.entries.size })
+
+    // 다른 화면에서 특정 탭 route로 새로 진입할 때(예: 프로필→보관함) 그 탭 페이지로 점프시킨다.
+    // back stack entry id 기준이라, 상세 화면에서 뒤로 돌아오는 pop은 이미 처리된 entry라 다시 점프하지 않는다
+    // (사용자가 스와이프로 옮겨둔 탭을 유지).
+    val syncedEntryIds = remember { mutableStateOf(setOf<String>()) }
+    LaunchedEffect(navBackStackEntry) {
+        val entry = navBackStackEntry ?: return@LaunchedEffect
+        val page = BottomNavItem.entries.indexOfFirst { it.route == entry.destination.route }
+        if (page >= 0 && entry.id !in syncedEntryIds.value) {
+            syncedEntryIds.value = syncedEntryIds.value + entry.id
+            pagerState.scrollToPage(page)
+        }
+    }
+
     // ?섎떒諛??쒖떆 route: ??4媛?+ ?붿옄?몄긽 ?섎떒諛붽? ?덈뒗 ?붾㈃(誘몄뀡 紐⑸줉). 洹????먮룞 ?④?.
     // currentRoute == null = 泥??꾨젅???쒖옉 ?붾㈃ ?명똿 ?? ???④꼈????쾶 ?⑥? ?딄쾶 諛붾줈 ?쒖떆.
     // ??CONVERSATION_PREP(誘몄뀡 吏꾩엯)? ?쒖쇅 ??UI 7李?"誘몄뀡 吏꾩엯" ?꾨젅?꾩뿉 ?섎떒 ?ㅻ퉬寃뚯씠?섏씠 ?놁쓬(2026-07-19 CSS ?뺤씤).
     val bottomBarRoutes = BottomNavItem.entries.map { it.route } +
-        Screen.MISSION_LIST + Screen.MISSION_DETAIL + Screen.CONVERSATION +
-        Screen.REPORT + Screen.PROFILE_BADGES + Screen.PROFILE_RECENT_MISSION
+        Screen.MISSION_LIST + Screen.MISSION_LIST_HOME + Screen.MISSION_DETAIL +
+        Screen.PROFILE_BADGES + Screen.PROFILE_RECENT_MISSION
+    // CONVERSATION 제외(UI 13차): "대화 시작(추천 답변 열림)" 프레임에 하단 앱 네비가 없다.
+    // 시스템 네비(804~852)만 있고 입력창이 그 바로 위 24까지 내려온다. 나가는 길은 헤더의
+    // 뒤로가기(저장 안 함) / "대화 완료"(완료·저장) 두 버튼이 대신한다.
+    // REPORT 제외: 최신 시안에서 리포트(성장/주간)는 하단 네비 없는 단독 화면(뒤로가기로 이탈)
 
     val hazeState = remember { HazeState() }
 
@@ -59,6 +82,8 @@ fun MainScreen() {
         NavGraph(
             navController = navController,
             // hazeSource: ???곸뿭(?붾㈃ 肄섑뀗痢????좊━???먮━寃?鍮꾩튌 '?먮낯'.
+            pagerState = pagerState,
+            // 탭 간 가로 스와이프는 MainTabsPager 내부 HorizontalPager가 손가락을 따라 처리한다.
             modifier = Modifier
                 .fillMaxSize()
                 .hazeSource(state = hazeState),
@@ -67,6 +92,7 @@ fun MainScreen() {
         if (showBottomBar) {
             TqBottomBar(
                 navController = navController,
+                pagerState = pagerState,
                 hazeState = hazeState,
                 modifier = Modifier
                     .align(Alignment.BottomCenter)

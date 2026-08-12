@@ -1,4 +1,4 @@
-﻿package com.talkqquest.app.feature.auth.viewmodel
+package com.talkqquest.app.feature.auth.viewmodel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -7,6 +7,8 @@ import com.talkqquest.app.feature.auth.data.AuthRepository
 import com.talkqquest.app.feature.auth.data.EmailSignupRequest
 import com.talkqquest.app.feature.auth.data.OnboardingStepSaveRequest
 import com.talkqquest.app.feature.auth.data.SocialLoginData
+import com.talkqquest.app.feature.auth.data.SessionCheckResult
+import com.talkqquest.app.feature.home.data.model.LegalDocument
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -19,6 +21,8 @@ import javax.inject.Inject
 data class AuthUiState(
     val isLoading: Boolean = false,
     val errorMessage: String? = null,
+    val serviceTerms: LegalDocument? = null,
+    val privacyPolicy: LegalDocument? = null,
 )
 
 @HiltViewModel
@@ -28,6 +32,51 @@ class AuthViewModel @Inject constructor(
     private val _uiState = MutableStateFlow(AuthUiState())
     val uiState: StateFlow<AuthUiState> = _uiState.asStateFlow()
 
+    fun checkStoredSession(
+        onAuthenticated: () -> Unit,
+        onUnauthenticated: () -> Unit,
+        onNetworkError: () -> Unit,
+    ) {
+        viewModelScope.launch {
+            _uiState.update { it.copy(isLoading = true, errorMessage = null) }
+            when (authRepository.checkStoredSession()) {
+                SessionCheckResult.Authenticated -> {
+                    _uiState.update { it.copy(isLoading = false) }
+                    onAuthenticated()
+                }
+                SessionCheckResult.Unauthenticated -> {
+                    _uiState.update { it.copy(isLoading = false) }
+                    onUnauthenticated()
+                }
+                SessionCheckResult.NetworkError -> {
+                    _uiState.update { it.copy(isLoading = false, errorMessage = "네트워크 연결을 확인해주세요.") }
+                    onNetworkError()
+                }
+            }
+        }
+    }
+    fun loadSignupLegalDocuments() {
+        viewModelScope.launch {
+            _uiState.update { it.copy(isLoading = true, errorMessage = null) }
+            val termsResult = authRepository.getServiceTerms()
+            val privacyResult = authRepository.getPrivacyPolicy()
+            val nextError = when {
+                termsResult is ApiResult.Exception || privacyResult is ApiResult.Exception -> "\uB124\uD2B8\uC6CC\uD06C \uC5F0\uACB0\uC744 \uD655\uC778\uD574\uC8FC\uC138\uC694."
+                termsResult is ApiResult.Error -> termsResult.message ?: "\uC774\uC6A9\uC57D\uAD00\uC744 \uBD88\uB7EC\uC624\uC9C0 \uBABB\uD588\uC5B4\uC694."
+                privacyResult is ApiResult.Error -> privacyResult.message ?: "\uAC1C\uC778\uC815\uBCF4 \uCC98\uB9AC\uBC29\uCE68\uC744 \uBD88\uB7EC\uC624\uC9C0 \uBABB\uD588\uC5B4\uC694."
+                else -> null
+            }
+
+            _uiState.update {
+                it.copy(
+                    isLoading = false,
+                    errorMessage = nextError,
+                    serviceTerms = (termsResult as? ApiResult.Success)?.data ?: it.serviceTerms,
+                    privacyPolicy = (privacyResult as? ApiResult.Success)?.data ?: it.privacyPolicy,
+                )
+            }
+        }
+    }
     fun loginWithKakao(
         providerAccessToken: String,
         onSuccess: (SocialLoginData) -> Unit,
@@ -130,6 +179,35 @@ class AuthViewModel @Inject constructor(
     }
 
 
+    fun updateSocialNickname(
+        nickname: String,
+        onSuccess: () -> Unit,
+    ) {
+        if (nickname.isBlank()) {
+            _uiState.update { it.copy(errorMessage = "닉네임을 입력해주세요.") }
+            return
+        }
+
+        viewModelScope.launch {
+            _uiState.update { it.copy(isLoading = true, errorMessage = null) }
+            when (val result = authRepository.updateMyNickname(
+                nickname = nickname.trim(),
+                termsAgreedAt = Instant.now().toString(),
+            )) {
+                is ApiResult.Success -> {
+                    _uiState.update { it.copy(isLoading = false) }
+                    onSuccess()
+                }
+                is ApiResult.Error -> _uiState.update {
+                    it.copy(isLoading = false, errorMessage = result.message ?: "닉네임 저장에 실패했어요.")
+                }
+                is ApiResult.Exception -> _uiState.update {
+                    it.copy(isLoading = false, errorMessage = "네트워크 연결을 확인해주세요.")
+                }
+            }
+        }
+    }
+
     fun saveOnboardingStep(
         request: OnboardingStepSaveRequest,
         onSuccess: () -> Unit,
@@ -171,6 +249,42 @@ class AuthViewModel @Inject constructor(
                 }
                 is ApiResult.Exception -> _uiState.update {
                     it.copy(isLoading = false, errorMessage = "\uB124\uD2B8\uC6CC\uD06C \uC5F0\uACB0\uC744 \uD655\uC778\uD574\uC8FC\uC138\uC694.")
+                }
+            }
+        }
+    }
+
+    fun logout(onSuccess: () -> Unit) {
+        viewModelScope.launch {
+            _uiState.update { it.copy(isLoading = true, errorMessage = null) }
+            when (val result = authRepository.logout()) {
+                is ApiResult.Success -> {
+                    _uiState.update { it.copy(isLoading = false) }
+                    onSuccess()
+                }
+                is ApiResult.Error -> _uiState.update {
+                    it.copy(isLoading = false, errorMessage = result.message ?: "로그아웃에 실패했어요.")
+                }
+                is ApiResult.Exception -> _uiState.update {
+                    it.copy(isLoading = false, errorMessage = "네트워크 연결을 확인해주세요.")
+                }
+            }
+        }
+    }
+
+    fun withdraw(onSuccess: () -> Unit) {
+        viewModelScope.launch {
+            _uiState.update { it.copy(isLoading = true, errorMessage = null) }
+            when (val result = authRepository.withdraw()) {
+                is ApiResult.Success -> {
+                    _uiState.update { it.copy(isLoading = false) }
+                    onSuccess()
+                }
+                is ApiResult.Error -> _uiState.update {
+                    it.copy(isLoading = false, errorMessage = result.message ?: "회원 탈퇴에 실패했어요.")
+                }
+                is ApiResult.Exception -> _uiState.update {
+                    it.copy(isLoading = false, errorMessage = "네트워크 연결을 확인해주세요.")
                 }
             }
         }
@@ -228,4 +342,8 @@ class AuthViewModel @Inject constructor(
         }
     }
 }
+
+
+
+
 

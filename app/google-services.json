@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "997295644955",
+    "project_id": "talkqquest",
+    "storage_bucket": "talkqquest.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:997295644955:android:ebf1a8add97ee2f068b3be",
+        "android_client_info": {
+          "package_name": "com.talkqquest.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDk-CqZz0vl886mFEoBJBLy4d1wAHarg8Q"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

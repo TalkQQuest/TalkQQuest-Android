@@ -1,17 +1,85 @@
 package com.talkqquest.app.feature.archive.data
 
 import com.talkqquest.app.core.network.ApiResponse
+import com.talkqquest.app.feature.archive.data.model.ArchiveConversationDetailResponse
+import com.talkqquest.app.feature.archive.data.model.ArchivePhraseDetailResponse
+import com.talkqquest.app.feature.archive.data.model.ArchiveReportDetailResponse
+import com.talkqquest.app.feature.archive.data.model.ArchiveSearchResponse
 import com.talkqquest.app.feature.archive.data.model.ArchiveSummary
+import com.talkqquest.app.feature.archive.data.model.DeletePhraseResponse
+import com.talkqquest.app.feature.archive.data.model.DeleteReportResponse
+import com.talkqquest.app.feature.archive.data.model.MissionSaveResponse
+import com.talkqquest.app.feature.archive.data.model.SavePhraseRequest
+import com.talkqquest.app.feature.archive.data.model.SavePhraseResponse
+import com.talkqquest.app.feature.archive.data.model.SaveReportRequest
+import com.talkqquest.app.feature.archive.data.model.SaveReportResponse
+import retrofit2.http.Body
+import retrofit2.http.DELETE
 import retrofit2.http.GET
+import retrofit2.http.POST
+import retrofit2.http.Path
+import retrofit2.http.Query
 
-// 아카이브 API (기능명세서 F101~F103). Retrofit 인터페이스.
 interface ArchiveApi {
-
-    // 아카이브 카운트 및 최근 활동 요약 조회 (F101)
     @GET("api/v1/archives/summary")
     suspend fun getArchiveSummary(): ApiResponse<ArchiveSummary>
 
-    // 추가 API (참고용 - 명세서 F102, F103 등)
-    // @GET("api/v1/archives/search")
-    // suspend fun searchArchives(...)
+    @GET("api/v1/archives")
+    suspend fun searchArchives(
+        @Query("keyword") keyword: String? = null,
+        @Query("type") type: String? = null,
+        @Query("startDate") startDate: String? = null,
+        @Query("endDate") endDate: String? = null,
+        @Query("sort") sort: String? = null,
+        @Query("missionFilter") missionFilter: String? = null, // 💡 API 명세 변경: 미션 필터 파라미터 추가
+        @Query("folderId") folderId: String? = null,
+        @Query("tag") tag: String? = null,
+        @Query("page") page: Int? = null,
+        @Query("size") size: Int? = null
+    ): ApiResponse<ArchiveSearchResponse>
+
+    @GET("api/v1/archives/conversations/{conversationId}")
+    suspend fun getConversationDetail(
+        @Path("conversationId") conversationId: String
+    ): ApiResponse<ArchiveConversationDetailResponse>
+
+    @GET("api/v1/archives/phrases/{phraseId}")
+    suspend fun getPhraseDetail(
+        @Path("phraseId") phraseId: String
+    ): ApiResponse<ArchivePhraseDetailResponse>
+
+    @GET("api/v1/reports/{reportId}")
+    suspend fun getReportDetail(
+        @Path("reportId") reportId: String
+    ): ApiResponse<ArchiveReportDetailResponse>
+
+    @POST("api/v1/missions/{missionId}/save")
+    suspend fun saveMissionArchive(
+        @Path("missionId") missionId: String
+    ): ApiResponse<MissionSaveResponse>
+
+    @DELETE("api/v1/missions/{missionId}/save")
+    suspend fun deleteMissionArchive(
+        @Path("missionId") missionId: String
+    ): ApiResponse<MissionSaveResponse>
+
+    @POST("api/v1/archives/phrases")
+    suspend fun savePhraseArchive(
+        @Body request: SavePhraseRequest
+    ): ApiResponse<SavePhraseResponse>
+
+    @DELETE("api/v1/archives/phrases/{phraseId}")
+    suspend fun deletePhraseArchive(
+        @Path("phraseId") phraseId: String
+    ): ApiResponse<DeletePhraseResponse>
+
+    @POST("api/v1/reports")
+    suspend fun saveReportArchive(
+        @Body request: SaveReportRequest
+    ): ApiResponse<SaveReportResponse>
+
+    @DELETE("api/v1/reports/{reportId}")
+    suspend fun deleteReportArchive(
+        @Path("reportId") reportId: String
+    ): ApiResponse<DeleteReportResponse>
 }

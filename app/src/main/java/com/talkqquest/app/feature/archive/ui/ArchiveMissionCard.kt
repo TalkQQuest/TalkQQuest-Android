@@ -84,16 +84,14 @@ fun ArchiveMissionCard(
         verticalAlignment = Alignment.CenterVertically
     ) {
         // [좌측 영역] 미션 전용 아이콘
-        Box(
-            modifier = Modifier.size(48.dp),
-            contentAlignment = Alignment.Center
-        ) {
-            Image(
-                painter = painterResource(id = R.drawable.img_archive_mission),
-                contentDescription = null,
-                modifier = Modifier.size(40.dp)
-            )
-        }
+        // 💡 CSS 크기에 맞게 49.dp로 수정 및 불필요한 Box 제거
+        Image(
+            painter = painterResource(id = R.drawable.img_archive_mission),
+            contentDescription = null,
+            modifier = Modifier
+                .size(49.dp)
+                .clip(RoundedCornerShape(8.dp))
+        )
 
         Spacer(modifier = Modifier.width(8.dp))
 
@@ -142,6 +140,7 @@ fun ArchiveMissionCard(
                     if (mission.isSaved) R.drawable.ic_mission_bookmark_filled else R.drawable.ic_mission_bookmark
                 ),
                 contentDescription = if (mission.isSaved) "북마크 해제" else "북마크",
+                modifier = Modifier.size(24.dp) // 💡 CSS 크기에 맞게 24.dp로 수정
             )
         }
     }
@@ -191,7 +190,7 @@ private fun ArchiveTimeXpRow(minutes: Int, xp: Int) {
             Image(
                 painter = painterResource(R.drawable.ic_mission_time),
                 contentDescription = null,
-                modifier = Modifier.size(9.dp),
+                modifier = Modifier.size(9.dp), // 💡 CSS 크기에 맞게 9.dp (유지)
             )
             Text(text = "${minutes}분", style = TqType.Caption.figma(), color = Gray500, softWrap = false)
         }
@@ -201,7 +200,10 @@ private fun ArchiveTimeXpRow(minutes: Int, xp: Int) {
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(2.dp),
         ) {
-            Image(painter = painterResource(R.drawable.ic_mission_xp), contentDescription = null)
+            Image(
+                painter = painterResource(R.drawable.ic_mission_xp),
+                contentDescription = null
+            )
             Text(text = "${xp}XP", style = TqType.Caption.figma(), color = Gray500, softWrap = false)
         }
     }

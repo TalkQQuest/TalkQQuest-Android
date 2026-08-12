@@ -1,6 +1,8 @@
 package com.talkqquest.app.feature.archive.viewmodel
 
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
+import com.talkqquest.app.core.network.ApiResult
 import com.talkqquest.app.feature.archive.data.ArchiveRepository
 import com.talkqquest.app.feature.archive.ui.ArchiveMissionItem
 import com.talkqquest.app.feature.archive.ui.BookmarkArchiveItem
@@ -9,40 +11,23 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.launch
 import java.time.LocalDate
+import java.time.ZonedDateTime
 import java.time.format.DateTimeFormatter
 import javax.inject.Inject
 
-enum class ArchiveSortType(val title: String) {
-    LATEST("최신순"),
-    OLDEST("오래된 순"),
-    SAVED("저장한 순")
-}
+enum class ArchiveSortType(val title: String) { LATEST("최신순"), OLDEST("오래된 순"), SAVED("저장한 순") }
 
-data class SearchBookmarkWrapper(
-    val item: BookmarkArchiveItem,
-    val isSentence: Boolean
-)
+data class SearchBookmarkWrapper(val item: BookmarkArchiveItem, val isSentence: Boolean)
 
 data class ArchiveSearchUiState(
-    val searchQuery: String = "",
-    val selectedDateTab: String? = "전체",
-    val selectedCategoryTab: String? = "전체",
-    val oldestCardDate: LocalDate = LocalDate.of(2025, 1, 1),
-    val leftDate: LocalDate = LocalDate.of(2025, 1, 1),
-    val rightDate: LocalDate = LocalDate.now(),
-    val showResults: Boolean = false,
-
-    val isDateChipVisible: Boolean = true,
-    val isCategoryChipVisible: Boolean = true,
-
+    val searchQuery: String = "", val selectedDateTab: String? = "전체", val selectedCategoryTab: String? = "전체",
+    val oldestCardDate: LocalDate = LocalDate.of(2025, 1, 1), val leftDate: LocalDate = LocalDate.of(2025, 1, 1), val rightDate: LocalDate = LocalDate.now(),
+    val showResults: Boolean = false, val isDateChipVisible: Boolean = true, val isCategoryChipVisible: Boolean = true,
     val sortType: ArchiveSortType = ArchiveSortType.LATEST,
-
-    val allMissions: List<ArchiveMissionItem> = emptyList(),
-    val allConversations: List<RecentActivity> = emptyList(),
-    val allSentences: List<BookmarkArchiveItem> = emptyList(),
-    val allReports: List<BookmarkArchiveItem> = emptyList(),
-
+    val allMissions: List<ArchiveMissionItem> = emptyList(), val allConversations: List<RecentActivity> = emptyList(),
+    val allSentences: List<BookmarkArchiveItem> = emptyList(), val allReports: List<BookmarkArchiveItem> = emptyList(),
     val savedTimestamps: Map<String, Long> = emptyMap()
 ) {
     val searchResults: List<Any>
@@ -57,40 +42,29 @@ data class ArchiveSearchUiState(
 
             val formatter = DateTimeFormatter.ofPattern("yyyy.MM.dd")
 
-            fun getItemDate(item: Any): LocalDate {
-                return try {
-                    when (item) {
-                        is RecentActivity -> LocalDate.parse(item.date, formatter)
-                        is SearchBookmarkWrapper -> LocalDate.parse(item.item.date, formatter)
-                        is BookmarkArchiveItem -> LocalDate.parse(item.date, formatter)
-                        is ArchiveMissionItem -> LocalDate.parse(item.completedDate, formatter)
-                        else -> LocalDate.MIN
-                    }
-                } catch (e: Exception) {
-                    LocalDate.MIN
+            fun getItemDate(item: Any): LocalDate = try {
+                when (item) {
+                    is RecentActivity -> LocalDate.parse(item.date, formatter)
+                    is SearchBookmarkWrapper -> LocalDate.parse(item.item.date, formatter)
+                    is BookmarkArchiveItem -> LocalDate.parse(item.date, formatter)
+                    is ArchiveMissionItem -> LocalDate.parse(item.completedDate, formatter)
+                    else -> LocalDate.MIN
                 }
-            }
+            } catch (e: Exception) { LocalDate.MIN }
 
-            fun getItemId(item: Any): Long {
-                return try {
-                    when (item) {
-                        // 💡 미션 ID도 이제 String이므로 toLongOrNull() 사용
-                        is ArchiveMissionItem -> item.id.toLongOrNull() ?: 0L
-                        is RecentActivity -> item.id.toLongOrNull() ?: 0L
-                        is SearchBookmarkWrapper -> item.item.id.toLongOrNull() ?: 0L
-                        else -> 0L
-                    }
-                } catch (e: Exception) {
-                    0L
+            fun getItemId(item: Any): Long = try {
+                when (item) {
+                    is ArchiveMissionItem -> item.id.toLongOrNull() ?: 0L
+                    is RecentActivity -> item.id.toLongOrNull() ?: 0L
+                    is SearchBookmarkWrapper -> item.item.id.toLongOrNull() ?: 0L
+                    else -> 0L
                 }
-            }
+            } catch (e: Exception) { 0L }
 
-            fun getItemKey(item: Any): String {
-                return when (item) {
-                    is ArchiveMissionItem -> "mission_${item.id}"
-                    is SearchBookmarkWrapper -> "bookmark_${item.isSentence}_${item.item.id}"
-                    else -> ""
-                }
+            fun getItemKey(item: Any): String = when (item) {
+                is ArchiveMissionItem -> "mission_${item.id}"
+                is SearchBookmarkWrapper -> "bookmark_${item.isSentence}_${item.item.id}"
+                else -> ""
             }
 
             fun isDateInRange(item: Any): Boolean {
@@ -99,51 +73,27 @@ data class ArchiveSearchUiState(
                 return !itemDate.isBefore(leftDate) && !itemDate.isAfter(rightDate)
             }
 
-            if (showMission) {
-                results.addAll(allMissions.filter {
-                    (query.isEmpty() || it.title.lowercase().contains(query)) && isDateInRange(it)
-                })
-            }
-            if (showConversation) {
-                results.addAll(allConversations.filter {
-                    (query.isEmpty() || it.title.lowercase().contains(query)) && isDateInRange(it)
-                })
-            }
-            if (showSentence) {
-                results.addAll(allSentences.filter { sentence ->
-                    val matchSentenceTitle = sentence.title.lowercase().contains(query)
-                    val relatedConv = allConversations.find { it.id == sentence.relatedConversationId }
-                    val matchConvTitle = relatedConv?.title?.lowercase()?.contains(query) == true
+            if (showMission) results.addAll(allMissions.filter { (query.isEmpty() || it.title.lowercase().contains(query)) && isDateInRange(it) })
+            if (showConversation) results.addAll(allConversations.filter { (query.isEmpty() || it.title.lowercase().contains(query)) && isDateInRange(it) })
+            if (showSentence) results.addAll(allSentences.filter { sentence ->
+                val matchSentenceTitle = sentence.title.lowercase().contains(query)
+                val relatedConv = allConversations.find { it.id == sentence.relatedConversationId }
+                val matchConvTitle = relatedConv?.title?.lowercase()?.contains(query) == true
+                (query.isEmpty() || matchSentenceTitle || matchConvTitle) && isDateInRange(sentence)
+            }.map { SearchBookmarkWrapper(it, isSentence = true) })
+            if (showReport) results.addAll(allReports.filter { (query.isEmpty() || it.title.lowercase().contains(query)) && isDateInRange(it) }.map { SearchBookmarkWrapper(it, isSentence = false) })
 
-                    (query.isEmpty() || matchSentenceTitle || matchConvTitle) && isDateInRange(sentence)
-                }.map { SearchBookmarkWrapper(it, isSentence = true) })
-            }
-            if (showReport) {
-                results.addAll(allReports.filter {
-                    (query.isEmpty() || it.title.lowercase().contains(query)) && isDateInRange(it)
-                }.map { SearchBookmarkWrapper(it, isSentence = false) })
-            }
-
-            fun isItemSaved(item: Any): Boolean {
-                return when (item) {
-                    is ArchiveMissionItem -> item.isSaved
-                    is SearchBookmarkWrapper -> item.item.isSaved
-                    else -> false
-                }
+            fun isItemSaved(item: Any): Boolean = when (item) {
+                is ArchiveMissionItem -> item.isSaved
+                is SearchBookmarkWrapper -> item.item.isSaved
+                else -> false
             }
 
             when (sortType) {
                 ArchiveSortType.LATEST -> results.sortByDescending { getItemDate(it) }
                 ArchiveSortType.OLDEST -> results.sortBy { getItemDate(it) }
-                ArchiveSortType.SAVED -> {
-                    results.sortWith(
-                        compareByDescending<Any> { if (isItemSaved(it)) 1 else 0 }
-                            .thenByDescending { savedTimestamps[getItemKey(it)] ?: 0L }
-                            .thenByDescending { getItemId(it) }
-                    )
-                }
+                ArchiveSortType.SAVED -> results.sortWith(compareByDescending<Any> { if (isItemSaved(it)) 1 else 0 }.thenByDescending { savedTimestamps[getItemKey(it)] ?: 0L }.thenByDescending { getItemId(it) })
             }
-
             return results
         }
 }
@@ -156,132 +106,102 @@ class ArchiveSearchViewModel @Inject constructor(
     private val _uiState = MutableStateFlow(ArchiveSearchUiState())
     val uiState: StateFlow<ArchiveSearchUiState> = _uiState.asStateFlow()
 
-    init {
-        refreshData()
-    }
+    init { refreshData() }
 
-    fun updateSearchQuery(query: String) {
-        _uiState.update { it.copy(searchQuery = query) }
-    }
-
-    fun setSortType(type: ArchiveSortType) {
-        _uiState.update { it.copy(sortType = type) }
-    }
-
+    fun updateSearchQuery(query: String) { _uiState.update { it.copy(searchQuery = query) } }
+    fun setSortType(type: ArchiveSortType) { _uiState.update { it.copy(sortType = type) } }
     fun selectDateTab(tab: String) {
         val right = LocalDate.now()
-        val left = when (tab) {
-            "7일" -> right.minusDays(7)
-            "30일" -> right.minusDays(30)
-            "3개월" -> right.minusMonths(3)
-            else -> _uiState.value.oldestCardDate
-        }
+        val left = when (tab) { "7일" -> right.minusDays(7); "30일" -> right.minusDays(30); "3개월" -> right.minusMonths(3); else -> _uiState.value.oldestCardDate }
         _uiState.update { it.copy(selectedDateTab = tab, leftDate = left, rightDate = right) }
     }
-
     fun selectCustomDate(date: LocalDate, isStartDate: Boolean) {
         _uiState.update { state ->
-            var newLeft = state.leftDate
-            var newRight = state.rightDate
-
-            if (isStartDate) {
-                newLeft = date
-                if (newLeft.isAfter(newRight)) newRight = newLeft.plusDays(1)
-            } else {
-                newRight = date
-                if (newRight.isBefore(newLeft)) newLeft = newRight.minusDays(1)
-            }
+            var newLeft = state.leftDate; var newRight = state.rightDate
+            if (isStartDate) { newLeft = date; if (newLeft.isAfter(newRight)) newRight = newLeft.plusDays(1) }
+            else { newRight = date; if (newRight.isBefore(newLeft)) newLeft = newRight.minusDays(1) }
             state.copy(selectedDateTab = null, leftDate = newLeft, rightDate = newRight)
         }
     }
-
-    fun selectCategoryTab(tab: String) {
-        _uiState.update { it.copy(selectedCategoryTab = tab) }
-    }
-
-    fun resetFilters() {
-        selectDateTab("전체")
-        selectCategoryTab("전체")
-        updateSearchQuery("")
-        clearSearch()
-        setSortType(ArchiveSortType.LATEST)
-    }
-
-    fun performSearch() {
-        _uiState.update { it.copy(showResults = true, isDateChipVisible = true, isCategoryChipVisible = true) }
-    }
-
-    fun clearSearch() {
-        _uiState.update { it.copy(showResults = false) }
-    }
-
+    fun selectCategoryTab(tab: String) { _uiState.update { it.copy(selectedCategoryTab = tab) } }
+    fun resetFilters() { selectDateTab("전체"); selectCategoryTab("전체"); updateSearchQuery(""); clearSearch(); setSortType(ArchiveSortType.LATEST) }
+    fun performSearch() { _uiState.update { it.copy(showResults = true, isDateChipVisible = true, isCategoryChipVisible = true) } }
+    fun clearSearch() { _uiState.update { it.copy(showResults = false) } }
     fun clearDateFilter() {
         val right = LocalDate.now()
         val left = _uiState.value.oldestCardDate
         _uiState.update { it.copy(selectedDateTab = "전체", leftDate = left, rightDate = right, isDateChipVisible = false) }
     }
+    fun clearCategoryFilter() { _uiState.update { it.copy(selectedCategoryTab = "전체", isCategoryChipVisible = false) } }
 
-    fun clearCategoryFilter() {
-        _uiState.update { it.copy(selectedCategoryTab = "전체", isCategoryChipVisible = false) }
-    }
-
-    // 💡 Long 타입 파라미터를 String으로 변경
     fun toggleMissionBookmark(missionId: String) {
-        val isCurrentlySaved = _uiState.value.allMissions.find { it.id == missionId }?.isSaved == true
-
-        repository.toggleMissionBookmark(missionId)
-        refreshData()
-
-        _uiState.update { state ->
-            val key = "mission_$missionId"
-            val updatedTimestamps = state.savedTimestamps.toMutableMap()
-            if (!isCurrentlySaved) {
-                updatedTimestamps[key] = System.currentTimeMillis()
-            }
-            state.copy(savedTimestamps = updatedTimestamps)
-        }
+        val target = _uiState.value.allMissions.find { it.id == missionId } ?: return
+        val isCurrentlySaved = target.isSaved
+        _uiState.update { state -> state.copy(allMissions = state.allMissions.map { if (it.id == missionId) it.copy(isSaved = !isCurrentlySaved) else it }) }
+        viewModelScope.launch { repository.toggleMissionBookmark(missionId, isCurrentlySaved).also { refreshData() } }
     }
 
     fun toggleSentenceBookmark(sentenceId: String) {
-        val isCurrentlySaved = _uiState.value.allSentences.find { it.id == sentenceId }?.isSaved == true
-
-        repository.toggleSentenceBookmark(sentenceId)
-        refreshData()
-
-        _uiState.update { state ->
-            val key = "bookmark_true_$sentenceId"
-            val updatedTimestamps = state.savedTimestamps.toMutableMap()
-            if (!isCurrentlySaved) {
-                updatedTimestamps[key] = System.currentTimeMillis()
-            }
-            state.copy(savedTimestamps = updatedTimestamps)
-        }
+        val target = _uiState.value.allSentences.find { it.id == sentenceId } ?: return
+        val isCurrentlySaved = target.isSaved
+        viewModelScope.launch { repository.toggleSentenceBookmark(id = sentenceId, isCurrentlySaved = isCurrentlySaved, conversationId = target.relatedConversationId, content = target.title, memo = target.memoText).also { refreshData() } }
     }
 
     fun toggleReportBookmark(reportId: String) {
-        val isCurrentlySaved = _uiState.value.allReports.find { it.id == reportId }?.isSaved == true
+        val target = _uiState.value.allReports.find { it.id == reportId } ?: return
+        if (target.isSaved) {
+            _uiState.update { state -> state.copy(allReports = state.allReports.filter { it.id != reportId }) }
+            viewModelScope.launch { repository.toggleReportBookmark(reportId, true).also { refreshData() } }
+        }
+    }
 
-        repository.toggleReportBookmark(reportId)
-        refreshData()
+    private fun formatIsoDate(isoString: String): String {
+        return try {
+            val zdt = ZonedDateTime.parse(isoString)
+            zdt.format(DateTimeFormatter.ofPattern("yyyy.MM.dd"))
+        } catch (e: Exception) { isoString.substringBefore("T").replace("-", ".") }
+    }
 
-        _uiState.update { state ->
-            val key = "bookmark_false_$reportId"
-            val updatedTimestamps = state.savedTimestamps.toMutableMap()
-            if (!isCurrentlySaved) {
-                updatedTimestamps[key] = System.currentTimeMillis()
-            }
-            state.copy(savedTimestamps = updatedTimestamps)
+    // 💡 추가됨: 시간 파싱 함수
+    private fun formatIsoTime(isoString: String): String {
+        return try {
+            val zdt = ZonedDateTime.parse(isoString)
+            zdt.format(DateTimeFormatter.ofPattern("HH:mm"))
+        } catch (e: Exception) {
+            val timePart = isoString.substringAfter("T").substringBefore("+").substringBefore("Z")
+            if (timePart.length >= 5) timePart.substring(0, 5) else ""
         }
     }
 
     fun refreshData() {
-        _uiState.update { state ->
-            state.copy(
-                allMissions = repository.getArchiveMissions(),
-                allConversations = repository.getArchiveConversations(),
-                allSentences = repository.getArchiveSentences(),
-                allReports = repository.getArchiveReports()
-            )
+        viewModelScope.launch {
+            when (val result = repository.searchArchives()) {
+                is ApiResult.Success -> {
+                    val items = result.data.items
+                    val allMissions = items.filter { it.type.lowercase() == "mission" }.map {
+                        ArchiveMissionItem(id = it.missionId ?: it.id, title = it.title, category = it.category ?: "", difficulty = it.difficulty ?: "", duration = it.estimatedMinutes ?: 0, xp = it.rewardXp ?: 0, isCompleted = it.missionStatus == "completed", isSaved = it.isBookmarked, completedDate = formatIsoDate(it.createdAt))
+                    }
+
+                    val allConversations = items.filter { it.type.lowercase() == "conversation" }.map {
+                        RecentActivity(
+                            id = it.referenceId ?: it.id,
+                            type = ActivityType.CONVERSATION,
+                            title = it.title,
+                            status = "대화 완료",
+                            date = formatIsoDate(it.createdAt),
+                            time = formatIsoTime(it.createdAt), // 💡 시간 파싱 적용
+                            tags = it.tags,
+                            summary = it.description
+                        )
+                    }
+                    val allSentences = items.filter { it.type.lowercase() == "phrase" || it.type.lowercase() == "sentence" }.map { BookmarkArchiveItem(id = it.referenceId ?: it.id, title = it.title, status = "문장 저장", date = formatIsoDate(it.createdAt), isSaved = it.isBookmarked, memoKeywords = it.tags, memoText = "", relatedConversationId = "") }
+                    val allReports = items.filter { it.type.lowercase() == "report" }.map { BookmarkArchiveItem(id = it.referenceId ?: it.id, title = it.title, status = "리포트 열람", date = formatIsoDate(it.createdAt), isSaved = it.isBookmarked, memoKeywords = it.tags, memoText = "", relatedConversationId = "") }
+
+                    _uiState.update { state -> state.copy(allMissions = allMissions, allConversations = allConversations, allSentences = allSentences, allReports = allReports) }
+                }
+                is ApiResult.Error -> {}
+                is ApiResult.Exception -> {}
+            }
         }
     }
 }

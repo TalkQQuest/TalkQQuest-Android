@@ -26,12 +26,12 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
@@ -39,6 +39,8 @@ import androidx.compose.ui.text.style.LineHeightStyle
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.talkqquest.app.R
 import com.talkqquest.app.core.designsystem.FitDesign
@@ -65,13 +67,22 @@ fun ArchiveHomeScreen(
     viewModel: ArchiveHomeViewModel = hiltViewModel(),
     onNavigateToSearch: () -> Unit = {},
     onNavigateToList: (tabIndex: Int) -> Unit = {},
-    onNavigateToDetail: (activityId: String, type: ActivityType) -> Unit = { _: String, _: ActivityType -> }
+    onNavigateToDetail: (activityId: String, type: ActivityType, isWeeklyCompare: Boolean) -> Unit = { _, _, _ -> }
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val lifecycleOwner = LocalLifecycleOwner.current
 
-    // 💡 화면으로 돌아올 때마다(예: 상세 페이지에서 해제하고 백 버튼) 최신 카운트를 갱신합니다!
-    LaunchedEffect(Unit) {
-        viewModel.refreshData()
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) {
+                viewModel.refreshData()
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+
+        onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
+        }
     }
 
     ArchiveHomeScreen(
@@ -85,8 +96,8 @@ fun ArchiveHomeScreen(
         onCategoryClick = { tabIndex ->
             onNavigateToList(tabIndex)
         },
-        onActivityClick = { activityId, type ->
-            onNavigateToDetail(activityId, type)
+        onActivityClick = { activityId, type, isWeeklyCompare ->
+            onNavigateToDetail(activityId, type, isWeeklyCompare)
         }
     )
 }
@@ -97,7 +108,7 @@ private fun ArchiveHomeScreen(
     onSearchClick: () -> Unit,
     onArchiveBoxClick: () -> Unit,
     onCategoryClick: (Int) -> Unit,
-    onActivityClick: (String, ActivityType) -> Unit
+    onActivityClick: (String, ActivityType, Boolean) -> Unit
 ) = FitDesign {
     BoxWithConstraints(
         modifier = Modifier
@@ -117,22 +128,23 @@ private fun ArchiveHomeScreen(
                     .statusBarsPadding(),
                 contentPadding = PaddingValues(
                     top = 29.dp,
-                    bottom = 32.dp
+                    bottom = 120.dp
                 )
             ) {
-                // [헤더 영역] 보관함 타이틀
+                // [헤더 영역]
                 item {
                     Column(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(horizontal = 16.dp)
+                            .padding(horizontal = 16.dp),
+                        verticalArrangement = Arrangement.spacedBy(2.dp)
                     ) {
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
                             modifier = Modifier
                                 .size(width = 79.dp, height = 32.dp)
                                 .clip(CircleShape)
-                                .clickable { onArchiveBoxClick() }
+                                .clickable(onClick = onArchiveBoxClick)
                         ) {
                             Text(
                                 text = "보관함",
@@ -177,30 +189,34 @@ private fun ArchiveHomeScreen(
                         ArchiveCategoryItem(
                             iconRes = R.drawable.img_archive_mission,
                             label = "미션",
-                            count = uiState.completedMissionCount
-                        ) { onCategoryClick(0) }
+                            count = uiState.completedMissionCount,
+                            onClick = { onCategoryClick(0) }
+                        )
 
                         ArchiveCategoryItem(
                             iconRes = R.drawable.img_archive_conversation,
                             label = "대화",
-                            count = uiState.conversationCount
-                        ) { onCategoryClick(1) }
+                            count = uiState.conversationCount,
+                            onClick = { onCategoryClick(1) }
+                        )
 
                         ArchiveCategoryItem(
                             iconRes = R.drawable.img_archive_sentence,
                             label = "문장",
-                            count = uiState.savedSentenceCount
-                        ) { onCategoryClick(2) }
+                            count = uiState.savedSentenceCount,
+                            onClick = { onCategoryClick(2) }
+                        )
 
                         ArchiveCategoryItem(
                             iconRes = R.drawable.img_archive_report,
                             label = "리포트",
-                            count = uiState.reportCount
-                        ) { onCategoryClick(3) }
+                            count = uiState.reportCount,
+                            onClick = { onCategoryClick(3) }
+                        )
                     }
                 }
 
-                item { Spacer(modifier = Modifier.height(24.dp)) }
+                item { Spacer(modifier = Modifier.height(36.dp)) }
 
                 // [최근 활동 리스트 영역]
                 item {
@@ -217,11 +233,25 @@ private fun ArchiveHomeScreen(
                 item { Spacer(modifier = Modifier.height(16.dp)) }
 
                 items(uiState.recentActivities) { activity ->
-                    RecentActivityCard(
-                        activity = activity,
-                        onClick = { onActivityClick(activity.id, activity.type) },
-                        modifier = Modifier.padding(horizontal = 16.dp)
-                    )
+                    val isWeeklyCompare = activity.title.contains("주간 비교")
+
+                    if (activity.type == ActivityType.CONVERSATION) {
+                        ArchiveConversationCard(
+                            title = activity.title,
+                            tags = activity.tags,
+                            summary = activity.summary ?: "",
+                            date = activity.date,
+                            time = activity.time,
+                            onClick = { onActivityClick(activity.id, activity.type, false) },
+                            modifier = Modifier.padding(horizontal = 16.dp)
+                        )
+                    } else {
+                        RecentActivityCard(
+                            activity = activity,
+                            onClick = { onActivityClick(activity.id, activity.type, isWeeklyCompare) },
+                            modifier = Modifier.padding(horizontal = 16.dp)
+                        )
+                    }
                     Spacer(modifier = Modifier.height(16.dp))
                 }
             }
@@ -234,7 +264,7 @@ private fun ArchiveHomeScreen(
                     .padding(top = 8.dp, end = 6.dp)
                     .size(44.dp)
                     .clip(CircleShape)
-                    .clickable { onSearchClick() },
+                    .clickable(onClick = onSearchClick),
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
@@ -260,7 +290,7 @@ private fun ArchiveCategoryItem(
         modifier = modifier
             .size(width = 64.dp, height = 93.dp)
             .clip(RoundedCornerShape(16.dp))
-            .clickable { onClick() }
+            .clickable(onClick = onClick)
     ) {
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
@@ -294,18 +324,54 @@ private fun ArchiveCategoryItem(
 @Composable
 private fun ArchiveHomeScreenPreview() {
     val mockActivities = listOf(
-        RecentActivity("1", ActivityType.MISSION, "처음 보는 사람에게 짧게 인사하기", "미션 완료", "2026.08.20", "쉬움", "짧은 대화", 2, 20),
-        RecentActivity("2", ActivityType.CONVERSATION, "처음 보는 사람에게 짧게 인사하기", "대화 완료", "2026.08.20"),
-        RecentActivity("3", ActivityType.SENTENCE, "\"그렇군요! 저도 편해서 놀랐습니다.\"", "문장 저장", "2026.08.20"),
-        RecentActivity("4", ActivityType.REPORT, "처음 보는 사람에게 짧게 인사하기", "리포트 열람", "2026.08.20")
+        RecentActivity(
+            id = "1",
+            type = ActivityType.MISSION,
+            title = "처음 보는 사람에게 짧게 인사하기",
+            status = "미션 완료",
+            date = "2026.08.20",
+            time = "14:35",
+            difficulty = "쉬움",
+            category = "짧은 대화",
+            estimatedMinutes = 2,
+            rewardXp = 20
+        ),
+        RecentActivity(
+            id = "2",
+            type = ActivityType.CONVERSATION,
+            title = "처음 보는 사람에게 짧게 인사하기",
+            status = "대화 완료",
+            date = "2026.08.20",
+            time = "14:35",
+            tags = listOf("자기 성장", "첫 만남"),
+            summary = "간단한 인사와 자기소개를 나누며 첫 만남의 어색함을 줄이고 대화를 시작했어요."
+        ),
+        RecentActivity(
+            id = "3",
+            type = ActivityType.SENTENCE,
+            title = "\"그렇군요! 저도 편해서 놀랐습니다.\"",
+            status = "문장 저장",
+            date = "2026.08.20",
+            time = "14:35"
+        ),
+        RecentActivity(
+            id = "4",
+            type = ActivityType.REPORT,
+            title = "8월 2-3주차 주간 비교 리포트",
+            status = "리포트 열람",
+            date = "2026.08.20",
+            time = "14:35"
+        )
     )
+
     TalkQQuestTheme {
         ArchiveHomeScreen(
             uiState = ArchiveHomeUiState(3, 3, 2, 3, mockActivities),
             onSearchClick = {},
             onArchiveBoxClick = {},
             onCategoryClick = {},
-            onActivityClick = { _: String, _: ActivityType -> }
+            // 💡 [해결완료] 올바른 파라미터명(onActivityClick)과 타입(String, ActivityType, Boolean) 적용
+            onActivityClick = { _, _, _ -> }
         )
     }
 }

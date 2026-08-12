@@ -1,0 +1,13 @@
+<!-- 주간 비교 리포트 "지난주 → 이번주" 사이 화살표 (Figma export "Icon-2" 14x11, Gray/500, stroke 1.5 round) -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="14dp"
+    android:height="11dp"
+    android:viewportWidth="14"
+    android:viewportHeight="11">
+    <path
+        android:pathData="M7.87069,9.75L13.25,5.25C13.25,5.25 9.97144,2.50736 7.87069,0.75M13.25,5.25C13.25,5.25 5.30163,5.25 0.75,5.25"
+        android:strokeColor="#64748B"
+        android:strokeWidth="1.5"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round" />
+</vector>

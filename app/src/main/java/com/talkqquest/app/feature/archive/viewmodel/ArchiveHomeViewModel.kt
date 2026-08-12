@@ -10,6 +10,8 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import java.time.ZonedDateTime
+import java.time.format.DateTimeFormatter
 import javax.inject.Inject
 
 enum class ActivityType {
@@ -22,10 +24,14 @@ data class RecentActivity(
     val title: String,
     val status: String,
     val date: String,
+    val time: String = "", // 💡 추가됨: 시간 데이터
     val difficulty: String? = null,
     val category: String? = null,
     val estimatedMinutes: Int? = null,
-    val rewardXp: Int? = null
+    val rewardXp: Int? = null,
+    val tags: List<String> = emptyList(),
+    val summary: String? = null,
+    val reportType: String? = null
 )
 
 data class ArchiveHomeUiState(
@@ -50,6 +56,26 @@ class ArchiveHomeViewModel @Inject constructor(
         refreshData()
     }
 
+    private fun formatIsoDate(isoString: String): String {
+        return try {
+            val zdt = ZonedDateTime.parse(isoString)
+            zdt.format(DateTimeFormatter.ofPattern("yyyy.MM.dd"))
+        } catch (e: Exception) {
+            isoString.substringBefore("T").replace("-", ".")
+        }
+    }
+
+    // 💡 추가됨: ISO 포맷에서 시간(HH:mm)만 추출하는 함수
+    private fun formatIsoTime(isoString: String): String {
+        return try {
+            val zdt = ZonedDateTime.parse(isoString)
+            zdt.format(DateTimeFormatter.ofPattern("HH:mm"))
+        } catch (e: Exception) {
+            val timePart = isoString.substringAfter("T").substringBefore("+").substringBefore("Z")
+            if (timePart.length >= 5) timePart.substring(0, 5) else ""
+        }
+    }
+
     fun refreshData() {
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true, errorMessage = null) }
@@ -57,33 +83,40 @@ class ArchiveHomeViewModel @Inject constructor(
             when (val result = archiveRepository.getArchiveSummary()) {
                 is ApiResult.Success -> {
                     val summary = result.data
-                    val allMissions = archiveRepository.getArchiveMissions()
 
-                    val uiActivities = summary.recentActivities.map { dto ->
-                        val isMission = dto.type.uppercase() == "MISSION"
-                        val matchedMission = if (isMission) {
-                            // 💡 이미 String 타입이므로 toString() 제거
-                            allMissions.find { it.id == dto.id }
-                        } else null
+                    val uiActivities = summary.recentItems.take(4).map { dto ->
+
+                        val statusText = when (dto.type.lowercase()) {
+                            "conversation" -> "대화 완료"
+                            "phrase", "sentence" -> "문장 저장"
+                            "report" -> "리포트 열람"
+                            else -> ""
+                        }
+
+                        val actualId = dto.referenceId ?: dto.id
 
                         RecentActivity(
-                            id = dto.id,
+                            id = actualId,
                             type = mapToActivityType(dto.type),
                             title = dto.title,
-                            status = dto.status,
-                            date = dto.date,
-                            difficulty = matchedMission?.difficulty,
-                            category = matchedMission?.category,
-                            estimatedMinutes = matchedMission?.duration,
-                            rewardXp = matchedMission?.xp
+                            status = statusText,
+                            date = formatIsoDate(dto.createdAt),
+                            time = formatIsoTime(dto.createdAt), // 💡 시간 파싱 적용
+                            difficulty = dto.difficulty,
+                            category = dto.category,
+                            estimatedMinutes = dto.estimatedMinutes,
+                            rewardXp = dto.rewardXp,
+                            tags = dto.tags,
+                            summary = dto.description,
+                            reportType = dto.reportType
                         )
                     }
 
                     _uiState.update {
                         it.copy(
-                            completedMissionCount = summary.completedMissionCount,
+                            completedMissionCount = summary.missionRecordCount,
                             conversationCount = summary.conversationCount,
-                            savedSentenceCount = summary.savedSentenceCount,
+                            savedSentenceCount = summary.phraseCount,
                             reportCount = summary.reportCount,
                             recentActivities = uiActivities,
                             isLoading = false
@@ -105,11 +138,11 @@ class ArchiveHomeViewModel @Inject constructor(
     }
 
     private fun mapToActivityType(typeString: String): ActivityType {
-        return when (typeString.uppercase()) {
-            "MISSION" -> ActivityType.MISSION
-            "CONVERSATION" -> ActivityType.CONVERSATION
-            "SENTENCE" -> ActivityType.SENTENCE
-            "REPORT" -> ActivityType.REPORT
+        return when (typeString.lowercase()) {
+            "mission" -> ActivityType.MISSION
+            "conversation" -> ActivityType.CONVERSATION
+            "phrase", "sentence" -> ActivityType.SENTENCE
+            "report" -> ActivityType.REPORT
             else -> ActivityType.MISSION
         }
     }

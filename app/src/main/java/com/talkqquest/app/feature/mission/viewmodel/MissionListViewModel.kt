@@ -22,6 +22,7 @@ private val difficultyFilters = setOf("쉬움", "보통", "어려움")
 data class MissionListUiState(
     val isLoading: Boolean = false,
     val missions: List<MissionListItem> = emptyList(),
+    val nickname: String = "소다123", // 헤더 "OO님을 위한 미션" — 서버 /users/me 닉네임(로딩 전/실패 시 stub)
     val selectedFilter: String = "전체",
     val errorMessage: String? = null,
     val saveSheetMissionId: String? = null, // 방금 북마크로 저장해 시트에 띄울 미션 (null = 시트 닫힘)
@@ -56,6 +57,15 @@ class MissionListViewModel @Inject constructor(
 
     init {
         loadMissions()
+        loadNickname()
+    }
+
+    // 헤더 닉네임 로드 — Repository가 /users/me를 캐시하므로 홈/피드백과 중복 호출 안 됨.
+    private fun loadNickname() {
+        viewModelScope.launch {
+            val nick = missionRepository.getUserNickname()
+            _uiState.update { it.copy(nickname = nick) }
+        }
     }
 
     // showLoading=false: 화면 복귀 시 조용한 재조회(스피너 없이 북마크 등 최신 상태만 반영)

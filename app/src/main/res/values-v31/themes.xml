@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <style name="Theme.TalkQQuest.Starting" parent="Theme.TalkQQuest">
+        <item name="android:windowBackground">@color/auth_splash_background</item>
+        <item name="android:windowSplashScreenBackground">@color/auth_splash_background</item>
+        <item name="android:windowSplashScreenAnimatedIcon">@drawable/ic_auth_splash_transparent</item>
+        <item name="android:windowSplashScreenIconBackgroundColor">@android:color/transparent</item>
+        <item name="android:windowSplashScreenAnimationDuration">0</item>
+    </style>
+</resources>

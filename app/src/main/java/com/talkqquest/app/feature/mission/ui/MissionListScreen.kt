@@ -1,8 +1,15 @@
 package com.talkqquest.app.feature.mission.ui
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -10,15 +17,20 @@ import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.res.painterResource
@@ -27,10 +39,17 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.input.pointer.pointerInput
@@ -60,6 +79,7 @@ import com.talkqquest.app.feature.mission.data.model.MissionListItem
 import com.talkqquest.app.feature.mission.viewmodel.MissionListUiState
 import com.talkqquest.app.feature.mission.viewmodel.MissionListViewModel
 import com.talkqquest.app.feature.mission.viewmodel.missionFilters
+import kotlinx.coroutines.delay
 
 // ── 미션 목록 (UI 1차 v2.css 전사) ──
 // 화면 = 2단 분리(state hoisting): (1) viewModel 연결용 / (2) 값만 받아 그리는 부분(Preview용). 홈 패턴 동일.
@@ -72,6 +92,10 @@ fun MissionListScreen(
     onMissionClick: (String) -> Unit = {},
     onSheetTopChange: (Float?) -> Unit = {}, // 저장 시트 위 끝 y(px), null=없음 — 하단 네비 가림 처리(MainScreen 연결)
     onSavedListClick: () -> Unit = {}, // 시트 "저장 목록 >" → 저장 목록 화면
+    onArchiveClick: () -> Unit = {}, // 헤더 폴더 → 보관함 (UI 12)
+    // homeContext=true: 홈 "다른 미션 보기"로 띄운 화면. 헤더를 예전 CSS(뒤로가기 + "미션 목록")로 표시하고
+    // 홈 탭을 유지한다. false(기본)=미션 탭의 새 헤더("OO님을 위한 미션" + 폴더). 본문·북마크는 공유.
+    homeContext: Boolean = false,
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     // 다른 화면(상세·저장 목록)에서 바꾼 북마크가 돌아왔을 때 반영되도록, 복귀마다 조용히 재조회.
@@ -90,6 +114,8 @@ fun MissionListScreen(
         onMissionClick = onMissionClick,
         onSheetTopChange = onSheetTopChange,
         onSavedListClick = onSavedListClick,
+        onArchiveClick = onArchiveClick,
+        homeContext = homeContext,
     )
 }
 
@@ -104,6 +130,8 @@ private fun MissionListScreen(
     onMissionClick: (String) -> Unit = {},
     onSheetTopChange: (Float?) -> Unit = {},
     onSavedListClick: () -> Unit = {},
+    homeContext: Boolean = false,
+    onArchiveClick: () -> Unit = {},
 ) = FitDesign { // 작은 화면에선 디자인(393x852) 통째 축소 — 저장 시트 포함 (사용자 결정)
     Box(
         modifier = Modifier
@@ -143,12 +171,25 @@ private fun MissionListScreen(
                     },
                 ) {
                     Box(modifier = Modifier.fillMaxSize()) {
+                        val listState = rememberLazyListState()
+                        // 하단 페이드는 "아래 더 있어요" 힌트이므로, 끝까지 스크롤해 더 내릴 게 없으면
+                        // 사라져야 함(안 그러면 마지막 카드가 페이드에 영구히 가림). 툭 꺼지면 어색하니
+                        // 0.2초에 걸쳐 alpha를 부드럽게 전환.
+                        val showFade by remember { derivedStateOf { listState.canScrollForward } }
+                        val fadeAlpha by animateFloatAsState(
+                            targetValue = if (showFade) 1f else 0f,
+                            animationSpec = tween(200),
+                            label = "listBottomFade",
+                        )
                         MissionListContent(
                             uiState = uiState,
-                            onBack = onBack,
+                            listState = listState,
                             onFilterSelect = onFilterSelect,
                             onToggleSave = onToggleSave,
                             onMissionClick = onMissionClick,
+                            onArchiveClick = onArchiveClick,
+                            onBack = onBack,
+                            homeContext = homeContext,
                         )
                         // 스크롤 유도 마스크 (CSS "스크롤 유도 마스크"): left 16 · 폭 360 · top 670 · 높이 68
                         // = 하단 네비 알약 위에서 목록이 배경색으로 사라짐 (투명→Gray50).
@@ -160,6 +201,7 @@ private fun MissionListScreen(
                                 .padding(start = 16.dp, end = 17.dp, bottom = 114.dp)
                                 .fillMaxWidth()
                                 .height(68.dp)
+                                .alpha(fadeAlpha)
                                 .background(Brush.verticalGradient(listOf(Gray50.copy(alpha = 0f), Gray50))),
                         )
                     }
@@ -172,70 +214,114 @@ private fun MissionListScreen(
 @Composable
 private fun MissionListContent(
     uiState: MissionListUiState,
-    onBack: () -> Unit,
+    listState: LazyListState,
     onFilterSelect: (String) -> Unit,
     onToggleSave: (String) -> Unit,
     onMissionClick: (String) -> Unit,
+    onArchiveClick: () -> Unit,
+    onBack: () -> Unit,
+    homeContext: Boolean,
 ) {
+    val targetMissions = uiState.filteredMissions
+    var animatedSlots by remember { mutableStateOf(targetMissions) }
+    var visibleSlotCount by remember { mutableIntStateOf(targetMissions.size) }
+
+    // 미션 id가 아니라 화면 위에서부터의 카드 슬롯을 유지한다. 결과가 줄면 위쪽 슬롯은
+    // 제자리에 둔 채 내용만 새 결과로 바꾸고, 초과한 아래 슬롯만 접는다. 결과가 늘면 기존
+    // 슬롯은 그대로 두고 새 아래 슬롯만 사라짐의 역순으로 펼친다.
+    LaunchedEffect(targetMissions) {
+        val previousSlots = animatedSlots
+        val transitionSlotCount = maxOf(previousSlots.size, targetMissions.size)
+        animatedSlots = List(transitionSlotCount) { index ->
+            targetMissions.getOrNull(index) ?: previousSlots[index]
+        }
+
+        // 늘어나는 슬롯이 먼저 0 높이로 목록에 들어간 뒤 visible이 되어야 펼침이 보인다.
+        withFrameNanos { }
+        visibleSlotCount = targetMissions.size
+
+        delay(MissionFilterAnimationMillis.toLong())
+        animatedSlots = targetMissions
+    }
+
     // 화면 좌우 스와이프로도 필터 전환 (칩 탭 선택은 그대로 유지). FlowRow가 칩을 missionFilters
     // 순서(왼→오, 위→아래)로 깔므로 인덱스 ±1 = 읽기 순서 이동 — 줄 오른쪽 끝이면 다음 줄 왼쪽으로 순환.
-    // 가로 드래그만 감지해 세로 스크롤과 충돌 안 함.
-    val currentFilter by rememberUpdatedState(uiState.selectedFilter)
+    // 목록 끝 여백. ⚠️ CSS(Frame 431)는 뷰포트 padding:0 + 스크롤 리스트라 "스크롤 끝 여백"을
+    // 정의하지 않음 = CSS 침묵 구간. 그래서 이 값은 전사값이 아니라 판단값이다.
+    // 하단 네비(알약 h64, 인셋+76)에 안 겹치게 확보 + "목록의 끝" 느낌으로 여유를 둔 것(사용자 결정).
+    // ※ 카드 간격(14)과 일치가 목적 아님. CSS가 이 여백을 명시하면 그 값으로 교체할 것.
+    val bottomBarClearance = WindowInsets.navigationBars.asPaddingValues()
+        .calculateBottomPadding() + 76.dp + 14.dp
     LazyColumn(
+        state = listState,
         modifier = Modifier
             .fillMaxSize()
-            .statusBarsPadding()
-            .pointerInput(Unit) {
-                var accum = 0f
-                val threshold = 48.dp.toPx()
-                detectHorizontalDragGestures(
-                    onDragStart = { accum = 0f },
-                    onHorizontalDrag = { _, delta -> accum += delta },
-                    onDragEnd = {
-                        val idx = missionFilters.indexOf(currentFilter)
-                        if (idx >= 0) {
-                            val n = missionFilters.size
-                            when {
-                                accum <= -threshold -> onFilterSelect(missionFilters[(idx + 1) % n]) // 왼쪽으로 밀기 → 다음 칩
-                                accum >= threshold -> onFilterSelect(missionFilters[(idx - 1 + n) % n]) // 오른쪽으로 밀기 → 이전 칩
-                            }
-                        }
-                    },
-                )
-            },
+            .statusBarsPadding(),
         verticalArrangement = Arrangement.spacedBy(14.dp), // 카드 간격 14 (CSS Frame 360 gap)
     ) {
         item {
-            Column(modifier = Modifier.padding(horizontal = 16.dp)) { // 콘텐츠 좌우 16 (CSS Frame 431 left)
-                Spacer(Modifier.height(8.dp)) // 상태바(40) → 뒤로가기(top 48) (CSS chevoren_left)
-                // 뒤로가기 (CSS chevoren_left): 44 터치영역이 화면 왼끝(left 0), 아이콘 Gray500.
-                Box(
-                    modifier = Modifier
-                        .offset(x = (-16).dp) // 콘텐츠 좌우 16 패딩 상쇄 → 터치영역 left 0
-                        .size(44.dp)
-                        .clip(CircleShape) // 눌림 효과를 네모 대신 동그라미로 (아이콘 버튼 관례)
-                        .clickable(onClick = onBack),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Icon(
-                        painter = painterResource(R.drawable.ic_back_chevron),
-                        contentDescription = "뒤로가기",
-                        tint = Gray500,
-                    )
+            Column(modifier = Modifier.padding(horizontal = 16.dp)) { // 콘텐츠 좌우 16
+                if (homeContext) {
+                    // 홈 "다른 미션 보기" 진입 = 예전 CSS 헤더(뒤로가기 + "미션 목록"). 홈 탭 유지.
+                    Spacer(Modifier.height(8.dp)) // 상태바(40) → 뒤로가기(top 48) (CSS chevoren_left)
+                    Box(
+                        modifier = Modifier
+                            .offset(x = (-16).dp) // 콘텐츠 좌우 16 패딩 상쇄 → 터치영역 left 0
+                            .size(44.dp)
+                            .clip(CircleShape) // 눌림 효과 동그라미 (아이콘 버튼 관례)
+                            .clickable(onClick = onBack),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Icon(
+                            painter = painterResource(R.drawable.ic_back_chevron),
+                            contentDescription = "뒤로가기",
+                            tint = Gray500,
+                        )
+                    }
+                    Spacer(Modifier.height(4.dp)) // 뒤로가기(48+44) → 제목(top 96) = 4 (CSS)
+                    Text(text = "미션 목록", style = TqType.TitleL.figma(), color = Gray700)
+                    Spacer(Modifier.height(12.dp)) // 제목 → 칩 (CSS Frame 355 gap 12)
+                } else {
+                    // 미션 탭 = UI 12 헤더(Frame 427321646, space-between): 제목(왼) + 보관함 폴더(오). 뒤로가기 없음.
+                    Spacer(Modifier.height(18.dp)) // 상태바(40) → 콘텐츠(top 58) = 18 (UI 12 Frame 427321648)
+                    Row(
+                        modifier = Modifier.fillMaxWidth().height(44.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        // 제목 "OO님을 위한 미션" (Title/L 18/600 Gray700). OO = 서버 닉네임(유동).
+                        Text(
+                            text = "${uiState.nickname}님을 위한 미션",
+                            style = TqType.TitleL.figma(),
+                            color = Gray700,
+                        )
+                        // 보관함 폴더 (UI 12 archive 44x44, Gray/500 외곽선). 44 터치영역, 우측 끝(콘텐츠 16 안쪽).
+                        Box(
+                            modifier = Modifier
+                                .size(44.dp)
+                                .clip(CircleShape) // 눌림 효과 동그라미 (아이콘 버튼 관례)
+                                .clickable(onClick = onArchiveClick),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            Icon(
+                                painter = painterResource(R.drawable.ic_folder_outline),
+                                contentDescription = "보관함",
+                                tint = Gray500,
+                            )
+                        }
+                    }
+                    Spacer(Modifier.height(6.dp)) // 제목 → 칩 (UI 12 Frame 427321647 gap 6)
                 }
-                Spacer(Modifier.height(4.dp)) // 뒤로가기(48+44) → 제목(top 96) = 4 (CSS)
-                Text(text = "미션 목록", style = TqType.TitleL.figma(), color = Gray700)
-                Spacer(Modifier.height(12.dp)) // 제목 → 칩 (CSS Frame 355 gap 12)
                 MissionFilterChips(
                     selectedFilter = uiState.selectedFilter,
                     onFilterSelect = onFilterSelect,
                 )
-                Spacer(Modifier.height(10.dp)) // 칩 → 목록 24 (CSS Frame 431 gap) = 10 + 카드간격 14
+                Spacer(Modifier.height(10.dp)) // 칩 → 목록 24 = 10 + 카드간격 14
             }
         }
 
-        if (uiState.filteredMissions.isEmpty()) {
-            item {
+        if (targetMissions.isEmpty() && animatedSlots.isEmpty()) {
+            item(key = "mission-filter-empty") {
                 // 빈 목록 화면이 피그마에 없음 → 임시 문구. TODO(디자인): 빈 상태 디자인 확정 시 교체.
                 Box(
                     modifier = Modifier
@@ -246,20 +332,41 @@ private fun MissionListContent(
                     Text(text = "해당하는 미션이 없어요", style = TqType.BodyM.figma(), color = Gray500)
                 }
             }
-        } else {
-            items(uiState.filteredMissions, key = { it.id }) { mission ->
+        }
+
+        items(
+            count = animatedSlots.size,
+            key = { index -> "mission-filter-slot-$index" },
+        ) { index ->
+            val mission = animatedSlots[index]
+            AnimatedVisibility(
+                visible = index < visibleSlotCount,
+                enter = fadeIn(tween(MissionFilterAnimationMillis, easing = FastOutSlowInEasing)) +
+                    expandVertically(
+                        animationSpec = tween(MissionFilterAnimationMillis, easing = FastOutSlowInEasing),
+                        expandFrom = Alignment.Top,
+                    ),
+                exit = fadeOut(tween(MissionFilterAnimationMillis, easing = FastOutSlowInEasing)) +
+                    shrinkVertically(
+                        animationSpec = tween(MissionFilterAnimationMillis, easing = FastOutSlowInEasing),
+                        shrinkTowards = Alignment.Top,
+                    ),
+            ) {
                 MissionCard(
                     mission = mission,
                     onClick = { onMissionClick(mission.id) },
                     onToggleSave = { onToggleSave(mission.id) },
                     modifier = Modifier.padding(horizontal = 16.dp),
+                    animateContentChanges = true,
                 )
             }
         }
 
-        item { Spacer(Modifier.height(100.dp)) } // 목록 끝 여백 — 떠 있는 하단 네비에 안 가리게 (홈과 동일)
+        item { Spacer(Modifier.height(bottomBarClearance)) } // 목록 끝 여백 (네비바 위로 카드 간격만큼)
     }
 }
+
+private const val MissionFilterAnimationMillis = 260
 
 // 필터 칩 2줄 (CSS Frame 341: 줄 간격 10, 칩 간격 8). 폭 넘치면 자동 줄바꿈(FlowRow) — 디자인과 동일 배치.
 @OptIn(ExperimentalLayoutApi::class)

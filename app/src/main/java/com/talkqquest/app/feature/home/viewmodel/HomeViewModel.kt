@@ -67,7 +67,8 @@ class HomeViewModel @Inject constructor(
 
     fun refreshTodayMission() {
         val current = _uiState.value.summary?.todayMission ?: return
-        if (_uiState.value.isRefreshingMission || current.remainingRefreshes <= 0) return
+        // null은 횟수 정보가 없는 상태이지 소진 상태가 아니다.
+        if (_uiState.value.isRefreshingMission || current.remainingRefreshes == 0) return
 
         viewModelScope.launch {
             _uiState.update { it.copy(isRefreshingMission = true) }

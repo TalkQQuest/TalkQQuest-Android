@@ -572,7 +572,9 @@ fun NavGraph(
         composable(Screen.WEEKLY_COMPARE) {
             WeeklyCompareScreen(
                 onClose = { navController.popBackStack() },
-                onCompletedMissionsClick = {},
+                onCompletedMissionsClick = {
+                    navController.navigate("${Screen.ARCHIVE_LIST}/1")
+                },
             )
         }
 
@@ -710,10 +712,17 @@ fun NavGraph(
         ) { backStackEntry ->
             val missionId = backStackEntry.arguments?.getString("missionId").orEmpty()
             val setupViewModel: ConversationSetupViewModel = hiltViewModel(backStackEntry)
+            val selection by setupViewModel.selection.collectAsStateWithLifecycle()
+            val guideline by setupViewModel.guideline.collectAsStateWithLifecycle()
+            val isGuidelineReady by setupViewModel.isGuidelineReady.collectAsStateWithLifecycle()
+            LaunchedEffect(missionId) { setupViewModel.loadGuideline(missionId) }
             ConversationSetup1Screen(
                 onBack = { navController.popBackStack() },
                 onNext = { navController.navigate("conversation_setup_2/$missionId") },
                 onSelect = setupViewModel::selectEnvironment,
+                initialSelection = selection.environment,
+                disabledOptions = guideline?.disabled?.environment.orEmpty().toSet(),
+                isLoading = !isGuidelineReady,
             )
         }
 
@@ -723,10 +732,14 @@ fun NavGraph(
         ) { backStackEntry ->
             val missionId = backStackEntry.arguments?.getString("missionId").orEmpty()
             val setupViewModel = navController.conversationSetupViewModel(missionId)
+            val selection by setupViewModel.selection.collectAsStateWithLifecycle()
+            val guideline by setupViewModel.guideline.collectAsStateWithLifecycle()
             ConversationSetup2Screen(
                 onBack = { navController.popBackStack() },
                 onNext = { navController.navigate("conversation_setup_3/$missionId") },
                 onSelect = setupViewModel::selectPartnerRole,
+                initialSelection = selection.partnerRole,
+                disabledOptions = guideline?.disabled?.partnerRole.orEmpty().toSet(),
             )
         }
 
@@ -736,11 +749,17 @@ fun NavGraph(
         ) { backStackEntry ->
             val missionId = backStackEntry.arguments?.getString("missionId").orEmpty()
             val setupViewModel = navController.conversationSetupViewModel(missionId)
+            val selection by setupViewModel.selection.collectAsStateWithLifecycle()
+            val guideline by setupViewModel.guideline.collectAsStateWithLifecycle()
             ConversationSetup3Screen(
                 onBack = { navController.popBackStack() },
                 onNext = { navController.navigate("conversation_setup_4/$missionId") },
                 onSelectGender = setupViewModel::selectGender,
                 onSelectAgeGroup = setupViewModel::selectAgeGroup,
+                initialGender = selection.partnerGender,
+                initialAgeGroup = selection.partnerAgeGroup,
+                disabledGenders = guideline?.disabled?.partnerGender.orEmpty().toSet(),
+                disabledAgeGroups = guideline?.disabled?.partnerAgeGroup.orEmpty().toSet(),
             )
         }
 
@@ -751,6 +770,8 @@ fun NavGraph(
             val missionId = backStackEntry.arguments?.getString("missionId").orEmpty()
             val setupViewModel = navController.conversationSetupViewModel(missionId)
             val isSaving by setupViewModel.isSaving.collectAsStateWithLifecycle()
+            val selection by setupViewModel.selection.collectAsStateWithLifecycle()
+            val guideline by setupViewModel.guideline.collectAsStateWithLifecycle()
             ConversationSetup4Screen(
                 onBack = { navController.popBackStack() },
                 // 고른 6축을 서버에 저장한 뒤 대화로 넘어간다. 저장이 실패해도 넘어간다 —
@@ -763,6 +784,10 @@ fun NavGraph(
                 onIntimacyChange = setupViewModel::selectIntimacy,
                 onFormalityChange = setupViewModel::selectFormality,
                 isSaving = isSaving,
+                initialIntimacy = selection.intimacyIndex,
+                initialFormality = selection.formalityIndex,
+                disabledIntimacy = guideline?.disabled?.intimacyLevel.orEmpty().map { it - 1 }.toSet(),
+                disabledFormality = guideline?.disabled?.formalityLevel.orEmpty().map { it - 1 }.toSet(),
             )
         }
 

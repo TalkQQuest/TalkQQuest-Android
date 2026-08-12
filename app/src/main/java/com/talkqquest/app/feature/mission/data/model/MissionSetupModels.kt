@@ -67,6 +67,37 @@ data class MissionSetupResponse(
     val createdAt: String = "",
 )
 
+// GET /missions/{missionId}의 setupGuideline. 화면에는 기본값과 비활성 항목만 반영하고,
+// note·recommendedTopics·tags는 추후 디자인이 정해질 때 쓸 수 있도록 계약만 보존한다.
+@Serializable
+data class MissionSetupGuideline(
+    val defaults: MissionSetupDefaults = MissionSetupDefaults(),
+    val disabled: MissionSetupDisabled = MissionSetupDisabled(),
+    val note: String? = null,
+    val recommendedTopics: List<String> = emptyList(),
+    val tags: List<String> = emptyList(),
+)
+
+@Serializable
+data class MissionSetupDefaults(
+    val environment: MissionSetupEnvironment = MissionSetupEnvironment.DAILY_PLACE,
+    val partnerRole: MissionSetupPartnerRole = MissionSetupPartnerRole.FRIEND,
+    val intimacyLevel: Int = 3,
+    val formalityLevel: Int = 3,
+    val partnerGender: MissionSetupPartnerGender = MissionSetupPartnerGender.MALE,
+    val partnerAgeGroup: MissionSetupPartnerAgeGroup = MissionSetupPartnerAgeGroup.TWENTIES,
+)
+
+@Serializable
+data class MissionSetupDisabled(
+    val environment: List<MissionSetupEnvironment> = emptyList(),
+    val partnerRole: List<MissionSetupPartnerRole> = emptyList(),
+    val intimacyLevel: List<Int> = emptyList(),
+    val formalityLevel: List<Int> = emptyList(),
+    val partnerGender: List<MissionSetupPartnerGender> = emptyList(),
+    val partnerAgeGroup: List<MissionSetupPartnerAgeGroup> = emptyList(),
+)
+
 // ── 화면이 들고 다니는 선택값 ──
 // 설정 1~4단계가 각자 자기 화면에서만 값을 들고 있어 다음 화면으로 넘길 방법이 없었다.
 // 네 화면이 공유하는 ConversationSetupViewModel이 이 모델 하나를 채워 나간다.

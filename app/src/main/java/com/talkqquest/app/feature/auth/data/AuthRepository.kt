@@ -1,10 +1,10 @@
 package com.talkqquest.app.feature.auth.data
 
-import android.os.Build
 import com.talkqquest.app.core.datastore.TokenDataStore
 import com.talkqquest.app.core.network.ApiResponse
 import com.talkqquest.app.core.network.ApiResult
 import com.talkqquest.app.core.network.safeApiCall
+import com.talkqquest.app.core.push.FcmTokenRegistrar
 import com.talkqquest.app.feature.home.data.HomeApi
 import com.talkqquest.app.feature.home.data.model.LegalDocument
 import com.talkqquest.app.feature.home.data.model.UserUpdateRequest
@@ -23,6 +23,7 @@ class AuthRepository @Inject constructor(
     private val authApi: AuthApi,
     private val tokenDataStore: TokenDataStore,
     private val homeApi: HomeApi,
+    private val fcmTokenRegistrar: FcmTokenRegistrar,
 ) {
     suspend fun getServiceTerms(): ApiResult<LegalDocument> =
         safeApiCall { homeApi.getServiceTerms() }
@@ -94,6 +95,7 @@ class AuthRepository @Inject constructor(
                 accessToken = result.data.accessToken,
                 refreshToken = result.data.refreshToken,
             )
+            fcmTokenRegistrar.registerCurrentTokenIfAuthenticated()
         }
         return if (result is ApiResult.Error && result.code != null) {
             result.copy(message = emailLoginErrorMessage(result.code))
@@ -186,6 +188,7 @@ class AuthRepository @Inject constructor(
                 accessToken = result.data.accessToken,
                 refreshToken = result.data.refreshToken,
             )
+            fcmTokenRegistrar.registerCurrentTokenIfAuthenticated()
         }
         return if (result is ApiResult.Error && result.code != null) {
             result.copy(message = emailSignupErrorMessage(result.code))
@@ -202,7 +205,7 @@ class AuthRepository @Inject constructor(
             call(
                 SocialLoginRequest(
                     providerAccessToken = providerAccessToken,
-                    deviceInfo = currentDeviceInfo(),
+                    deviceInfo = null,
                 ),
             )
         }
@@ -211,6 +214,7 @@ class AuthRepository @Inject constructor(
                 accessToken = result.data.accessToken,
                 refreshToken = result.data.refreshToken,
             )
+            fcmTokenRegistrar.registerCurrentTokenIfAuthenticated()
         }
         return if (result is ApiResult.Error && result.code != null) {
             result.copy(message = socialLoginErrorMessage(result.code))
@@ -291,17 +295,5 @@ class AuthRepository @Inject constructor(
         409 -> "\uC774\uBBF8 \uC628\uBCF4\uB529\uC774 \uC644\uB8CC\uB41C \uACC4\uC815\uC785\uB2C8\uB2E4."
         500 -> "\uC11C\uBC84 \uB0B4\uBD80 \uC624\uB958\uAC00 \uBC1C\uC0DD\uD588\uC2B5\uB2C8\uB2E4. \uC7A0\uC2DC \uD6C4 \uB2E4\uC2DC \uC2DC\uB3C4\uD574\uC8FC\uC138\uC694."
         else -> "\uC628\uBCF4\uB529 \uC644\uB8CC \uCC98\uB9AC\uC5D0 \uC2E4\uD328\uD588\uC5B4\uC694."
-    }
-    private fun currentDeviceInfo(): DeviceInfo = DeviceInfo(
-        platform = "android",
-        model = Build.MODEL.orEmpty(),
-        osVersion = Build.VERSION.RELEASE.orEmpty(),
-    )
+    }
 }
-
-
-
-
-
-
-

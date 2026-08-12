@@ -1,6 +1,8 @@
 package com.talkqquest.app.feature.notification.data
 
 import com.talkqquest.app.core.network.ApiResponse
+import com.talkqquest.app.feature.notification.data.model.FcmTokenRegisterData
+import com.talkqquest.app.feature.notification.data.model.FcmTokenRegisterRequest
 import com.talkqquest.app.feature.notification.data.model.NotificationSettings
 import com.talkqquest.app.feature.notification.data.model.NotificationSettingsUpdateRequest
 import com.talkqquest.app.feature.notification.data.model.NotificationsResponse
@@ -8,12 +10,18 @@ import kotlinx.serialization.Serializable
 import retrofit2.http.Body
 import retrofit2.http.GET
 import retrofit2.http.PATCH
+import retrofit2.http.POST
 import retrofit2.http.Path
 import retrofit2.http.Query
 
 // 알림 API — 실서버 스웨거(2026-07-22) 기준. 전 엔드포인트 Bearer 필수(AuthInterceptor 자동 첨부).
 // ⚠️서버가 아직 알림을 생성하지 않아 목록이 항상 빈 배열(실측) — Repository가 목업 폴백으로 채움.
 interface NotificationApi {
+
+    @POST("api/v1/devices/fcm-token")
+    suspend fun registerFcmToken(
+        @Body body: FcmTokenRegisterRequest,
+    ): ApiResponse<FcmTokenRegisterData>
 
     // 알림 목록 조회. 응답 data = { notifications: [...] }
     @GET("api/v1/notifications")

@@ -117,6 +117,37 @@ data class RecentMissionSummary(
 
 
 @Serializable
+data class ArchiveSummary(
+    val totalCount: Int = 0,
+    val missionRecordCount: Int = 0,
+    val conversationCount: Int = 0,
+    val phraseCount: Int = 0,
+    val reportCount: Int = 0,
+    val recentItems: List<ArchiveRecentItem> = emptyList(),
+)
+
+@Serializable
+data class ArchiveRecentItem(
+    val id: String = "",
+    val referenceId: String = "",
+    val type: String = "",
+    val reportType: String? = null,
+    val title: String = "",
+    val tags: List<String> = emptyList(),
+    val description: String? = null,
+    val duration: String? = null,
+    val isBookmarked: Boolean = false,
+    val missionId: String? = null,
+    val conversationId: String? = null,
+    val missionRecordId: String? = null,
+    val missionStatus: String? = null,
+    val category: String? = null,
+    val difficulty: String? = null,
+    val estimatedMinutes: Int? = null,
+    val rewardXp: Int? = null,
+    val createdAt: String = "",
+)
+@Serializable
 data class ProfileImageUploadResponse(
     val avatarUrl: String = "",
 )

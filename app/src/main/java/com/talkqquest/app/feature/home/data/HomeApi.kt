@@ -1,6 +1,7 @@
 package com.talkqquest.app.feature.home.data
 
 import com.talkqquest.app.core.network.ApiResponse
+import com.talkqquest.app.feature.home.data.model.ArchiveSummary
 import com.talkqquest.app.feature.home.data.model.CurrentPasswordVerifyRequest
 import com.talkqquest.app.feature.home.data.model.HomeSummary
 import com.talkqquest.app.feature.home.data.model.LegalDocument
@@ -42,6 +43,9 @@ interface HomeApi {
 
     @GET("api/v1/badges/me")
     suspend fun getMyBadges(): ApiResponse<MyBadgesResponse>
+
+    @GET("api/v1/archives/summary")
+    suspend fun getArchiveSummary(): ApiResponse<ArchiveSummary>
 
     @GET("api/v1/legal/terms")
     suspend fun getServiceTerms(): ApiResponse<LegalDocument>

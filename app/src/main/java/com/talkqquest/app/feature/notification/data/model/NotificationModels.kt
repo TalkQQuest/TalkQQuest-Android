@@ -1,4 +1,4 @@
-﻿package com.talkqquest.app.feature.notification.data.model
+package com.talkqquest.app.feature.notification.data.model
 
 import kotlinx.serialization.Serializable
 
@@ -61,4 +61,13 @@ data class NotificationUiItem(
     // (CSS "알림창" Frame 427321769). 나머지 알림은 읽고 마는 것이라 화살표가 없다.
     val hasLink: Boolean = false,
 )
+@Serializable
+data class FcmTokenRegisterRequest(
+    val fcmToken: String,
+    val platform: String = "android",
+)
 
+@Serializable
+data class FcmTokenRegisterData(
+    val registered: Boolean = false,
+)

@@ -49,6 +49,10 @@ fun FeedbackResult.scoreItems(): List<Pair<String, Int>> = listOf(
 @Serializable
 data class CreateFeedbackRequest(val conversationId: String)
 
+// POST /api/v1/feedback/{feedbackId}/retry 응답 data — 생성이 실패한 피드백을 다시 돌린다.
+// 응답 모양이 생성과 같아(feedbackId + status) 같은 DTO를 쓴다.
+typealias RetryFeedbackResponse = CreateFeedbackResponse
+
 @Serializable
 data class CreateFeedbackResponse(
     val feedbackId: String = "",

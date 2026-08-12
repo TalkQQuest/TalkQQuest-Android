@@ -3,6 +3,7 @@ package com.talkqquest.app.feature.home.data
 import com.talkqquest.app.core.datastore.UserXpStore
 import com.talkqquest.app.core.network.ApiResult
 import com.talkqquest.app.core.network.serverCall
+import com.talkqquest.app.core.util.TierProgress
 import com.talkqquest.app.feature.home.data.model.HomeSummary
 import com.talkqquest.app.feature.home.data.model.TodayMission
 import com.talkqquest.app.feature.mission.data.MissionApi
@@ -29,8 +30,18 @@ class HomeRepository @Inject constructor(
                 // 서버 레벨·XP로 1회 초기화 — 이후엔 미션 완료가 값을 이어감.
                 // nextLevelXp까지 넘겨야 진행바 분모가 서버와 같아진다(레벨마다 필요량이 달라짐).
                 userXpStore.seedFromServer(d.level, d.currentXp, d.nextLevelXp)
+                // 실전 티어는 서버가 이름/별을 주지 않는다 — 누적 원값(growthTotals)으로 앱이 계산한다.
+                // 성장 리포트와 같은 TierProgress를 써야 두 화면의 티어·별이 어긋나지 않는다.
+                val tier = TierProgress.of(
+                    kindness = d.growthTotals.kindnessTotal,
+                    initiative = d.growthTotals.initiativeTotal,
+                    empathy = d.growthTotals.empathyTotal,
+                    questionLink = d.growthTotals.questionLinkTotal,
+                )
                 return ApiResult.Success(
                     d.copy(
+                        tierName = tier.tierName,
+                        tierStars = tier.tierStars,
                         // 닉네임 미설정 계정(null→"") 폴백: /users/me의 nickname→name → 그래도 없으면 stub 문구
                         nickname = d.nickname.ifBlank { fallbackNickname() },
                         level = userXpStore.level,

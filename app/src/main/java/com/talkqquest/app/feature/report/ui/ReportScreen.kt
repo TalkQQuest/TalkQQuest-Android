@@ -433,17 +433,19 @@ private fun TierCard(
             }
         }
 
-        // "별 N개를 더 획득하면 X이에요!"
-        Text(
-            text = buildAnnotatedString {
-                withStyle(SpanStyle(color = Gray600)) { append("별 ") }
-                withStyle(SpanStyle(color = Primary600, fontWeight = FontWeight.Medium)) { append("${nextStarsNeeded}개") }
-                withStyle(SpanStyle(color = Gray600)) { append("를 더 획득하면 ") }
-                withStyle(SpanStyle(color = Primary600, fontWeight = FontWeight.Medium)) { append(nextTierName) }
-                withStyle(SpanStyle(color = Gray600)) { append("이에요!") }
-            },
-            style = TqType.BodyM.figma(), // 14/400
-        )
+        // "별 N개를 더 획득하면 X이에요!" — 마스터는 위 티어가 없어 이 줄 자체를 그리지 않는다.
+        if (nextTierName.isNotBlank()) {
+            Text(
+                text = buildAnnotatedString {
+                    withStyle(SpanStyle(color = Gray600)) { append("별 ") }
+                    withStyle(SpanStyle(color = Primary600, fontWeight = FontWeight.Medium)) { append("${nextStarsNeeded}개") }
+                    withStyle(SpanStyle(color = Gray600)) { append("를 더 획득하면 ") }
+                    withStyle(SpanStyle(color = Primary600, fontWeight = FontWeight.Medium)) { append(nextTierName) }
+                    withStyle(SpanStyle(color = Gray600)) { append("이에요!") }
+                },
+                style = TqType.BodyM.figma(), // 14/400
+            )
+        }
     }
 }
 
@@ -663,15 +665,18 @@ private fun AxisLabel(
 ) {
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
         Text(text = label, style = TqType.BodyM.figma(), color = Gray800) // 14/400
-        Text(
-            text = "+$gain",
-            style = TqType.LabelL.figma(),
-            color = Primary600,
-            modifier = Modifier.graphicsLayer {
-                alpha = gainAlpha
-                translationY = gainOffsetY
-            },
-        ) // 14/500
+        // 증가분을 모르는 경로(보관함 등 피드백을 안 거친 진입)면 "+0" 대신 아예 그리지 않는다.
+        if (gain > 0) {
+            Text(
+                text = "+$gain",
+                style = TqType.LabelL.figma(),
+                color = Primary600,
+                modifier = Modifier.graphicsLayer {
+                    alpha = gainAlpha
+                    translationY = gainOffsetY
+                },
+            ) // 14/500
+        }
     }
 }
 

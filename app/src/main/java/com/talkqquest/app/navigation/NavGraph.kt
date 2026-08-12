@@ -20,6 +20,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.IntOffset
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.talkqquest.app.feature.mission.viewmodel.ConversationSetupViewModel
 import androidx.navigation.NavBackStackEntry
 import androidx.navigation.NavHostController
 import androidx.navigation.NavType
@@ -697,14 +699,21 @@ fun NavGraph(
             )
         }
 
+        // ── 대화 설정 1~4단계 ──
+        // 네 화면이 하나의 ConversationSetupViewModel을 공유한다. 1단계의 backStackEntry에
+        // 묶어 두면 2~4단계가 같은 인스턴스를 받고, 설정 흐름을 벗어나 그 entry가 사라질 때
+        // 같이 정리된다. 각 화면이 자기 remember만 들고 있던 예전엔 고른 값이 다음 화면으로도
+        // 서버로도 가지 않았다.
         composable(
             route = Screen.CONVERSATION_SETUP_1,
             arguments = listOf(navArgument("missionId") { type = NavType.StringType }),
         ) { backStackEntry ->
             val missionId = backStackEntry.arguments?.getString("missionId").orEmpty()
+            val setupViewModel: ConversationSetupViewModel = hiltViewModel(backStackEntry)
             ConversationSetup1Screen(
                 onBack = { navController.popBackStack() },
                 onNext = { navController.navigate("conversation_setup_2/$missionId") },
+                onSelect = setupViewModel::selectEnvironment,
             )
         }
 
@@ -713,9 +722,11 @@ fun NavGraph(
             arguments = listOf(navArgument("missionId") { type = NavType.StringType }),
         ) { backStackEntry ->
             val missionId = backStackEntry.arguments?.getString("missionId").orEmpty()
+            val setupViewModel = navController.conversationSetupViewModel(missionId)
             ConversationSetup2Screen(
                 onBack = { navController.popBackStack() },
                 onNext = { navController.navigate("conversation_setup_3/$missionId") },
+                onSelect = setupViewModel::selectPartnerRole,
             )
         }
 
@@ -724,9 +735,12 @@ fun NavGraph(
             arguments = listOf(navArgument("missionId") { type = NavType.StringType }),
         ) { backStackEntry ->
             val missionId = backStackEntry.arguments?.getString("missionId").orEmpty()
+            val setupViewModel = navController.conversationSetupViewModel(missionId)
             ConversationSetup3Screen(
                 onBack = { navController.popBackStack() },
                 onNext = { navController.navigate("conversation_setup_4/$missionId") },
+                onSelectGender = setupViewModel::selectGender,
+                onSelectAgeGroup = setupViewModel::selectAgeGroup,
             )
         }
 
@@ -735,9 +749,20 @@ fun NavGraph(
             arguments = listOf(navArgument("missionId") { type = NavType.StringType }),
         ) { backStackEntry ->
             val missionId = backStackEntry.arguments?.getString("missionId").orEmpty()
+            val setupViewModel = navController.conversationSetupViewModel(missionId)
+            val isSaving by setupViewModel.isSaving.collectAsStateWithLifecycle()
             ConversationSetup4Screen(
                 onBack = { navController.popBackStack() },
-                onNext = { navController.navigate("conversation/$missionId") },
+                // 고른 6축을 서버에 저장한 뒤 대화로 넘어간다. 저장이 실패해도 넘어간다 —
+                // 준비 정보는 AI가 참고하는 값이지 대화의 전제가 아니다.
+                onNext = {
+                    setupViewModel.saveAndStart(missionId) {
+                        navController.navigate("conversation/$missionId")
+                    }
+                },
+                onIntimacyChange = setupViewModel::selectIntimacy,
+                onFormalityChange = setupViewModel::selectFormality,
+                isSaving = isSaving,
             )
         }
 
@@ -777,10 +802,11 @@ fun NavGraph(
             FeedbackScreen(
                 onBack = { navController.popBackStack() },
                 onItemClick = { index -> navController.navigate("feedback_detail/$feedbackId?item=$index") },
-                onDetailReport = { missionTitle, conversationId ->
+                onDetailReport = { missionTitle, conversationId, scores ->
                     navController.navigate(
                         "report?missionTitle=${Uri.encode(missionTitle)}" +
-                                "&conversationId=${Uri.encode(conversationId)}",
+                                "&conversationId=${Uri.encode(conversationId)}" +
+                                "&gains=${scores.joinToString(",")}",
                     )
                 },
                 onHome = { navController.popBackStack(Screen.HOME, inclusive = false) },
@@ -792,6 +818,7 @@ fun NavGraph(
             arguments = listOf(
                 navArgument("missionTitle") { type = NavType.StringType; defaultValue = "" },
                 navArgument("conversationId") { type = NavType.StringType; defaultValue = "" },
+                navArgument("gains") { type = NavType.StringType; defaultValue = "" },
             ),
         ) {
             ReportScreen(
@@ -1148,6 +1175,15 @@ fun NavGraph(
             )
         }
     }
+}
+
+// 대화 설정 2~4단계가 1단계와 같은 ViewModel을 보게 하는 헬퍼.
+// 1단계의 backStackEntry를 owner로 넘기면 그 entry가 살아 있는 동안(=설정 흐름을 도는 동안)
+// 네 화면이 한 인스턴스를 공유하고, 흐름을 벗어나면 함께 정리된다.
+@Composable
+private fun NavHostController.conversationSetupViewModel(missionId: String): ConversationSetupViewModel {
+    val firstStep = remember(missionId) { getBackStackEntry("conversation_setup_1/$missionId") }
+    return hiltViewModel(firstStep)
 }
 
 private fun Uri.toProfileImagePart(context: Context): MultipartBody.Part? {

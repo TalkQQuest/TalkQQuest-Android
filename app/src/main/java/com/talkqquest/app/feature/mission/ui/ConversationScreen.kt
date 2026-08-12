@@ -181,7 +181,9 @@ fun ConversationScreen(
         onCompleteDismiss = { viewModel.setCompleteDialogVisible(false) },
         onCompleteConfirm = { onExitConfirm(viewModel.elapsedSeconds()) },
         onLeaveDismiss = { viewModel.setLeaveDialogVisible(false) },
-        onLeaveConfirm = onBack,
+        // 나가기 = 대화 포기. 서버에 열려 있는 대화를 abandoned로 닫고 화면을 벗어난다.
+        // 예전엔 아무것도 안 보내서 서버엔 in_progress로 남았다.
+        onLeaveConfirm = { viewModel.abandonConversation(); onBack() },
     )
 }
 

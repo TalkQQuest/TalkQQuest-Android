@@ -8,6 +8,7 @@ import kotlinx.serialization.Serializable
 import retrofit2.http.Body
 import retrofit2.http.GET
 import retrofit2.http.PATCH
+import retrofit2.http.POST
 import retrofit2.http.Path
 import retrofit2.http.Query
 
@@ -46,10 +47,32 @@ interface NotificationApi {
     suspend fun updateSettings(
         @Body body: NotificationSettingsUpdateRequest,
     ): ApiResponse<NotificationSettings>
+
+    // 이 기기의 FCM 토큰 등록/갱신 — 2026-08-13 연동.
+    // 앱에 Firebase 의존성과 수신 서비스는 이미 있었는데 토큰을 서버에 보내지 않아
+    // 푸시가 올 수 있는 경로 자체가 없었다.
+    // 같은 토큰을 다시 보내도 서버가 갱신만 하고 중복 등록하지 않는다(스웨거 설명).
+    @POST("api/v1/devices/fcm-token")
+    suspend fun registerFcmToken(
+        @Body body: FcmTokenRequest,
+    ): ApiResponse<FcmTokenResponse>
 }
 
 // 읽음 처리 응답 data — 서버 스키마 미문서라 최소 형태(전부 기본값)로 수용.
 @Serializable
 data class MarkReadResponse(
     val updatedCount: Int = 0,
+)
+
+// POST /api/v1/devices/fcm-token 요청 body.
+// ★platform에 기본값 금지: Json이 encodeDefaults=false라 기본값 필드는 요청에서 빠진다(필수 필드).
+@Serializable
+data class FcmTokenRequest(
+    val fcmToken: String,
+    val platform: String, // "android" — 서버 enum에 이 값 하나뿐이지만 호출부에서 명시
+)
+
+@Serializable
+data class FcmTokenResponse(
+    val deviceId: String = "",
 )

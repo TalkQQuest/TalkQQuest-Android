@@ -413,8 +413,13 @@ fun NavGraph(
             val context = LocalContext.current
             val authViewModel: AuthViewModel = hiltViewModel()
             val authUiState by authViewModel.uiState.collectAsState()
+            val profileViewModel: ProfileViewModel = hiltViewModel()
+            val profileUiState by profileViewModel.uiState.collectAsState()
             val nickname = if (isConcernEditMode) {
-                "소다123"
+                profileUiState.profile?.nickname?.takeIf { it.isNotBlank() }
+                    ?: profileUiState.dashboard?.nickname?.takeIf { it.isNotBlank() }
+                    ?: profileUiState.profile?.name?.takeIf { it.isNotBlank() }
+                    ?: navController.currentBackStackEntry?.savedStateHandle?.get<String>("onboarding_nickname").orEmpty()
             } else {
                 navController.currentBackStackEntry?.savedStateHandle?.get<String>("onboarding_nickname").orEmpty()
             }

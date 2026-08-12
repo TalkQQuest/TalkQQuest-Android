@@ -61,6 +61,10 @@ fun MainTabsPager(
     var modalSheetOpen by remember { mutableStateOf(false) }
     var showHomeBadgeCollection by remember { mutableStateOf(false) }
     var homeResumeAnimationTrigger by remember { mutableIntStateOf(0) }
+    var homeExitResetToken by remember { mutableIntStateOf(0) }
+    // 최초 ON_RESUME은 HomeViewModel의 최초 데이터 도착과 같은 홈 진입이다.
+    // 이때는 HomeLevelCard가 자체적으로 0 → XP를 재생하므로 복귀 신호를 추가하지 않는다.
+    var hasConsumedInitialHomeResume by remember { mutableStateOf(false) }
     val pagerScope = rememberCoroutineScope()
     val homePage = BottomNavItem.entries.indexOf(BottomNavItem.Home)
     val profilePage = BottomNavItem.entries.indexOf(BottomNavItem.Profile)
@@ -71,9 +75,19 @@ fun MainTabsPager(
         }
     }
     BackHandler(enabled = showHomeBadgeCollection, onBack = returnFromHomeBadgeCollection)
+    LaunchedEffect(pagerState.currentPage) {
+        if (pagerState.currentPage != homePage) {
+            // 페이저는 홈을 composition에 보존하므로 탭 이동 시 게이지 상태를 명시적으로 비운다.
+            homeExitResetToken++
+        }
+    }
     LifecycleEventEffect(Lifecycle.Event.ON_RESUME) {
         if (pagerState.currentPage == BottomNavItem.entries.indexOf(BottomNavItem.Home)) {
-            homeResumeAnimationTrigger++
+            if (hasConsumedInitialHomeResume) {
+                homeResumeAnimationTrigger++
+            } else {
+                hasConsumedInitialHomeResume = true
+            }
         }
     }
     HorizontalPager(
@@ -88,6 +102,7 @@ fun MainTabsPager(
             BottomNavItem.Home -> HomeTab(
                 navController = navController,
                 resumeAnimationTrigger = homeResumeAnimationTrigger,
+                xpResetToken = homeExitResetToken,
                 onOverlaySheetTop = onOverlaySheetTop,
                 onBadgeCollectionClick = {
                     showHomeBadgeCollection = true
@@ -109,6 +124,7 @@ fun MainTabsPager(
 private fun HomeTab(
     navController: NavHostController,
     resumeAnimationTrigger: Int,
+    xpResetToken: Int,
     onOverlaySheetTop: (Float?) -> Unit,
     onBadgeCollectionClick: () -> Unit,
     onModalSheetChange: (Boolean) -> Unit,
@@ -116,6 +132,7 @@ private fun HomeTab(
     val homeScope = rememberCoroutineScope()
     HomeScreen(
         resumeAnimationTrigger = resumeAnimationTrigger,
+        xpResetToken = xpResetToken,
         onStartMissionClick = { missionId -> navController.navigate("mission_detail/$missionId") },
         // "다른 미션 보기" → 홈 소속 미션 목록(예전 헤더). 미션 탭으로 전환하지 않고 홈 탭 유지.
         onOtherMissionsClick = { navController.navigate(Screen.MISSION_LIST_HOME) },

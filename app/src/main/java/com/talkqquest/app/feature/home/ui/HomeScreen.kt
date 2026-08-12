@@ -41,6 +41,7 @@ import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.CubicBezierEasing
 import androidx.compose.animation.core.LinearOutSlowInEasing
+import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
@@ -62,6 +63,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.lerp
@@ -139,6 +141,7 @@ fun HomeScreen(
     onOtherMissionsClick: () -> Unit = {},    // "다른 미션 보기" → 미션 목록
     onNotificationClick: () -> Unit = {},     // 상단 벨 → 알림창
     onWeeklyReportClick: () -> Unit = {},     // 주간 비교 리포트 도착 모달 "보러가기" → 주간 비교 리포트
+    onBadgeCollectionClick: () -> Unit = {}, // 나의 배지 컬렉션 → 프로필 배지 목록
     onSheetTopChange: (Float?) -> Unit = {},  // 티어 승급 안내 시트가 하단 네비를 덮는 동안 네비 가림
     onModalSheetChange: (Boolean) -> Unit = {}, // 티어 시트가 떠 있는 동안 탭 스와이프를 끄기 위한 신호
 ) {
@@ -157,6 +160,7 @@ fun HomeScreen(
         onOtherMissionsClick = onOtherMissionsClick,
         onNotificationClick = onNotificationClick,
         onWeeklyReportClick = onWeeklyReportClick,
+        onBadgeCollectionClick = onBadgeCollectionClick,
         onSheetTopChange = onSheetTopChange,
         onModalSheetChange = onModalSheetChange,
     )
@@ -171,6 +175,7 @@ private fun HomeScreen(
     onOtherMissionsClick: () -> Unit = {},
     onNotificationClick: () -> Unit = {},
     onWeeklyReportClick: () -> Unit = {},
+    onBadgeCollectionClick: () -> Unit = {},
     onSheetTopChange: (Float?) -> Unit = {},
     onModalSheetChange: (Boolean) -> Unit = {},
 ) = FitDesign { // 작은 화면에선 디자인(393x852) 통째 축소 — 미션 화면들과 동일하게 스크롤 없이 한 화면에
@@ -201,6 +206,7 @@ private fun HomeScreen(
                     onOtherMissionsClick = onOtherMissionsClick,
                     onNotificationClick = onNotificationClick,
                     onWeeklyReportClick = onWeeklyReportClick,
+                    onBadgeCollectionClick = onBadgeCollectionClick,
                     onSheetTopChange = onSheetTopChange,
                     onModalSheetChange = onModalSheetChange,
                 )
@@ -242,6 +248,7 @@ private fun HomeContent(
     onOtherMissionsClick: () -> Unit = {},
     onNotificationClick: () -> Unit = {},
     onWeeklyReportClick: () -> Unit = {},
+    onBadgeCollectionClick: () -> Unit = {},
     onSheetTopChange: (Float?) -> Unit = {},
     onModalSheetChange: (Boolean) -> Unit = {},
 ) {
@@ -267,19 +274,20 @@ private fun HomeContent(
                 .padding(bottom = 118.dp)
                 .verticalScroll(scrollState)
         ) {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .graphicsLayer {
-                        scaleX = scale
-                        scaleY = scale
-                        transformOrigin = TransformOrigin(0.5f, 0f) // 위쪽 기준(상단 고정, 아래로만 당겨 올림)
-                    }
-                    .onGloballyPositioned { naturalPx = it.size.height } // graphicsLayer는 레이아웃 크기 불변 → 안정
-                    .statusBarsPadding()
-                    // CSS: 카드 묶음 Frame 430 left 16, 폭 362 → 우측 여백 15 (좌우 비대칭)
-                    .padding(start = 16.dp, end = 15.dp),
-            ) {
+            Column(modifier = Modifier.fillMaxWidth()) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .graphicsLayer {
+                            scaleX = scale
+                            scaleY = scale
+                            transformOrigin = TransformOrigin(0.5f, 0f) // 위쪽 기준(상단 고정, 아래로만 당겨 올림)
+                        }
+                        .onGloballyPositioned { naturalPx = it.size.height } // graphicsLayer는 레이아웃 크기 불변 → 안정
+                        .statusBarsPadding()
+                        // CSS: 카드 묶음 Frame 430 left 16, 폭 362 → 우측 여백 15 (좌우 비대칭)
+                        .padding(start = 16.dp, end = 15.dp),
+                ) {
                 HomeHeader(
                     nickname = summary.nickname,
                     hasNewNotification = summary.hasNewNotification,
@@ -308,7 +316,10 @@ private fun HomeContent(
                 Spacer(Modifier.height(12.dp)) // CSS 카드 스택 gap 12
                 OtherMissionsCard(onClick = onOtherMissionsClick)
                 Spacer(Modifier.height(12.dp)) // CSS 카드 스택 gap 12 (다른 미션 보기 → 배지)
-                BadgeCollectionCard()
+                    BadgeCollectionCard(onClick = onBadgeCollectionClick)
+                }
+                // 콘텐츠가 화면에 모두 보여도 다른 미션 보기 카드 높이만큼 더 내려갈 수 있게 한다.
+                Spacer(Modifier.height(50.dp))
             }
         }
 
@@ -776,8 +787,8 @@ private fun HomeTierRow(
             tierBadgeShineProgress.animateTo(
                 targetValue = 1f,
                 animationSpec = tween(
-                    durationMillis = 650,
-                    easing = FastOutSlowInEasing,
+                    durationMillis = 450,
+                    easing = LinearEasing,
                 ),
             )
         } finally {
@@ -869,6 +880,8 @@ private fun HomeTierRow(
                     },
                 )
                 if (tierBadgeShineVisible) {
+                    // 기존 뱃지 전용 타원 광선 모션.
+                    /*
                     Image(
                         painter = painterResource(tierEmblemRes(tierName)),
                         contentDescription = null,
@@ -881,6 +894,7 @@ private fun HomeTierRow(
                                 scaleY = tierBadgeScale
                             }
                             .drawWithContent {
+                                drawContent()
                                 val progress = tierBadgeShineProgress.value
                                 val spread = 1f - abs((progress * 2f) - 1f)
                                 val center = Offset(
@@ -936,6 +950,46 @@ private fun HomeTierRow(
                                     this@drawWithContent.drawContent()
                                 }
                         },
+                    )
+                    */
+                    // Gold 글자와 같은 방향의 빛이 뱃지 표면을 왼쪽에서 오른쪽으로 통과한다.
+                    Image(
+                        painter = painterResource(tierEmblemRes(tierName)),
+                        contentDescription = null,
+                        contentScale = ContentScale.Fit,
+                        colorFilter = ColorFilter.tint(White.copy(alpha = 0.18f)),
+                        modifier = Modifier
+                            .size(40.dp)
+                            .graphicsLayer {
+                                scaleX = tierBadgeScale
+                                scaleY = tierBadgeScale
+                            }
+                            .drawWithContent {
+                                val progress = tierBadgeShineProgress.value
+                                // 뱃지 리소스의 투명 외곽 때문에 빛이 늦게 보이는 것을 보정한다.
+                                // 시작 위치만 앞당기고 종료점은 1.0에 고정해 글자 광택과 맞춘다.
+                                val lead = when (tierName) {
+                                    "브론즈", "실버" -> 0.16f
+                                    "플래티넘", "플레티넘", "다이아", "다이아몬드", "마스터" -> 0.10f
+                                    else -> 0.08f
+                                }
+                                val adjustedProgress = lead + (progress * (1f - lead))
+                                val centerX = size.width * adjustedProgress
+                                val shineWidth = size.width * 0.24f
+                                val shine = Brush.linearGradient(
+                                    colors = listOf(
+                                        Color.Transparent,
+                                        White.copy(alpha = 0.82f),
+                                        Color.Transparent,
+                                    ),
+                                    start = Offset(centerX - shineWidth, size.height),
+                                    end = Offset(centerX + shineWidth, 0f),
+                                )
+                                drawRect(
+                                    brush = shine,
+                                    blendMode = BlendMode.SrcAtop,
+                                )
+                            },
                     )
                 }
             }
@@ -1575,11 +1629,12 @@ private fun InfoDivider() {
 // 나의 배지 컬렉션 카드 (UI 10차 신규). 흰 카드 radius 12 / 높이 64 (CSS: box-shadow 없음).
 // 좌: 제목 16 medium + 부제 13 regular / 우: 44×44 테두리 박스(Gray100) 안 배지 38×38(회전은 PNG에 구워짐).
 @Composable
-private fun BadgeCollectionCard() {
+private fun BadgeCollectionCard(onClick: () -> Unit = {}) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .height(64.dp)
+            .clickable(onClick = onClick)
             .clip(RoundedCornerShape(12.dp))
             .background(White)
             .padding(start = 20.dp, end = 16.dp), // CSS padding 10 16 10 20 (상하 10은 center로 흡수)

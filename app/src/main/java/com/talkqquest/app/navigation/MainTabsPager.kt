@@ -90,6 +90,7 @@ private fun HomeTab(
         },
         // 주간 비교 리포트 도착 모달 "보러가기" → 주간 비교 리포트 (알림창 화살표와 같은 화면)
         onWeeklyReportClick = { navController.navigate(Screen.WEEKLY_COMPARE) },
+        onBadgeCollectionClick = { navController.navigate(Screen.PROFILE_BADGES) },
         // 티어 승급 안내 시트가 하단 네비를 덮는 동안 네비를 가림.
         onSheetTopChange = onOverlaySheetTop,
         // 그 시트가 떠 있는 동안 탭 스와이프를 끔(모달이라 뒤 화면으로 못 넘어가야 함).

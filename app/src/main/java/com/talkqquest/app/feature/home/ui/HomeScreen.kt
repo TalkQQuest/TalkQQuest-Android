@@ -1170,7 +1170,9 @@ private fun HomeTierRow(
                                 maxLines = 1,
                                 modifier = Modifier
                                     .wrapContentWidth(Alignment.Start, unbounded = true)
-                                    .graphicsLayer { alpha = 1f - tierTextFadeProgress.value },
+                                    .graphicsLayer {
+                                        alpha = 1f - tierTextFadeProgress.value
+                                    },
                             )
                             Text(
                                 text = tierName,
@@ -1180,7 +1182,9 @@ private fun HomeTierRow(
                                 maxLines = 1,
                                 modifier = Modifier
                                     .wrapContentWidth(Alignment.Start, unbounded = true)
-                                    .graphicsLayer { alpha = tierTextFadeProgress.value },
+                                    .graphicsLayer {
+                                        alpha = tierTextFadeProgress.value
+                                    },
                             )
                         } else {
                             val isEnglish = tierTextPhase >= 2

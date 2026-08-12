@@ -466,8 +466,10 @@ private fun TierNameAnimation(
     var phase by remember { mutableStateOf(0) } // 0=한글, 1=삭제, 2=영문 입력, 3=광택
     var charCount by remember { mutableStateOf(tierName.length) }
     var running by remember { mutableStateOf(false) }
+    val restoreProgress = remember { Animatable(0f) }
     val scope = rememberCoroutineScope()
     val titleStyle = TqType.BodyL.figma().copy(fontWeight = FontWeight.Medium)
+    val restoreOffsetPx = with(LocalDensity.current) { 5.dp.toPx() }
 
     fun play() {
         if (englishName == null || running) return
@@ -488,8 +490,16 @@ private fun TierNameAnimation(
                 // Gold 완성 즉시 300ms 광선을 실행한 뒤 200ms를 더 유지한다.
                 onShineStart()
                 delay(200)
+                // Gold가 사라지는 동안 골드는 아래에서 제자리로 올라온다.
+                phase = 4
+                restoreProgress.snapTo(0f)
+                restoreProgress.animateTo(
+                    targetValue = 1f,
+                    animationSpec = tween(220, easing = FastOutSlowInEasing),
+                )
                 phase = 0
                 charCount = tierName.length
+                restoreProgress.snapTo(0f)
             } finally {
                 running = false
             }
@@ -500,21 +510,43 @@ private fun TierNameAnimation(
         if (autoTrigger > 0) play()
     }
 
-    val shownText = when (phase) {
-        1 -> tierName.take(charCount)
-        2, 3 -> englishName?.take(charCount).orEmpty()
-        else -> tierName
-    }
-    Text(
-        text = shownText,
-        style = titleStyle,
-        color = if (phase == 2 || phase == 3) Color(0xFFD4A72C) else Gray800,
+    Box(
         modifier = Modifier.clickable(
             interactionSource = remember { MutableInteractionSource() },
             indication = null,
             onClick = ::play,
         ),
-    )
+    ) {
+        when (phase) {
+            1 -> Text(text = tierName.take(charCount), style = titleStyle, color = Gray800)
+            2, 3 -> Text(
+                text = englishName?.take(charCount).orEmpty(),
+                style = titleStyle,
+                color = Color(0xFFD4A72C),
+            )
+            4 -> {
+                Text(
+                    text = englishName.orEmpty(),
+                    style = titleStyle,
+                    color = Color(0xFFD4A72C),
+                    modifier = Modifier.graphicsLayer {
+                        alpha = 1f - restoreProgress.value
+                        translationY = -restoreOffsetPx * restoreProgress.value
+                    },
+                )
+                Text(
+                    text = tierName,
+                    style = titleStyle,
+                    color = Gray800,
+                    modifier = Modifier.graphicsLayer {
+                        alpha = restoreProgress.value
+                        translationY = restoreOffsetPx * (1f - restoreProgress.value)
+                    },
+                )
+            }
+            else -> Text(text = tierName, style = titleStyle, color = Gray800)
+        }
+    }
 }
 
 // ── 핵심 역량 카드 (361x484) ──

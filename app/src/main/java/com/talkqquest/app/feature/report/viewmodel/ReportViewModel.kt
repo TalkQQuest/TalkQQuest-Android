@@ -53,6 +53,13 @@ class ReportViewModel @Inject constructor(
     // 직접 진입(아카이브 등)이면 빈 값 → 저장은 화면 표시만 되고 서버 저장은 건너뛴다.
     private val conversationId: String = savedStateHandle["conversationId"] ?: ""
 
+    // 마름모 꼭짓점 "+N" — 이번 대화로 오른 점수 4개(친절,주도,공감,질문 순).
+    // 서버 성장 리포트 응답에 증가분 필드가 없어 피드백 화면이 route로 넘겨준다.
+    // 직접 진입 등으로 비어 있으면 빈 목록 → 화면이 "+N"을 그리지 않는다.
+    private val gains: List<Int> = (savedStateHandle["gains"] ?: "")
+        .split(",")
+        .mapNotNull { it.trim().toIntOrNull() }
+
     private val _uiState = MutableStateFlow(ReportUiState(missionTitle = missionTitle))
     val uiState: StateFlow<ReportUiState> = _uiState.asStateFlow()
 
@@ -163,7 +170,7 @@ class ReportViewModel @Inject constructor(
     fun loadReports() {
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true, errorMessage = null) }
-            val growth = reportRepository.getGrowthReport()
+            val growth = reportRepository.getGrowthReport(gains)
             val weekly = reportRepository.getWeeklyCompare()
             if (growth is ApiResult.Success && weekly is ApiResult.Success) {
                 _uiState.update {

@@ -4,6 +4,10 @@ import com.talkqquest.app.core.network.ApiResponse
 import com.talkqquest.app.feature.mission.data.model.ArchiveListResponse
 import com.talkqquest.app.feature.mission.data.model.ConversationCreateRequest
 import com.talkqquest.app.feature.mission.data.model.ConversationCreateResponse
+import com.talkqquest.app.feature.mission.data.model.ConversationDetailResponse
+import com.talkqquest.app.feature.mission.data.model.ConversationFinishRequest
+import com.talkqquest.app.feature.mission.data.model.ConversationFinishResponse
+import com.talkqquest.app.feature.mission.data.model.ConversationGuideResponse
 import com.talkqquest.app.feature.mission.data.model.ConversationMessageRequest
 import com.talkqquest.app.feature.mission.data.model.ConversationMessageResponse
 import com.talkqquest.app.feature.mission.data.model.ConversationSuggestionsResponse
@@ -21,6 +25,9 @@ import com.talkqquest.app.feature.mission.data.model.TodayMissionResponse
 import com.talkqquest.app.feature.mission.data.model.MissionListResponse
 import com.talkqquest.app.feature.mission.data.model.MissionPrepResponse
 import com.talkqquest.app.feature.mission.data.model.MissionSaveResponse
+import com.talkqquest.app.feature.mission.data.model.MissionSetupRequest
+import com.talkqquest.app.feature.mission.data.model.MissionSetupResponse
+import com.talkqquest.app.feature.mission.data.model.RetryFeedbackResponse
 import com.talkqquest.app.feature.mission.data.model.XpSummary
 import retrofit2.http.Body
 import retrofit2.http.DELETE
@@ -86,6 +93,15 @@ interface MissionApi {
         @Body body: MissionCompleteRequest,
     ): ApiResponse<MissionCompleteResponse>
 
+    // 미션 준비 정보(대화 설정 1~4단계에서 고른 6축) 저장 — 2026-08-13 연동.
+    // 400 MISSION_SETUP_DISABLED_COMBINATION = 서버가 막아둔 조합. 장소×상대 25가지는
+    // 전부 통과하는 걸 실호출로 확인했고, 어떤 조합이 막혀 있는지는 문서에 없다.
+    @POST("api/v1/missions/{missionId}/setups")
+    suspend fun createMissionSetup(
+        @Path("missionId") missionId: String,
+        @Body body: MissionSetupRequest,
+    ): ApiResponse<MissionSetupResponse>
+
     // ── 대화(Conversation) — 2026-07-22 서버 배포 확인, 응답 실측 기준 ──
 
     // 대화 세션 생성. 인사말(첫 AI 발화)은 안 줌 — 화면 인트로는 로컬 문구 유지.
@@ -107,6 +123,29 @@ interface MissionApi {
         @Path("conversationId") conversationId: String,
     ): ApiResponse<ConversationSuggestionsResponse>
 
+    // 대화 종료 — 2026-08-13 연동. status = completed | abandoned.
+    // ★성공 완료엔 쓰지 않는다. completeMission이 종료를 겸하고, 이걸 먼저 부르면 완료가 막힌다.
+    //   이 API는 사용자가 중간에 나갔을 때(abandoned) 서버에 열려 있는 대화를 닫는 용도다.
+    @POST("api/v1/conversations/{conversationId}/finish")
+    suspend fun finishConversation(
+        @Path("conversationId") conversationId: String,
+        @Body body: ConversationFinishRequest,
+    ): ApiResponse<ConversationFinishResponse>
+
+    // 대화 가이드 — 2026-08-13 연동. guideCards + suggestedReplies.
+    // suggestions API와 답변 목록이 겹치지만 이쪽이 가이드 카드까지 함께 준다.
+    @GET("api/v1/conversations/{conversationId}/guide")
+    suspend fun getConversationGuide(
+        @Path("conversationId") conversationId: String,
+    ): ApiResponse<ConversationGuideResponse>
+
+    // 대화 상세 — 2026-08-13 연동. 주고받은 메시지를 통째로 돌려준다.
+    // ※대응 화면이 아직 없다(앱을 껐다 켜고 이어하기 흐름 미구현). 계약만 확보해 둔 것.
+    @GET("api/v1/conversations/{conversationId}")
+    suspend fun getConversation(
+        @Path("conversationId") conversationId: String,
+    ): ApiResponse<ConversationDetailResponse>
+
     // XP/레벨 요약 — 완료 화면의 레벨업 연출용 (완료 전·후 조회).
     @GET("api/v1/xp/summary")
     suspend fun getXpSummary(): ApiResponse<XpSummary>
@@ -124,6 +163,13 @@ interface MissionApi {
     suspend fun getFeedbackDetail(
         @Path("feedbackId") feedbackId: String,
     ): ApiResponse<FeedbackDetailResponse>
+
+    // 피드백 재생성 — 2026-08-13 연동. 생성이 failed로 끝난 피드백을 서버에서 다시 돌린다.
+    // 화면의 "다시 시도"는 지금까지 조회만 다시 했다 — 서버 생성이 깨진 경우엔 몇 번을 눌러도 같은 실패였다.
+    @POST("api/v1/feedback/{feedbackId}/retry")
+    suspend fun retryFeedback(
+        @Path("feedbackId") feedbackId: String,
+    ): ApiResponse<RetryFeedbackResponse>
 
     // 문장(베스트 문장) 저장 — 아카이브 '문장'에 저장. dev 백엔드 실계약 대조(2026-07-25).
     // 저장 항목 표시는 C(아카이브)지만, 저장 호출은 AI 피드백 상세(B)에서 발생.

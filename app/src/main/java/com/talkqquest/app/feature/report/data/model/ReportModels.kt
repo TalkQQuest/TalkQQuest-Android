@@ -1,5 +1,7 @@
 package com.talkqquest.app.feature.report.data.model
 
+import com.talkqquest.app.core.util.GrowthTotalsDto
+import com.talkqquest.app.core.util.TierProgress
 import kotlinx.serialization.Serializable
 import kotlin.math.roundToInt
 
@@ -23,7 +25,7 @@ data class CategoryRank(
 )
 
 // ── 성장 리포트(B 담당, UI-14 신규) — 실전 티어 + 핵심 역량(마름모 4축). 성장 티어 시스템 시각화 ──
-// TODO(서버 growthTotals merge 후): kindness/initiative/empathy/questionLink 누적값 → 티어·별·역량 점수 계산.
+// 서버 growthTotals(누적 원값 4개) → 티어·별·축 점수는 앱이 계산(core/util/TierProgress).
 data class GrowthTierReport(
     val tierName: String,                    // 현재 티어 이름 ("골드")
     val tierStars: Int,                      // 채운 별 수 0..3 (티어 내 단계)
@@ -73,6 +75,9 @@ data class GrowthReportResponse(
     val trendChangeRate: Double = 0.0, // 성장 추이 우측 "+N%" (rate라 소수 가능 → 표시 시 반올림)
     val topCategories: List<TopCategoryDto> = emptyList(),
     val missionProgress: MissionProgressDto = MissionProgressDto(),
+    // 능력치 누적 원값 4개 — 성장 리포트의 티어·별·마름모가 전부 여기서 나온다.
+    // 실서버 실측(2026-08-13): 필드명이 `kindness`가 아니라 `kindnessTotal` 형태다.
+    val growthTotals: GrowthTotalsDto = GrowthTotalsDto(),
 )
 
 @Serializable
@@ -170,7 +175,41 @@ fun GrowthReportResponse.toGrowthReport() = GrowthReport(
     completedMissions = missionProgress.completed,
     totalMissions = missionProgress.total,
 )
-// B 성장 리포트(GrowthTierReport)는 growthTotals 대개편 전이라 서버 매퍼 없이 stub(ReportRepository).
+// B 성장 리포트 — 서버 누적값(growthTotals)을 티어·별·마름모로 바꾼다.
+// gains = 마름모 꼭짓점의 "+N"(이번 대화로 오른 점수). 서버 응답에 증가분 필드가 없어
+// 피드백 화면이 방금 받은 4항목 점수를 넘겨준다 — 서버가 누적에 그대로 더하는 값이라 같은 수다.
+// 순서는 화면 축 순서(친절·주도·공감·질문) 고정. 없으면 0(= 화면에서 "+N" 자체를 감춤).
+fun GrowthReportResponse.toGrowthTierReport(gains: List<Int> = emptyList()): GrowthTierReport {
+    val progress = TierProgress.of(
+        kindness = growthTotals.kindnessTotal,
+        initiative = growthTotals.initiativeTotal,
+        empathy = growthTotals.empathyTotal,
+        questionLink = growthTotals.questionLinkTotal,
+    )
+    // 공감만 축 라벨("공감 표현")과 범례 라벨("공감 능력")이 다르다 — CSS 그대로.
+    val axes = listOf(
+        Triple(CompetencyAxis.KINDNESS, "친절한 태도", "친절한 태도"),
+        Triple(CompetencyAxis.INITIATIVE, "대화 주도", "대화 주도"),
+        Triple(CompetencyAxis.EMPATHY, "공감 표현", "공감 능력"),
+        Triple(CompetencyAxis.QUESTION_LINK, "질문 연결성", "질문 연결성"),
+    )
+    return GrowthTierReport(
+        tierName = progress.tierName,
+        tierStars = progress.tierStars,
+        nextStarsNeeded = progress.nextStarsNeeded,
+        nextTierName = progress.nextTierName,
+        competencies = axes.mapIndexed { i, (axis, label, legendLabel) ->
+            Competency(
+                axis = axis,
+                label = label,
+                legendLabel = legendLabel,
+                score = progress.axisScores[i],
+                gain = gains.getOrElse(i) { 0 },
+                maxScore = TierProgress.AXIS_MAX,
+            )
+        },
+    )
+}
 
 fun WeeklyCompareResponse.toWeeklyCompareReport() = WeeklyCompareReport(
     metrics = metricChanges.map {

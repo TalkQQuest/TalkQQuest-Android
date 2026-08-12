@@ -36,10 +36,17 @@ class FeedbackViewModel @Inject constructor(
         loadFeedback()
     }
 
-    // 예외 E1(피드백 실패): 실패 시 기본 안내 문구 + 재시도 버튼 — 에러 분기가 그 역할.
-    fun loadFeedback() {
+    /**
+     * 예외 E1(피드백 실패): 실패 시 기본 안내 문구 + 재시도 버튼 — 에러 분기가 그 역할.
+     *
+     * @param regenerate 재시도 버튼에서 부를 때 true. 서버에 피드백을 다시 만들어 달라고 한 뒤
+     *   조회한다. 조회만 다시 하면 서버 생성이 failed로 끝난 피드백은 몇 번을 눌러도 그대로다.
+     *   첫 진입(init)은 생성이 이미 걸려 있으므로 false로 둔다.
+     */
+    fun loadFeedback(regenerate: Boolean = false) {
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true, errorMessage = null) }
+            if (regenerate) missionRepository.retryFeedback(feedbackId)
             when (val result = missionRepository.getFeedback(feedbackId)) {
                 is ApiResult.Success -> _uiState.update {
                     it.copy(isLoading = false, result = result.data)

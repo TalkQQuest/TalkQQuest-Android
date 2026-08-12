@@ -158,6 +158,11 @@ class ConversationViewModel @Inject constructor(
         }
     }
 
+    // "정말 나가시겠습니까?"에서 나가기 — 서버에 열려 있는 대화를 abandoned로 닫는다.
+    // 화면은 기다리지 않고 바로 벗어나고, 요청은 Repository가 자기 스코프에서 마저 보낸다.
+    // ★완료 경로에서는 부르지 않는다: 미션 완료 API가 종료를 겸하고, 이걸 먼저 부르면 완료가 막힌다.
+    fun abandonConversation() = missionRepository.abandonConversation()
+
     fun setCompleteDialogVisible(visible: Boolean) {
         _uiState.update { it.copy(showCompleteDialog = visible) }
     }

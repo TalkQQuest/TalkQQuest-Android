@@ -13,16 +13,23 @@ import com.google.firebase.messaging.FirebaseMessagingService
 import com.google.firebase.messaging.RemoteMessage
 import com.talkqquest.app.MainActivity
 import com.talkqquest.app.R
+import dagger.hilt.android.AndroidEntryPoint
+import javax.inject.Inject
 import kotlin.random.Random
 
 // FCM 수신 담당 서비스 (Manifest에 등록). 두 가지를 받음:
-//  - onNewToken: 이 기기의 FCM 토큰(주소) 발급/갱신 → 백엔드 등록은 5번 작업(아직 미구현)
+//  - onNewToken: 이 기기의 FCM 토큰(주소) 발급/갱신 → 서버 등록 (POST /devices/fcm-token)
 //  - onMessageReceived: 앱이 포그라운드일 때(또는 data 메시지) 푸시 수신 → 알림으로 표시
+@AndroidEntryPoint
 class TqMessagingService : FirebaseMessagingService() {
 
+    @Inject lateinit var pushTokenRegistrar: PushTokenRegistrar
+
     override fun onNewToken(token: String) {
-        // TODO(5번): 백엔드에 토큰 등록/갱신. 현재는 로그인 시 fcmToken 필드로만 전송 예정이라 여기선 로그만.
-        Log.d(TAG, "FCM token: $token")
+        // 여기는 토큰이 새로 발급/갱신될 때만 불린다(보통 설치 직후 한 번).
+        // 이미 깔려 있던 기기를 위해 앱 시작 때도 한 번 더 올린다 — PushTokenRegistrar 참고.
+        Log.d(TAG, "FCM token 갱신 — 서버 등록")
+        pushTokenRegistrar.register(token)
     }
 
     override fun onMessageReceived(message: RemoteMessage) {

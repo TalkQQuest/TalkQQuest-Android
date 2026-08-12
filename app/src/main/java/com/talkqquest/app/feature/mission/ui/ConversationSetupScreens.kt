@@ -80,13 +80,24 @@ import com.talkqquest.app.core.designsystem.TalkQQuestTheme
 import com.talkqquest.app.core.designsystem.TqType
 import com.talkqquest.app.core.designsystem.Gray50
 import com.talkqquest.app.core.designsystem.component.TqButton
+import com.talkqquest.app.feature.mission.data.model.MissionSetupEnvironment
+import com.talkqquest.app.feature.mission.data.model.MissionSetupPartnerAgeGroup
+import com.talkqquest.app.feature.mission.data.model.MissionSetupPartnerGender
+import com.talkqquest.app.feature.mission.data.model.MissionSetupPartnerRole
+import com.talkqquest.app.feature.mission.data.model.SetupAgeGroupByIndex
+import com.talkqquest.app.feature.mission.data.model.SetupEnvironmentByIndex
+import com.talkqquest.app.feature.mission.data.model.SetupGenderByIndex
+import com.talkqquest.app.feature.mission.data.model.SetupPartnerRoleByIndex
 
 // ── 미션 진입 · 대화 설정 4스텝 (UI 13차 "진입- 대화 설정 1~4" 전사) ──
 // 미션 상세 "다음" → 1(장소)→2(상대)→3(성별·나이)→4(친밀도·말투) → 대화. 옛 ConversationPrepScreen 대체.
 //
 // ★옵션 라벨·아이콘·세부설명은 피그마 실렌더(스크린샷) 기준. CSS 레이어명은 플레이스홀더라 못 씀.
 // ★아이콘 = 디자이너 SVG를 vector drawable로 변환(ic_setup_*).
-// ★선택값은 대화 시작 API에 넣을 서버 필드가 아직 없어 화면 로컬 상태만(흐름·네비만 동작).
+// ★선택값은 네 화면이 공유하는 ConversationSetupViewModel에 모았다가 4단계 "대화 시작하기"에서
+//   POST /missions/{id}/setups로 보낸다(2026-08-13 연동). 각 화면은 카드 index를 서버 enum으로
+//   바꿔 넘기기만 하고(SetupXxxByIndex), 화면 안의 선택 표시는 예전처럼 로컬 상태가 그린다.
+//   ※카드 순서를 바꾸면 MissionSetupModels.kt의 SetupXxxByIndex도 같이 바꿔야 한다.
 // ★선택 상태 색은 디자이너 컴포넌트 CSS(component.css)의 default↔filled 변형 그대로.
 //   화면 CSS엔 미선택만 깔려 있어 예전엔 앱 관례로 임시 지정했었는데, 컴포넌트가 와서 전부 교체했다.
 
@@ -276,7 +287,12 @@ private fun PlaceCard(
 }
 
 @Composable
-fun ConversationSetup1Screen(onBack: () -> Unit = {}, onNext: () -> Unit = {}) {
+fun ConversationSetup1Screen(
+    onBack: () -> Unit = {},
+    onNext: () -> Unit = {},
+    // 고른 장소를 서버 enum으로 바꿔 넘긴다. 카드 목록이 여기 있으니 매핑도 여기서 한다.
+    onSelect: (MissionSetupEnvironment) -> Unit = {},
+) {
     var selected by remember { mutableStateOf<Int?>(null) }
     var hasMovedSelection by remember { mutableStateOf(false) }
     SetupStepScaffold(step = 1, onBack = onBack, nextEnabled = selected != null, onNext = onNext) {
@@ -353,6 +369,7 @@ fun ConversationSetup1Screen(onBack: () -> Unit = {}, onNext: () -> Unit = {}) {
                         onClick = {
                             if (selected != null && selected != i) hasMovedSelection = true
                             selected = i
+                            onSelect(SetupEnvironmentByIndex[i])
                         },
                         modifier = Modifier.onGloballyPositioned { coordinates ->
                             val position = coordinates.positionInParent()
@@ -409,7 +426,11 @@ private fun PartnerCard(option: IconOption, selected: Boolean, onClick: () -> Un
 }
 
 @Composable
-fun ConversationSetup2Screen(onBack: () -> Unit = {}, onNext: () -> Unit = {}) {
+fun ConversationSetup2Screen(
+    onBack: () -> Unit = {},
+    onNext: () -> Unit = {},
+    onSelect: (MissionSetupPartnerRole) -> Unit = {},
+) {
     var selected by remember { mutableStateOf<Int?>(null) }
     var hasMovedSelection by remember { mutableStateOf(false) }
     SetupStepScaffold(step = 2, onBack = onBack, nextEnabled = selected != null, onNext = onNext) {
@@ -490,6 +511,7 @@ fun ConversationSetup2Screen(onBack: () -> Unit = {}, onNext: () -> Unit = {}) {
                                 onClick = {
                                     if (selected != null && selected != idx) hasMovedSelection = true
                                     selected = idx
+                                    onSelect(SetupPartnerRoleByIndex[idx])
                                 },
                                 modifier = Modifier
                                     .weight(1f)
@@ -561,7 +583,12 @@ private fun SectionTitle(text: String) {
 }
 
 @Composable
-fun ConversationSetup3Screen(onBack: () -> Unit = {}, onNext: () -> Unit = {}) {
+fun ConversationSetup3Screen(
+    onBack: () -> Unit = {},
+    onNext: () -> Unit = {},
+    onSelectGender: (MissionSetupPartnerGender) -> Unit = {},
+    onSelectAgeGroup: (MissionSetupPartnerAgeGroup) -> Unit = {},
+) {
     var gender by remember { mutableStateOf<Int?>(null) }
     var age by remember { mutableStateOf<Int?>(null) }
     SetupStepScaffold(step = 3, onBack = onBack, nextEnabled = gender != null && age != null, onNext = onNext) {
@@ -631,6 +658,7 @@ fun ConversationSetup3Screen(onBack: () -> Unit = {}, onNext: () -> Unit = {}) {
                                 {
                                     if (gender != null && gender != i) genderMoved = true
                                     gender = i
+                                    onSelectGender(SetupGenderByIndex[i])
                                 },
                                 Modifier.width(130.dp).onGloballyPositioned { c ->
                                     val p = c.positionInWindow()
@@ -706,6 +734,7 @@ fun ConversationSetup3Screen(onBack: () -> Unit = {}, onNext: () -> Unit = {}) {
                                         {
                                             if (age != null && age != idx) ageMoved = true
                                             age = idx
+                                            onSelectAgeGroup(SetupAgeGroupByIndex[idx])
                                         },
                                         pillMod.onGloballyPositioned { c ->
                                             val p = c.positionInWindow()
@@ -869,10 +898,17 @@ private fun DotScale(value: Int, onValueChange: (Int) -> Unit, left: String, cen
 }
 
 @Composable
-fun ConversationSetup4Screen(onBack: () -> Unit = {}, onNext: () -> Unit = {}) {
+fun ConversationSetup4Screen(
+    onBack: () -> Unit = {},
+    onNext: () -> Unit = {},
+    onIntimacyChange: (Int) -> Unit = {}, // 눈금 index 0~4 그대로. 서버 1~5 변환은 모델이 한다.
+    onFormalityChange: (Int) -> Unit = {},
+    // 설정 저장 요청이 날아가는 동안 "대화 시작하기"를 잠근다(두 번 눌러 두 번 저장되는 것 방지).
+    isSaving: Boolean = false,
+) {
     var intimacy by remember { mutableIntStateOf(2) } // 기본 중앙(보통)
     var tone by remember { mutableIntStateOf(2) }
-    SetupStepScaffold(step = 4, onBack = onBack, nextEnabled = true, onNext = onNext, nextText = "대화 시작하기") {
+    SetupStepScaffold(step = 4, onBack = onBack, nextEnabled = !isSaving, onNext = onNext, nextText = "대화 시작하기") {
         SetupHeader("마지막으로,\n관계를 조금 더 정해볼까요?", "친밀도와 말투를 선택하면 준비가 끝나요.") // CSS 수동 줄바꿈: "마지막으로," 뒤 개행(2줄)
         Spacer(Modifier.height(36.dp))
         Column(
@@ -881,11 +917,11 @@ fun ConversationSetup4Screen(onBack: () -> Unit = {}, onNext: () -> Unit = {}) {
         ) {
             Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
                 SectionTitle("관계 친밀도")
-                DotScale(intimacy, { intimacy = it }, "매우 낯선 사이", "보통", "매우 친한 사이")
+                DotScale(intimacy, { intimacy = it; onIntimacyChange(it) }, "매우 낯선 사이", "보통", "매우 친한 사이")
             }
             Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
                 SectionTitle("대화 말투")
-                DotScale(tone, { tone = it }, "편한 말투", "보통", "격식있는 말투")
+                DotScale(tone, { tone = it; onFormalityChange(it) }, "편한 말투", "보통", "격식있는 말투")
             }
         }
     }

@@ -109,7 +109,9 @@ internal fun MissionCard(
         }
         if (animateContentChanges) {
             AnimatedContent(
-                targetState = mission,
+                // 필터 전환 때만 제목·메타를 바꾸기 위한 전환이다. 북마크 여부까지 target에
+                // 넣으면 아이콘을 누를 때도 이전·새 카드 본문이 동시에 그려져 깜빡여 보인다.
+                targetState = mission.copy(isSaved = false),
                 transitionSpec = {
                     (fadeIn(tween(260, easing = FastOutSlowInEasing)) +
                         slideInVertically(
@@ -127,24 +129,23 @@ internal fun MissionCard(
             ) { animatedMission ->
                 MissionCardBody(
                     mission = animatedMission,
-                    onToggleSave = onToggleSave,
                     modifier = Modifier.fillMaxWidth(),
                 )
             }
         } else {
             MissionCardBody(
                 mission = mission,
-                onToggleSave = onToggleSave,
                 modifier = Modifier.weight(1f),
             )
         }
+        // 북마크는 카드 내용 전환과 독립시켜, 저장 여부가 바뀌어도 아이콘만 즉시 교체한다.
+        BookmarkButton(isSaved = mission.isSaved, onToggleSave = onToggleSave)
     }
 }
 
 @Composable
 private fun MissionCardBody(
     mission: MissionListItem,
-    onToggleSave: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Row(modifier = modifier, verticalAlignment = Alignment.CenterVertically) {
@@ -177,25 +178,28 @@ private fun MissionCardBody(
                 TimeXpRow(minutes = mission.estimatedMinutes, xp = mission.rewardXp)
             }
         }
-        // 북마크: 44 터치영역 + 아이콘 (미저장 Gray400 테두리 / 저장 Purple600 채움 — drawable 2종)
-        // 리플(사각형 번쩍임) 끔 — 아이콘 색 변화만으로 충분 (사용자 결정)
-        Box(
-            modifier = Modifier
-                .size(44.dp)
-                .clickable(
-                    interactionSource = remember { MutableInteractionSource() },
-                    indication = null,
-                    onClick = onToggleSave,
-                ),
-            contentAlignment = Alignment.Center,
-        ) {
-            Image(
-                painter = painterResource(
-                    if (mission.isSaved) R.drawable.ic_mission_bookmark_filled else R.drawable.ic_mission_bookmark,
-                ),
-                contentDescription = if (mission.isSaved) "북마크 해제" else "북마크",
-            )
-        }
+    }
+}
+
+@Composable
+private fun BookmarkButton(isSaved: Boolean, onToggleSave: () -> Unit) {
+    // 리플(사각형 번쩍임) 없이 아이콘만 상태를 바꾼다.
+    Box(
+        modifier = Modifier
+            .size(44.dp)
+            .clickable(
+                interactionSource = remember { MutableInteractionSource() },
+                indication = null,
+                onClick = onToggleSave,
+            ),
+        contentAlignment = Alignment.Center,
+    ) {
+        Image(
+            painter = painterResource(
+                if (isSaved) R.drawable.ic_mission_bookmark_filled else R.drawable.ic_mission_bookmark,
+            ),
+            contentDescription = if (isSaved) "북마크 해제" else "북마크",
+        )
     }
 }
 

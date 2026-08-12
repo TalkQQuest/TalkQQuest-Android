@@ -275,6 +275,10 @@ private fun HomeContent(
     var showWeekly by remember { mutableStateOf(summary.hasNewWeeklyReport) }
     var missionHasLongText by remember { mutableStateOf(false) }
     val scrollState = rememberScrollState()
+    // 홈이 화면에서 벗어나는 순간 받은 reset 신호로 스크롤 위치도 항상 맨 위로 되돌린다.
+    LaunchedEffect(xpResetToken) {
+        if (xpResetToken > 0) scrollState.scrollTo(0)
+    }
     // 실전 티어 ⓘ 탭 → 티어 승급 안내 시트(성장 리포트와 동일 공용 시트).
     var showTierHelp by remember { mutableStateOf(false) }
     // 콘텐츠가 떠 있는 하단 네비(118 몫) 위로 다 들어가게 "필요한 만큼만" 균등 축소.

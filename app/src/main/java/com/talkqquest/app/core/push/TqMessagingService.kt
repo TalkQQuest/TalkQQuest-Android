@@ -1,4 +1,4 @@
-package com.talkqquest.app.core.push
+﻿package com.talkqquest.app.core.push
 
 import android.Manifest
 import android.app.PendingIntent
@@ -13,39 +13,54 @@ import com.google.firebase.messaging.FirebaseMessagingService
 import com.google.firebase.messaging.RemoteMessage
 import com.talkqquest.app.MainActivity
 import com.talkqquest.app.R
+import dagger.hilt.android.AndroidEntryPoint
+import javax.inject.Inject
 import kotlin.random.Random
 
-// FCM 수신 담당 서비스 (Manifest에 등록). 두 가지를 받음:
-//  - onNewToken: 이 기기의 FCM 토큰(주소) 발급/갱신 → 백엔드 등록은 5번 작업(아직 미구현)
-//  - onMessageReceived: 앱이 포그라운드일 때(또는 data 메시지) 푸시 수신 → 알림으로 표시
+// FCM 수신 서비스. 토큰 갱신과 포그라운드 메시지 알림 표시를 담당한다.
+@AndroidEntryPoint
 class TqMessagingService : FirebaseMessagingService() {
+    @Inject lateinit var pushTokenRegistrar: PushTokenRegistrar
 
     override fun onNewToken(token: String) {
-        // TODO(5번): 백엔드에 토큰 등록/갱신. 현재는 로그인 시 fcmToken 필드로만 전송 예정이라 여기선 로그만.
-        Log.d(TAG, "FCM token: $token")
+        Log.d(TAG, "FCM token refreshed")
+        pushTokenRegistrar.register(token)
     }
 
     override fun onMessageReceived(message: RemoteMessage) {
-        // notification 페이로드 우선, 없으면 data 페이로드에서 title/body 추출
         val title = message.notification?.title ?: message.data["title"] ?: "TalkQQuest"
         val body = message.notification?.body ?: message.data["body"] ?: ""
-        showNotification(title, body)
+        val type = message.data[EXTRA_NOTIFICATION_TYPE].orEmpty()
+        val reportId = message.data[EXTRA_REFERENCE_ID]
+
+        // 휴대폰 실제 알림은 주간 비교 리포트 도착 안내만 표시한다.
+        // 미션 완료 등 나머지 알림은 서버 목록에 남아 앱 내부 알림창에서만 확인한다.
+        if (type != WEEKLY_COMPARE_NOTIFICATION_TYPE &&
+            !title.contains(WEEKLY_COMPARE_NOTIFICATION_TEXT) &&
+            !body.contains(WEEKLY_COMPARE_NOTIFICATION_TEXT)
+        ) {
+            Log.d(TAG, "앱 내부 전용 알림 — 시스템 알림 표시 생략")
+            return
+        }
+
+        showNotification(title, body, reportId)
     }
 
-    private fun showNotification(title: String, body: String) {
-        // Android 13+ 는 권한 없으면 알림 못 띄움 — 조용히 무시 (권한 요청은 앱 실행 시 처리)
+    private fun showNotification(title: String, body: String, reportId: String?) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
             ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED
         ) {
             return
         }
 
-        // 알림 탭 시 앱 열기 (구체 화면 이동은 6번 작업)
+        val notificationId = Random.nextInt()
         val intent = Intent(this, MainActivity::class.java).apply {
             flags = Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP
+            putExtra(EXTRA_NOTIFICATION_TYPE, WEEKLY_COMPARE_NOTIFICATION_TYPE)
+            reportId?.takeIf { it.isNotBlank() }?.let { putExtra(EXTRA_REFERENCE_ID, it) }
         }
         val pending = PendingIntent.getActivity(
-            this, 0, intent,
+            this, notificationId, intent,
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
         )
 
@@ -58,10 +73,14 @@ class TqMessagingService : FirebaseMessagingService() {
             .setContentIntent(pending)
             .build()
 
-        NotificationManagerCompat.from(this).notify(Random.nextInt(), notification)
+        NotificationManagerCompat.from(this).notify(notificationId, notification)
     }
 
     companion object {
         private const val TAG = "TqMessaging"
+        private const val WEEKLY_COMPARE_NOTIFICATION_TEXT = "주간 비교 리포트"
+        const val WEEKLY_COMPARE_NOTIFICATION_TYPE = "weekly_compare_ready"
+        const val EXTRA_NOTIFICATION_TYPE = "type"
+        const val EXTRA_REFERENCE_ID = "referenceId"
     }
 }

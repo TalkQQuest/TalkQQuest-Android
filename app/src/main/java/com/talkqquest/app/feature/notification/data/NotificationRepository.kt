@@ -17,8 +17,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
 
-// 알림 Repository. 서버 → 실패/빈 목록이면 목업 폴백 (미션 패턴과 동일).
-// 서버가 알림 생성을 시작하면(목록이 비지 않으면) 자동으로 실데이터로 전환되는 구조.
+// 알림 Repository. 서버가 돌려준 목록을 그대로 화면에 전달한다.
 @Singleton
 class NotificationRepository @Inject constructor(
     private val notificationApi: NotificationApi,
@@ -33,16 +32,15 @@ class NotificationRepository @Inject constructor(
     suspend fun getNotifications(): ApiResult<List<NotificationUiItem>> {
         locallyDeletedIds.addAll(notificationDataStore.deletedNotificationIds())
         val r = serverCall { notificationApi.getNotifications() } // 데모 스위치(DemoConfig.USE_MOCK) 시 서버 건너뛰고 목업
-        if (r is ApiResult.Success && r.data.notifications.isNotEmpty()) {
-            return ApiResult.Success(
+        return when (r) {
+            is ApiResult.Success -> ApiResult.Success(
                 r.data.notifications
                     .filterNot { it.id in locallyDeletedIds }
                     .map { it.toUiItem().withLocalReadState() },
             )
+            is ApiResult.Error -> r
+            is ApiResult.Exception -> r
         }
-        return ApiResult.Success(
-            stubNotifications.filterNot { it.id in locallyDeletedIds }.map { it.withLocalReadState() },
-        ) // 서버 빈 배열/실패 → 목업
     }
 
     // 홈 종의 점도 알림창과 같은 읽음 상태를 사용한다.
@@ -73,14 +71,21 @@ class NotificationRepository @Inject constructor(
         }
     }
 
+    // 2026-08-13 백엔드가 삭제 API를 만들어 줘 서버에서 실제로 지운다.
+    // 로컬 기록은 그대로 남겨 둔다 — 서버 삭제가 실패해도 화면에서는 사라진 상태를 유지하고,
+    // 예전에 로컬로만 지운 알림이 되살아나지 않게 하기 위해서다.
     suspend fun deleteNotification(notificationId: String) {
         locallyDeletedIds.add(notificationId)
         notificationDataStore.addDeletedNotificationIds(listOf(notificationId))
+        if (!notificationId.startsWith("stub-")) {
+            serverCall { notificationApi.deleteNotification(notificationId) }
+        }
     }
 
     suspend fun deleteAllNotifications(notificationIds: Collection<String>) {
         locallyDeletedIds.addAll(notificationIds)
         notificationDataStore.addDeletedNotificationIds(notificationIds)
+        serverCall { notificationApi.deleteAllNotifications() }
     }
 
     private fun NotificationUiItem.withLocalReadState(): NotificationUiItem =
@@ -93,15 +98,16 @@ class NotificationRepository @Inject constructor(
         timeText = relativeTime(createdAt),
         isUnread = !isRead,
         hasLink = isWeeklyCompare,
+        linkReportId = referenceId?.takeIf { isWeeklyCompare && it.isNotBlank() },
     )
 
     // 주간 비교 리포트 알림인지 — 이 알림만 화살표가 붙어 눌러서 바로 리포트로 간다.
-    // ★서버가 이 알림에 어떤 type을 쓰는지 아직 못 받았다. 지금까지 받은 type 목록은
-    //   mission_reminder / report_ready / community_approved / event 뿐이고 주간 비교용이 없다.
-    //   그래서 type에 weekly가 들어있는지를 먼저 보고, 아니면 제목 문구로 판별한다.
-    //   백엔드에서 정확한 값을 받으면 이 한 곳만 그 값 비교로 바꾸면 된다.
+    // referenceType(백엔드 추가 2026-08-13)이 리포트 계열이면 그것으로 판별하고,
+    // 아직 그 값이 안 오는 알림은 예전처럼 type·제목 문구로 판별한다.
     private val NotificationItemDto.isWeeklyCompare: Boolean
-        get() = type.contains("weekly", ignoreCase = true) || title.contains("주간 비교")
+        get() = referenceType?.contains("weekly", ignoreCase = true) == true ||
+            type.contains("weekly", ignoreCase = true) ||
+            title.contains("주간 비교")
 }
 
 // ISO 시각 → 디자인 표기(방금 / N분 전 / N시간 전 / N일 전 / yyyy.MM.dd)
@@ -117,30 +123,3 @@ private fun relativeTime(iso: String): String {
             .format(created.atZone(ZoneId.systemDefault()).toLocalDate())
     }
 }
-
-// 서버 없이 확인용 목업 — 디자인 목업 3건 그대로 전사. 서버가 알림을 만들기 시작하면 자동으로 안 쓰임.
-private val stubNotifications = listOf(
-    // 주간 비교 리포트 알림 — 화살표가 붙는 유일한 종류 (CSS Frame 427321769, 목록 맨 위)
-    NotificationUiItem(
-        id = "stub-0",
-        category = "아직 읽지 않은 주간 비교 리포트가 있어요.",
-        body = "내 주간 비교 리포트 보러가기",
-        timeText = "방금",
-        isUnread = true,
-        hasLink = true,
-    ),
-    NotificationUiItem(
-        id = "stub-1",
-        category = "새로운 리포트가 도착했어요!",
-        body = "지금 바로 성장 리포트를 보러갈 수 있어요.", // 13차에서 "성장" 추가됨
-        timeText = "방금",
-        isUnread = true,
-    ),
-    NotificationUiItem(
-        id = "stub-2",
-        category = "새로운 기기에서 로그인되었어요",
-        body = "이전 기기에서는 로그아웃 됩니다.",
-        timeText = "1일 전",
-        isUnread = true,
-    ),
-)

@@ -1,10 +1,13 @@
-package com.talkqquest.app.feature.profile.ui
+﻿package com.talkqquest.app.feature.profile.ui
+
+import android.net.Uri
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.Row
@@ -33,6 +36,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.em
 import androidx.compose.ui.unit.sp
+import coil3.compose.AsyncImage
 import com.talkqquest.app.R
 import com.talkqquest.app.core.designsystem.FitDesign
 import com.talkqquest.app.core.designsystem.Gray100
@@ -98,6 +102,7 @@ private val LabelMediumStyle = TextStyle(
 @Composable
 fun ProfileScreen(
     nickname: String = "다민",
+    avatarUrl: String? = null,
     level: Int = 2,
     xp: Int = 30,
     nextLevelXp: Int = 100,
@@ -106,6 +111,7 @@ fun ProfileScreen(
     weeklyTotalCount: Int = 7,
     onSettingsClick: () -> Unit = {},
     onEditProfileClick: () -> Unit = {},
+    onAvatarClick: (Uri) -> Unit = {},
     onBadgesClick: () -> Unit = {},
     onRecentMissionClick: () -> Unit = {},
     onArchiveClick: () -> Unit = {},
@@ -128,7 +134,7 @@ fun ProfileScreen(
             modifier = Modifier
                 .offset(x = 343.dp, y = 48.dp)
                 .size(44.dp)
-                .clickable(onClick = onSettingsClick),
+                .profileCircleClick(onClick = onSettingsClick),
             contentAlignment = Alignment.Center,
         ) {
             Image(
@@ -140,7 +146,9 @@ fun ProfileScreen(
 
         ProfileHeader(
             nickname = nickname,
+            avatarUrl = avatarUrl,
             onEditProfileClick = onEditProfileClick,
+            onAvatarClick = onAvatarClick,
             modifier = Modifier
                 .offset(x = 150.5.dp, y = 126.dp)
                 .size(width = 93.dp, height = 172.dp),
@@ -178,11 +186,24 @@ fun ProfileScreen(
 @Composable
 private fun ProfileHeader(
     nickname: String,
+    avatarUrl: String?,
     onEditProfileClick: () -> Unit,
+    onAvatarClick: (Uri) -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val imagePickerLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetContent(),
+    ) { uri ->
+        if (uri != null) onAvatarClick(uri)
+    }
+
     Box(modifier = modifier) {
-        AvatarImage(modifier = Modifier.size(93.dp))
+        AvatarImage(
+            avatarUrl = avatarUrl,
+            modifier = Modifier
+                .size(93.dp)
+                .profileCircleClick { imagePickerLauncher.launch("image/*") },
+        )
         Text(
             text = "$nickname 님",
             style = HeadingStyle,
@@ -198,7 +219,7 @@ private fun ProfileHeader(
                 .size(width = 93.dp, height = 32.dp)
                 .clip(RoundedCornerShape(24.dp))
                 .border(1.dp, Gray300, RoundedCornerShape(24.dp))
-                .clickable(onClick = onEditProfileClick),
+                .profileItemClick(onClick = onEditProfileClick),
             contentAlignment = Alignment.Center,
         ) {
             Text(
@@ -211,12 +232,25 @@ private fun ProfileHeader(
 }
 
 @Composable
-private fun AvatarImage(modifier: Modifier = Modifier) {
-    Image(
-        painter = painterResource(R.drawable.img_profile_avatar),
-        contentDescription = null,
-        modifier = modifier,
-    )
+private fun AvatarImage(
+    avatarUrl: String? = null,
+    modifier: Modifier = Modifier,
+) {
+    if (avatarUrl.isNullOrBlank()) {
+        Image(
+            painter = painterResource(R.drawable.img_profile_avatar),
+            contentDescription = null,
+            modifier = modifier,
+        )
+    } else {
+        AsyncImage(
+            model = avatarUrl,
+            contentDescription = null,
+            modifier = modifier,
+            error = painterResource(R.drawable.img_profile_avatar),
+            placeholder = painterResource(R.drawable.img_profile_avatar),
+        )
+    }
 }
 
 @Composable
@@ -425,7 +459,7 @@ private fun ProfileMenuRow(
     modifier: Modifier = Modifier,
 ) {
     Box(
-        modifier = modifier.clickable(onClick = onClick),
+        modifier = modifier.profileItemClick(onClick = onClick),
         contentAlignment = Alignment.CenterStart,
     ) {
         Text(

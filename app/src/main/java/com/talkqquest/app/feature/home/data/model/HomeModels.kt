@@ -1,5 +1,6 @@
 package com.talkqquest.app.feature.home.data.model
 
+import com.talkqquest.app.core.util.GrowthTotalsDto
 import kotlinx.serialization.Serializable
 
 @Serializable
@@ -13,14 +14,21 @@ data class HomeSummary(
     val communityCount: Int,
     val questionOfDay: String? = null,
     val hasNewNotification: Boolean = false,
-    // 실전 티어(성장 티어 시스템 — 레벨 카드에 표시). 서버 growthTotals(누적 4필드)가 merge되면
-    // 그 값으로 티어/별을 앱에서 계산해 채운다(300점 단위·마름모 3개=티어). 지금은 명세만 상태라 디자인 기본값.
-    // TODO(백엔드 growthTotals merge 후): kindness/initiative/empathy/questionLink 누적값 → 티어·별 계산 연결.
+    // 능력치 누적 원값 4개 — 실전 티어의 원천. 서버가 홈 요약에도 함께 내려준다(스웨거 HomeSummaryResponseDto).
+    val growthTotals: GrowthTotalsDto = GrowthTotalsDto(),
+    // 실전 티어(레벨 카드 표시) — 서버가 주는 값이 아니라 위 growthTotals로 Repository가 계산해 채운다.
+    // 성장 리포트와 같은 계산(core/util/TierProgress)을 써야 두 화면이 어긋나지 않는다.
     val tierName: String = "골드",  // 티어 이름 (브론즈/실버/골드/플래티넘/다이아/마스터)
     val tierStars: Int = 2,         // 채워진 별 수 0~3 (티어 내 단계)
-    // 안 읽은 주간 비교 리포트가 있으면 홈 진입 시 도착 모달을 띄운다(백엔드 1번째 보고: 주간=목록·홈 알림 진입).
-    // TODO(백엔드 연동): 서버가 '안 읽은 주간 비교 리포트 존재' 신호를 주면 매핑.
-    val hasNewWeeklyReport: Boolean = false,
+    // 새 주간 비교 리포트 도착 신호. 백엔드 추가(2026-08-13) — 홈 진입 시 도착 모달을 띄우고,
+    // "보러가기"는 reportId로 그 리포트를 바로 연다(목록 최신을 추측하지 않는다).
+    val newWeeklyCompareReport: NewWeeklyCompareReport? = null,
+)
+
+@Serializable
+data class NewWeeklyCompareReport(
+    val available: Boolean = false,
+    val reportId: String? = null,
 )
 
 @Serializable
@@ -117,6 +125,37 @@ data class RecentMissionSummary(
 
 
 @Serializable
+data class ArchiveSummary(
+    val totalCount: Int = 0,
+    val missionRecordCount: Int = 0,
+    val conversationCount: Int = 0,
+    val phraseCount: Int = 0,
+    val reportCount: Int = 0,
+    val recentItems: List<ArchiveRecentItem> = emptyList(),
+)
+
+@Serializable
+data class ArchiveRecentItem(
+    val id: String = "",
+    val referenceId: String = "",
+    val type: String = "",
+    val reportType: String? = null,
+    val title: String = "",
+    val tags: List<String> = emptyList(),
+    val description: String? = null,
+    val duration: String? = null,
+    val isBookmarked: Boolean = false,
+    val missionId: String? = null,
+    val conversationId: String? = null,
+    val missionRecordId: String? = null,
+    val missionStatus: String? = null,
+    val category: String? = null,
+    val difficulty: String? = null,
+    val estimatedMinutes: Int? = null,
+    val rewardXp: Int? = null,
+    val createdAt: String = "",
+)
+@Serializable
 data class ProfileImageUploadResponse(
     val avatarUrl: String = "",
 )
@@ -151,4 +190,7 @@ data class TodayMission(
     val difficulty: String,
     val estimatedMinutes: Int,
     val rewardXp: Int,
+    val refreshCount: Int = 0,
+    val refreshLimit: Int? = null,
+    val remainingRefreshes: Int? = null,
 )

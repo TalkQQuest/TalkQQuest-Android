@@ -1,4 +1,4 @@
-package com.talkqquest.app.feature.profile.ui
+﻿package com.talkqquest.app.feature.profile.ui
 
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -192,14 +192,14 @@ private fun BadgeBackButton(
     modifier: Modifier = Modifier,
 ) {
     Box(
-        modifier = modifier.clickable(onClick = onClick),
+        modifier = modifier.profileCircleClick(onClick = onClick),
         contentAlignment = Alignment.Center,
     ) {
         Icon(
             painter = painterResource(R.drawable.ic_back_chevron),
             contentDescription = null,
             tint = Gray500,
-            modifier = Modifier.size(width = 30.dp, height = 32.dp),
+            modifier = Modifier.size(24.dp),
         )
     }
 }
@@ -210,7 +210,6 @@ private fun BadgeTabs(
     onSelectTab: (Int) -> Unit,
 ) {
     val labels = listOf("\uC804\uCCB4", "\uC9C4\uD589\uC911", "\uB2EC\uC131")
-    val xPositions = listOf(52.dp, 173.dp, 310.dp)
     val widths = listOf(31.dp, 47.dp, 31.dp)
 
     Box(
@@ -219,16 +218,21 @@ private fun BadgeTabs(
             .size(width = 393.dp, height = 38.dp),
     ) {
         labels.forEachIndexed { index, label ->
-            Text(
-                text = label,
-                style = BadgeTabStyle,
-                color = if (selectedTab == index) Gray800 else Gray400,
-                textAlign = TextAlign.Center,
+            Box(
                 modifier = Modifier
-                    .offset(x = xPositions[index])
-                    .size(width = widths[index], height = 28.dp)
-                    .clickable { onSelectTab(index) },
-            )
+                    .offset(x = (index * 131).dp)
+                    .size(width = 131.dp, height = 36.dp)
+                    .profileItemClick { onSelectTab(index) },
+                contentAlignment = Alignment.TopCenter,
+            ) {
+                Text(
+                    text = label,
+                    style = BadgeTabStyle,
+                    color = if (selectedTab == index) Gray800 else Gray400,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.size(width = widths[index], height = 28.dp),
+                )
+            }
         }
         Box(
             modifier = Modifier
@@ -326,7 +330,7 @@ private fun BadgeItem(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    Box(modifier = modifier.clickable(onClick = onClick)) {
+    Box(modifier = modifier.profileItemClick(onClick = onClick)) {
         Image(
             painter = painterResource(
                 if (badge.isEarned) R.drawable.img_profile_badge_unlocked else R.drawable.img_profile_badge_locked,
@@ -374,7 +378,7 @@ private fun BadgeDetailDialog(
             modifier = Modifier
                 .offset(x = 232.dp, y = 8.dp)
                 .size(44.dp)
-                .clickable(onClick = onClose),
+                .profileCircleClick(onClick = onClose),
             contentAlignment = Alignment.Center,
         ) {
             Image(

@@ -7,13 +7,10 @@ import com.talkqquest.app.feature.report.data.model.Competency
 import com.talkqquest.app.feature.report.data.model.CompetencyAxis
 import com.talkqquest.app.feature.report.data.model.DeleteReportResponse
 import com.talkqquest.app.feature.report.data.model.GrowthTierReport
-import com.talkqquest.app.feature.report.data.model.HighlightItem
-import com.talkqquest.app.feature.report.data.model.MetricChange
 import com.talkqquest.app.feature.report.data.model.SaveReportRequest
 import com.talkqquest.app.feature.report.data.model.SaveReportResponse
 import com.talkqquest.app.feature.report.data.model.SavedReportItem
-import com.talkqquest.app.feature.report.data.model.WeeklyCompareReport
-import com.talkqquest.app.feature.report.data.model.toWeeklyCompareReport
+import com.talkqquest.app.feature.report.data.model.toGrowthTierReport
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -24,15 +21,13 @@ class ReportRepository @Inject constructor(
     private val reportApi: ReportApi,
 ) {
 
-    // 성장 리포트(B) — 티어/핵심역량(growthTotals) 대개편 전이라 서버 매핑 없이 stub.
-    // TODO(서버 growthTotals merge 후): GET /reports/growth 실 응답 → tier·별·4축 매핑으로 교체.
-    suspend fun getGrowthReport(): ApiResult<GrowthTierReport> = ApiResult.Success(stubGrowth)
-
-    // 주간 비교 리포트 — GET /api/v1/reports/weekly-compare.
-    suspend fun getWeeklyCompare(): ApiResult<WeeklyCompareReport> {
-        val r = serverCall { reportApi.getWeeklyCompare() }
-        return if (r is ApiResult.Success) ApiResult.Success(r.data.toWeeklyCompareReport())
-        else ApiResult.Success(stubWeekly)
+    // 성장 리포트(B) — GET /api/v1/reports/growth의 growthTotals(누적 원값 4개)로 티어·별·마름모를 계산.
+    // gains는 마름모 꼭짓점 "+N" — 서버에 증가분 필드가 없어 피드백 화면이 방금 받은 점수를 넘겨준다.
+    // 실패/데모(USE_MOCK)면 stub 폴백(화면 공백 방지 — 다른 리포트 조회와 같은 방식).
+    suspend fun getGrowthReport(gains: List<Int> = emptyList()): ApiResult<GrowthTierReport> {
+        val r = serverCall { reportApi.getGrowth() }
+        return if (r is ApiResult.Success) ApiResult.Success(r.data.toGrowthTierReport(gains))
+        else ApiResult.Success(stubGrowth)
     }
 
     // 리포트 저장 (리포트 저장 시트) — POST /api/v1/reports.
@@ -73,7 +68,7 @@ class ReportRepository @Inject constructor(
             is ApiResult.Exception -> r
         }
 
-    // stub 값 = UI CSS 목업 그대로 (성장 티어 시스템 — growthTotals merge 전 기본값)
+    // 오프라인/데모(USE_MOCK) 폴백 — UI CSS 목업 값 그대로. 서버가 응답하면 쓰이지 않는다.
     private val stubGrowth = GrowthTierReport(
         tierName = "골드",
         tierStars = 2,
@@ -82,22 +77,9 @@ class ReportRepository @Inject constructor(
         competencies = listOf(
             Competency(CompetencyAxis.KINDNESS, "친절한 태도", "친절한 태도", score = 300, gain = 70),
             Competency(CompetencyAxis.INITIATIVE, "대화 주도", "대화 주도", score = 200, gain = 70),
-            Competency(CompetencyAxis.EMPATHY, "공감 표현", "공감 능력", score = 100, gain = 70),
+            Competency(CompetencyAxis.EMPATHY, "공감 능력", "공감 능력", score = 100, gain = 70),
             Competency(CompetencyAxis.QUESTION_LINK, "질문 연결성", "질문 연결성", score = 300, gain = 70),
         ),
     )
 
-    private val stubWeekly = WeeklyCompareReport(
-        metrics = listOf(
-            MetricChange(name = "친절한 태도", lastWeek = 88, thisWeek = 92),
-            MetricChange(name = "대화 주도", lastWeek = 86, thisWeek = 88),
-            MetricChange(name = "공감 표현", lastWeek = 82, thisWeek = 85),
-            MetricChange(name = "질문 연결성", lastWeek = 74, thisWeek = 78),
-        ),
-        highlights = listOf(
-            HighlightItem(emphasis = "전체 점수", rest = "가 78점에서 86점으로 상승했어요"),
-            HighlightItem(emphasis = "친절한 태도", rest = "가 가장 많이 상승되었어요"),
-            HighlightItem(emphasis = "질문 연결성", rest = "을 꾸준히 개선하고 있어요"),
-        ),
-    )
 }

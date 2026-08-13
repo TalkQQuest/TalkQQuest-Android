@@ -1,18 +1,23 @@
-package com.talkqquest.app
+﻿package com.talkqquest.app
 
 import android.app.Application
 import com.kakao.sdk.common.KakaoSdk
 import com.navercorp.nid.NidOAuth
 import com.talkqquest.app.core.push.PushNotifications
+import com.talkqquest.app.core.push.PushTokenRegistrar
 import dagger.hilt.android.HiltAndroidApp
+import javax.inject.Inject
 
 @HiltAndroidApp
 class TalkQQuestApplication : Application() {
+    @Inject lateinit var pushTokenRegistrar: PushTokenRegistrar
+
     override fun onCreate() {
         super.onCreate()
 
-        // FCM 알림 채널 생성 (없으면 알림이 안 뜸)
+        // FCM 기본 알림 채널을 생성하고, 저장된 로그인 세션이 있으면 현재 기기 토큰을 서버에 등록한다.
         PushNotifications.createDefaultChannel(this)
+        pushTokenRegistrar.registerCurrentToken()
 
         if (BuildConfig.KAKAO_NATIVE_APP_KEY.isNotBlank()) {
             KakaoSdk.init(this, BuildConfig.KAKAO_NATIVE_APP_KEY)

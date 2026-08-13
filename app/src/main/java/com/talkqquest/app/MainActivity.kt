@@ -1,6 +1,7 @@
 package com.talkqquest.app
 
 import android.Manifest
+import android.content.Intent
 import android.content.pm.PackageManager
 import android.graphics.Color
 import android.os.Build
@@ -10,13 +11,20 @@ import androidx.activity.SystemBarStyle
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.core.content.ContextCompat
 import com.talkqquest.app.core.designsystem.TalkQQuestTheme
+import com.talkqquest.app.core.push.TqMessagingService
 import com.talkqquest.app.navigation.MainScreen
+import com.talkqquest.app.navigation.WeeklyReportLaunchRequest
 import dagger.hilt.android.AndroidEntryPoint
 
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
+
+    private var weeklyReportLaunchRequest by mutableStateOf<WeeklyReportLaunchRequest?>(null)
 
     // Android 13+ 알림 권한 요청 런처 (결과는 지금 따로 처리 안 함 — 거부해도 앱은 정상 동작)
     private val requestNotificationPermission =
@@ -38,10 +46,33 @@ class MainActivity : ComponentActivity() {
             statusBarStyle = SystemBarStyle.light(Color.TRANSPARENT, Color.TRANSPARENT),
             navigationBarStyle = SystemBarStyle.light(Color.TRANSPARENT, Color.TRANSPARENT),
         )
+        consumeWeeklyReportIntent(intent)
         setContent {
             TalkQQuestTheme {
-                MainScreen()
+                MainScreen(
+                    weeklyReportLaunchRequest = weeklyReportLaunchRequest,
+                    onWeeklyReportLaunchConsumed = { weeklyReportLaunchRequest = null },
+                )
             }
         }
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        consumeWeeklyReportIntent(intent)
+    }
+
+    private fun consumeWeeklyReportIntent(intent: Intent?) {
+        val type = intent?.getStringExtra(TqMessagingService.EXTRA_NOTIFICATION_TYPE)
+        if (type != TqMessagingService.WEEKLY_COMPARE_NOTIFICATION_TYPE) return
+
+        weeklyReportLaunchRequest = WeeklyReportLaunchRequest(
+            reportId = intent.getStringExtra(TqMessagingService.EXTRA_REFERENCE_ID),
+            requestId = System.nanoTime(),
+        )
+        // 화면 회전 등 Activity 재생성 때 같은 알림 클릭을 다시 처리하지 않는다.
+        intent.removeExtra(TqMessagingService.EXTRA_NOTIFICATION_TYPE)
+        intent.removeExtra(TqMessagingService.EXTRA_REFERENCE_ID)
     }
 }

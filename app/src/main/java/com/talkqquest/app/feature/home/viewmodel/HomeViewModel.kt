@@ -20,6 +20,7 @@ import javax.inject.Inject
 // - errorMessage: 실패 시 보여줄 메시지(없으면 null)
 data class HomeUiState(
     val isLoading: Boolean = false,
+    val isRefreshingMission: Boolean = false,
     val summary: HomeSummary? = null,
     val errorMessage: String? = null,
 )
@@ -60,6 +61,25 @@ class HomeViewModel @Inject constructor(
                 is ApiResult.Exception -> _uiState.update {
                     it.copy(isLoading = false, errorMessage = "네트워크 연결을 확인해주세요.")
                 }
+            }
+        }
+    }
+
+    fun refreshTodayMission() {
+        val current = _uiState.value.summary?.todayMission ?: return
+        // null은 횟수 정보가 없는 상태이지 소진 상태가 아니다.
+        if (_uiState.value.isRefreshingMission || current.remainingRefreshes == 0) return
+
+        viewModelScope.launch {
+            _uiState.update { it.copy(isRefreshingMission = true) }
+            when (val result = homeRepository.refreshTodayMission()) {
+                is ApiResult.Success -> _uiState.update { state ->
+                    state.copy(
+                        isRefreshingMission = false,
+                        summary = state.summary?.copy(todayMission = result.data),
+                    )
+                }
+                else -> _uiState.update { it.copy(isRefreshingMission = false) }
             }
         }
     }

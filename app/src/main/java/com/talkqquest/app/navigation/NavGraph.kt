@@ -1,4 +1,4 @@
-﻿package com.talkqquest.app.navigation
+package com.talkqquest.app.navigation
 
 import android.content.Context
 import android.net.Uri
@@ -20,6 +20,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.IntOffset
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.talkqquest.app.feature.mission.viewmodel.ConversationSetupViewModel
 import androidx.navigation.NavBackStackEntry
 import androidx.navigation.NavHostController
 import androidx.navigation.NavType
@@ -71,6 +73,7 @@ import com.talkqquest.app.feature.mission.ui.FeedbackScreen
 import com.talkqquest.app.feature.mission.ui.MissionCompleteScreen
 import com.talkqquest.app.feature.mission.ui.MissionDetailScreen
 import com.talkqquest.app.feature.mission.ui.MissionListScreen
+import com.talkqquest.app.feature.home.viewmodel.HomeViewModel
 import com.talkqquest.app.feature.report.ui.ReportScreen
 import com.talkqquest.app.feature.report.ui.WeeklyCompareScreen
 import com.talkqquest.app.feature.archive.ui.ArchiveListScreen
@@ -86,12 +89,15 @@ import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.MultipartBody
 import okhttp3.RequestBody.Companion.toRequestBody
 
+private const val NOTIFICATION_READ_REFRESH_KEY = "notification_read_refresh"
+
 @Composable
 fun NavGraph(
     navController: NavHostController,
     pagerState: PagerState,
     modifier: Modifier = Modifier,
     onOverlaySheetTop: (Float?) -> Unit = {},
+    onShowWeeklyReportModal: (String?) -> Unit = {},
 ) {
     val tabRoutes = BottomNavItem.entries.map { it.route }.toSet()
     fun AnimatedContentTransitionScope<NavBackStackEntry>.isTabSwitch() =
@@ -556,21 +562,49 @@ fun NavGraph(
             )
         }
 
-        composable(Screen.HOME) {
-            MainTabsPager(navController, pagerState, onOverlaySheetTop)
+        composable(Screen.HOME) { homeEntry ->
+            val notificationReadRefresh by homeEntry.savedStateHandle
+                .getStateFlow(NOTIFICATION_READ_REFRESH_KEY, 0L)
+                .collectAsState()
+            val homeViewModel: HomeViewModel = hiltViewModel(homeEntry)
+            LaunchedEffect(notificationReadRefresh) {
+                if (notificationReadRefresh != 0L) {
+                    // 알림 종료 직후에는 XP 복귀 모션과 별개로 홈의 새 알림 상태만 다시 조회한다.
+                    homeViewModel.loadHome(showLoading = false)
+                }
+            }
+            MainTabsPager(navController, pagerState, onOverlaySheetTop, onShowWeeklyReportModal)
         }
 
         composable(Screen.NOTIFICATION) {
             NotificationScreen(
-                onBack = { navController.popBackStack() },
-                onWeeklyReportClick = { navController.navigate(Screen.WEEKLY_COMPARE) },
+                onBack = {
+                    // 상단 화살표와 시스템 뒤로가기가 모두 이 경로를 타며,
+                    // 알림 Repository의 로컬 읽음 반영 뒤 홈에 독립적인 갱신 신호를 보낸다.
+                    navController.previousBackStackEntry?.savedStateHandle?.set(
+                        NOTIFICATION_READ_REFRESH_KEY,
+                        System.nanoTime(),
+                    )
+                    navController.popBackStack()
+                },
+                // 알림이 가리키는 리포트로 바로 들어간다(서버 referenceId). 없으면 가장 최근 주차.
+                onWeeklyReportClick = { reportId ->
+                    navController.navigate("weekly_compare?reportId=${reportId.orEmpty()}")
+                },
             )
         }
 
-        composable(Screen.WEEKLY_COMPARE) {
+        composable(
+            route = Screen.WEEKLY_COMPARE,
+            arguments = listOf(
+                navArgument("reportId") { type = NavType.StringType; defaultValue = "" },
+            ),
+        ) {
             WeeklyCompareScreen(
                 onClose = { navController.popBackStack() },
-                onCompletedMissionsClick = {},
+                onCompletedMissionsClick = {
+                    navController.navigate("${Screen.ARCHIVE_LIST}/1")
+                },
             )
         }
 
@@ -697,14 +731,28 @@ fun NavGraph(
             )
         }
 
+        // ── 대화 설정 1~4단계 ──
+        // 네 화면이 하나의 ConversationSetupViewModel을 공유한다. 1단계의 backStackEntry에
+        // 묶어 두면 2~4단계가 같은 인스턴스를 받고, 설정 흐름을 벗어나 그 entry가 사라질 때
+        // 같이 정리된다. 각 화면이 자기 remember만 들고 있던 예전엔 고른 값이 다음 화면으로도
+        // 서버로도 가지 않았다.
         composable(
             route = Screen.CONVERSATION_SETUP_1,
             arguments = listOf(navArgument("missionId") { type = NavType.StringType }),
         ) { backStackEntry ->
             val missionId = backStackEntry.arguments?.getString("missionId").orEmpty()
+            val setupViewModel: ConversationSetupViewModel = hiltViewModel(backStackEntry)
+            val selection by setupViewModel.selection.collectAsStateWithLifecycle()
+            val guideline by setupViewModel.guideline.collectAsStateWithLifecycle()
+            val isGuidelineReady by setupViewModel.isGuidelineReady.collectAsStateWithLifecycle()
+            LaunchedEffect(missionId) { setupViewModel.loadGuideline(missionId) }
             ConversationSetup1Screen(
                 onBack = { navController.popBackStack() },
                 onNext = { navController.navigate("conversation_setup_2/$missionId") },
+                onSelect = setupViewModel::selectEnvironment,
+                initialSelection = selection.environment,
+                disabledOptions = guideline?.disabled?.environment.orEmpty().toSet(),
+                isLoading = !isGuidelineReady,
             )
         }
 
@@ -713,9 +761,15 @@ fun NavGraph(
             arguments = listOf(navArgument("missionId") { type = NavType.StringType }),
         ) { backStackEntry ->
             val missionId = backStackEntry.arguments?.getString("missionId").orEmpty()
+            val setupViewModel = navController.conversationSetupViewModel(missionId)
+            val selection by setupViewModel.selection.collectAsStateWithLifecycle()
+            val guideline by setupViewModel.guideline.collectAsStateWithLifecycle()
             ConversationSetup2Screen(
                 onBack = { navController.popBackStack() },
                 onNext = { navController.navigate("conversation_setup_3/$missionId") },
+                onSelect = setupViewModel::selectPartnerRole,
+                initialSelection = selection.partnerRole,
+                disabledOptions = guideline?.disabled?.partnerRole.orEmpty().toSet(),
             )
         }
 
@@ -724,9 +778,18 @@ fun NavGraph(
             arguments = listOf(navArgument("missionId") { type = NavType.StringType }),
         ) { backStackEntry ->
             val missionId = backStackEntry.arguments?.getString("missionId").orEmpty()
+            val setupViewModel = navController.conversationSetupViewModel(missionId)
+            val selection by setupViewModel.selection.collectAsStateWithLifecycle()
+            val guideline by setupViewModel.guideline.collectAsStateWithLifecycle()
             ConversationSetup3Screen(
                 onBack = { navController.popBackStack() },
                 onNext = { navController.navigate("conversation_setup_4/$missionId") },
+                onSelectGender = setupViewModel::selectGender,
+                onSelectAgeGroup = setupViewModel::selectAgeGroup,
+                initialGender = selection.partnerGender,
+                initialAgeGroup = selection.partnerAgeGroup,
+                disabledGenders = guideline?.disabled?.partnerGender.orEmpty().toSet(),
+                disabledAgeGroups = guideline?.disabled?.partnerAgeGroup.orEmpty().toSet(),
             )
         }
 
@@ -735,9 +798,26 @@ fun NavGraph(
             arguments = listOf(navArgument("missionId") { type = NavType.StringType }),
         ) { backStackEntry ->
             val missionId = backStackEntry.arguments?.getString("missionId").orEmpty()
+            val setupViewModel = navController.conversationSetupViewModel(missionId)
+            val isSaving by setupViewModel.isSaving.collectAsStateWithLifecycle()
+            val selection by setupViewModel.selection.collectAsStateWithLifecycle()
+            val guideline by setupViewModel.guideline.collectAsStateWithLifecycle()
             ConversationSetup4Screen(
                 onBack = { navController.popBackStack() },
-                onNext = { navController.navigate("conversation/$missionId") },
+                // 고른 6축을 서버에 저장한 뒤 대화로 넘어간다. 저장이 실패해도 넘어간다 —
+                // 준비 정보는 AI가 참고하는 값이지 대화의 전제가 아니다.
+                onNext = {
+                    setupViewModel.saveAndStart(missionId) {
+                        navController.navigate("conversation/$missionId")
+                    }
+                },
+                onIntimacyChange = setupViewModel::selectIntimacy,
+                onFormalityChange = setupViewModel::selectFormality,
+                isSaving = isSaving,
+                initialIntimacy = selection.intimacyIndex,
+                initialFormality = selection.formalityIndex,
+                disabledIntimacy = guideline?.disabled?.intimacyLevel.orEmpty().map { it - 1 }.toSet(),
+                disabledFormality = guideline?.disabled?.formalityLevel.orEmpty().map { it - 1 }.toSet(),
             )
         }
 
@@ -777,10 +857,11 @@ fun NavGraph(
             FeedbackScreen(
                 onBack = { navController.popBackStack() },
                 onItemClick = { index -> navController.navigate("feedback_detail/$feedbackId?item=$index") },
-                onDetailReport = { missionTitle, conversationId ->
+                onDetailReport = { missionTitle, conversationId, scores ->
                     navController.navigate(
                         "report?missionTitle=${Uri.encode(missionTitle)}" +
-                                "&conversationId=${Uri.encode(conversationId)}",
+                                "&conversationId=${Uri.encode(conversationId)}" +
+                                "&gains=${scores.joinToString(",")}",
                     )
                 },
                 onHome = { navController.popBackStack(Screen.HOME, inclusive = false) },
@@ -792,6 +873,7 @@ fun NavGraph(
             arguments = listOf(
                 navArgument("missionTitle") { type = NavType.StringType; defaultValue = "" },
                 navArgument("conversationId") { type = NavType.StringType; defaultValue = "" },
+                navArgument("gains") { type = NavType.StringType; defaultValue = "" },
             ),
         ) {
             ReportScreen(
@@ -859,7 +941,23 @@ fun NavGraph(
         }
 
         composable(Screen.PROFILE_RECENT_MISSION) {
-            ProfileRecentMissionScreen(onBack = { navController.popBackStack() })
+            val context = LocalContext.current
+            val profileViewModel: ProfileViewModel = hiltViewModel()
+            val profileUiState by profileViewModel.uiState.collectAsState()
+
+            LaunchedEffect(Unit) {
+                profileViewModel.loadArchiveSummary()
+            }
+
+            profileUiState.errorMessage?.let { message ->
+                Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
+                profileViewModel.clearError()
+            }
+
+            ProfileRecentMissionScreen(
+                recentItems = profileUiState.archiveSummary?.recentItems.orEmpty(),
+                onBack = { navController.popBackStack() },
+            )
         }
 
         composable(Screen.PROFILE_SETTINGS) {
@@ -1056,12 +1154,32 @@ fun NavGraph(
         }
 
         composable(Screen.PROFILE_CONCERN) {
+            val context = LocalContext.current
+            val profileViewModel: ProfileViewModel = hiltViewModel()
+            val profileUiState by profileViewModel.uiState.collectAsState()
+            val profile = profileUiState.profile
+            val dashboard = profileUiState.dashboard
+            val nickname = dashboard?.nickname?.takeIf { it.isNotBlank() }
+                ?: profile?.nickname?.takeIf { it.isNotBlank() }
+                ?: profile?.name?.takeIf { it.isNotBlank() }
+                ?: "사용자"
+
+            LaunchedEffect(Unit) {
+                profileViewModel.loadDashboard()
+            }
+
+            profileUiState.errorMessage?.let { message ->
+                Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
+                profileViewModel.clearError()
+            }
+
             fun startConcernEdit() {
                 isConcernEditMode = true
                 navController.navigate(Screen.ONBOARDING_PERSONALITY)
             }
 
             ProfileConcernScreen(
+                nickname = nickname,
                 onBack = { navController.popBackStack() },
                 onPersonalityClick = { startConcernEdit() },
                 onDifficultyClick = { startConcernEdit() },
@@ -1148,6 +1266,15 @@ fun NavGraph(
             )
         }
     }
+}
+
+// 대화 설정 2~4단계가 1단계와 같은 ViewModel을 보게 하는 헬퍼.
+// 1단계의 backStackEntry를 owner로 넘기면 그 entry가 살아 있는 동안(=설정 흐름을 도는 동안)
+// 네 화면이 한 인스턴스를 공유하고, 흐름을 벗어나면 함께 정리된다.
+@Composable
+private fun NavHostController.conversationSetupViewModel(missionId: String): ConversationSetupViewModel {
+    val firstStep = remember(missionId) { getBackStackEntry("conversation_setup_1/$missionId") }
+    return hiltViewModel(firstStep)
 }
 
 private fun Uri.toProfileImagePart(context: Context): MultipartBody.Part? {

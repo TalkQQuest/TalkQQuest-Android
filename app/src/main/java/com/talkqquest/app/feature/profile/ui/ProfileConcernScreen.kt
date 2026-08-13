@@ -1,7 +1,6 @@
-package com.talkqquest.app.feature.profile.ui
+﻿package com.talkqquest.app.feature.profile.ui
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -32,6 +31,7 @@ import com.talkqquest.app.core.designsystem.White
 
 @Composable
 fun ProfileConcernScreen(
+    nickname: String = "사용자",
     onBack: () -> Unit = {},
     onPersonalityClick: () -> Unit = {},
     onDifficultyClick: () -> Unit = {},
@@ -51,7 +51,7 @@ fun ProfileConcernScreen(
                 .background(White),
         ) {
             ProfileConcernRow(
-                label = "평소 대화할 때 소다123님의 모습은",
+                label = "평소 대화할 때 ${nickname}님의 모습은",
                 value = "사교적이고 활발한 편이에요",
                 onClick = onPersonalityClick,
                 modifier = Modifier
@@ -86,7 +86,7 @@ private fun ProfileConcernRow(
     onClick: () -> Unit = {},
 ) {
     Row(
-        modifier = modifier.clickable(onClick = onClick),
+        modifier = modifier.profileItemClick(onClick = onClick),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Column(

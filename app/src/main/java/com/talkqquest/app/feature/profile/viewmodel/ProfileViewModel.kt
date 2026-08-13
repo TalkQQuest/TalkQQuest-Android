@@ -1,8 +1,9 @@
-﻿package com.talkqquest.app.feature.profile.viewmodel
+package com.talkqquest.app.feature.profile.viewmodel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.talkqquest.app.core.network.ApiResult
+import com.talkqquest.app.feature.home.data.model.ArchiveSummary
 import com.talkqquest.app.feature.home.data.model.LegalDocument
 import com.talkqquest.app.feature.home.data.model.MyBadge
 import com.talkqquest.app.feature.home.data.model.MyPageDashboard
@@ -24,6 +25,7 @@ data class ProfileUiState(
     val isLoading: Boolean = false,
     val profile: UserMe? = null,
     val dashboard: MyPageDashboard? = null,
+    val archiveSummary: ArchiveSummary? = null,
     val badges: List<MyBadge> = emptyList(),
     val serviceTerms: LegalDocument? = null,
     val privacyPolicy: LegalDocument? = null,
@@ -51,6 +53,22 @@ class ProfileViewModel @Inject constructor(
                 }
                 is ApiResult.Error -> _uiState.update {
                     it.copy(isLoading = false, errorMessage = result.message ?: "\uB9C8\uC774\uD398\uC774\uC9C0 \uC694\uC57D\uC744 \uBD88\uB7EC\uC624\uC9C0 \uBABB\uD588\uC5B4\uC694.")
+                }
+                is ApiResult.Exception -> _uiState.update {
+                    it.copy(isLoading = false, errorMessage = networkErrorMessage)
+                }
+            }
+        }
+    }
+    fun loadArchiveSummary() {
+        viewModelScope.launch {
+            _uiState.update { it.copy(isLoading = true, errorMessage = null) }
+            when (val result = profileRepository.getArchiveSummary()) {
+                is ApiResult.Success -> _uiState.update {
+                    it.copy(isLoading = false, archiveSummary = result.data)
+                }
+                is ApiResult.Error -> _uiState.update {
+                    it.copy(isLoading = false, errorMessage = result.message ?: "최근 활동을 불러오지 못했어요.")
                 }
                 is ApiResult.Exception -> _uiState.update {
                     it.copy(isLoading = false, errorMessage = networkErrorMessage)

@@ -56,6 +56,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.zIndex
 import androidx.compose.ui.platform.LocalContext
@@ -111,7 +112,7 @@ private fun TextStyle.figma(): TextStyle = copy(lineHeightStyle = NotificationFu
 fun NotificationScreen(
     viewModel: NotificationViewModel = hiltViewModel(),
     onBack: () -> Unit = {},
-    onWeeklyReportClick: () -> Unit = {}, // 주간 비교 리포트 알림의 화살표
+    onWeeklyReportClick: (String?) -> Unit = {}, // 주간 비교 리포트 알림의 화살표(서버 referenceId)
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val context = LocalContext.current
@@ -148,7 +149,7 @@ fun NotificationScreen(
         onNotificationClick = { item ->
             viewModel.readNotification(item.id)
             if (item.hasLink) {
-                onWeeklyReportClick()
+                onWeeklyReportClick(item.linkReportId)
             }
         },
         onNotificationDelete = viewModel::removeNotification,
@@ -534,10 +535,39 @@ private fun NotificationCard(
         verticalAlignment = Alignment.Top,
         ) {
         Column(
-            modifier = Modifier.weight(1f),
+            modifier = Modifier.fillMaxWidth(),
             verticalArrangement = Arrangement.spacedBy(2.dp), // CSS gap 2
         ) {
-            Text(text = item.category, style = TqType.BodyS, color = Gray500)
+            // 시간은 첫 줄에서만 본문 폭을 나눈다. 본문은 다음 줄 전체 폭을 사용해야
+            // "방금"·"1일 전"처럼 시간 문자열 길이가 달라도 같은 문구가 같은 줄 수로 보인다.
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(
+                    text = item.category,
+                    style = TqType.BodyS.figma(),
+                    color = Gray500,
+                    modifier = Modifier.weight(1f),
+                )
+                // 피그마 Frame 427321606/608: 시간과 점은 세로가 아니라 같은 20dp 줄의 가로 배치.
+                // 점이 사라져도 이 줄의 높이는 변하지 않아 제목↔본문 2dp 간격과 카드 높이가 고정된다.
+                Row(
+                    modifier = Modifier.height(20.dp),
+                    verticalAlignment = Alignment.Top,
+                    horizontalArrangement = Arrangement.spacedBy(3.dp),
+                ) {
+                    Text(text = item.timeText, style = TqType.BodyS.figma(), color = Gray400)
+                    // CSS Frame 427321605: 7x7 점은 20dp 시간 줄의 상단에 붙는다.
+                    // 읽음 상태에서도 자리는 유지하고 투명하게만 바꿔 카드·시간 위치가 변하지 않게 한다.
+                    Box(
+                        modifier = Modifier
+                            .size(7.dp)
+                            .clip(CircleShape)
+                            .background(if (item.isUnread) Primary600 else Color.Transparent),
+                    )
+                }
+            }
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(
                     text = item.body,
@@ -553,29 +583,15 @@ private fun NotificationCard(
                             strictness = LineBreak.Strictness.Normal,
                             wordBreak = LineBreak.WordBreak.Phrase,
                         ),
-                    ),
+                    ).figma(),
                     color = Gray900,
+                    modifier = if (item.hasLink) Modifier.weight(1f) else Modifier,
                 )
                 if (item.hasLink) {
                     Icon(
                         painter = painterResource(R.drawable.ic_forward_chevron),
                         contentDescription = null,
                         tint = Gray600, // CSS Icon border 2px #475569
-                    )
-                }
-            }
-        }
-        // CSS Frame 427321606/427321608: align-items: flex-start · gap 3 → 점도 상단 정렬
-        Column(horizontalAlignment = Alignment.End) {
-            Text(text = item.timeText, style = TqType.BodyS, color = Gray400)
-            if (item.isUnread) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Spacer(Modifier.width(3.dp)) // CSS gap 3
-                    Box(
-                        modifier = Modifier
-                            .size(7.dp)
-                            .clip(CircleShape)
-                            .background(Primary600),
                     )
                 }
             }

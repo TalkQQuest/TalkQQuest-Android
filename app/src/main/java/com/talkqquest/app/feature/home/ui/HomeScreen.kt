@@ -38,7 +38,6 @@ import androidx.compose.material3.ripple
 import androidx.compose.material3.Text
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.CubicBezierEasing
@@ -91,12 +90,11 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
-import androidx.lifecycle.Lifecycle
-import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlin.math.abs
+import kotlin.math.roundToInt
 import com.talkqquest.app.R
 import com.talkqquest.app.core.designsystem.Error
 import com.talkqquest.app.core.designsystem.FitDesign
@@ -141,41 +139,36 @@ fun HomeScreen(
     viewModel: HomeViewModel = hiltViewModel(),
     resumeAnimationTrigger: Int = 0,
     xpResetToken: Int = 0,
+    animateXpFromZero: Boolean = true,
+    onXpAnimationStarted: () -> Unit = {},
     onStartMissionClick: (String) -> Unit = {}, // 오늘의 미션 "미션 시작하기" → 미션 상세
     onOtherMissionsClick: () -> Unit = {},    // "다른 미션 보기" → 미션 목록
     onNotificationClick: () -> Unit = {},     // 상단 벨 → 알림창
-    onWeeklyReportClick: () -> Unit = {},     // 주간 비교 리포트 도착 모달 "보러가기" → 주간 비교 리포트
+    // 주간 비교 리포트 도착 모달은 앱 최상위 레이어에서 표시. 서버가 준 reportId를 함께 올려
+    // "보러가기"가 목록 최신을 추측하지 않고 그 리포트를 바로 열게 한다.
+    onShowWeeklyReportModal: (String?) -> Unit = {},
     onBadgeCollectionClick: () -> Unit = {}, // 나의 배지 컬렉션 → 프로필 배지 목록
     onSheetTopChange: (Float?) -> Unit = {},  // 티어 승급 안내 시트가 하단 네비를 덮는 동안 네비 가림
     onModalSheetChange: (Boolean) -> Unit = {}, // 티어 시트가 떠 있는 동안 탭 스와이프를 끄기 위한 신호
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
-    var hasConsumedInitialResume by remember { mutableStateOf(false) }
-    var lifecycleXpResetToken by remember { mutableIntStateOf(0) }
-    // 상세 화면으로 이동하거나 앱이 백그라운드로 갈 때 홈은 back stack에 남는다.
-    // 그 상태에선 Animatable도 그대로 남으므로, 떠나는 즉시 빈 게이지로 되돌린다.
-    LifecycleEventEffect(Lifecycle.Event.ON_STOP) {
-        lifecycleXpResetToken++
-    }
     LaunchedEffect(resumeAnimationTrigger) {
         if (resumeAnimationTrigger <= 0) return@LaunchedEffect
-        if (hasConsumedInitialResume) {
-            // 실제 복귀: 최신값을 조용히 다시 받는다.
-            viewModel.loadHome(showLoading = false)
-        } else {
-            // 최초 ON_RESUME: ViewModel init 조회가 이미 진행 중이므로 중복 호출하지 않는다.
-            hasConsumedInitialResume = true
-        }
+        // 별도 화면에서 실제로 돌아온 경우만 들어오는 신호다. 하단 탭·앱 재개에는 호출되지 않는다.
+        viewModel.loadHome(showLoading = false)
     }
     HomeScreen(
         uiState = uiState,
         xpAnimationTrigger = resumeAnimationTrigger,
-        xpResetToken = xpResetToken + lifecycleXpResetToken,
+        xpResetToken = xpResetToken,
+        animateXpFromZero = animateXpFromZero,
+        onXpAnimationStarted = onXpAnimationStarted,
         onRetry = viewModel::loadHome,
+        onRefreshTodayMission = viewModel::refreshTodayMission,
         onStartMissionClick = onStartMissionClick,
         onOtherMissionsClick = onOtherMissionsClick,
         onNotificationClick = onNotificationClick,
-        onWeeklyReportClick = onWeeklyReportClick,
+        onShowWeeklyReportModal = onShowWeeklyReportModal,
         onBadgeCollectionClick = onBadgeCollectionClick,
         onSheetTopChange = onSheetTopChange,
         onModalSheetChange = onModalSheetChange,
@@ -187,11 +180,14 @@ private fun HomeScreen(
     uiState: HomeUiState,
     xpAnimationTrigger: Int = 0,
     xpResetToken: Int = 0,
+    animateXpFromZero: Boolean = true,
+    onXpAnimationStarted: () -> Unit = {},
     onRetry: () -> Unit,
+    onRefreshTodayMission: () -> Unit = {},
     onStartMissionClick: (String) -> Unit = {},
     onOtherMissionsClick: () -> Unit = {},
     onNotificationClick: () -> Unit = {},
-    onWeeklyReportClick: () -> Unit = {},
+    onShowWeeklyReportModal: (String?) -> Unit = {},
     onBadgeCollectionClick: () -> Unit = {},
     onSheetTopChange: (Float?) -> Unit = {},
     onModalSheetChange: (Boolean) -> Unit = {},
@@ -218,12 +214,16 @@ private fun HomeScreen(
             uiState.summary != null -> {
                 HomeContent(
                     summary = uiState.summary,
+                    isRefreshingMission = uiState.isRefreshingMission,
                     xpAnimationTrigger = xpAnimationTrigger,
                     xpResetToken = xpResetToken,
+                    animateXpFromZero = animateXpFromZero,
+                    onXpAnimationStarted = onXpAnimationStarted,
                     onStartMissionClick = onStartMissionClick,
+                    onRefreshTodayMission = onRefreshTodayMission,
                     onOtherMissionsClick = onOtherMissionsClick,
                     onNotificationClick = onNotificationClick,
-                    onWeeklyReportClick = onWeeklyReportClick,
+                    onShowWeeklyReportModal = onShowWeeklyReportModal,
                     onBadgeCollectionClick = onBadgeCollectionClick,
                     onSheetTopChange = onSheetTopChange,
                     onModalSheetChange = onModalSheetChange,
@@ -261,18 +261,25 @@ private fun HomeCard(
 @Composable
 private fun HomeContent(
     summary: HomeSummary,
+    isRefreshingMission: Boolean = false,
     xpAnimationTrigger: Int = 0,
     xpResetToken: Int = 0,
+    animateXpFromZero: Boolean = true,
+    onXpAnimationStarted: () -> Unit = {},
     onStartMissionClick: (String) -> Unit = {},
+    onRefreshTodayMission: () -> Unit = {},
     onOtherMissionsClick: () -> Unit = {},
     onNotificationClick: () -> Unit = {},
-    onWeeklyReportClick: () -> Unit = {},
+    onShowWeeklyReportModal: (String?) -> Unit = {},
     onBadgeCollectionClick: () -> Unit = {},
     onSheetTopChange: (Float?) -> Unit = {},
     onModalSheetChange: (Boolean) -> Unit = {},
 ) {
-    // 검증용(임시): 상단 벨 탭으로 주간 비교 리포트 도착 모달 토글. 실제 트리거는 summary.hasNewWeeklyReport.
-    var showWeekly by remember { mutableStateOf(summary.hasNewWeeklyReport) }
+    // 새 주간 비교 리포트 도착 신호(서버 newWeeklyCompareReport). available일 때만 모달을 띄운다.
+    val newWeekly = summary.newWeeklyCompareReport
+    LaunchedEffect(newWeekly) {
+        if (newWeekly?.available == true) onShowWeeklyReportModal(newWeekly.reportId)
+    }
     var missionHasLongText by remember { mutableStateOf(false) }
     val scrollState = rememberScrollState()
     // 홈이 화면에서 벗어나는 순간 받은 reset 신호로 스크롤 위치도 항상 맨 위로 되돌린다.
@@ -325,12 +332,16 @@ private fun HomeContent(
                     tierStars = summary.tierStars,
                     xpAnimationTrigger = xpAnimationTrigger,
                     xpResetToken = xpResetToken,
+                    animateXpFromZero = animateXpFromZero,
+                    onXpAnimationStarted = onXpAnimationStarted,
                     onTierInfoClick = { showTierHelp = true },
                 )
                 Spacer(Modifier.height(12.dp)) // CSS 카드 스택 gap 12
                 summary.todayMission?.let { mission ->
                     HomeMissionCard(
                         mission = mission,
+                        isRefreshing = isRefreshingMission,
+                        onRefreshClick = onRefreshTodayMission,
                         onStartClick = { onStartMissionClick(mission.id) },
                         onTextLineCountChanged = { titleLines, descriptionLines ->
                             missionHasLongText = titleLines >= 3 || descriptionLines >= 3
@@ -345,15 +356,6 @@ private fun HomeContent(
                 // 콘텐츠가 화면에 모두 보여도 다른 미션 보기 카드 높이만큼 더 내려갈 수 있게 한다.
                 Spacer(Modifier.height(50.dp))
             }
-        }
-
-        // 주간 비교 리포트 도착 모달 — 설계상 고정 크기(302dp 카드) 모달이라 피그마 원본 크기로 띄운다.
-        // 홈 축소(scale)는 실제 2줄 미션을 담기 위한 콘텐츠 대응일 뿐, 모달 오버레이는 그걸 따라가지 않는다.
-        if (showWeekly) {
-            WeeklyReportModal(
-                onConfirm = { showWeekly = false; onWeeklyReportClick() },
-                onDismiss = { showWeekly = false },
-            )
         }
 
         // 티어 승급 안내 시트(공용) — 홈 축소(scale)와 무관하게 전체 화면에 오버레이.
@@ -599,11 +601,15 @@ private fun HomeLevelCard(
     tierStars: Int,
     xpAnimationTrigger: Int = 0,
     xpResetToken: Int = 0,
+    animateXpFromZero: Boolean = true,
+    onXpAnimationStarted: () -> Unit = {},
     onTierInfoClick: () -> Unit = {},
 ) {
     // 홈이 처음 보이거나 다른 화면에서 돌아올 때 현재 XP를 먼저 그리지 않는다.
     // 빈 게이지에서 최신 XP까지 한 번만 차오르게 한다.
-    val xpShown = remember { Animatable(0f) }
+    val xpShown = remember {
+        Animatable(if (animateXpFromZero) 0f else currentXp.toFloat())
+    }
     var displayLevel by remember { mutableIntStateOf(level) }
     val levelScale = remember { Animatable(1f) } // 레벨업 순간 Lv 글자가 튀는 배율
     val levelBurst = remember { Animatable(0f) } // 레벨업 순간 Lv 글자 주변 작은 폭죽 (완료 화면과 동일)
@@ -655,23 +661,29 @@ private fun HomeLevelCard(
         tierVisualPhase = 0
     }
     LaunchedEffect(xpResetToken) {
-        if (xpResetToken > 0) {
+        if (xpResetToken > 0 && animateXpFromZero) {
             xpShown.snapTo(0f)
         }
     }
     LaunchedEffect(level, currentXp, xpAnimationTrigger) {
-        if (xpAnimationTrigger == 0 && lastXpAnimationTrigger == 0) {
-            // 최초 홈 데이터도 빈 게이지에서 현재 XP까지 바로 한 번 재생한다.
-            displayLevel = level
-            xpShown.animateTo(
-                currentXp.toFloat(),
-                tween(durationMillis = 700, easing = xpFillEasing),
-            )
-            playTierGrowthSequence()
-        } else if (xpAnimationTrigger != lastXpAnimationTrigger) {
+        if (xpAnimationTrigger != lastXpAnimationTrigger) {
             lastXpAnimationTrigger = xpAnimationTrigger
             displayLevel = level
-            xpShown.snapTo(0f)
+            if (animateXpFromZero) {
+                onXpAnimationStarted()
+                xpShown.snapTo(0f)
+                xpShown.animateTo(
+                    currentXp.toFloat(),
+                    tween(durationMillis = 700, easing = xpFillEasing),
+                )
+                playTierGrowthSequence()
+            } else {
+                xpShown.snapTo(currentXp.toFloat())
+            }
+        } else if (xpAnimationTrigger == 0 && lastXpAnimationTrigger == 0 && animateXpFromZero) {
+            // 최초 홈 데이터도 빈 게이지에서 현재 XP까지 바로 한 번 재생한다.
+            onXpAnimationStarted()
+            displayLevel = level
             xpShown.animateTo(
                 currentXp.toFloat(),
                 tween(durationMillis = 700, easing = xpFillEasing),
@@ -693,13 +705,18 @@ private fun HomeLevelCard(
                 tween(durationMillis = 720, easing = xpFillEasing),
             )
             playTierGrowthSequence()
-        } else {
+        } else if (xpShown.value.roundToInt() != currentXp) {
             displayLevel = level
             xpShown.animateTo(
                 currentXp.toFloat(),
                 tween(durationMillis = 950, easing = xpFillEasing),
             )
             playTierGrowthSequence()
+        } else {
+            // 하단 탭 이동으로 홈 페이지가 폐기됐다 재생성된 경우: 현재값을 그대로 표시하고
+            // 최초 진입으로 오인한 게이지·티어 모션은 실행하지 않는다.
+            displayLevel = level
+            xpShown.snapTo(currentXp.toFloat())
         }
     }
     HomeCard(
@@ -878,10 +895,10 @@ private fun HomeTierRow(
     val tierBadgeContentOffset = if (tierName == "브론즈" || tierName == "실버") (-6).dp else 0.dp
     // 날개가 없는 뱃지의 왼쪽 투명 여백 때문에 전체 그룹이 안쪽으로 보이지 않게 기준선에 맞춘다.
     val tierBadgeGroupOffset = if (tierName == "브론즈" || tierName == "실버") (-6).dp else 0.dp
-    var tierTextPhase by remember { mutableIntStateOf(0) } // 0=한글, 1=삭제, 2=입력, 3=광택, 4=크로스페이드
-    var tierTextCharCount by remember { mutableIntStateOf(tierName.length) }
+    var tierTextPhase by remember { mutableIntStateOf(0) } // 0=한글, 3=광택, 4=크로스페이드, 5=글자 띠 전환
     var tierTextRunning by remember { mutableStateOf(false) }
     val tierTextFadeProgress = remember { Animatable(0f) }
+    val tierTextWipeProgress = remember { Animatable(0f) }
     val tierTextScope = rememberCoroutineScope()
 
     suspend fun playTierGroupShine() {
@@ -916,16 +933,18 @@ private fun HomeTierRow(
         tierTextRunning = true
         try {
             tierTextFadeProgress.snapTo(0f)
-            tierTextPhase = 1
-            for (count in (tierName.length - 1) downTo 0) {
-                tierTextCharCount = count
-                delay(110)
-            }
-            tierTextPhase = 2
-            for (count in 1..tierEnglish.length) {
-                tierTextCharCount = count
-                delay(110)
-            }
+            tierTextWipeProgress.snapTo(0f)
+            tierTextPhase = 5
+            tierTextWipeProgress.animateTo(
+                targetValue = 1f,
+                animationSpec = tween(
+                    // 이름 길이와 무관하게 기존 골드 → Gold 전환 속도로 통일한다.
+                    durationMillis = 660,
+                    easing = LinearEasing,
+                ),
+            )
+            // 영문 전체가 그려진 프레임을 먼저 노출한 뒤 광선 단계로 넘어간다.
+            withFrameNanos { }
             tierTextPhase = 3
             // Gold 광택이 시작되는 순간, 휘장·글자·별을 한 줄 광선으로 함께 훑는다.
             playTierGroupShine()
@@ -939,8 +958,8 @@ private fun HomeTierRow(
                 animationSpec = tween(400, easing = LinearOutSlowInEasing),
             )
             tierTextPhase = 0
-            tierTextCharCount = tierName.length
             tierTextFadeProgress.snapTo(0f)
+            tierTextWipeProgress.snapTo(0f)
         } finally {
             tierTextRunning = false
         }
@@ -1136,27 +1155,42 @@ private fun HomeTierRow(
                     val titleStyle = TqType.BodyL.figma().copy(fontWeight = FontWeight.Medium)
                     val titleMeasurer = rememberTextMeasurer()
                     val density = LocalDensity.current
-                    val koreanText = tierName.take(tierTextCharCount)
-                    val englishText = tierEnglish.take(tierTextCharCount)
-                    val displayedText = if (tierTextPhase <= 1) koreanText else englishText
+                    val displayedText = if (tierTextPhase == 0) tierName else tierEnglish
                     fun textWidth(text: String): Int =
                         titleMeasurer.measure(AnnotatedString(text), style = titleStyle).size.width
-                    val targetWidthDp = with(density) {
-                        (if (tierTextPhase == 4) textWidth(tierName) else textWidth(displayedText)).toDp()
+                    fun progressiveTextWidth(text: String, progress: Float): Float {
+                        val scaledProgress = progress.coerceIn(0f, 1f) * text.length
+                        val completedCharacters = scaledProgress.toInt().coerceAtMost(text.length)
+                        val characterProgress = scaledProgress - completedCharacters
+                        val easedProgress = characterProgress * characterProgress * (3f - 2f * characterProgress)
+                        val startWidth = textWidth(text.take(completedCharacters)).toFloat()
+                        val endWidth = textWidth(text.take((completedCharacters + 1).coerceAtMost(text.length))).toFloat()
+                        return startWidth + (endWidth - startWidth) * easedProgress
                     }
-                    val animatedWidth by animateDpAsState(
-                        targetValue = targetWidthDp,
-                        animationSpec = tween(
-                            durationMillis = if (tierTextPhase == 4) 400 else 90,
-                            easing = FastOutSlowInEasing,
-                        ),
-                        label = "tierTextWidth",
-                    )
+                    val wipeSplit = tierName.length.toFloat() / (tierName.length + tierEnglish.length)
+                    val wipeWidth = if (tierTextWipeProgress.value <= wipeSplit) {
+                        val eraseProgress = tierTextWipeProgress.value / wipeSplit
+                        progressiveTextWidth(tierName, 1f - eraseProgress)
+                    } else {
+                        val writeProgress = (tierTextWipeProgress.value - wipeSplit) / (1f - wipeSplit)
+                        progressiveTextWidth(tierEnglish, writeProgress)
+                    }
+                    val targetWidthDp = with(density) {
+                        (when (tierTextPhase) {
+                            4 -> {
+                                val englishWidth = textWidth(tierEnglish).toFloat()
+                                val koreanWidth = textWidth(tierName).toFloat()
+                                englishWidth + (koreanWidth - englishWidth) * tierTextFadeProgress.value
+                            }
+                            5 -> wipeWidth
+                            else -> textWidth(displayedText).toFloat()
+                        }).toDp()
+                    }
                     Box(
                         modifier = Modifier
                             // 한글 티어명의 왼쪽 시작점을 고정하고, 영문이 길어지는 만큼만
                             // 오른쪽 폭을 늘려 별 묶음을 밀어낸다. 크로스페이드 때는 원래 폭으로 복귀.
-                            .width(animatedWidth)
+                            .width(targetWidthDp)
                             .height(24.dp)
                             .clickable(
                                 interactionSource = remember { MutableInteractionSource() },
@@ -1189,6 +1223,15 @@ private fun HomeTierRow(
                                     .graphicsLayer {
                                         alpha = tierTextFadeProgress.value
                                     },
+                            )
+                        } else if (tierTextPhase == 5) {
+                            HomeTierNameWipeText(
+                                koreanName = tierName,
+                                englishName = tierEnglish,
+                                progress = tierTextWipeProgress.value,
+                                style = titleStyle,
+                                koreanColor = Gray600,
+                                englishColor = tierPalette.base,
                             )
                         } else {
                             val isEnglish = tierTextPhase >= 2
@@ -1416,6 +1459,63 @@ private fun tierTextPalette(tierName: String): TierTextPalette = when (tierName)
     else -> TierTextPalette(Gray700, Gray600, Gray400)
 }
 
+@Composable
+private fun HomeTierNameWipeText(
+    koreanName: String,
+    englishName: String,
+    progress: Float,
+    style: TextStyle,
+    koreanColor: Color,
+    englishColor: Color,
+) {
+    val split = koreanName.length.toFloat() / (koreanName.length + englishName.length)
+    Box {
+        HomeTierNameWipeLayer(
+            text = koreanName,
+            progress = (progress / split).coerceIn(0f, 1f),
+            appearing = false,
+            style = style,
+            color = koreanColor,
+        )
+        HomeTierNameWipeLayer(
+            text = englishName,
+            progress = ((progress - split) / (1f - split)).coerceIn(0f, 1f),
+            appearing = true,
+            style = style,
+            color = englishColor,
+        )
+    }
+}
+
+@Composable
+private fun HomeTierNameWipeLayer(
+    text: String,
+    progress: Float,
+    appearing: Boolean,
+    style: TextStyle,
+    color: Color,
+) {
+    val timeline = progress.coerceIn(0f, 1f) * text.length
+    val animatedText = buildAnnotatedString {
+        text.forEachIndexed { index, character ->
+            val animationOrder = if (appearing) index else text.lastIndex - index
+            val localProgress = (timeline - animationOrder).coerceIn(0f, 1f)
+            val easedProgress = localProgress * localProgress * (3f - 2f * localProgress)
+            val alpha = if (appearing) easedProgress else 1f - easedProgress
+            withStyle(SpanStyle(color = color.copy(alpha = alpha))) {
+                append(character)
+            }
+        }
+    }
+    Text(
+        text = animatedText,
+        style = style,
+        softWrap = false,
+        maxLines = 1,
+        modifier = Modifier.wrapContentWidth(Alignment.Start, unbounded = true),
+    )
+}
+
 private fun TierTextPalette.brush(progress: Float): Brush {
     val shift = (progress * 2f) - 1f
     return Brush.linearGradient(
@@ -1433,6 +1533,8 @@ private val StarHighlight = Color(0xFFFFE7A3)
 @Composable
 private fun HomeMissionCard(
     mission: TodayMission,
+    isRefreshing: Boolean = false,
+    onRefreshClick: () -> Unit = {},
     onStartClick: () -> Unit = {},
     onTextLineCountChanged: (titleLines: Int, descriptionLines: Int) -> Unit = { _, _ -> },
 ) {
@@ -1525,9 +1627,13 @@ private fun HomeMissionCard(
                     ),
             )
             // 추천 뱃지: 컴포넌트.css 그대로 (고정 40x22, Primary100, radius 4, 텍스트 중앙)
+            // 횟수 정보가 없는 폴백 미션은 활성 상태로 유지하고,
+            // 서버가 명시적으로 0회를 내려준 경우에만 비활성화한다.
+            val canRefresh = mission.remainingRefreshes != 0 && !isRefreshing
             Box(
                 modifier = Modifier
-                    .size(width = 40.dp, height = 22.dp)
+                    .height(22.dp)
+                    .widthIn(min = 40.dp)
                     .graphicsLayer {
                         scaleX = recommendationScale
                         scaleY = recommendationScale
@@ -1536,12 +1642,15 @@ private fun HomeMissionCard(
                         translationY = 0f
                     }
                     .clip(RoundedCornerShape(4.dp))
-                    .background(Primary100)
+                    .background(if (canRefresh) Primary100 else Gray100)
+                    .padding(horizontal = 7.dp)
                     .clickable(
+                        enabled = canRefresh,
                         interactionSource = recommendationInteraction,
                         indication = null,
                         onClick = {
                             if (!recommendationClickAnimating) {
+                                onRefreshClick()
                                 recommendationClickAnimating = true
                                 recommendationScope.launch {
                                     delay(100)
@@ -1552,7 +1661,15 @@ private fun HomeMissionCard(
                     ),
                 contentAlignment = Alignment.Center,
             ) {
-                Text(text = "추천", style = TqType.LabelM.figma(), color = Primary600)
+                Text(
+                    text = if (mission.refreshLimit != null && mission.remainingRefreshes != null) {
+                        "추천 ${mission.remainingRefreshes}"
+                    } else {
+                        "추천"
+                    },
+                    style = TqType.LabelM.figma(),
+                    color = if (canRefresh) Primary600 else Gray400,
+                )
             }
         }
         Spacer(Modifier.height(16.dp))
@@ -1770,9 +1887,10 @@ private fun BadgeCollectionCard(onClick: () -> Unit = {}) {
         modifier = Modifier
             .fillMaxWidth()
             .height(64.dp)
-            .clickable(onClick = onClick)
             .clip(RoundedCornerShape(12.dp))
             .background(White)
+            // 클릭 물결도 카드의 둥근 모서리 안에서만 그려져야 한다.
+            .clickable(onClick = onClick)
             .padding(start = 20.dp, end = 16.dp), // CSS padding 10 16 10 20 (상하 10은 center로 흡수)
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically,

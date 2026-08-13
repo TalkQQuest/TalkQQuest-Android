@@ -21,6 +21,10 @@ data class ConversationCreateRequest(
     val missionId: String,
     val mode: String, // text | voice — 호출부에서 항상 명시
     val selectedTopic: String? = null, // null 기본값은 의도적(빠지면 서버가 옵션 처리 — 실측 OK)
+    // 대화 설정 4단계에서 저장한 준비 정보 id (POST /missions/{id}/setups 응답).
+    // ★이걸 보내야 고른 장소·상대·친밀도·말투가 이 대화에 반영된다.
+    //   설정만 저장하고 여기서 안 넘기면 저장은 되지만 대화에는 아무 영향이 없다.
+    val missionSetupId: String? = null,
 )
 
 // POST /api/v1/conversations 응답 data.
@@ -66,4 +70,42 @@ data class ConversationMessageResponse(
 @Serializable
 data class ConversationSuggestionsResponse(
     val suggestions: List<String> = emptyList(),
+)
+
+// ── 2026-08-13 추가 연동분 ──
+
+// POST /api/v1/conversations/{id}/finish 요청 body.
+// ★status에 기본값 금지 — 위 mode·role과 같은 함정(기본값이면 요청에서 빠진다).
+@Serializable
+data class ConversationFinishRequest(
+    val status: String, // "completed" | "abandoned" — 호출부에서 항상 명시
+)
+
+@Serializable
+data class ConversationFinishResponse(
+    val conversationId: String = "",
+    val status: String = "",
+    val finishedAt: String = "",
+)
+
+// GET /api/v1/conversations/{id}/guide 응답 data.
+// suggestions API와 겹치는 듯 보이지만 이쪽이 넓다 — 대화 가이드 카드가 함께 온다.
+@Serializable
+data class ConversationGuideResponse(
+    val conversationId: String = "",
+    val guideCards: List<String> = emptyList(),
+    val suggestedReplies: List<String> = emptyList(),
+)
+
+// GET /api/v1/conversations/{id} 응답 data — 지난 대화를 통째로 받는다.
+// status: in_progress | completed | abandoned.
+@Serializable
+data class ConversationDetailResponse(
+    val conversationId: String = "",
+    val missionId: String = "",
+    val status: String = "",
+    val startedAt: String = "",
+    val finishedAt: String = "",
+    val durationMinutes: Int = 0,
+    val messages: List<ServerChatMessage> = emptyList(),
 )

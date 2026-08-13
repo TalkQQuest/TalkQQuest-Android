@@ -1,4 +1,4 @@
-package com.talkqquest.app.feature.profile.ui
+﻿package com.talkqquest.app.feature.profile.ui
 
 import android.net.Uri
 
@@ -6,8 +6,8 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -72,7 +72,7 @@ fun ProfileInfoScreen(
             Box(
                 modifier = Modifier
                     .size(60.dp)
-                    .clickable { imagePickerLauncher.launch("image/*") },
+                    .profileCircleClick { imagePickerLauncher.launch("image/*") },
                 contentAlignment = Alignment.Center,
             ) {
                 if (avatarUrl.isNullOrBlank()) {
@@ -95,7 +95,7 @@ fun ProfileInfoScreen(
             Row(
                 modifier = Modifier
                     .size(width = 130.dp, height = 44.dp)
-                    .clickable(onClick = onNicknameClick),
+                    .profileItemClick(onClick = onNicknameClick),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Text(
@@ -139,7 +139,7 @@ fun ProfileInfoScreen(
             }
             ProfileInfoRow(
                 title = "${nickname}님의 대화 고민",
-                titleWidth = 145,
+                titleWidth = null,
                 modifier = Modifier
                     .offset(y = if (isEmailMember) 92.dp else 46.dp)
                     .size(width = 371.dp, height = 44.dp),
@@ -154,20 +154,31 @@ private fun ProfileInfoRow(
     title: String,
     modifier: Modifier = Modifier,
     trailing: String? = null,
-    titleWidth: Int = 129,
+    titleWidth: Int? = 129,
     onClick: () -> Unit = {},
 ) {
     Row(
-        modifier = modifier.clickable(onClick = onClick),
+        modifier = modifier.profileItemClick(onClick = onClick),
         verticalAlignment = Alignment.CenterVertically,
     ) {
+        val titleModifier = if (titleWidth == null) {
+            Modifier
+                .weight(1f)
+                .height(24.dp)
+        } else {
+            Modifier.size(width = titleWidth.dp, height = 24.dp)
+        }
         Text(
             text = title,
             style = TqType.BodyL,
             color = Gray800,
-            modifier = Modifier.size(width = titleWidth.dp, height = 24.dp),
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            modifier = titleModifier,
         )
-        Spacer(Modifier.weight(1f))
+        if (titleWidth != null) {
+            Spacer(Modifier.weight(1f))
+        }
         if (trailing != null) {
             Text(
                 text = trailing,
@@ -208,3 +219,5 @@ private fun ProfileInfoSocialMemberScreenPreview() {
         ProfileInfoScreen(isEmailMember = false)
     }
 }
+
+

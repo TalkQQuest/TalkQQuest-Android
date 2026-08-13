@@ -1,5 +1,7 @@
 package com.talkqquest.app.feature.report.data.model
 
+import com.talkqquest.app.core.util.GrowthTotalsDto
+import com.talkqquest.app.core.util.TierProgress
 import kotlinx.serialization.Serializable
 import kotlin.math.roundToInt
 
@@ -23,13 +25,29 @@ data class CategoryRank(
 )
 
 // ── 성장 리포트(B 담당, UI-14 신규) — 실전 티어 + 핵심 역량(마름모 4축). 성장 티어 시스템 시각화 ──
-// TODO(서버 growthTotals merge 후): kindness/initiative/empathy/questionLink 누적값 → 티어·별·역량 점수 계산.
+// 서버 growthTotals(누적 원값 4개) → 티어·별·축 점수는 앱이 계산(core/util/TierProgress).
 data class GrowthTierReport(
     val tierName: String,                    // 현재 티어 이름 ("골드")
     val tierStars: Int,                      // 채운 별 수 0..3 (티어 내 단계)
     val nextStarsNeeded: Int,                // 다음 티어까지 남은 별 수 ("별 N개")
     val nextTierName: String,                // 다음 티어 이름 ("플래티넘")
     val competencies: List<Competency>,      // 핵심 역량 4축 (친절/주도/공감/질문)
+    // AI 상세 리포트에서 이번 점수로 마름모 하나를 완성했는지. 별 완성 연출에만 쓴다.
+    val completedDiamondThisReport: Boolean = false,
+    // 마름모를 완성한 회차의 "그 다음 상태". 승급 모션이 이 값으로 화면을 갈아 끼운다.
+    val promotion: TierPromotion? = null,
+)
+
+// 4축이 전부 300을 채우는 순간이 마름모 완성이고, 그 즉시 축 점수는 이월분만 남기고 리셋된다.
+// 서버는 리셋된 뒤의 누적값만 주기 때문에 증가분(gains)을 빼서 직전 상태를 되돌려 계산한다.
+data class TierPromotion(
+    val slotIndex: Int,                 // 이번에 불이 들어오는 별 자리 (0..2)
+    val isTierUp: Boolean,              // 별 3개를 채워 티어 자체가 바뀌는가
+    val newTierName: String,            // 완성 후 티어 이름
+    val newTierStars: Int,              // 완성 후 별 수
+    val newNextStarsNeeded: Int,
+    val newNextTierName: String,
+    val afterScores: List<Int>,         // 완성 후 리셋된 축 점수 (친절·주도·공감·질문)
 )
 
 // 핵심 역량 4축 — 레이더(마름모) 위치·범례·체크 계산에 씀.
@@ -38,10 +56,13 @@ enum class CompetencyAxis { KINDNESS, INITIATIVE, EMPATHY, QUESTION_LINK }
 data class Competency(
     val axis: CompetencyAxis,   // 마름모 축 매핑(위=친절/오른=주도/아래=공감/왼=질문)
     val label: String,          // 레이더 축 라벨 ("친절한 태도")
-    val legendLabel: String,    // 범례 라벨 (CSS상 공감은 축="공감 표현"/범례="공감 능력"로 달라 분리)
+    val legendLabel: String,    // 범례 라벨
     val score: Int,             // 현재 점수 0..maxScore
     val gain: Int,              // 이번에 획득한 점수 ("+70")
     val maxScore: Int = 300,    // 축당 만점(300점 = 별 1개)
+    // 마름모·범례 숫자가 어디서 출발할지. 보통은 score - gain이지만, 마름모가 완성되는 회차는
+    // score가 300(만점)으로 고정돼 그 뺄셈이 직전 값과 맞지 않아 따로 받는다.
+    val startScore: Int = (score - gain).coerceAtLeast(0),
 )
 
 // 주간 비교 리포트 탭
@@ -73,6 +94,9 @@ data class GrowthReportResponse(
     val trendChangeRate: Double = 0.0, // 성장 추이 우측 "+N%" (rate라 소수 가능 → 표시 시 반올림)
     val topCategories: List<TopCategoryDto> = emptyList(),
     val missionProgress: MissionProgressDto = MissionProgressDto(),
+    // 능력치 누적 원값 4개 — 성장 리포트의 티어·별·마름모가 전부 여기서 나온다.
+    // 실서버 실측(2026-08-13): 필드명이 `kindness`가 아니라 `kindnessTotal` 형태다.
+    val growthTotals: GrowthTotalsDto = GrowthTotalsDto(),
 )
 
 @Serializable
@@ -170,7 +194,64 @@ fun GrowthReportResponse.toGrowthReport() = GrowthReport(
     completedMissions = missionProgress.completed,
     totalMissions = missionProgress.total,
 )
-// B 성장 리포트(GrowthTierReport)는 growthTotals 대개편 전이라 서버 매퍼 없이 stub(ReportRepository).
+// B 성장 리포트 — 서버 누적값(growthTotals)을 티어·별·마름모로 바꾼다.
+// gains = 마름모 꼭짓점의 "+N"(이번 대화로 오른 점수). 서버 응답에 증가분 필드가 없어
+// 피드백 화면이 방금 받은 4항목 점수를 넘겨준다 — 서버가 누적에 그대로 더하는 값이라 같은 수다.
+// 순서는 화면 축 순서(친절·주도·공감·질문) 고정. 없으면 0(= 화면에서 "+N" 자체를 감춤).
+fun GrowthReportResponse.toGrowthTierReport(gains: List<Int> = emptyList()): GrowthTierReport {
+    val progress = TierProgress.of(
+        kindness = growthTotals.kindnessTotal,
+        initiative = growthTotals.initiativeTotal,
+        empathy = growthTotals.empathyTotal,
+        questionLink = growthTotals.questionLinkTotal,
+    )
+    // growthTotals에는 이번 미션 점수가 이미 포함된다. 직전 진행도와 비교해,
+    // 이번 리포트에서 새 마름모(=별)가 완성됐는지만 판별한다.
+    val beforeProgress = TierProgress.of(
+        kindness = (growthTotals.kindnessTotal - gains.getOrElse(0) { 0 }).coerceAtLeast(0),
+        initiative = (growthTotals.initiativeTotal - gains.getOrElse(1) { 0 }).coerceAtLeast(0),
+        empathy = (growthTotals.empathyTotal - gains.getOrElse(2) { 0 }).coerceAtLeast(0),
+        questionLink = (growthTotals.questionLinkTotal - gains.getOrElse(3) { 0 }).coerceAtLeast(0),
+    )
+    // 완성 마름모 개수는 TierProgress가 직접 준다(티어·별에서 되계산할 필요 없음).
+    val completedDiamondThisReport = gains.size >= 4 && progress.diamonds > beforeProgress.diamonds
+    val axes = listOf(
+        Triple(CompetencyAxis.KINDNESS, "친절한 태도", "친절한 태도"),
+        Triple(CompetencyAxis.INITIATIVE, "대화 주도", "대화 주도"),
+        Triple(CompetencyAxis.EMPATHY, "공감 능력", "공감 능력"),
+        Triple(CompetencyAxis.QUESTION_LINK, "질문 연결성", "질문 연결성"),
+    )
+    // 완성 회차면 화면을 직전 상태로 세우고, 승급 모션이 끝나면서 완성 후 상태로 갈아탄다.
+    val shown = if (completedDiamondThisReport) beforeProgress else progress
+    return GrowthTierReport(
+        tierName = shown.tierName,
+        tierStars = shown.tierStars,
+        nextStarsNeeded = shown.nextStarsNeeded,
+        nextTierName = shown.nextTierName,
+        completedDiamondThisReport = completedDiamondThisReport,
+        competencies = axes.mapIndexed { i, (axis, label, legendLabel) ->
+            Competency(
+                axis = axis,
+                label = label,
+                legendLabel = legendLabel,
+                // 완성 회차면 4축이 만점까지 차오르는 것을 보여 준 뒤 모션이 리셋 값으로 갈아 끼운다.
+                score = if (completedDiamondThisReport) TierProgress.AXIS_MAX else progress.axisScores[i],
+                gain = gains.getOrElse(i) { 0 },
+                maxScore = TierProgress.AXIS_MAX,
+                startScore = beforeProgress.axisScores[i],
+            )
+        },
+        promotion = if (!completedDiamondThisReport) null else TierPromotion(
+            slotIndex = beforeProgress.tierStars.coerceIn(0, TierProgress.STARS_PER_TIER - 1),
+            isTierUp = progress.tierName != beforeProgress.tierName,
+            newTierName = progress.tierName,
+            newTierStars = progress.tierStars,
+            newNextStarsNeeded = progress.nextStarsNeeded,
+            newNextTierName = progress.nextTierName,
+            afterScores = progress.axisScores,
+        ),
+    )
+}
 
 fun WeeklyCompareResponse.toWeeklyCompareReport() = WeeklyCompareReport(
     metrics = metricChanges.map {

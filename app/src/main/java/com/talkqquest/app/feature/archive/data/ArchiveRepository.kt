@@ -1,6 +1,7 @@
 package com.talkqquest.app.feature.archive.data
 
 import com.talkqquest.app.core.network.ApiResult
+import com.talkqquest.app.core.util.TierProgress // 💡 추가됨: 공용 계산식 Import
 import com.talkqquest.app.feature.archive.data.model.ArchiveConversationDetailResponse
 import com.talkqquest.app.feature.archive.data.model.ArchiveConversationFeedbackDto
 import com.talkqquest.app.feature.archive.data.model.ArchiveConversationMessageDto
@@ -221,7 +222,7 @@ class ArchiveRepository @Inject constructor(
         }
     }
 
-    // --- 💡 기존의 성장 리포트 전용 로직 ---
+    // --- 💡 성장 리포트 전용 로직 (TierProgress 연동 및 신규 recentScores 매핑) ---
     suspend fun getArchiveReportDetail(id: String): ApiResult<Triple<String, GrowthReport?, WeeklyCompareReport?>> {
         if (isMockMode) {
             val title = stubReports.find { it.id == id }?.title ?: "성장 리포트"
@@ -237,41 +238,36 @@ class ArchiveRepository @Inject constructor(
                 val data = response.data
                 if (data != null) {
                     val growth = data.growth?.let { g ->
+                        // 1. 서버에서 받은 누적 점수 (전체 기간 합산)
                         val totals = g.growthTotals
                         val kTotal = totals?.kindnessTotal ?: 0
                         val iTotal = totals?.initiativeTotal ?: 0
                         val eTotal = totals?.empathyTotal ?: 0
                         val qTotal = totals?.questionLinkTotal ?: 0
 
-                        val completedRhombuses = minOf(kTotal, iTotal, eTotal, qTotal) / 300
+                        // 💡 2. 서버에서 새로 추가해 준 이 리포트(대화)만의 획득 점수 스냅샷 (+점수로 사용)
+                        val recent = data.recentScores
+                        val kRecent = recent?.kindness ?: 0
+                        val iRecent = recent?.initiative ?: 0
+                        val eRecent = recent?.empathy ?: 0
+                        val qRecent = recent?.questionLink ?: 0
 
-                        val tiers = listOf("브론즈", "실버", "골드", "플래티넘", "다이아", "마스터")
-                        val tierIndex = (completedRhombuses / 3).coerceIn(0, 5)
+                        // 3. 현재 티어와 별 상태를 알아내기 위해 공용 계산식(TierProgress) 호출
+                        val progress = TierProgress.of(kindness = kTotal, initiative = iTotal, empathy = eTotal, questionLink = qTotal)
 
-                        val tierName = tiers[tierIndex]
-                        val tierStars = if (tierIndex == 5) 0 else completedRhombuses % 3
-                        val nextTierName = if (tierIndex < 5) tiers[tierIndex + 1] else "마스터"
-                        val nextStarsNeeded = if (tierIndex < 5) 3 - tierStars else 0
-
-                        val baseScore = completedRhombuses * 300
-                        val kScore = minOf(kTotal - baseScore, 300)
-                        val iScore = minOf(iTotal - baseScore, 300)
-                        val eScore = minOf(eTotal - baseScore, 300)
-                        val qScore = minOf(qTotal - baseScore, 300)
-
-                        val recent = g.recentScores
+                        // 4. 공용 계산식에서 나온 UI용 점수(0~300)와 방금 얻은 스냅샷 점수(gain) 매핑
                         val competencies = listOf(
-                            Competency(CompetencyAxis.KINDNESS, "친절한 태도", "친절한 태도", 300, kScore, recent?.kindness ?: 0),
-                            Competency(CompetencyAxis.INITIATIVE, "대화 주도", "대화 주도", 300, iScore, recent?.initiative ?: 0),
-                            Competency(CompetencyAxis.EMPATHY, "공감 표현", "공감 능력", 300, eScore, recent?.empathy ?: 0),
-                            Competency(CompetencyAxis.QUESTION_LINK, "질문 연결성", "질문 연결성", 300, qScore, recent?.questionLink ?: 0)
+                            Competency(CompetencyAxis.KINDNESS, "친절한 태도", "친절한 태도", 300, progress.axisScores[0], kRecent),
+                            Competency(CompetencyAxis.INITIATIVE, "대화 주도", "대화 주도", 300, progress.axisScores[1], iRecent),
+                            Competency(CompetencyAxis.EMPATHY, "공감 표현", "공감 능력", 300, progress.axisScores[2], eRecent),
+                            Competency(CompetencyAxis.QUESTION_LINK, "질문 연결성", "질문 연결성", 300, progress.axisScores[3], qRecent)
                         )
 
                         GrowthReport(
-                            tierName = tierName,
-                            tierStars = tierStars,
-                            nextStarsNeeded = nextStarsNeeded,
-                            nextTierName = nextTierName,
+                            tierName = progress.tierName,
+                            tierStars = progress.tierStars,
+                            nextStarsNeeded = progress.nextStarsNeeded,
+                            nextTierName = progress.nextTierName,
                             competencies = competencies
                         )
                     } ?: GrowthReport("브론즈", 0, 3, "실버", emptyList<Competency>())
@@ -288,7 +284,6 @@ class ArchiveRepository @Inject constructor(
         }
     }
 
-    // --- 💡 신규 주간 비교 리포트 전용 로직 ---
     suspend fun getWeeklyCompareReportDetail(id: String): ApiResult<WeeklyCompareReportUiModel> {
         if (isMockMode) {
             val report = stubWeeklyCompareDetails[id]
@@ -307,8 +302,8 @@ class ArchiveRepository @Inject constructor(
                             HighlightItem(emphasis = "", rest = it)
                         },
                         completedMissions = data.data.thisWeek.completedMissionCount,
-                        totalMissions = 0, // 💡 새로운 API 명세에 해당 필드가 사라져 기본값(0) 할당
-                        topCategories = emptyList() // 💡 새로운 API 명세에 해당 필드가 사라져 기본값(empty) 할당
+                        totalMissions = 0,
+                        topCategories = emptyList()
                     )
 
                     val title = "${data.weekIndex}주차 주간 비교 리포트"

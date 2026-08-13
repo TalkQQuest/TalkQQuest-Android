@@ -1,7 +1,6 @@
-package com.talkqquest.app.feature.profile.ui
+﻿package com.talkqquest.app.feature.profile.ui
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -79,7 +78,7 @@ fun ProfileConnectedAccountScreen(
                     .size(width = 361.dp, height = 52.dp)
                     .clip(RoundedCornerShape(16.dp))
                     .background(Primary600)
-                    .clickable(onClick = onLogoutClick),
+                    .profileItemClick(onClick = onLogoutClick),
                 contentAlignment = Alignment.Center,
             ) {
                 Text(

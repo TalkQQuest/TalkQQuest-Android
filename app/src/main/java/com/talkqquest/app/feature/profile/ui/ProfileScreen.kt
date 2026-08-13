@@ -1,4 +1,4 @@
-package com.talkqquest.app.feature.profile.ui
+﻿package com.talkqquest.app.feature.profile.ui
 
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -8,7 +8,6 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.Row
@@ -135,7 +134,7 @@ fun ProfileScreen(
             modifier = Modifier
                 .offset(x = 343.dp, y = 48.dp)
                 .size(44.dp)
-                .clickable(onClick = onSettingsClick),
+                .profileCircleClick(onClick = onSettingsClick),
             contentAlignment = Alignment.Center,
         ) {
             Image(
@@ -203,7 +202,7 @@ private fun ProfileHeader(
             avatarUrl = avatarUrl,
             modifier = Modifier
                 .size(93.dp)
-                .clickable { imagePickerLauncher.launch("image/*") },
+                .profileCircleClick { imagePickerLauncher.launch("image/*") },
         )
         Text(
             text = "$nickname 님",
@@ -220,7 +219,7 @@ private fun ProfileHeader(
                 .size(width = 93.dp, height = 32.dp)
                 .clip(RoundedCornerShape(24.dp))
                 .border(1.dp, Gray300, RoundedCornerShape(24.dp))
-                .clickable(onClick = onEditProfileClick),
+                .profileItemClick(onClick = onEditProfileClick),
             contentAlignment = Alignment.Center,
         ) {
             Text(
@@ -460,7 +459,7 @@ private fun ProfileMenuRow(
     modifier: Modifier = Modifier,
 ) {
     Box(
-        modifier = modifier.clickable(onClick = onClick),
+        modifier = modifier.profileItemClick(onClick = onClick),
         contentAlignment = Alignment.CenterStart,
     ) {
         Text(

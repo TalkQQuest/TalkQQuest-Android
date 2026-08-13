@@ -1,4 +1,4 @@
-package com.talkqquest.app.feature.profile.ui
+﻿package com.talkqquest.app.feature.profile.ui
 
 import android.net.Uri
 
@@ -6,7 +6,6 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.Row
@@ -73,7 +72,7 @@ fun ProfileInfoScreen(
             Box(
                 modifier = Modifier
                     .size(60.dp)
-                    .clickable { imagePickerLauncher.launch("image/*") },
+                    .profileCircleClick { imagePickerLauncher.launch("image/*") },
                 contentAlignment = Alignment.Center,
             ) {
                 if (avatarUrl.isNullOrBlank()) {
@@ -96,7 +95,7 @@ fun ProfileInfoScreen(
             Row(
                 modifier = Modifier
                     .size(width = 130.dp, height = 44.dp)
-                    .clickable(onClick = onNicknameClick),
+                    .profileItemClick(onClick = onNicknameClick),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Text(
@@ -159,7 +158,7 @@ private fun ProfileInfoRow(
     onClick: () -> Unit = {},
 ) {
     Row(
-        modifier = modifier.clickable(onClick = onClick),
+        modifier = modifier.profileItemClick(onClick = onClick),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         val titleModifier = if (titleWidth == null) {

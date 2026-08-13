@@ -1,4 +1,4 @@
-package com.talkqquest.app.feature.profile.ui
+﻿package com.talkqquest.app.feature.profile.ui
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -94,7 +94,7 @@ fun ProfileWithdrawScreen(
             modifier = Modifier
                 .offset(x = 16.dp, y = 415.dp)
                 .size(width = 361.dp, height = 26.dp)
-                .clickable { agreed = !agreed },
+                .profileItemClick { agreed = !agreed },
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Box(
@@ -125,7 +125,7 @@ fun ProfileWithdrawScreen(
                 .size(width = 361.dp, height = 52.dp)
                 .clip(RoundedCornerShape(16.dp))
                 .background(Primary600)
-                .clickable(enabled = agreed) { showConfirm = true },
+                .profileItemClick(enabled = agreed) { showConfirm = true },
             contentAlignment = Alignment.Center,
         ) {
             Text(
@@ -232,7 +232,7 @@ private fun WithdrawDialogButton(
             .clip(RoundedCornerShape(12.dp))
             .background(background)
             
-            .clickable(onClick = onClick),
+            .profileItemClick(onClick = onClick),
         contentAlignment = Alignment.Center,
     ) {
         Text(text = text, style = TqType.TitleL.copy(fontWeight = FontWeight.SemiBold), color = textColor)

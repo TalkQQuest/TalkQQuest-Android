@@ -271,7 +271,7 @@ private fun SettingsProfileHeader(
                 .size(width = 86.dp, height = 30.dp)
                 .clip(RoundedCornerShape(24.dp))
                 .border(1.dp, Gray300, RoundedCornerShape(24.dp))
-                .clickable(onClick = onEditProfileClick),
+                .profileItemClick(onClick = onEditProfileClick),
             contentAlignment = Alignment.Center,
         ) {
             Text(
@@ -325,7 +325,7 @@ private fun SettingsToggleRow(
     modifier: Modifier = Modifier,
     description: String? = null,
 ) {
-    Box(modifier = modifier) {
+    Box(modifier = modifier.profileItemClick { onCheckedChange(!checked) }) {
         Text(
             text = title,
             style = SettingsBodyLargeStyle,
@@ -346,7 +346,6 @@ private fun SettingsToggleRow(
         }
         SettingsSwitch(
             checked = checked,
-            onClick = { onCheckedChange(!checked) },
             modifier = Modifier
                 .align(Alignment.CenterEnd)
                 .size(width = 52.dp, height = 32.dp),
@@ -357,14 +356,12 @@ private fun SettingsToggleRow(
 @Composable
 private fun SettingsSwitch(
     checked: Boolean,
-    onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Box(
         modifier = modifier
             .clip(RoundedCornerShape(999.dp))
-            .background(if (checked) Primary600 else Gray200)
-            .clickable(onClick = onClick),
+            .background(if (checked) Primary600 else Gray200),
     ) {
         Box(
             modifier = Modifier
@@ -382,7 +379,7 @@ private fun SettingsTimeRow(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    Box(modifier = modifier.clickable(onClick = onClick)) {
+    Box(modifier = modifier.profileItemClick(onClick = onClick)) {
         Text(
             text = "미션 리마인드 시간",
             style = SettingsBodyLargeStyle,
@@ -425,7 +422,7 @@ private fun SettingsArrowRow(
     trailing: String? = null,
     onClick: () -> Unit = {},
 ) {
-    Box(modifier = modifier.clickable(onClick = onClick)) {
+    Box(modifier = modifier.profileItemClick(onClick = onClick)) {
         Text(
             text = title,
             style = SettingsBodyLargeStyle,
@@ -631,7 +628,7 @@ private fun DialogButton(
         modifier = modifier
             .clip(RoundedCornerShape(9.dp))
             .then(if (primary) Modifier.background(Primary600) else Modifier.border(1.dp, Gray300, RoundedCornerShape(9.dp)))
-            .clickable(onClick = onClick),
+            .profileItemClick(onClick = onClick),
         contentAlignment = Alignment.Center,
     ) {
         Text(

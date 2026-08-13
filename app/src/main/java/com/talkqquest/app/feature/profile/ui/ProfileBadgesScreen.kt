@@ -1,4 +1,4 @@
-package com.talkqquest.app.feature.profile.ui
+﻿package com.talkqquest.app.feature.profile.ui
 
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -199,7 +199,7 @@ private fun BadgeBackButton(
             painter = painterResource(R.drawable.ic_back_chevron),
             contentDescription = null,
             tint = Gray500,
-            modifier = Modifier.size(width = 30.dp, height = 32.dp),
+            modifier = Modifier.size(24.dp),
         )
     }
 }

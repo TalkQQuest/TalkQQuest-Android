@@ -42,6 +42,9 @@ import com.talkqquest.app.feature.profile.ui.ProfileBadgeUi
 import com.talkqquest.app.feature.profile.viewmodel.ProfileViewModel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import okhttp3.MediaType.Companion.toMediaTypeOrNull
+import okhttp3.MultipartBody
+import okhttp3.RequestBody.Companion.toRequestBody
 
 // 하단 탭 4개(홈·미션·보관함·프로필)를 하나의 HorizontalPager에 담아 손가락 추종 슬라이드를 제공한다.
 // - 페이지 = BottomNavItem.entries 순서와 1:1 매칭.
@@ -251,15 +254,33 @@ private fun ProfileTab(
         )
     } else ProfileScreen(
         nickname = nickname,
+        avatarUrl = dashboard?.avatarUrl ?: profile?.avatarUrl,
         level = dashboard?.level ?: profile?.level ?: 2,
         xp = dashboard?.xp ?: profile?.xp ?: 30,
         earnedBadgeCount = earnedBadgeCount,
         weeklyCompletedCount = weeklyMissionStatus?.completed ?: 5,
         weeklyTotalCount = weeklyMissionStatus?.total ?: 7,
         onEditProfileClick = { navController.navigate(Screen.PROFILE_INFO) },
+        onAvatarClick = { uri ->
+            val imagePart = uri.toProfileImagePart(context)
+            if (imagePart == null) {
+                Toast.makeText(context, "\uC774\uBBF8\uC9C0\uB97C \uBD88\uB7EC\uC624\uC9C0 \uBABB\uD588\uC5B4\uC694.", Toast.LENGTH_SHORT).show()
+            } else {
+                profileViewModel.uploadProfileImage(imagePart)
+            }
+        },
         onSettingsClick = { navController.navigate(Screen.PROFILE_SETTINGS) },
         onBadgesClick = { navController.navigate(Screen.PROFILE_BADGES) },
         onRecentMissionClick = { navController.navigate(Screen.PROFILE_RECENT_MISSION) },
         onArchiveClick = { navController.navigate(Screen.ARCHIVE_HOME) },
     )
+}
+
+private fun Uri.toProfileImagePart(context: Context): MultipartBody.Part? {
+    val resolver = context.contentResolver
+    val mimeType = resolver.getType(this)?.takeIf { it == "image/jpeg" || it == "image/png" } ?: return null
+    val bytes = resolver.openInputStream(this)?.use { it.readBytes() } ?: return null
+    val extension = if (mimeType == "image/png") "png" else "jpg"
+    val requestBody = bytes.toRequestBody(mimeType.toMediaTypeOrNull())
+    return MultipartBody.Part.createFormData("image", "profile_image.$extension", requestBody)
 }

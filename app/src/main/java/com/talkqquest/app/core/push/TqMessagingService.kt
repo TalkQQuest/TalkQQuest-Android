@@ -30,31 +30,37 @@ class TqMessagingService : FirebaseMessagingService() {
     override fun onMessageReceived(message: RemoteMessage) {
         val title = message.notification?.title ?: message.data["title"] ?: "TalkQQuest"
         val body = message.notification?.body ?: message.data["body"] ?: ""
+        val type = message.data[EXTRA_NOTIFICATION_TYPE].orEmpty()
+        val reportId = message.data[EXTRA_REFERENCE_ID]
 
         // 휴대폰 실제 알림은 주간 비교 리포트 도착 안내만 표시한다.
         // 미션 완료 등 나머지 알림은 서버 목록에 남아 앱 내부 알림창에서만 확인한다.
-        if (!title.contains(WEEKLY_COMPARE_NOTIFICATION_TEXT) &&
+        if (type != WEEKLY_COMPARE_NOTIFICATION_TYPE &&
+            !title.contains(WEEKLY_COMPARE_NOTIFICATION_TEXT) &&
             !body.contains(WEEKLY_COMPARE_NOTIFICATION_TEXT)
         ) {
             Log.d(TAG, "앱 내부 전용 알림 — 시스템 알림 표시 생략")
             return
         }
 
-        showNotification(title, body)
+        showNotification(title, body, reportId)
     }
 
-    private fun showNotification(title: String, body: String) {
+    private fun showNotification(title: String, body: String, reportId: String?) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
             ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED
         ) {
             return
         }
 
+        val notificationId = Random.nextInt()
         val intent = Intent(this, MainActivity::class.java).apply {
             flags = Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP
+            putExtra(EXTRA_NOTIFICATION_TYPE, WEEKLY_COMPARE_NOTIFICATION_TYPE)
+            reportId?.takeIf { it.isNotBlank() }?.let { putExtra(EXTRA_REFERENCE_ID, it) }
         }
         val pending = PendingIntent.getActivity(
-            this, 0, intent,
+            this, notificationId, intent,
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
         )
 
@@ -67,11 +73,14 @@ class TqMessagingService : FirebaseMessagingService() {
             .setContentIntent(pending)
             .build()
 
-        NotificationManagerCompat.from(this).notify(Random.nextInt(), notification)
+        NotificationManagerCompat.from(this).notify(notificationId, notification)
     }
 
     companion object {
         private const val TAG = "TqMessaging"
         private const val WEEKLY_COMPARE_NOTIFICATION_TEXT = "주간 비교 리포트"
+        const val WEEKLY_COMPARE_NOTIFICATION_TYPE = "weekly_compare_ready"
+        const val EXTRA_NOTIFICATION_TYPE = "type"
+        const val EXTRA_REFERENCE_ID = "referenceId"
     }
 }

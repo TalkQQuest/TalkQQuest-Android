@@ -222,7 +222,7 @@ class ArchiveRepository @Inject constructor(
         }
     }
 
-    // --- 💡 성장 리포트 전용 로직 (TierProgress 공용 모듈 연동 적용) ---
+    // --- 💡 성장 리포트 전용 로직 (TierProgress 연동 및 신규 recentScores 매핑) ---
     suspend fun getArchiveReportDetail(id: String): ApiResult<Triple<String, GrowthReport?, WeeklyCompareReport?>> {
         if (isMockMode) {
             val title = stubReports.find { it.id == id }?.title ?: "성장 리포트"
@@ -238,44 +238,29 @@ class ArchiveRepository @Inject constructor(
                 val data = response.data
                 if (data != null) {
                     val growth = data.growth?.let { g ->
-                        // 1. 서버에서 받은 누적 점수 및 피드백 점수
+                        // 1. 서버에서 받은 누적 점수 (전체 기간 합산)
                         val totals = g.growthTotals
                         val kTotal = totals?.kindnessTotal ?: 0
                         val iTotal = totals?.initiativeTotal ?: 0
                         val eTotal = totals?.empathyTotal ?: 0
                         val qTotal = totals?.questionLinkTotal ?: 0
 
-                        val recent = g.recentScores
+                        // 💡 2. 서버에서 새로 추가해 준 이 리포트(대화)만의 획득 점수 스냅샷 (+점수로 사용)
+                        val recent = data.recentScores
                         val kRecent = recent?.kindness ?: 0
                         val iRecent = recent?.initiative ?: 0
                         val eRecent = recent?.empathy ?: 0
                         val qRecent = recent?.questionLink ?: 0
 
-                        // 2. 이번에 획득한 피드백 점수를 역산하여 이전 누적 점수를 구함 (애니메이션용)
-                        val prevKTotal = maxOf(0, kTotal - kRecent)
-                        val prevITotal = maxOf(0, iTotal - iRecent)
-                        val prevETotal = maxOf(0, eTotal - eRecent)
-                        val prevQTotal = maxOf(0, qTotal - qRecent)
-
-                        // 💡 3. 공용 계산식(TierProgress)을 호출하여 복잡한 수동 계산을 대체
+                        // 3. 현재 티어와 별 상태를 알아내기 위해 공용 계산식(TierProgress) 호출
                         val progress = TierProgress.of(kindness = kTotal, initiative = iTotal, empathy = eTotal, questionLink = qTotal)
-                        val prevProgress = TierProgress.of(kindness = prevKTotal, initiative = prevITotal, empathy = prevETotal, questionLink = prevQTotal)
 
-                        // 💡 4. 애니메이션용 증가분(+점수) 계산 로직 리팩토링
-                        // 이전과 현재의 티어나 별 개수가 다르다면(승급했다면) 마름모가 새로 시작된 것이므로 현재 축 점수가 그대로 증가분이 됨
-                        val isUpgraded = (progress.tierName != prevProgress.tierName) || (progress.tierStars != prevProgress.tierStars)
-
-                        val kGain = if (isUpgraded) progress.axisScores[0] else maxOf(0, progress.axisScores[0] - prevProgress.axisScores[0])
-                        val iGain = if (isUpgraded) progress.axisScores[1] else maxOf(0, progress.axisScores[1] - prevProgress.axisScores[1])
-                        val eGain = if (isUpgraded) progress.axisScores[2] else maxOf(0, progress.axisScores[2] - prevProgress.axisScores[2])
-                        val qGain = if (isUpgraded) progress.axisScores[3] else maxOf(0, progress.axisScores[3] - prevProgress.axisScores[3])
-
-                        // 5. 공용 계산식에서 나온 값을 그대로 GrowthReport 모델에 매핑
+                        // 4. 공용 계산식에서 나온 UI용 점수(0~300)와 방금 얻은 스냅샷 점수(gain) 매핑
                         val competencies = listOf(
-                            Competency(CompetencyAxis.KINDNESS, "친절한 태도", "친절한 태도", 300, progress.axisScores[0], kGain),
-                            Competency(CompetencyAxis.INITIATIVE, "대화 주도", "대화 주도", 300, progress.axisScores[1], iGain),
-                            Competency(CompetencyAxis.EMPATHY, "공감 표현", "공감 능력", 300, progress.axisScores[2], eGain),
-                            Competency(CompetencyAxis.QUESTION_LINK, "질문 연결성", "질문 연결성", 300, progress.axisScores[3], qGain)
+                            Competency(CompetencyAxis.KINDNESS, "친절한 태도", "친절한 태도", 300, progress.axisScores[0], kRecent),
+                            Competency(CompetencyAxis.INITIATIVE, "대화 주도", "대화 주도", 300, progress.axisScores[1], iRecent),
+                            Competency(CompetencyAxis.EMPATHY, "공감 표현", "공감 능력", 300, progress.axisScores[2], eRecent),
+                            Competency(CompetencyAxis.QUESTION_LINK, "질문 연결성", "질문 연결성", 300, progress.axisScores[3], qRecent)
                         )
 
                         GrowthReport(

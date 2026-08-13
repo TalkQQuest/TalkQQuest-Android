@@ -64,7 +64,6 @@ import com.talkqquest.app.core.designsystem.Gray500
 import com.talkqquest.app.core.designsystem.Gray600
 import com.talkqquest.app.core.designsystem.Gray700
 import com.talkqquest.app.core.designsystem.Gray800
-import com.talkqquest.app.core.designsystem.Gray900
 import com.talkqquest.app.core.designsystem.Gray50
 import com.talkqquest.app.core.designsystem.Primary100
 import com.talkqquest.app.core.designsystem.Primary50
@@ -192,9 +191,9 @@ private fun ArchiveConversationDetailContent(
                 ArchiveConversationCard(
                     title = uiState.title,
                     tags = uiState.summaryKeywords.take(2),
-                    summary = uiState.summaryText,
+                    summary = uiState.description, // 💡 상단 카드: 짧은 요약 (description) 매핑 완료
                     date = uiState.date,
-                    time = uiState.time, // 💡 수정됨: 하드코딩 제거하고 실제 시간 파싱 데이터 연동
+                    time = uiState.time,
                     onClick = { /* 상세 화면 최상단 썸네일이므로 클릭 동작 없음 */ }
                 )
 
@@ -205,7 +204,10 @@ private fun ArchiveConversationDetailContent(
                     verticalArrangement = Arrangement.spacedBy(24.dp)
                 ) {
                     ConversationSummarySection(uiState.summaryKeywords, uiState.summaryText)
-                    ConversationMainContentSection(uiState.mainContentText)
+
+                    // 💡 핵심 변경: 억지로 자르던 코드를 지우고 uiState.keyPoints 리스트를 그대로 전달
+                    ConversationMainContentSection(uiState.keyPoints)
+
                     ConversationAiFeedbackSection(uiState.feedbacks)
                 }
 
@@ -384,7 +386,10 @@ private fun ConversationSummarySection(keywords: List<String>, summaryText: Stri
 }
 
 @Composable
-private fun ConversationMainContentSection(mainContentText: String) {
+private fun ConversationMainContentSection(keyPoints: List<String>) {
+    // 💡 피드백 로딩 중이거나 배열이 비어있으면 아예 영역을 그리지 않음
+    if (keyPoints.isEmpty()) return
+
     Column(
         modifier = Modifier.fillMaxWidth().padding(horizontal = 6.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp)
@@ -395,9 +400,8 @@ private fun ConversationMainContentSection(mainContentText: String) {
             verticalArrangement = Arrangement.spacedBy(0.dp),
             modifier = Modifier.padding(horizontal = 2.dp)
         ) {
-            val points = mainContentText.split(". ").filter { it.isNotBlank() }
-            points.forEach { point ->
-                val formattedText = if (point.endsWith(".")) point else "$point."
+            // 💡 억지로 문장을 자르지 않고 백엔드 배열 항목을 순회하여 그립니다.
+            keyPoints.forEach { point ->
                 Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.Top) {
                     Text(
                         text = "•",
@@ -406,7 +410,7 @@ private fun ConversationMainContentSection(mainContentText: String) {
                         modifier = Modifier.padding(end = 4.dp)
                     )
                     Text(
-                        text = formattedText,
+                        text = point,
                         style = TqType.BodyM.copy(
                             lineHeight = 22.sp,
                             lineBreak = LineBreak(
@@ -457,7 +461,6 @@ private fun ConversationAiFeedbackSection(feedbacks: List<AiFeedbackItem>) {
                             Text(text = "점", style = TqType.BodyS.figma(), color = Primary600, modifier = Modifier.padding(bottom = 3.dp))
                         }
                         Box(modifier = Modifier.size(44.dp), contentAlignment = Alignment.Center) {
-                            // 💡 내장 아이콘 대신 커스텀 아이콘 적용
                             Icon(
                                 painter = painterResource(id = R.drawable.ic_forward_chevron),
                                 contentDescription = "상세 보기",
@@ -481,18 +484,23 @@ private fun ArchiveConversationDetailScreenPreview() {
     TalkQQuestTheme {
         ArchiveConversationDetailContent(
             uiState = ArchiveConversationDetailUiState(
-                title = "처음 보는 사람에게 짧게 인사하기",
-                date = "2026.07.16",
-                time = "14:35",
-                duration = "5분 30초",
-                summaryKeywords = listOf("자기 성장", "첫 만남", "스몰 토크"),
-                summaryText = "카페에서 처음 만난 사람에게 자연스럽게 인사를 건네고, 간단한 질문을 이어가며 어색하지 않게 대화를 시작하는 연습을 진행했습니다.",
-                mainContentText = "먼저 인사를 건네며 대화를 시작했어요. \"자주는 오시나요?\"와 같은 질문으로 대화를 이어갔어요. 상대의 답변에 반응하고 공감하며 대화를 마무리했어요.",
+                title = "팀플 조원에게 먼저 연락하기",
+                date = "2026.08.13",
+                time = "01:22",
+                duration = "1분 22초",
+                description = "먼저 인사를 건넨 짧은 대화",
+                summaryKeywords = listOf("팀플 조율", "역할 분배", "일정 확정"),
+                summaryText = "팀 프로젝트 조원에게 먼저 연락해 역할 분배 방식을 제안하고, 회의 일정을 조율하는 대화를 진행했습니다. 상대방의 모호한 응답에 대해 명확히 재확인하며 대화를 이끌었습니다.",
+                keyPoints = listOf(
+                    "역할 분배 방식을 제안하며 대화를 시작함",
+                    "상대의 모호한 발언에 대해 명확히 재확인함",
+                    "구체적 일정을 제시하며 회의 일정을 조율함"
+                ),
                 feedbacks = listOf(
-                    AiFeedbackItem("친절한 태도", 92),
-                    AiFeedbackItem("대화 주도", 88),
-                    AiFeedbackItem("공감 능력", 85),
-                    AiFeedbackItem("질문 연결성", 78)
+                    AiFeedbackItem("친절한 태도", 75),
+                    AiFeedbackItem("대화 주도", 85),
+                    AiFeedbackItem("공감 능력", 70),
+                    AiFeedbackItem("질문 연결성", 65)
                 )
             ),
             onBackClick = {},
@@ -507,7 +515,7 @@ private fun ArchiveConversationReviewScreenPreview() {
     TalkQQuestTheme {
         ArchiveConversationReviewContent(
             uiState = ArchiveConversationDetailUiState(
-                title = "처음 보는 사람에게 짧게 인사하기",
+                title = "팀플 조원에게 먼저 연락하기",
                 messages = listOf(
                     ReviewChatMessage("1", "안녕하세요! 처음 뵙네요 \uD83D\uDE42", false, "9:20"),
                     ReviewChatMessage("2", "오늘 여기 처음 오셨어요?", false, "9:20"),

@@ -7,9 +7,11 @@ import kotlinx.serialization.Serializable
 data class ArchiveConversationDetailResponse(
     val conversationId: String,
     val missionTitle: String? = null,
-    val summary: String? = null,
+    val description: String? = null, // 💡 추가됨: 상단 대화 카드용 짧은 요약
+    val summary: String? = null,     // 기존: 중간 '대화 요약' 줄글
     val duration: String? = null,
     val summaryChips: List<String> = emptyList(),
+    val keyPoints: List<String> = emptyList(), // 💡 추가됨: 하단 '주요 내용' 불릿 리스트
     val messages: List<ArchiveConversationMessageDto> = emptyList(),
     val feedback: ArchiveConversationFeedbackDto? = null
 )
@@ -61,6 +63,7 @@ data class ArchiveReportDetailResponse(
     val period: String? = null,
     val title: String? = null,
     val growth: ReportGrowthDto? = null,
+    val recentScores: ReportMetricsDto? = null,
     val createdAt: String
 )
 
@@ -72,8 +75,7 @@ data class ReportGrowthDto(
     val trendChangeRate: Double,
     val topCategories: List<ReportTopCategoryDto>,
     val missionProgress: ReportMissionProgressDto,
-    val growthTotals: ReportGrowthTotalsDto? = null,
-    val recentScores: ReportMetricsDto? = null
+    val growthTotals: ReportGrowthTotalsDto? = null
 )
 
 @Serializable

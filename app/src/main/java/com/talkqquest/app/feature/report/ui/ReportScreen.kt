@@ -224,8 +224,6 @@ private fun ReportContent(
     // 마름모 중심과 별 자리는 서로 다른 카드에 있다. 오버레이가 쓰는 좌표계로 환산하려면
     // 두 좌표를 이 루트 Box 기준으로 옮겨야 한다.
     var motionRoot by remember { mutableStateOf<LayoutCoordinates?>(null) }
-    // 빈 곳을 누르면 연출을 처음부터 다시 본다.
-    var replayKey by remember(growth) { mutableStateOf(0) }
     // 모션이 끝나면 카드가 승급 후 상태로 갈아탄다(그 전까지는 직전 상태).
     var swapped by remember(growth) { mutableStateOf(false) }
     val shownTierName = if (swapped && promotion != null) promotion.newTierName else growth.tierName
@@ -250,12 +248,7 @@ private fun ReportContent(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .onGloballyPositioned { motionRoot = it }
-            .clickable(
-                interactionSource = remember { MutableInteractionSource() },
-                indication = null,
-                onClick = { replayKey++ },
-            ),
+            .onGloballyPositioned { motionRoot = it },
     ) {
         Column(
             modifier = Modifier
@@ -317,7 +310,6 @@ private fun ReportContent(
                         // 연출(completedDiamondTrigger)을 겹쳐 재생하지 않는다.
                         if (growth.completedDiamondThisReport && promotion == null) completedDiamondTrigger++
                     },
-                    replayKey = replayKey,
                     convergeProgress = motion.converge.value,
                     onRadarCenterPositioned = { center, coords ->
                         val root = motionRoot ?: return@CompetencyCard
@@ -357,7 +349,7 @@ private fun ReportContent(
             )
             // 만점 체크와 좌표 확보를 "안에서" 기다린다. 이 둘을 key로 두면 재생 도중 조건이
             // 다시 평가되며 코루틴이 취소돼 축하 화면이 걷히지 않은 채 멈춘다.
-            LaunchedEffect(growth, replayKey) {
+            LaunchedEffect(growth) {
                 val base = tierAutoTrigger // 이번 회차의 만점 체크가 끝나는 시점만 기다린다
                 motion.reset()
                 swapped = false
@@ -778,8 +770,6 @@ private fun CompetencyCard(
     competencies: List<Competency>,
     completedDiamondThisReport: Boolean,
     onCompletionAnimationFinished: () -> Unit,
-    // 값이 바뀔 때마다 등장 연출을 처음부터 다시 재생한다.
-    replayKey: Int = 0,
     // 승급 모션 — 1이면 네 꼭짓점이 마름모 중심으로 모인다.
     convergeProgress: Float = 0f,
     onRadarCenterPositioned: (Offset, LayoutCoordinates) -> Unit = { _, _ -> },
@@ -836,7 +826,7 @@ private fun CompetencyCard(
         onCompletionAnimationFinished()
     }
 
-    LaunchedEffect(replayKey) {
+    LaunchedEffect(Unit) {
         playCompletionSequence()
     }
 

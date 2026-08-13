@@ -243,9 +243,10 @@ class MissionRepository @Inject constructor(
     // 미션 완료 — 실서버 POST /missions/{missionId}/complete (2026-07-22 실호출 검증).
     // 서버가 XP 지급·대화 종료까지 처리(xpEarned 응답, /xp/summary 실제 증가 확인).
     // 레벨업 연출용 before/after는 완료 전·후 /xp/summary 두 번 조회로 구성.
-    // 체크리스트는 서버 미제공 — 로컬 문구 유지. 세션 없음/실패 시 기존 로컬 XP 경로 폴백.
+    // 체크리스트는 서버 미제공 — 로컬 문구 유지. 서버 대화 세션 자체가 없을 때만 로컬 XP 경로 폴백.
+    // 세션이 있는데 완료 API가 실패한 경우까지 성공으로 바꾸면, 사용자 발화가 없어 서버가 완료를
+    // 거부한 경우에도 앱이 XP를 지급한 것처럼 보이므로 서버 오류를 그대로 전달한다.
     suspend fun completeMission(missionId: String, durationSec: Long = 0): ApiResult<MissionCompleteResult> {
-        statusOverrides[missionId] = "완료" // 목록·저장 목록의 상태 필터에 바로 반영
         val cid = activeConversationId
         if (cid != null) {
             val before = serverCall { missionApi.getXpSummary() }
@@ -260,6 +261,7 @@ class MissionRepository @Inject constructor(
                 )
             }
             if (done is ApiResult.Success) {
+                statusOverrides[missionId] = "완료"
                 // 피드백 생성(POST /feedback) — cid가 지워지기 전에 트리거. 실패해도 완료는 진행(feedbackId=null).
                 val feedbackId = (serverCall { missionApi.createFeedback(CreateFeedbackRequest(conversationId = cid)) }
                     as? ApiResult.Success)?.data?.feedbackId
@@ -286,8 +288,14 @@ class MissionRepository @Inject constructor(
                     ),
                 )
             }
+            return when (done) {
+                is ApiResult.Error -> done
+                is ApiResult.Exception -> done
+                is ApiResult.Success -> error("완료 성공 응답은 위에서 처리되어야 합니다.")
+            }
         }
         // ── 폴백: 서버 세션 없음(오프라인 진입 등) — 기존 로컬 XP 경로 ──
+        statusOverrides[missionId] = "완료"
         val gained = stubMissions.firstOrNull { it.id == missionId }?.rewardXp ?: 20
         val beforeXp = userXpStore.currentXp
         val beforeLevel = userXpStore.level

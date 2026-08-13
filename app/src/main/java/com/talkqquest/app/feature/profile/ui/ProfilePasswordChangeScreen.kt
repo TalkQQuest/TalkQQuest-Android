@@ -1,8 +1,7 @@
-package com.talkqquest.app.feature.profile.ui
+﻿package com.talkqquest.app.feature.profile.ui
 
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -199,7 +198,7 @@ private fun ProfilePasswordInputCard(
             modifier = Modifier
                 .align(Alignment.CenterEnd)
                 .size(44.dp)
-                .clickable(onClick = onTogglePassword),
+                .profileCircleClick(onClick = onTogglePassword),
             contentAlignment = Alignment.Center,
         ) {
             ProfilePasswordEyeIcon(

@@ -1,7 +1,6 @@
-package com.talkqquest.app.feature.profile.ui
+﻿package com.talkqquest.app.feature.profile.ui
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -87,7 +86,7 @@ private fun SupportRow(title: String, trailing: String? = null) {
     Row(
         modifier = Modifier
             .size(width = 330.dp, height = 44.dp)
-            .clickable { },
+            .profileItemClick { },
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Text(

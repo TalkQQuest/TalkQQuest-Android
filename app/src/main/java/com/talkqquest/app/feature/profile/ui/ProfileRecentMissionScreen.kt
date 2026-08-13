@@ -1,8 +1,7 @@
-package com.talkqquest.app.feature.profile.ui
+﻿package com.talkqquest.app.feature.profile.ui
 
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -336,7 +335,7 @@ private fun RecentActivitySummaryCard(
             .size(width = 361.dp, height = if (isMission) 85.dp else 72.dp)
             .clip(RoundedCornerShape(20.dp))
             .background(White)
-            .clickable { },
+            .profileItemClick { },
         verticalAlignment = Alignment.CenterVertically,
     ) {
         ActivityIcon(
@@ -494,7 +493,7 @@ internal fun ProfileSimpleTopBar(
             modifier = Modifier
                 .offset(x = backIconStartPadding, y = 48.dp)
                 .size(44.dp)
-                .clickable(onClick = onBack),
+                .profileCircleClick(onClick = onBack),
             contentAlignment = Alignment.Center,
         ) {
             Icon(

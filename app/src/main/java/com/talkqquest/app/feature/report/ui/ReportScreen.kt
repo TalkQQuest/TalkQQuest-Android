@@ -726,40 +726,46 @@ private fun CompetencyCard(
             .padding(vertical = 12.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        // 제목
-        Text(
-            text = "핵심 역량",
-            style = TqType.BodyL.figma().copy(fontWeight = FontWeight.Medium), // 16/500
-            color = Color.Black,
-            modifier = Modifier.padding(start = 16.dp),
-        )
-
-        // 레이더 + 4축 라벨 (위=친절/왼=질문/오른=주도/아래=공감)
+        // CSS Frame 427321736: 제목과 레이더 묶음 사이 간격 16dp.
         Column(
             modifier = Modifier.fillMaxWidth(),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(12.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
-            if (top != null) AxisLabel(top.label, top.gain, gainAlpha, gainOffsetY)
-            Row(
-                modifier = Modifier.fillMaxWidth().padding(horizontal = 4.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween,
+            Text(
+                text = "핵심 역량",
+                style = TqType.BodyL.figma().copy(fontWeight = FontWeight.Medium), // 16/500
+                color = Color.Black,
+                modifier = Modifier.padding(start = 16.dp),
+            )
+
+            // CSS Frame 427321711: 위·가운데·아래 축 사이 간격 12dp.
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(12.dp),
             ) {
-                if (left != null) AxisLabel(left.label, left.gain, gainAlpha, gainOffsetY)
-                RadarChart(
-                    top = frac(top),
-                    right = frac(right),
-                    bottom = frac(bottom),
-                    left = frac(left),
-                    dataScale = radarScale,
-                    completionEnergy = completionEnergy.value,
-                    showCompletionEnergy = completedDiamondThisReport,
-                    modifier = Modifier.size(176.dp),
-                )
-                if (right != null) AxisLabel(right.label, right.gain, gainAlpha, gainOffsetY)
+                if (top != null) AxisLabel(top.label, top.gain, gainAlpha, gainOffsetY)
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    // CSS: 52dp 라벨 + 12dp + 176dp 마름모 + 12dp + 52dp 라벨을 중앙 정렬.
+                    horizontalArrangement = Arrangement.spacedBy(12.dp, Alignment.CenterHorizontally),
+                ) {
+                    if (left != null) AxisLabel(left.label, left.gain, gainAlpha, gainOffsetY)
+                    RadarChart(
+                        top = frac(top),
+                        right = frac(right),
+                        bottom = frac(bottom),
+                        left = frac(left),
+                        dataScale = radarScale,
+                        completionEnergy = completionEnergy.value,
+                        showCompletionEnergy = completedDiamondThisReport,
+                        modifier = Modifier.size(176.dp),
+                    )
+                    if (right != null) AxisLabel(right.label, right.gain, gainAlpha, gainOffsetY)
+                }
+                if (bottom != null) AxisLabel(bottom.label, bottom.gain, gainAlpha, gainOffsetY)
             }
-            if (bottom != null) AxisLabel(bottom.label, bottom.gain, gainAlpha, gainOffsetY)
         }
 
         // 범례 4행
@@ -789,19 +795,34 @@ private fun AxisLabel(
     gainAlpha: Float = 1f,
     gainOffsetY: Float = 0f,
 ) {
-    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-        Text(text = label, style = TqType.BodyM.figma(), color = Gray800) // 14/400
+    Column(
+        modifier = Modifier.size(width = 52.dp, height = 42.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        Text(
+            text = label,
+            style = TqType.BodyM.figma(),
+            color = Gray800,
+            softWrap = false,
+            maxLines = 1,
+            modifier = Modifier.wrapContentWidth(Alignment.CenterHorizontally, unbounded = true),
+        ) // 14/400
         // 증가분을 모르는 경로(보관함 등 피드백을 안 거친 진입)면 "+0" 대신 아예 그리지 않는다.
         if (gain > 0) {
             Text(
                 text = "+$gain",
                 style = TqType.LabelL.figma(),
                 color = Primary600,
-                modifier = Modifier.graphicsLayer {
-                    alpha = gainAlpha
-                    translationY = gainOffsetY
-                },
+                textAlign = TextAlign.Center,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .graphicsLayer {
+                        alpha = gainAlpha
+                        translationY = gainOffsetY
+                    },
             ) // 14/500
+        } else {
+            Spacer(Modifier.height(20.dp))
         }
     }
 }

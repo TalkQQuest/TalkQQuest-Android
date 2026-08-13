@@ -1,6 +1,5 @@
 package com.talkqquest.app.navigation
 
-import android.content.Context
 import android.net.Uri
 import android.widget.Toast
 import androidx.activity.compose.BackHandler
@@ -41,18 +40,16 @@ import com.talkqquest.app.feature.profile.ui.ProfileScreen
 import com.talkqquest.app.feature.profile.ui.ProfileBadgesScreen
 import com.talkqquest.app.feature.profile.ui.ProfileBadgeUi
 import com.talkqquest.app.feature.profile.viewmodel.ProfileViewModel
+import com.talkqquest.app.feature.profile.data.toProfileImagePart
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-import okhttp3.MediaType.Companion.toMediaTypeOrNull
-import okhttp3.MultipartBody
-import okhttp3.RequestBody.Companion.toRequestBody
 
-// ?�단 ??4�??�·�??�·보관?�·프로필)�??�나??HorizontalPager???�아 ?��???추종 ?�라?�드�??�공?�다.
-// - ?�이지 = BottomNavItem.entries ?�서?� 1:1 매칭.
-// - pagerState??MainScreen?�서 ?�이?�팅???�겨받아 ?�단�??�역)?� ?�태�?공유?�다.
-// - �???콘텐�?HomeScreen/MissionListScreen/ArchiveHomeScreen/ProfileScreen)??그�?�??�고,
-//   기존 NavGraph destination???�던 콜백 배선�????�일????컴포?�블로 ??��??
-// - ?�세 ?�면(미션 ?�세·?�?�·보관???�세 ???� ?�전??NavGraph??별도 destination?�며 ?�이?� ?�로 push ?�다.
+// 하단 탭 4개(홈, 미션, 보관함, 프로필)를 HorizontalPager로 묶어 스와이프 가능한 탭 화면을 구성한다.
+// - 페이지 순서는 BottomNavItem.entries와 1:1로 맞춘다.
+// - pagerState는 MainScreen에서 내려받아 하단바 선택 상태와 공유한다.
+// - 각 탭의 실제 콘텐츠는 HomeScreen/MissionListScreen/ArchiveHomeScreen/ProfileScreen으로 분리한다.
+// - 상세 화면은 기존 NavGraph destination을 사용하고, 탭 화면에서는 navigate 콜백만 연결한다.
+// - 미션 상세, 알림, 보관함 상세처럼 하단바 밖 화면은 NavGraph에서 별도 destination으로 push한다.
 @Composable
 fun MainTabsPager(
     navController: NavHostController,
@@ -61,26 +58,26 @@ fun MainTabsPager(
     onShowWeeklyReportModal: (String?) -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
-    // ?�의 ?�어 ?�급 ?�내 ?�트처럼 ?�이 깔린 모달?????�는 ?�안?� ???��??�프�??�다.
-    // (?�트가 ?�이?� ?�이지 ?�에 ?�어 ?�어?? ???�면 모달 ?�에???�었????????���??�어가 버림)
+    // 하단 시트처럼 화면 위에 올라오는 모달이 열려 있을 때는 탭 스와이프를 잠근다.
+    // 시트가 열린 상태에서 페이지가 움직이면 모달과 배경 화면의 위치가 어긋날 수 있다.
     var modalSheetOpen by remember { mutableStateOf(false) }
     var showHomeBadgeCollection by remember { mutableStateOf(false) }
     var homeResumeAnimationTrigger by remember { mutableIntStateOf(0) }
     var homeExitResetToken by remember { mutableIntStateOf(0) }
-    // ?�에??NavGraph??별도 ?�면????경우?�만 true가 ?�다.
-    // ?�단 ???�동�???백그?�운?�는 ??값을 건드리�? ?�아 XP ?�태�?그�?�?보존?�다.
+    // 홈에서 별도 상세 화면으로 나간 경우에만 true로 바뀐다.
+    // 일반 탭 이동에서는 홈 XP 애니메이션 상태를 보존해 불필요한 재시작을 막는다.
     var homeDetailExitPending by remember { mutableStateOf(false) }
     var homeDetailReplayPending by remember { mutableStateOf(false) }
     var badgeReplayPending by remember { mutableStateOf(false) }
-    // HorizontalPager가 멀?�진 ???�이지�??�기?�도 ??값�? ?�위 ?�에 ?�는??
-    // true????최초 진입 ?�는 명시?�인 별도 ?�면 복�??�서�??�용?�다.
+    // HorizontalPager는 멀어진 페이지를 버릴 수 있으므로, 초기화 플래그는 필요한 상황에서만 켠다.
+    // 최초 진입이나 명시적인 상세 화면 복귀에서만 XP를 0부터 다시 보여준다.
     var animateHomeXpFromZero by remember { mutableStateOf(true) }
-    // 최초 ON_RESUME?� HomeViewModel??최초 ?�이???�착�?같�? ??진입?�다.
-    // ?�때??HomeLevelCard가 ?�체?�으�?0 ??XP�??�생?��?�?복�? ?�호�?추�??��? ?�는??
+    // 첫 ON_RESUME에서는 HomeViewModel의 최초 데이터 로딩과 함께 들어오므로 재생 트리거를 소비만 한다.
+    // 이후 상세 화면에서 돌아올 때만 홈 카드 애니메이션을 다시 실행한다.
     var hasConsumedInitialHomeResume by remember { mutableStateOf(false) }
     val pagerScope = rememberCoroutineScope()
-    // 기본�??�면 ??�� 50%)?� 천천???�래그할 ???�동 거리가 길게 ?�껴진다.
-    // 짧�? ?��??�프?�도 반응?�되 ?�수�???�� 바뀌�? ?�는 25% 지?�에???�음 ?�이지�??�냅?�다.
+    // 기본 임계값(50%)보다 짧게 스와이프해도 탭 전환이 자연스럽게 반응하도록 조정한다.
+    // 너무 민감해지지 않도록 25% 지점에서 다음 페이지로 스냅한다.
     val tabFlingBehavior = PagerDefaults.flingBehavior(
         state = pagerState,
         snapPositionalThreshold = 0.25f,
@@ -101,8 +98,8 @@ fun MainTabsPager(
         }
     }
     BackHandler(enabled = showHomeBadgeCollection, onBack = returnFromHomeBadgeCollection)
-    // 뱃�? 컬렉?�에???�단 ????���?직접 ?�아?�는 경로?? ?�에 ?�전???�착?????�생?�다.
-    // ?�반 ?�단 ???�복?�는 badgeReplayPending???�으므�??�무 ?�작???��? ?�는??
+    // 홈의 배지 컬렉션 진입은 프로필 탭을 배경으로 사용하므로 뒤로가기 동작을 별도로 처리한다.
+    // 일반 탭 복귀와 구분하기 위해 badgeReplayPending으로 홈 애니메이션 재생 여부를 관리한다.
     LaunchedEffect(pagerState.settledPage, badgeReplayPending) {
         if (pagerState.settledPage == homePage && badgeReplayPending) {
             badgeReplayPending = false
@@ -112,7 +109,7 @@ fun MainTabsPager(
     }
     LifecycleEventEffect(Lifecycle.Event.ON_STOP) {
         if (homeDetailExitPending) {
-            // ?�면 ?�환???�나 ?�이 보이지 ?�을 ?�만 0?�로 준비해, ?��????�중 번쩍?�을 막는??
+            // 상세 화면으로 나가 앱이 보이지 않을 때만 0부터 다시 준비해 중간 프레임 깜빡임을 막는다.
             homeDetailExitPending = false
             homeDetailReplayPending = true
             animateHomeXpFromZero = true
@@ -132,7 +129,7 @@ fun MainTabsPager(
     HorizontalPager(
         state = pagerState,
         modifier = modifier.fillMaxSize(),
-        // ?�접 ??�� 미리 구성???��??�프 �?�??�면 ?�이 콘텐츠�? ?�라?�게 ?�다.
+        // 인접 페이지를 미리 구성해 탭 이동 시 콘텐츠가 늦게 그려지는 일을 줄인다.
         beyondViewportPageCount = 1,
         userScrollEnabled = !modalSheetOpen,
         flingBehavior = tabFlingBehavior,
@@ -150,7 +147,7 @@ fun MainTabsPager(
                     showHomeBadgeCollection = true
                     pagerScope.launch {
                         pagerState.animateScrollToPage(profilePage)
-                        // ?�이 ?�전???�면 밖으�??�간 ?�에�?0?�로 준비한??
+                        // 홈이 화면 밖으로 나간 뒤 돌아올 때 XP 애니메이션을 다시 준비한다.
                         animateHomeXpFromZero = true
                         homeExitResetToken++
                         badgeReplayPending = true
@@ -193,12 +190,12 @@ private fun HomeTab(
             onHomeDetailExit()
             navController.navigate("mission_detail/$missionId")
         },
-        // "?�른 미션 보기" ?????�속 미션 목록(?�전 ?�더). 미션 ??���??�환?��? ?�고 ?????��?.
+        // "다른 미션 보기"는 연속 미션 목록으로 이동한다. 미션 상세와 동일하게 홈 복귀 애니메이션을 준비한다.
         onOtherMissionsClick = {
             onHomeDetailExit()
             navController.navigate(Screen.MISSION_LIST_HOME)
         },
-        // ?�림 ?�이�?ripple??먼�? 보인 ???�면???�환?�도�?짧게 지?�합?�다.
+        // 알림 아이콘 ripple이 먼저 보인 뒤 화면이 전환되도록 짧게 지연한다.
         onNotificationClick = {
             homeScope.launch {
                 delay(140)
@@ -208,9 +205,9 @@ private fun HomeTab(
         },
         onShowWeeklyReportModal = onShowWeeklyReportModal,
         onBadgeCollectionClick = onBadgeCollectionClick,
-        // ?�어 ?�급 ?�내 ?�트가 ?�단 ?�비�???�� ?�안 ?�비�?가�?
+        // 하단 시트가 열릴 때 바텀 네비가 자연스럽게 가려지도록 상단 위치를 전달한다.
         onSheetTopChange = onOverlaySheetTop,
-        // �??�트가 ???�는 ?�안 ???��??�프�???모달?�라 ???�면?�로 �??�어가????.
+        // 시트가 떠 있는 동안 탭 스와이프를 잠그기 위한 모달 상태 콜백이다.
         onModalSheetChange = onModalSheetChange,
     )
 }
@@ -223,9 +220,9 @@ private fun MissionTab(
     MissionListScreen(
         onBack = { navController.popBackStack() },
         onMissionClick = { missionId -> navController.navigate("mission_detail/$missionId") },
-        onSheetTopChange = onOverlaySheetTop, // 바�??�트가 ?�라?????�버?�이 처리�??�한 콜백
+        onSheetTopChange = onOverlaySheetTop, // 바텀 시트 위치 변화는 상위 레이아웃이 처리한다.
         onSavedListClick = { navController.navigate("${Screen.ARCHIVE_LIST}/0") },
-        // ?�더 ?�더??보�???목록??미션 ??���?바로 ?�동?�다.
+        // 저장 목록 진입은 보관함 목록의 미션 탭으로 바로 이동한다.
         onArchiveClick = { navController.navigate("${Screen.ARCHIVE_LIST}/0") },
     )
 }
@@ -239,7 +236,7 @@ private fun ArchiveTab(navController: NavHostController) {
         onNavigateToList = { tabIndex: Int ->
             navController.navigate("${Screen.ARCHIVE_LIST}/$tabIndex")
         },
-        // ?�� [?�정?? isWeeklyCompare ?�라미터 추�? �??�우??분기 처리 ?�용
+        // 리포트 상세는 주간 비교 여부에 따라 다른 destination으로 분기한다.
         onNavigateToDetail = { activityId: String, type: ActivityType, isWeeklyCompare: Boolean ->
             when (type) {
                 ActivityType.CONVERSATION -> navController.navigate("archive_conversation_detail/$activityId")
@@ -272,7 +269,7 @@ private fun ProfileTab(
     val nickname = dashboard?.nickname?.takeIf { it.isNotBlank() }
         ?: profile?.nickname
         ?: profile?.name
-        ?: "?��?"
+        ?: "다민"
     val earnedBadgeCount = dashboard?.badges?.size
         ?: profileUiState.badges.count { it.isEarned }.takeIf { it > 0 }
         ?: 5
@@ -314,6 +311,7 @@ private fun ProfileTab(
         earnedBadgeCount = earnedBadgeCount,
         weeklyCompletedCount = weeklyMissionStatus?.completed ?: 5,
         weeklyTotalCount = weeklyMissionStatus?.total ?: 7,
+        weeklyDays = weeklyMissionStatus?.weeklyDays.orEmpty(),
         onEditProfileClick = { navController.navigate(Screen.PROFILE_INFO) },
         onAvatarClick = { uri ->
             val imagePart = uri.toProfileImagePart(context)
@@ -328,13 +326,4 @@ private fun ProfileTab(
         onRecentMissionClick = { navController.navigate(Screen.PROFILE_RECENT_MISSION) },
         onArchiveClick = { navController.navigate(Screen.ARCHIVE_HOME) },
     )
-}
-
-private fun Uri.toProfileImagePart(context: Context): MultipartBody.Part? {
-    val resolver = context.contentResolver
-    val mimeType = resolver.getType(this)?.takeIf { it == "image/jpeg" || it == "image/png" } ?: return null
-    val bytes = resolver.openInputStream(this)?.use { it.readBytes() } ?: return null
-    val extension = if (mimeType == "image/png") "png" else "jpg"
-    val requestBody = bytes.toRequestBody(mimeType.toMediaTypeOrNull())
-    return MultipartBody.Part.createFormData("image", "profile_image.$extension", requestBody)
 }

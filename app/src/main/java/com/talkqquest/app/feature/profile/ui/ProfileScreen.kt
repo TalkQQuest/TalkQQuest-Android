@@ -109,6 +109,7 @@ fun ProfileScreen(
     earnedBadgeCount: Int = 5,
     weeklyCompletedCount: Int = 5,
     weeklyTotalCount: Int = 7,
+    weeklyDays: List<Boolean> = emptyList(),
     onSettingsClick: () -> Unit = {},
     onEditProfileClick: () -> Unit = {},
     onAvatarClick: (Uri) -> Unit = {},
@@ -166,6 +167,7 @@ fun ProfileScreen(
         WeeklyMissionCard(
             completedCount = weeklyCompletedCount,
             totalCount = weeklyTotalCount,
+            weeklyDays = weeklyDays,
             modifier = Modifier
                 .offset(x = 16.dp, y = 427.dp)
                 .size(width = 362.dp, height = 121.dp),
@@ -328,20 +330,21 @@ private fun LevelCard(
 private fun WeeklyMissionCard(
     completedCount: Int,
     totalCount: Int,
+    weeklyDays: List<Boolean>,
     modifier: Modifier = Modifier,
 ) {
     ProfileCard(modifier = modifier) {
         Row(
             modifier = Modifier
                 .offset(x = 16.dp, y = 12.dp)
-                .size(width = 136.dp, height = 25.dp),
+                .size(width = 178.dp, height = 25.dp),
             verticalAlignment = Alignment.Bottom,
         ) {
             Text(
                 text = "이번 주 연속 미션",
                 style = BodyLargeMediumStyle,
                 color = Gray800,
-                modifier = Modifier.size(width = 109.dp, height = 24.dp),
+                modifier = Modifier.size(width = 149.dp, height = 24.dp),
             )
             Image(
                 painter = painterResource(R.drawable.ic_profile_fire),
@@ -351,11 +354,17 @@ private fun WeeklyMissionCard(
         }
 
         val days = listOf("일", "월", "화", "수", "목", "금", "토")
+        val normalizedWeeklyDays = weeklyDays.take(days.size)
+        val shouldUseWeeklyDays = normalizedWeeklyDays.isNotEmpty()
         val safeCompletedCount = completedCount.coerceIn(0, totalCount.coerceAtLeast(0)).coerceAtMost(days.size)
         days.forEachIndexed { index, day ->
             MissionDay(
                 day = day,
-                completed = index < safeCompletedCount,
+                completed = if (shouldUseWeeklyDays) {
+                    normalizedWeeklyDays.getOrElse(index) { false }
+                } else {
+                    index < safeCompletedCount
+                },
                 modifier = Modifier
                     .offset(x = (16 + index * 50).dp, y = 53.dp)
                     .size(width = 26.dp, height = 56.dp),
@@ -505,13 +514,3 @@ private fun ProfileScreenPreview() {
         ProfileScreen()
     }
 }
-
-
-
-
-
-
-
-
-
-

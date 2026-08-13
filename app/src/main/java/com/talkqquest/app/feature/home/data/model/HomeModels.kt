@@ -118,6 +118,7 @@ data class DashboardBadge(
 data class WeeklyMissionStatus(
     val completed: Int = 0,
     val total: Int = 7,
+    val weeklyDays: List<Boolean> = emptyList(),
 )
 
 @Serializable

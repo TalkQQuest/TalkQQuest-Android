@@ -69,7 +69,7 @@ class ProfileViewModel @Inject constructor(
                     it.copy(xpSummary = result.data)
                 }
                 is ApiResult.Error -> _uiState.update {
-                    it.copy(errorMessage = result.message ?: "XP ������ �ҷ����� ���߾��.")
+                    it.copy(errorMessage = result.message ?: "XP 정보를 불러오지 못했어요.")
                 }
                 is ApiResult.Exception -> _uiState.update {
                     it.copy(errorMessage = networkErrorMessage)
@@ -85,7 +85,7 @@ class ProfileViewModel @Inject constructor(
                     it.copy(isLoading = false, archiveSummary = result.data)
                 }
                 is ApiResult.Error -> _uiState.update {
-                    it.copy(isLoading = false, errorMessage = result.message ?: "최근 ?�동??불러?��? 못했?�요.")
+                    it.copy(isLoading = false, errorMessage = result.message ?: "최근 활동을 불러오지 못했어요.")
                 }
                 is ApiResult.Exception -> _uiState.update {
                     it.copy(isLoading = false, errorMessage = networkErrorMessage)
@@ -245,7 +245,7 @@ class ProfileViewModel @Inject constructor(
                     it.copy(
                         isLoading = false,
                         settings = previous,
-                        errorMessage = result.message ?: "\uC124\uC815\uC744 \uC218\uC815\uD558\uC9C0 \uBABB\uD588\uC5B4\uC694.",
+                        errorMessage = if (result.code == 404) "알림 설정을 저장하지 못했어요. 잠시 후 다시 시도해주세요." else result.message ?: "설정을 수정하지 못했어요.",
                     )
                 }
                 is ApiResult.Exception -> _uiState.update {
@@ -327,4 +327,3 @@ class ProfileViewModel @Inject constructor(
         const val networkErrorMessage = "\uB124\uD2B8\uC6CC\uD06C \uC5F0\uACB0\uC744 \uD655\uC778\uD574\uC8FC\uC138\uC694."
     }
 }
-

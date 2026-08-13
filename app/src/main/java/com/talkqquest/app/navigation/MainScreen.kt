@@ -1,4 +1,4 @@
-﻿package com.talkqquest.app.navigation
+package com.talkqquest.app.navigation
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -25,8 +25,6 @@ import com.talkqquest.app.feature.home.ui.WeeklyReportModal
 import dev.chrisbanes.haze.HazeState
 import dev.chrisbanes.haze.hazeSource
 
-// ???? ?섎떒 ?ㅻ퉬(???덈뒗 ?좊━ ?뚯빟)媛 ?붾㈃ ?꾩뿉 寃뱀퀜 ?щ떎.
-// hazeState: ??肄섑뀗痢?NavGraph)瑜??좊━(?섎떒 ?ㅻ퉬)媛 ?먮━寃?鍮꾩텛?꾨줉 ?곌껐?섎뒗 ?곹깭.
 @Composable
 fun MainScreen() {
     val navController = rememberNavController()
@@ -54,38 +52,26 @@ fun MainScreen() {
         }
     }
 
-    // ?섎떒諛??쒖떆 route: ??4媛?+ ?붿옄?몄긽 ?섎떒諛붽? ?덈뒗 ?붾㈃(誘몄뀡 紐⑸줉). 洹????먮룞 ?④?.
-    // currentRoute == null = 泥??꾨젅???쒖옉 ?붾㈃ ?명똿 ?? ???④꼈????쾶 ?⑥? ?딄쾶 諛붾줈 ?쒖떆.
-    // ??CONVERSATION_PREP(誘몄뀡 吏꾩엯)? ?쒖쇅 ??UI 7李?"誘몄뀡 吏꾩엯" ?꾨젅?꾩뿉 ?섎떒 ?ㅻ퉬寃뚯씠?섏씠 ?놁쓬(2026-07-19 CSS ?뺤씤).
     val bottomBarRoutes = BottomNavItem.entries.map { it.route } +
         Screen.MISSION_LIST + Screen.MISSION_LIST_HOME + Screen.MISSION_DETAIL +
         Screen.PROFILE_BADGES + Screen.PROFILE_RECENT_MISSION
-    // CONVERSATION 제외(UI 13차): "대화 시작(추천 답변 열림)" 프레임에 하단 앱 네비가 없다.
     // 시스템 네비(804~852)만 있고 입력창이 그 바로 위 24까지 내려온다. 나가는 길은 헤더의
-    // 뒤로가기(저장 안 함) / "대화 완료"(완료·저장) 두 버튼이 대신한다.
     // REPORT 제외: 최신 시안에서 리포트(성장/주간)는 하단 네비 없는 단독 화면(뒤로가기로 이탈)
 
     val hazeState = remember { HazeState() }
 
-    // ???섏씠吏 諛곌꼍(Gray50 = ?붿옄?몄떆?ㅽ뀥 '?섏씠吏 諛곌꼍'). ???붾㈃?ㅼ씠 媛숈? ?ㅼ쓣 怨듭쑀?섎룄濡?猷⑦듃?먯꽌 ??踰?源?
     BoxWithConstraints(modifier = Modifier.fillMaxSize().background(Gray50)) {
         val density = LocalDensity.current
-        // ?섎떒 ?ㅻ퉬 臾띠쓬(?뚯빟 64 + ?꾩븘???щ갚 12x2 + ?쒖뒪???ㅻ퉬 ?몄뀑)??????y(px)
         val navTopPx = with(density) { maxHeight.toPx() - 88.dp.toPx() } -
             WindowInsets.navigationBars.getBottom(density)
 
-        // ?붾㈃ ?ㅻ쾭?덉씠(???諛뷀??쒗듃)??????y(px). null = ?쒗듃 ?놁쓬.
-        // ?ㅻ퉬???쒗듃蹂대떎 ???덉씠?대씪 洹몃깷 ?먮㈃ ?쒗듃 ?꾩뿉 寃뱀퀜 蹂댁엫 ???쒗듃 ????"??蹂대떎
-        // ?꾨옒履쎌? 洹몃━吏 ?딆븘, ?쒗듃媛 ?대젮媛??留뚰겮 ?ㅻ퉬媛 ?ㅼ뿉 ?덈뜕 寃껋쿂???꾩뿉?쒕????쒕윭?쒕떎.
         var overlaySheetTop by remember { mutableStateOf<Float?>(null) }
 
-        // ?쒗듃媛 ?ㅻ퉬 ?곸뿭???꾩쟾????뒗 ?숈븞???ㅻ퉬瑜??꾩삁 鍮쇱꽌(洹몃┝+?곗튂 紐⑤몢) ?쒗듃 議곗옉????留됱쓬.
         val showBottomBar = (currentRoute == null || currentRoute in bottomBarRoutes) &&
             (overlaySheetTop?.let { it > navTopPx } ?: true)
 
         NavGraph(
             navController = navController,
-            // hazeSource: ???곸뿭(?붾㈃ 肄섑뀗痢????좊━???먮━寃?鍮꾩튌 '?먮낯'.
             pagerState = pagerState,
             // 탭 간 가로 스와이프는 MainTabsPager 내부 HorizontalPager가 손가락을 따라 처리한다.
             modifier = Modifier
@@ -109,7 +95,6 @@ fun MainScreen() {
                         if (sheetTop == null) {
                             drawContent()
                         } else {
-                            // ?쒗듃??????씤 遺遺??쒗듃 ???????꾩そ)留?洹몃┝
                             clipRect(bottom = (sheetTop - navTopPx).coerceAtMost(size.height)) {
                                 this@drawWithContent.drawContent()
                             }

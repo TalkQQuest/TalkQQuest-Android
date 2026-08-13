@@ -1,4 +1,4 @@
-﻿package com.talkqquest.app.feature.profile.ui
+package com.talkqquest.app.feature.profile.ui
 
 import android.net.Uri
 
@@ -8,6 +8,7 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -161,13 +162,24 @@ private fun ProfileInfoRow(
         modifier = modifier.clickable(onClick = onClick),
         verticalAlignment = Alignment.CenterVertically,
     ) {
+        val titleModifier = if (titleWidth == null) {
+            Modifier
+                .weight(1f)
+                .height(24.dp)
+        } else {
+            Modifier.size(width = titleWidth.dp, height = 24.dp)
+        }
         Text(
             text = title,
             style = TqType.BodyL,
             color = Gray800,
-            modifier = Modifier.size(width = titleWidth!!.dp, height = 24.dp),
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            modifier = titleModifier,
         )
-        Spacer(Modifier.weight(1f))
+        if (titleWidth != null) {
+            Spacer(Modifier.weight(1f))
+        }
         if (trailing != null) {
             Text(
                 text = trailing,

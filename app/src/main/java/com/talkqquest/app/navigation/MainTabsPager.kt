@@ -43,6 +43,9 @@ import com.talkqquest.app.feature.profile.ui.ProfileBadgeUi
 import com.talkqquest.app.feature.profile.viewmodel.ProfileViewModel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import okhttp3.MediaType.Companion.toMediaTypeOrNull
+import okhttp3.MultipartBody
+import okhttp3.RequestBody.Companion.toRequestBody
 
 // 하단 탭 4개(홈·미션·보관함·프로필)를 하나의 HorizontalPager에 담아 손가락 추종 슬라이드를 제공한다.
 // - 페이지 = BottomNavItem.entries 순서와 1:1 매칭.
@@ -156,7 +159,7 @@ fun MainTabsPager(
                 onHomeDetailExit = markHomeDetailExit,
                 onShowWeeklyReportModal = onShowWeeklyReportModal,
             ) { modalSheetOpen = it }
-            BottomNavItem.Mission -> MissionTab(navController, pagerState, onOverlaySheetTop)
+            BottomNavItem.Mission -> MissionTab(navController, onOverlaySheetTop)
             BottomNavItem.Archive -> ArchiveTab(navController)
             BottomNavItem.Profile -> ProfileTab(
                 navController = navController,
@@ -215,23 +218,15 @@ private fun HomeTab(
 @Composable
 private fun MissionTab(
     navController: NavHostController,
-    pagerState: PagerState,
     onOverlaySheetTop: (Float?) -> Unit,
 ) {
-    val missionScope = rememberCoroutineScope()
-    val archivePage = BottomNavItem.entries.indexOf(BottomNavItem.Archive)
     MissionListScreen(
         onBack = { navController.popBackStack() },
         onMissionClick = { missionId -> navController.navigate("mission_detail/$missionId") },
         onSheetTopChange = onOverlaySheetTop, // 바텀시트가 올라올 때 오버레이 처리를 위한 콜백
         onSavedListClick = { navController.navigate("${Screen.ARCHIVE_LIST}/0") },
-        // 헤더 폴더도 하단 보관함 탭을 누른 것과 같은 페이저 전환을 사용한다.
-        // 선택 칩은 pagerState를 따라 오른쪽으로 이동하고 화면은 인접 페이지로 함께 슬라이드된다.
-        onArchiveClick = {
-            if (archivePage >= 0 && archivePage != pagerState.currentPage) {
-                missionScope.launch { pagerState.animateScrollToPage(archivePage) }
-            }
-        },
+        // 헤더 폴더는 보관함 목록의 미션 탭으로 바로 이동한다.
+        onArchiveClick = { navController.navigate("${Screen.ARCHIVE_LIST}/0") },
     )
 }
 
@@ -310,15 +305,33 @@ private fun ProfileTab(
         )
     } else ProfileScreen(
         nickname = nickname,
+        avatarUrl = dashboard?.avatarUrl ?: profile?.avatarUrl,
         level = dashboard?.level ?: profile?.level ?: 2,
         xp = dashboard?.xp ?: profile?.xp ?: 30,
         earnedBadgeCount = earnedBadgeCount,
         weeklyCompletedCount = weeklyMissionStatus?.completed ?: 5,
         weeklyTotalCount = weeklyMissionStatus?.total ?: 7,
         onEditProfileClick = { navController.navigate(Screen.PROFILE_INFO) },
+        onAvatarClick = { uri ->
+            val imagePart = uri.toProfileImagePart(context)
+            if (imagePart == null) {
+                Toast.makeText(context, "\uC774\uBBF8\uC9C0\uB97C \uBD88\uB7EC\uC624\uC9C0 \uBABB\uD588\uC5B4\uC694.", Toast.LENGTH_SHORT).show()
+            } else {
+                profileViewModel.uploadProfileImage(imagePart)
+            }
+        },
         onSettingsClick = { navController.navigate(Screen.PROFILE_SETTINGS) },
         onBadgesClick = { navController.navigate(Screen.PROFILE_BADGES) },
         onRecentMissionClick = { navController.navigate(Screen.PROFILE_RECENT_MISSION) },
         onArchiveClick = { navController.navigate(Screen.ARCHIVE_HOME) },
     )
+}
+
+private fun Uri.toProfileImagePart(context: Context): MultipartBody.Part? {
+    val resolver = context.contentResolver
+    val mimeType = resolver.getType(this)?.takeIf { it == "image/jpeg" || it == "image/png" } ?: return null
+    val bytes = resolver.openInputStream(this)?.use { it.readBytes() } ?: return null
+    val extension = if (mimeType == "image/png") "png" else "jpg"
+    val requestBody = bytes.toRequestBody(mimeType.toMediaTypeOrNull())
+    return MultipartBody.Part.createFormData("image", "profile_image.$extension", requestBody)
 }

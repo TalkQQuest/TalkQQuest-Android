@@ -73,6 +73,7 @@ import com.talkqquest.app.feature.mission.ui.FeedbackScreen
 import com.talkqquest.app.feature.mission.ui.MissionCompleteScreen
 import com.talkqquest.app.feature.mission.ui.MissionDetailScreen
 import com.talkqquest.app.feature.mission.ui.MissionListScreen
+import com.talkqquest.app.feature.home.viewmodel.HomeViewModel
 import com.talkqquest.app.feature.report.ui.ReportScreen
 import com.talkqquest.app.feature.report.ui.WeeklyCompareScreen
 import com.talkqquest.app.feature.archive.ui.ArchiveListScreen
@@ -87,6 +88,8 @@ import kotlinx.coroutines.launch
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.MultipartBody
 import okhttp3.RequestBody.Companion.toRequestBody
+
+private const val NOTIFICATION_READ_REFRESH_KEY = "notification_read_refresh"
 
 @Composable
 fun NavGraph(
@@ -559,13 +562,31 @@ fun NavGraph(
             )
         }
 
-        composable(Screen.HOME) {
+        composable(Screen.HOME) { homeEntry ->
+            val notificationReadRefresh by homeEntry.savedStateHandle
+                .getStateFlow(NOTIFICATION_READ_REFRESH_KEY, 0L)
+                .collectAsState()
+            val homeViewModel: HomeViewModel = hiltViewModel(homeEntry)
+            LaunchedEffect(notificationReadRefresh) {
+                if (notificationReadRefresh != 0L) {
+                    // 알림 종료 직후에는 XP 복귀 모션과 별개로 홈의 새 알림 상태만 다시 조회한다.
+                    homeViewModel.loadHome(showLoading = false)
+                }
+            }
             MainTabsPager(navController, pagerState, onOverlaySheetTop, onShowWeeklyReportModal)
         }
 
         composable(Screen.NOTIFICATION) {
             NotificationScreen(
-                onBack = { navController.popBackStack() },
+                onBack = {
+                    // 상단 화살표와 시스템 뒤로가기가 모두 이 경로를 타며,
+                    // 알림 Repository의 로컬 읽음 반영 뒤 홈에 독립적인 갱신 신호를 보낸다.
+                    navController.previousBackStackEntry?.savedStateHandle?.set(
+                        NOTIFICATION_READ_REFRESH_KEY,
+                        System.nanoTime(),
+                    )
+                    navController.popBackStack()
+                },
                 // 알림이 가리키는 리포트로 바로 들어간다(서버 referenceId). 없으면 가장 최근 주차.
                 onWeeklyReportClick = { reportId ->
                     navController.navigate("weekly_compare?reportId=${reportId.orEmpty()}")

@@ -226,7 +226,16 @@ internal fun TierPromotionOverlay(
                     horizontalAlignment = Alignment.CenterHorizontally,
                     modifier = Modifier.offset(y = (-56).dp),
                 ) {
-                    Box(contentAlignment = Alignment.Center) {
+                    // 문구 영역은 처음부터 확보해 레이아웃 높이가 도중에 바뀌지 않게 한다.
+                    // 문구가 나타나는 동안 휘장이 중앙에서 최종 위치로 자연스럽게 올라간다.
+                    Box(
+                        contentAlignment = Alignment.Center,
+                        modifier = Modifier.graphicsLayer {
+                            translationY = with(density) {
+                                ((1f - textProgress) * 34f).dp.toPx()
+                            }
+                        },
+                    ) {
                         // 뒤로 퍼지는 광선 — 휘장이 자리를 잡는 동안 천천히 돈다.
                         Canvas(modifier = Modifier.size(240.dp)) {
                             if (e <= 0f) return@Canvas
@@ -286,27 +295,25 @@ internal fun TierPromotionOverlay(
                         )
                     }
 
-                    if (textProgress > 0f) {
-                        Spacer(Modifier.height(10.dp))
-                        Column(
-                            horizontalAlignment = Alignment.CenterHorizontally,
-                            modifier = Modifier.graphicsLayer {
-                                alpha = textProgress
-                                translationY = (1f - textProgress) * 22f
-                            },
-                        ) {
-                            Text(
-                                text = "$newTierName 승급!",
-                                style = TqType.HeadingL.motionLine(),
-                                color = Color.White,
-                            )
-                            Spacer(Modifier.height(6.dp))
-                            Text(
-                                text = "별 3개를 모아 티어가 올랐어요",
-                                style = TqType.BodyM.motionLine(),
-                                color = Color.White.copy(alpha = 0.82f),
-                            )
-                        }
+                    Spacer(Modifier.height(10.dp))
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        modifier = Modifier.graphicsLayer {
+                            alpha = textProgress
+                            translationY = (1f - textProgress) * 22f
+                        },
+                    ) {
+                        Text(
+                            text = "$newTierName 승급!",
+                            style = TqType.HeadingL.motionLine(),
+                            color = Color.White,
+                        )
+                        Spacer(Modifier.height(6.dp))
+                        Text(
+                            text = "별 3개를 모아 티어가 올랐어요",
+                            style = TqType.BodyM.motionLine(),
+                            color = Color.White.copy(alpha = 0.82f),
+                        )
                     }
                 }
             }

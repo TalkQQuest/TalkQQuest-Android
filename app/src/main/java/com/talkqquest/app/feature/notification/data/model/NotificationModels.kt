@@ -17,6 +17,10 @@ data class NotificationItemDto(
     val body: String? = null,      // 移대뱶 ?꾨옒 以?(nullable) ??dev ?ㅺ퀎???꾨뱶紐?(?댁쟾 異붿젙 message?먯꽌 ?뺤젙)
     val isRead: Boolean = false,
     val createdAt: String = "",    // ISO (?? 2026-07-22T09:51:57.440Z)
+    // 이 알림이 가리키는 대상. 백엔드 추가(2026-08-13).
+    // 주간 비교 리포트 알림이면 referenceType이 리포트 계열이고 referenceId가 그 리포트 id다.
+    val referenceId: String? = null,
+    val referenceType: String? = null,
 )
 
 // GET/PATCH /api/v1/notifications/settings ??dev NotificationSettingsResponseDto.
@@ -60,4 +64,6 @@ data class NotificationUiItem(
     // 二쇨컙 鍮꾧탳 由ы룷???뚮┝留??꾨옒 以??놁뿉 ?붿궡?쒓? 遺숇뒗?????뚮윭??諛붾줈 由ы룷?몃줈 ?대룞?섎뒗 ?듬줈?쇱꽌
     // (CSS "?뚮┝李? Frame 427321769). ?섎㉧吏 ?뚮┝? ?쎄퀬 留덈뒗 寃껋씠???붿궡?쒓? ?녿떎.
     val hasLink: Boolean = false,
+    // 화살표가 데려갈 리포트 id (서버 referenceId). 없으면 가장 최근 주차로 들어간다.
+    val linkReportId: String? = null,
 )

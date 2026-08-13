@@ -6,6 +6,7 @@ import com.talkqquest.app.feature.notification.data.model.NotificationSettingsUp
 import com.talkqquest.app.feature.notification.data.model.NotificationsResponse
 import kotlinx.serialization.Serializable
 import retrofit2.http.Body
+import retrofit2.http.DELETE
 import retrofit2.http.GET
 import retrofit2.http.PATCH
 import retrofit2.http.POST
@@ -33,6 +34,17 @@ interface NotificationApi {
     // ?꾩껜 ?쎌쓬 泥섎━
     @PATCH("api/v1/notifications/all/read")
     suspend fun markAllRead(): ApiResponse<MarkReadResponse>
+
+    // 알림 삭제 / 전체 삭제 — 2026-08-13 백엔드 신규.
+    // 그 전에는 서버에 지우는 통로가 없어 지운 id를 DataStore에 모아 목록에서 걸러냈고,
+    // 재설치하면 지운 알림이 되살아났다. 이제 서버에서 실제로 지운다.
+    @DELETE("api/v1/notifications/{notificationId}")
+    suspend fun deleteNotification(
+        @Path("notificationId") notificationId: String,
+    ): ApiResponse<DeleteNotificationResponse>
+
+    @DELETE("api/v1/notifications")
+    suspend fun deleteAllNotifications(): ApiResponse<DeleteNotificationResponse>
 
     // ?뚮┝ ?ㅼ젙 議고쉶 ??dev NotificationSettingsResponseDto.
     // ?ㅼ젙 UI???꾨줈???ㅼ젙 ?붾㈃(A?대떦)???덇퀬, 洹몄そ? 媛숈? 媛믪쓣 /users/me/settings濡??쎈뒗??
@@ -62,6 +74,14 @@ interface NotificationApi {
 @Serializable
 data class MarkReadResponse(
     val updatedCount: Int = 0,
+)
+
+// 삭제 응답 data — 개별은 DeleteNotificationResponseDto{notificationId, deleted},
+// 전체 삭제는 data가 null(ApiResponse_null_)이라 같은 타입을 기본값으로 받는다(읽음 처리와 같은 방식).
+@Serializable
+data class DeleteNotificationResponse(
+    val notificationId: String = "",
+    val deleted: Boolean = false,
 )
 
 // POST /api/v1/devices/fcm-token ?붿껌 body.

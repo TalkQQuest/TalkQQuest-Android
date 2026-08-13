@@ -83,7 +83,8 @@ object Screen {
     // WeeklyCompareScreen — 주간 비교 리포트(홈/알림창에서 진입).
     // ReportScreen(성장 리포트)과 다른 화면이다: 주차 이동·자주 연습한 주제·미션 진행률이 있고
     // 탭이 없다. 주가 끝나면 알림으로 안내되고 그 알림에서 들어온다.
-    const val WEEKLY_COMPARE = "weekly_compare"
+    // reportId를 붙이면 그 리포트로 바로 들어간다(홈 도착 모달·알림). 없으면 가장 최근 주차.
+    const val WEEKLY_COMPARE = "weekly_compare?reportId={reportId}"
 }
 
 

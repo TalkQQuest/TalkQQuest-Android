@@ -118,9 +118,7 @@ com.talkqquest.app
 │   ├── notification/     # (B)
 │   ├── mission/          # (B) — 대화 진행·대화 설정 화면도 여기 있습니다
 │   ├── report/           # (B)
-│   ├── archive/          # (C)
-│   ├── community/        # (C) 미구현 — 빈 폴더
-│   └── conversation/     # 빈 폴더 (대화 화면은 mission/ 안에 있음)
+│   └── archive/          # (C)
 └── navigation/
     ├── MainScreen.kt     # 앱 최상위 셸 (NavGraph + 하단 바 + 전역 모달)
     ├── NavGraph.kt       # 전체 네비게이션 그래프
@@ -143,7 +141,7 @@ com.talkqquest.app
 **지금 구조가 원칙과 어긋난 곳** — 알고 쓰라고 적어둡니다. 새 코드는 원칙 쪽으로 쓰세요.
 - `feature/profile/`에 Api 파일이 없고 `ProfileRepository`가 `HomeApi`·`NotificationApi`를 씁니다. 프로필 전용 엔드포인트를 새로 만든다면 `ProfileApi.kt`를 새로 파는 편이 낫습니다.
 - `feature/onboarding/`에 Api·ViewModel이 없고 `AuthApi`·`AuthViewModel`을 씁니다.
-- `feature/conversation/`, `feature/community/`는 `.gitkeep`만 있는 빈 폴더입니다.
+- **대화 진행·대화 설정 화면은 `feature/mission/` 안에 있습니다.** 별도의 `conversation` 패키지를 두지 않았습니다.
 
 ## 6. 화면(Screen) 네이밍 규칙
 

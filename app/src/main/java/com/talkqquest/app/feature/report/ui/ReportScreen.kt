@@ -831,11 +831,8 @@ private fun CompetencyCard(
         delay(720) // 아래 점수의 상승이 완전히 끝난 뒤에만 만점 체크를 보여 준다.
         completionChecksVisible = true
         delay(340) // 원 채움(240ms)과 체크 등장(140ms 지연 + 160ms)을 모두 마친다.
-        if (completedDiamondThisReport) {
-            // 네 축의 에너지가 중심으로 모인 뒤 별을 완성한다.
-            completionEnergy.snapTo(0f)
-            completionEnergy.animateTo(1f, tween(180, easing = FastOutSlowInEasing))
-        }
+        // 체크 직후 별도로 꼭짓점을 모으던 completionEnergy 연출은 제거한다.
+        // 마름모 집결은 이어지는 TierMotion.converge에서 한 번만 재생한다.
         onCompletionAnimationFinished()
     }
 

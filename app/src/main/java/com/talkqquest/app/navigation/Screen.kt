@@ -48,24 +48,21 @@ object Screen {
     const val PROFILE_SUPPORT = "profile_support"                 // ProfileSupportScreen
     const val PROFILE_WITHDRAW = "profile_withdraw"               // ProfileWithdrawScreen
 
-    // ?? B?대떦 (?대룄/?ㅺ린??: 誘몄뀡 쨌 AI ???쨌 ?깆옣 由ы룷????
     const val HOME = "home"                                       // HomeScreen
     const val NOTIFICATION = "notification"                       // NotificationScreen (알림 화면)
     const val MISSION_LIST = "mission_list"                       // MissionListScreen (하단 미션 탭)
     const val MISSION_LIST_HOME = "mission_list_home"             // MissionListScreen (홈 "다른 미션 보기" — 예전 헤더, 홈 탭 유지)
     const val MISSION_DETAIL = "mission_detail/{missionId}"       // MissionDetailScreen
-    // 미션 진입 · 대화 설정 4스텝 (ConversationSetupScreens). 옛 CONVERSATION_PREP 대체.
     const val CONVERSATION_SETUP_1 = "conversation_setup_1/{missionId}" // 장소
     const val CONVERSATION_SETUP_2 = "conversation_setup_2/{missionId}" // 상대
     const val CONVERSATION_SETUP_3 = "conversation_setup_3/{missionId}" // 성별·나이
     const val CONVERSATION_SETUP_4 = "conversation_setup_4/{missionId}" // 친밀도·말투
     const val CONVERSATION = "conversation/{conversationId}"      // ConversationScreen
-    const val CONVERSATION_COMPLETE = "conversation_complete/{conversationId}" // ConversationCompleteScreen (????붿빟)
-    const val MISSION_COMPLETE = "mission_complete/{missionId}"   // MissionCompleteScreen (XP ?띾뱷)
+    const val CONVERSATION_COMPLETE = "conversation_complete/{conversationId}" // ConversationCompleteScreen
+    const val MISSION_COMPLETE = "mission_complete/{missionId}"   // MissionCompleteScreen (XP 획득)
     const val FEEDBACK = "feedback/{feedbackId}"                  // FeedbackScreen
     const val FEEDBACK_DETAIL = "feedback_detail/{feedbackId}"    // FeedbackDetailScreen
 
-    // ?? C?대떦 (??源?ы썕): ?꾩뭅?대툕 쨌 而ㅻ??덊떚 ?? (?꾩뭅?대툕 route????ARCHIVE_* 李멸퀬)
     const val COMMUNITY_LIST = "community_list"                   // CommunityListScreen
     const val COMMUNITY_DETAIL = "community_detail/{communityId}" // CommunityDetailScreen
     const val COMMUNITY_CHAT_PREVIEW = "community_chat_preview/{communityId}" // CommunityChatPreviewScreen
@@ -73,10 +70,6 @@ object Screen {
     const val COMMUNITY_ADDRESS_SEARCH = "community_address_search" // CommunityAddressSearchScreen
     const val COMMUNITY_PREVIEW = "community_preview"            // CommunityPreviewScreen
     const val MY_GROUPS = "my_groups"                            // MyGroupsScreen
-    // ReportScreen (?깆옣 由ы룷??二쇨컙 鍮꾧탳 ???듯빀).
-    // missionTitle = ??由ы룷?멸? ?섏삩 誘몄뀡 ?쒕ぉ (????쒗듃 移대뱶 ?쒕ぉ???곗엫). ?놁쑝硫?鍮?媛?
-    // conversationId = 이 리포트가 나온 대화 id. POST /reports가 2026-08-10부터 이 값을 받는다.
-    // gains = 마름모 꼭짓점 "+N"에 쓸 이번 대화 점수 4개(친절,주도,공감,질문 순 쉼표 구분).
     // 서버 성장 리포트 응답엔 증가분이 없어, 방금 그 값을 받은 피드백 화면이 넘겨준다.
     const val REPORT = "report?missionTitle={missionTitle}&conversationId={conversationId}&gains={gains}"
 

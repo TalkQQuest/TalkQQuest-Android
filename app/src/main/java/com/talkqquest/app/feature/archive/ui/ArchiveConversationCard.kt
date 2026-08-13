@@ -7,7 +7,6 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -54,13 +53,12 @@ fun ArchiveConversationCard(
     Row(
         modifier = modifier
             .fillMaxWidth()
-            // 💡 고정 최소 높이(heightIn)를 제거하고 내부 텍스트 줄 수에 맞춰 카드 높이가 자동으로 조절되도록 wrapContentHeight 적용
             .wrapContentHeight()
             .softShadow(color = Gray1000.copy(alpha = 0.01f), offsetY = 8.dp, blur = 24.dp, cornerRadius = 20.dp)
             .clip(RoundedCornerShape(20.dp))
             .background(White)
             .clickable(onClick = onClick)
-            .padding(start = 16.dp, top = 12.dp, bottom = 12.dp, end = 6.dp), // 💡 디자이너 명세인 위아래 12dp 여백은 항상 유지됨
+            .padding(start = 16.dp, top = 12.dp, bottom = 12.dp, end = 6.dp),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.Top
     ) {
@@ -92,43 +90,49 @@ fun ArchiveConversationCard(
                 )
 
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    // 태그 및 요약 텍스트
-                    Column(verticalArrangement = Arrangement.spacedBy(0.dp)) {
-                        if (tags.isNotEmpty()) {
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(0.dp),
-                                modifier = Modifier.height(22.dp)
-                            ) {
-                                tags.forEachIndexed { index, tag ->
-                                    Text(
-                                        text = tag,
-                                        style = TqType.Caption.figma(),
-                                        color = Gray500
-                                    )
-                                    if (index < tags.lastIndex) {
-                                        Box(
-                                            modifier = Modifier
-                                                .padding(horizontal = 10.dp)
-                                                .width(1.dp)
-                                                .height(9.dp)
-                                                .background(Gray300)
+                    // 💡 [수정] 태그와 요약 내용의 존재 여부를 파악합니다.
+                    val hasTags = tags.isNotEmpty()
+                    val hasSummary = summary.isNotBlank()
+
+                    // 둘 중 하나라도 있을 때만 영역을 그려 불필요한 여백을 제거합니다.
+                    if (hasTags || hasSummary) {
+                        Column(verticalArrangement = Arrangement.spacedBy(0.dp)) {
+                            if (hasTags) {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(0.dp),
+                                    modifier = Modifier.height(22.dp)
+                                ) {
+                                    tags.forEachIndexed { index, tag ->
+                                        Text(
+                                            text = tag,
+                                            style = TqType.Caption.figma(),
+                                            color = Gray500
                                         )
+                                        if (index < tags.lastIndex) {
+                                            Box(
+                                                modifier = Modifier
+                                                    .padding(horizontal = 10.dp)
+                                                    .width(1.dp)
+                                                    .height(9.dp)
+                                                    .background(Gray300)
+                                            )
+                                        }
                                     }
                                 }
                             }
-                        } else {
-                            Spacer(modifier = Modifier.height(22.dp))
-                        }
 
-                        Text(
-                            text = summary,
-                            style = TqType.BodyS.copy(lineHeight = 20.sp).figma(),
-                            color = Gray600,
-                            maxLines = 2,
-                            overflow = TextOverflow.Ellipsis,
-                            modifier = Modifier.fillMaxWidth()
-                        )
+                            if (hasSummary) {
+                                Text(
+                                    text = summary,
+                                    style = TqType.BodyS.copy(lineHeight = 20.sp).figma(),
+                                    color = Gray600,
+                                    maxLines = 2,
+                                    overflow = TextOverflow.Ellipsis,
+                                    modifier = Modifier.fillMaxWidth()
+                                )
+                            }
+                        }
                     }
 
                     // 하단 날짜 및 시간 영역
@@ -204,7 +208,7 @@ fun ArchiveConversationCard(
 private fun ArchiveConversationCardPreview() {
     TalkQQuestTheme {
         Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
-            // 💡 1줄 테스트 (카드가 알맞게 짧아짐)
+            // 💡 1. 정상적으로 태그와 1줄 요약이 있는 케이스
             ArchiveConversationCard(
                 title = "처음 보는 사람에게 짧게 인사하기",
                 tags = listOf("자기 성장", "첫 만남"),
@@ -213,11 +217,20 @@ private fun ArchiveConversationCardPreview() {
                 time = "14:35",
                 onClick = {}
             )
-            // 💡 2줄 테스트 (카드가 자연스럽게 늘어남)
+            // 💡 2. 긴 타이틀과 2줄 요약이 있는 케이스
             ArchiveConversationCard(
                 title = "대학교 전공과 진로에 대해 깊게 이야기 했어요",
                 tags = listOf("학교", "진로"),
-                summary = "서로의 전공과 관심 분야를 공유하고, 진로 고민에 대해 조언을 주고받았어요.",
+                summary = "서로의 전공과 관심 분야를 공유하고, 진로 고민에 대해 조언을 주고받았어요. 아주 길게 적어보았습니다.",
+                date = "2026.08.20",
+                time = "14:35",
+                onClick = {}
+            )
+            // 💡 3. 내용이 아무것도 없는 케이스 (여백 제거 테스트)
+            ArchiveConversationCard(
+                title = "대화를 진행하지 않고 바로 종료했어요",
+                tags = emptyList(),
+                summary = "",
                 date = "2026.08.20",
                 time = "14:35",
                 onClick = {}

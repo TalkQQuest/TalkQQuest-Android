@@ -57,11 +57,14 @@
             android:name="com.google.firebase.messaging.default_notification_channel_id"
             android:value="@string/default_notification_channel_id" />
 
+        <!-- portrait 고정: 디자인이 393×852 세로 기준이고 FitDesign도 세로 비율로 축소율을 잡는다.
+             가로에서는 축소율 계산이 무너져 레이아웃이 늘어난다. -->
         <activity
             android:name=".MainActivity"
             android:exported="true"
             android:label="@string/app_name"
             android:theme="@style/Theme.TalkQQuest.Starting"
+            android:screenOrientation="portrait"
             android:windowSoftInputMode="adjustResize">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />

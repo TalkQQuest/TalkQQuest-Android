@@ -144,7 +144,9 @@ fun HomeScreen(
     onStartMissionClick: (String) -> Unit = {}, // 오늘의 미션 "미션 시작하기" → 미션 상세
     onOtherMissionsClick: () -> Unit = {},    // "다른 미션 보기" → 미션 목록
     onNotificationClick: () -> Unit = {},     // 상단 벨 → 알림창
-    onShowWeeklyReportModal: () -> Unit = {}, // 주간 비교 리포트 도착 모달은 앱 최상위 레이어에서 표시
+    // 주간 비교 리포트 도착 모달은 앱 최상위 레이어에서 표시. 서버가 준 reportId를 함께 올려
+    // "보러가기"가 목록 최신을 추측하지 않고 그 리포트를 바로 열게 한다.
+    onShowWeeklyReportModal: (String?) -> Unit = {},
     onBadgeCollectionClick: () -> Unit = {}, // 나의 배지 컬렉션 → 프로필 배지 목록
     onSheetTopChange: (Float?) -> Unit = {},  // 티어 승급 안내 시트가 하단 네비를 덮는 동안 네비 가림
     onModalSheetChange: (Boolean) -> Unit = {}, // 티어 시트가 떠 있는 동안 탭 스와이프를 끄기 위한 신호
@@ -185,7 +187,7 @@ private fun HomeScreen(
     onStartMissionClick: (String) -> Unit = {},
     onOtherMissionsClick: () -> Unit = {},
     onNotificationClick: () -> Unit = {},
-    onShowWeeklyReportModal: () -> Unit = {},
+    onShowWeeklyReportModal: (String?) -> Unit = {},
     onBadgeCollectionClick: () -> Unit = {},
     onSheetTopChange: (Float?) -> Unit = {},
     onModalSheetChange: (Boolean) -> Unit = {},
@@ -268,13 +270,15 @@ private fun HomeContent(
     onRefreshTodayMission: () -> Unit = {},
     onOtherMissionsClick: () -> Unit = {},
     onNotificationClick: () -> Unit = {},
-    onShowWeeklyReportModal: () -> Unit = {},
+    onShowWeeklyReportModal: (String?) -> Unit = {},
     onBadgeCollectionClick: () -> Unit = {},
     onSheetTopChange: (Float?) -> Unit = {},
     onModalSheetChange: (Boolean) -> Unit = {},
 ) {
-    LaunchedEffect(summary.hasNewWeeklyReport) {
-        if (summary.hasNewWeeklyReport) onShowWeeklyReportModal()
+    // 새 주간 비교 리포트 도착 신호(서버 newWeeklyCompareReport). available일 때만 모달을 띄운다.
+    val newWeekly = summary.newWeeklyCompareReport
+    LaunchedEffect(newWeekly) {
+        if (newWeekly?.available == true) onShowWeeklyReportModal(newWeekly.reportId)
     }
     var missionHasLongText by remember { mutableStateOf(false) }
     val scrollState = rememberScrollState()

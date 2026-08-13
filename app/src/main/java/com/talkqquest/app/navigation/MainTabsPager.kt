@@ -55,7 +55,7 @@ fun MainTabsPager(
     navController: NavHostController,
     pagerState: PagerState,
     onOverlaySheetTop: (Float?) -> Unit,
-    onShowWeeklyReportModal: () -> Unit = {},
+    onShowWeeklyReportModal: (String?) -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     // 홈의 티어 승급 안내 시트처럼 딤이 깔린 모달이 떠 있는 동안은 탭 스와이프를 끈다.
@@ -177,7 +177,7 @@ private fun HomeTab(
     onOverlaySheetTop: (Float?) -> Unit,
     onBadgeCollectionClick: () -> Unit,
     onHomeDetailExit: () -> Unit,
-    onShowWeeklyReportModal: () -> Unit,
+    onShowWeeklyReportModal: (String?) -> Unit,
     onModalSheetChange: (Boolean) -> Unit,
 ) {
     val homeScope = rememberCoroutineScope()

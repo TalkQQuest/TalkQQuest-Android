@@ -111,7 +111,7 @@ private fun TextStyle.figma(): TextStyle = copy(lineHeightStyle = NotificationFu
 fun NotificationScreen(
     viewModel: NotificationViewModel = hiltViewModel(),
     onBack: () -> Unit = {},
-    onWeeklyReportClick: () -> Unit = {}, // 주간 비교 리포트 알림의 화살표
+    onWeeklyReportClick: (String?) -> Unit = {}, // 주간 비교 리포트 알림의 화살표(서버 referenceId)
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val context = LocalContext.current
@@ -148,7 +148,7 @@ fun NotificationScreen(
         onNotificationClick = { item ->
             viewModel.readNotification(item.id)
             if (item.hasLink) {
-                onWeeklyReportClick()
+                onWeeklyReportClick(item.linkReportId)
             }
         },
         onNotificationDelete = viewModel::removeNotification,

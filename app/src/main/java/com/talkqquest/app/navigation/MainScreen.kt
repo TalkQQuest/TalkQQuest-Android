@@ -31,6 +31,8 @@ import dev.chrisbanes.haze.hazeSource
 fun MainScreen() {
     val navController = rememberNavController()
     var showWeeklyReportModal by remember { mutableStateOf(false) }
+    // 도착 모달이 열어야 할 리포트 id(서버 newWeeklyCompareReport.reportId). 비면 가장 최근 주차.
+    var weeklyReportModalId by remember { mutableStateOf<String?>(null) }
 
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route
@@ -90,7 +92,10 @@ fun MainScreen() {
                 .fillMaxSize()
                 .hazeSource(state = hazeState),
             onOverlaySheetTop = { overlaySheetTop = it },
-            onShowWeeklyReportModal = { showWeeklyReportModal = true },
+            onShowWeeklyReportModal = { reportId ->
+                weeklyReportModalId = reportId
+                showWeeklyReportModal = true
+            },
         )
         if (showBottomBar) {
             TqBottomBar(
@@ -117,7 +122,7 @@ fun MainScreen() {
             visible = showWeeklyReportModal,
             onConfirm = {
                 showWeeklyReportModal = false
-                navController.navigate(Screen.WEEKLY_COMPARE)
+                navController.navigate("weekly_compare?reportId=${weeklyReportModalId.orEmpty()}")
             },
             onDismiss = { showWeeklyReportModal = false },
         )

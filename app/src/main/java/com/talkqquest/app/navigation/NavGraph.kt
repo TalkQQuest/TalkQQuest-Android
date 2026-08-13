@@ -94,7 +94,7 @@ fun NavGraph(
     pagerState: PagerState,
     modifier: Modifier = Modifier,
     onOverlaySheetTop: (Float?) -> Unit = {},
-    onShowWeeklyReportModal: () -> Unit = {},
+    onShowWeeklyReportModal: (String?) -> Unit = {},
 ) {
     val tabRoutes = BottomNavItem.entries.map { it.route }.toSet()
     fun AnimatedContentTransitionScope<NavBackStackEntry>.isTabSwitch() =
@@ -566,11 +566,19 @@ fun NavGraph(
         composable(Screen.NOTIFICATION) {
             NotificationScreen(
                 onBack = { navController.popBackStack() },
-                onWeeklyReportClick = { navController.navigate(Screen.WEEKLY_COMPARE) },
+                // 알림이 가리키는 리포트로 바로 들어간다(서버 referenceId). 없으면 가장 최근 주차.
+                onWeeklyReportClick = { reportId ->
+                    navController.navigate("weekly_compare?reportId=${reportId.orEmpty()}")
+                },
             )
         }
 
-        composable(Screen.WEEKLY_COMPARE) {
+        composable(
+            route = Screen.WEEKLY_COMPARE,
+            arguments = listOf(
+                navArgument("reportId") { type = NavType.StringType; defaultValue = "" },
+            ),
+        ) {
             WeeklyCompareScreen(
                 onClose = { navController.popBackStack() },
                 onCompletedMissionsClick = {

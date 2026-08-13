@@ -156,7 +156,7 @@ fun MainTabsPager(
                 onHomeDetailExit = markHomeDetailExit,
                 onShowWeeklyReportModal = onShowWeeklyReportModal,
             ) { modalSheetOpen = it }
-            BottomNavItem.Mission -> MissionTab(navController, pagerState, onOverlaySheetTop)
+            BottomNavItem.Mission -> MissionTab(navController, onOverlaySheetTop)
             BottomNavItem.Archive -> ArchiveTab(navController)
             BottomNavItem.Profile -> ProfileTab(
                 navController = navController,
@@ -215,23 +215,15 @@ private fun HomeTab(
 @Composable
 private fun MissionTab(
     navController: NavHostController,
-    pagerState: PagerState,
     onOverlaySheetTop: (Float?) -> Unit,
 ) {
-    val missionScope = rememberCoroutineScope()
-    val archivePage = BottomNavItem.entries.indexOf(BottomNavItem.Archive)
     MissionListScreen(
         onBack = { navController.popBackStack() },
         onMissionClick = { missionId -> navController.navigate("mission_detail/$missionId") },
         onSheetTopChange = onOverlaySheetTop, // 바텀시트가 올라올 때 오버레이 처리를 위한 콜백
         onSavedListClick = { navController.navigate("${Screen.ARCHIVE_LIST}/0") },
-        // 헤더 폴더도 하단 보관함 탭을 누른 것과 같은 페이저 전환을 사용한다.
-        // 선택 칩은 pagerState를 따라 오른쪽으로 이동하고 화면은 인접 페이지로 함께 슬라이드된다.
-        onArchiveClick = {
-            if (archivePage >= 0 && archivePage != pagerState.currentPage) {
-                missionScope.launch { pagerState.animateScrollToPage(archivePage) }
-            }
-        },
+        // 헤더 폴더는 보관함 목록의 미션 탭으로 바로 이동한다.
+        onArchiveClick = { navController.navigate("${Screen.ARCHIVE_LIST}/0") },
     )
 }
 

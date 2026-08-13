@@ -964,7 +964,7 @@ private fun GrowthReportPreview() {
                 competencies = listOf(
                     Competency(CompetencyAxis.KINDNESS, "친절한 태도", "친절한 태도", 300, 70),
                     Competency(CompetencyAxis.INITIATIVE, "대화 주도", "대화 주도", 200, 70),
-                    Competency(CompetencyAxis.EMPATHY, "공감 표현", "공감 능력", 100, 70),
+                    Competency(CompetencyAxis.EMPATHY, "공감 능력", "공감 능력", 100, 70),
                     Competency(CompetencyAxis.QUESTION_LINK, "질문 연결성", "질문 연결성", 300, 70),
                 ),
             ),

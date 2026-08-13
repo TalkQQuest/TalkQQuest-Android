@@ -42,7 +42,7 @@ enum class CompetencyAxis { KINDNESS, INITIATIVE, EMPATHY, QUESTION_LINK }
 data class Competency(
     val axis: CompetencyAxis,   // 마름모 축 매핑(위=친절/오른=주도/아래=공감/왼=질문)
     val label: String,          // 레이더 축 라벨 ("친절한 태도")
-    val legendLabel: String,    // 범례 라벨 (CSS상 공감은 축="공감 표현"/범례="공감 능력"로 달라 분리)
+    val legendLabel: String,    // 범례 라벨
     val score: Int,             // 현재 점수 0..maxScore
     val gain: Int,              // 이번에 획득한 점수 ("+70")
     val maxScore: Int = 300,    // 축당 만점(300점 = 별 1개)
@@ -203,11 +203,10 @@ fun GrowthReportResponse.toGrowthTierReport(gains: List<Int> = emptyList()): Gro
     val completedDiamondThisReport = gains.size >= 4 &&
         completedDiamonds(progress.tierName, progress.tierStars) >
         completedDiamonds(beforeProgress.tierName, beforeProgress.tierStars)
-    // 공감만 축 라벨("공감 표현")과 범례 라벨("공감 능력")이 다르다 — CSS 그대로.
     val axes = listOf(
         Triple(CompetencyAxis.KINDNESS, "친절한 태도", "친절한 태도"),
         Triple(CompetencyAxis.INITIATIVE, "대화 주도", "대화 주도"),
-        Triple(CompetencyAxis.EMPATHY, "공감 표현", "공감 능력"),
+        Triple(CompetencyAxis.EMPATHY, "공감 능력", "공감 능력"),
         Triple(CompetencyAxis.QUESTION_LINK, "질문 연결성", "질문 연결성"),
     )
     return GrowthTierReport(

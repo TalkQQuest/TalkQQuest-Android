@@ -907,8 +907,6 @@ fun NavGraph(
             )
         }
 
-        composable(Screen.COMMUNITY_LIST) { PlaceholderScreen("모임") }
-
         composable(Screen.PROFILE) {
             MainTabsPager(navController, pagerState, onOverlaySheetTop)
         }

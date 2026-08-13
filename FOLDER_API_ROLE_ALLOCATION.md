@@ -174,15 +174,15 @@ feature/report/        (성장 리포트, 주간 비교 리포트, 리포트 저
 
 ---
 
-## C담당 (훈/김재훈) — 아카이브 · 커뮤니티 (화면 7개 + 커뮤니티 미구현)
+## C담당 (훈/김재훈) — 아카이브 (화면 7개)
 
 **건드릴 폴더**
 ```
 feature/archive/    (아카이브 홈·검색·보관함 목록·대화 기록 상세·저장 문장 상세·보관함 리포트 2종)
-feature/community/  (모임 검색·상세·만들기·내 모임) — 아직 비어 있음
 ```
 
-**기능명세서 번호**: 아카이브 `F101~F103` · 커뮤니티 `H101~H102`(예외 H-1) · 모임 만들기 `I101~I103`
+**기능명세서 번호**: 아카이브 `F101~F103`
+(커뮤니티 `H101~H102` · 모임 만들기 `I101~I103`은 구현 범위에서 제외됐습니다.)
 
 **API — `feature/archive/data/ArchiveApi.kt` (12개)**
 
@@ -205,9 +205,9 @@ feature/community/  (모임 검색·상세·만들기·내 모임) — 아직 �
 - 미션 항목은 **B의 `MissionDetailScreen`으로 들어갑니다.** 아카이브 전용 미션 상세 화면은 만들지 않았습니다.
 - 리포트 항목은 주간 여부(`isWeeklyCompare`)로 두 화면 중 하나로 갈라집니다.
 
-**커뮤니티는 아직 화면이 없습니다.**
-`feature/community/`는 `.gitkeep`만 있는 빈 폴더고, `community_list` route는 `PlaceholderScreen("모임")`을 그립니다.
-커뮤니티 API도 아직 앱에 선언된 게 없습니다. 팝업 4종(이탈·게시 완료·탈퇴 ×2)도 함께 C담당입니다.
+**커뮤니티(모임)는 구현하지 않기로 확정했습니다.**
+부가 기능이라 디자인이 뒤로 밀렸고, 남은 일정을 보관함과 리포트 완성도에 쓰기로 했습니다.
+패키지·화면·route·API 어느 것도 만들지 않았고, 팝업 4종(이탈·게시 완료·탈퇴 ×2)도 함께 제외됩니다.
 
 ---
 
@@ -230,8 +230,7 @@ feature/community/  (모임 검색·상세·만들기·내 모임) — 아직 �
 
 | 사실 | 설명 |
 | --- | --- |
-| `feature/conversation/` 은 **빈 폴더** | 대화 진행·대화 설정 화면은 전부 `feature/mission/` 안에 있습니다. |
-| `feature/community/` 는 **빈 폴더** | 커뮤니티 미구현. |
+| **`conversation` 패키지가 없음** | 대화 진행·대화 설정 화면은 전부 `feature/mission/` 안에 있습니다. |
 | `feature/profile/` 에 **Api 파일 없음** | `ProfileRepository`가 `HomeApi`·`NotificationApi`를 사용합니다. |
 | `feature/onboarding/` 에 **Api·ViewModel 없음** | 온보딩 화면이 `AuthApi`와 `AuthViewModel`을 사용합니다. |
 | `core/util/TierProgress.kt` | 티어·별 계산(B가 씀). 서버가 주는 값이 아니라 앱 계산입니다. |

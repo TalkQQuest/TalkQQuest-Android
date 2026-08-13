@@ -107,7 +107,7 @@ MainScreen
 
 ---
 
-## C담당 (훈/김재훈) — 아카이브 · 커뮤니티 (7화면 구현)
+## C담당 (훈/김재훈) — 아카이브 (7화면)
 
 | 화면 이름 | 스크린 ID | route | 진입 경로 |
 | --- | --- | --- | --- |
@@ -132,10 +132,8 @@ MainScreen
 >
 > **리포트 항목은 주간 여부로 갈라집니다.** 목록·검색 양쪽 모두 `isWeeklyCompare` 값을 보고 두 route 중 하나를 고릅니다.
 
-**커뮤니티 — 아직 화면이 없습니다.**
-`community_list` route는 등록돼 있지만 내용은 `PlaceholderScreen("모임")`이고, 앱 어디에서도 이 route로 이동하지 않습니다.
-`Screen.kt`의 `COMMUNITY_DETAIL` · `COMMUNITY_CHAT_PREVIEW` · `COMMUNITY_CREATE` · `COMMUNITY_ADDRESS_SEARCH` · `COMMUNITY_PREVIEW` · `MY_GROUPS` 도 상수만 있고 등록된 화면이 없습니다.
-커뮤니티 화면과 이탈·게시 완료·탈퇴 팝업 4종은 전부 C담당입니다.
+> **커뮤니티(모임)는 구현하지 않기로 확정했습니다.** 부가 기능이라 디자인이 뒤로 밀렸고, 남은 일정을 보관함과 리포트 완성도에 쓰기로 했습니다.
+> 화면·route·API·패키지 어느 것도 만들지 않았습니다. 이탈·게시 완료·탈퇴 팝업 4종도 함께 제외됩니다.
 
 ---
 
@@ -155,24 +153,24 @@ MainScreen
 | 보관함 정렬 시트 | 아카이브 검색·목록 → 정렬 | 선택 후 닫힘 | C |
 | 보관함 달력 시트 | 아카이브 검색 → 기간 선택 | 선택 후 닫힘 | C |
 | 보관함 리포트 시트 | 보관함 리포트 화면 | 선택 후 닫힘 | C |
-| 이탈 / 게시 완료 / 탈퇴 팝업 ×2 | 커뮤니티 (미구현) | — | C |
 
 > 저장 시트 3종(미션·문장·리포트)은 `core/designsystem`의 `TqSaveSheetScaffold` 하나를 공유합니다.
 > 티어 승급 안내 시트도 `core/designsystem`에 있어(`TierPromotionSheet`) 다른 화면에서 가져다 쓸 수 있습니다.
 
 ---
 
-## Screen.kt 상수 중 등록된 화면이 없는 것
+## route 상수와 실제 등록이 어긋나는 곳
 
-되돌릴 일에 대비해 남아 있지만 지금은 어떤 화면도 그리지 않는 route입니다.
+`Screen.kt`의 모든 상수는 실제로 등록된 화면을 가리킵니다. 다만 반대 방향으로 어긋난 곳이 있습니다.
 
-| 상수 | 상태 |
+| 대상 | 상태 |
 | --- | --- |
-| `CONVERSATION_COMPLETE` | 대화 요약 화면은 만들지 않았습니다. 대화 종료 시 미션 완료·XP로 바로 갑니다. |
-| `ARCHIVE_CONVERSATION_DETAIL` · `ARCHIVE_SAVED_PHRASE` | 화면은 있지만 NavGraph가 상수 대신 같은 값의 문자열을 직접 씁니다. |
-| `COMMUNITY_DETAIL` 등 커뮤니티 6개 | 화면 미구현. |
+| `ARCHIVE_CONVERSATION_DETAIL` · `ARCHIVE_SAVED_PHRASE` | 상수가 있는데 NavGraph는 같은 값의 문자열을 직접 씁니다. |
+| `archive_report/{reportId}` · `archive_weekly_compare_report/{reportId}` | **상수 없이 NavGraph에 문자열로 직접 등록**돼 있습니다. |
 
-또한 `archive_report/{reportId}` 와 `archive_weekly_compare_report/{reportId}` 는 **`Screen.kt`에 상수가 없고 NavGraph에 문자열로 직접 등록**돼 있습니다.
+route는 `Screen.kt`에 상수로 정의하고 NavGraph에서 그 상수를 쓰는 것이 규칙입니다([`CONVENTIONS.md`](CONVENTIONS.md) 6번). 위 네 곳은 정리 대상입니다.
+
+> **대화 요약 화면(`ConversationCompleteScreen`)은 만들지 않았습니다.** 대화 종료 시 미션 완료·XP로 바로 넘어갑니다. 관련 route 상수도 두지 않습니다.
 
 ---
 

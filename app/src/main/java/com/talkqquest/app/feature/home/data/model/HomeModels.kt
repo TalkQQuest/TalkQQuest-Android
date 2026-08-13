@@ -1,4 +1,4 @@
-﻿package com.talkqquest.app.feature.home.data.model
+package com.talkqquest.app.feature.home.data.model
 
 import com.talkqquest.app.core.util.GrowthTotalsDto
 import kotlinx.serialization.Serializable

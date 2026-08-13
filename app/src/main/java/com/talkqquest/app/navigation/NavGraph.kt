@@ -1,6 +1,5 @@
-﻿package com.talkqquest.app.navigation
+package com.talkqquest.app.navigation
 
-import android.content.Context
 import android.net.Uri
 import android.widget.Toast
 import androidx.compose.animation.AnimatedContentTransitionScope
@@ -59,6 +58,7 @@ import com.talkqquest.app.feature.profile.ui.ProfileSettingsScreen
 import com.talkqquest.app.feature.profile.ui.ProfileSupportScreen
 import com.talkqquest.app.feature.profile.ui.ProfileWithdrawScreen
 import com.talkqquest.app.feature.profile.viewmodel.ProfileViewModel
+import com.talkqquest.app.feature.profile.data.toProfileImagePart
 import com.talkqquest.app.feature.profile.ui.PrivacyPolicySections
 import com.talkqquest.app.feature.profile.ui.ProfileTermsDetailScreen
 import com.talkqquest.app.feature.profile.ui.ProfileTermsScreen
@@ -85,9 +85,6 @@ import com.talkqquest.app.feature.archive.ui.ArchiveWeeklyCompareReportScreen
 import com.talkqquest.app.feature.archive.viewmodel.ActivityType
 import com.talkqquest.app.navigation.Screen
 import kotlinx.coroutines.launch
-import okhttp3.MediaType.Companion.toMediaTypeOrNull
-import okhttp3.MultipartBody
-import okhttp3.RequestBody.Companion.toRequestBody
 
 private const val NOTIFICATION_READ_REFRESH_KEY = "notification_read_refresh"
 
@@ -1286,13 +1283,4 @@ fun NavGraph(
 private fun NavHostController.conversationSetupViewModel(missionId: String): ConversationSetupViewModel {
     val firstStep = remember(missionId) { getBackStackEntry("conversation_setup_1/$missionId") }
     return hiltViewModel(firstStep)
-}
-
-private fun Uri.toProfileImagePart(context: Context): MultipartBody.Part? {
-    val resolver = context.contentResolver
-    val mimeType = resolver.getType(this)?.takeIf { it == "image/jpeg" || it == "image/png" } ?: return null
-    val bytes = resolver.openInputStream(this)?.use { it.readBytes() } ?: return null
-    val extension = if (mimeType == "image/png") "png" else "jpg"
-    val requestBody = bytes.toRequestBody(mimeType.toMediaTypeOrNull())
-    return MultipartBody.Part.createFormData("image", "profile_image.$extension", requestBody)
 }

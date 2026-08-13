@@ -58,18 +58,13 @@ object Screen {
     const val CONVERSATION_SETUP_3 = "conversation_setup_3/{missionId}" // 성별·나이
     const val CONVERSATION_SETUP_4 = "conversation_setup_4/{missionId}" // 친밀도·말투
     const val CONVERSATION = "conversation/{conversationId}"      // ConversationScreen
-    const val CONVERSATION_COMPLETE = "conversation_complete/{conversationId}" // ConversationCompleteScreen
     const val MISSION_COMPLETE = "mission_complete/{missionId}"   // MissionCompleteScreen (XP 획득)
     const val FEEDBACK = "feedback/{feedbackId}"                  // FeedbackScreen
     const val FEEDBACK_DETAIL = "feedback_detail/{feedbackId}"    // FeedbackDetailScreen
 
-    const val COMMUNITY_LIST = "community_list"                   // CommunityListScreen
-    const val COMMUNITY_DETAIL = "community_detail/{communityId}" // CommunityDetailScreen
-    const val COMMUNITY_CHAT_PREVIEW = "community_chat_preview/{communityId}" // CommunityChatPreviewScreen
-    const val COMMUNITY_CREATE = "community_create"              // CommunityCreateScreen
-    const val COMMUNITY_ADDRESS_SEARCH = "community_address_search" // CommunityAddressSearchScreen
-    const val COMMUNITY_PREVIEW = "community_preview"            // CommunityPreviewScreen
-    const val MY_GROUPS = "my_groups"                            // MyGroupsScreen
+    // ReportScreen — 성장 리포트. AI 피드백 요약의 "상세 리포트"에서만 들어온다.
+    // missionTitle = 이 리포트가 나온 미션 제목(저장 시트 카드 제목). conversationId = 그 대화 id.
+    // gains = 마름모 꼭짓점 "+N"에 쓸 이번 대화 점수 4개(친절·주도·공감·질문 순, 쉼표 구분).
     // 서버 성장 리포트 응답엔 증가분이 없어, 방금 그 값을 받은 피드백 화면이 넘겨준다.
     const val REPORT = "report?missionTitle={missionTitle}&conversationId={conversationId}&gains={gains}"
 

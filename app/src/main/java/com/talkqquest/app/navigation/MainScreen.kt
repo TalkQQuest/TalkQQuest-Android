@@ -25,8 +25,16 @@ import com.talkqquest.app.feature.home.ui.WeeklyReportModal
 import dev.chrisbanes.haze.HazeState
 import dev.chrisbanes.haze.hazeSource
 
+data class WeeklyReportLaunchRequest(
+    val reportId: String?,
+    val requestId: Long,
+)
+
 @Composable
-fun MainScreen() {
+fun MainScreen(
+    weeklyReportLaunchRequest: WeeklyReportLaunchRequest? = null,
+    onWeeklyReportLaunchConsumed: () -> Unit = {},
+) {
     val navController = rememberNavController()
     var showWeeklyReportModal by remember { mutableStateOf(false) }
     // 도착 모달이 열어야 할 리포트 id(서버 newWeeklyCompareReport.reportId). 비면 가장 최근 주차.
@@ -38,6 +46,23 @@ fun MainScreen() {
     // 하단 탭 4개(홈·미션·보관함·프로필)를 한 HorizontalPager에서 스와이프 전환. 상태는 여기서 호이스팅해
     // 페이저 셸(MainTabsPager)과 전역 하단바(TqBottomBar)가 공유한다.
     val pagerState = rememberPagerState(pageCount = { BottomNavItem.entries.size })
+    val homePage = BottomNavItem.entries.indexOf(BottomNavItem.Home)
+
+    // 시스템 알림을 눌렀다면 현재 상세 화면이나 하단 탭 위치와 관계없이 홈으로 돌아와
+    // 주간 비교 리포트 모달을 연다. 콜드 스타트에서는 인증 확인이 끝나 HOME이 생길 때까지 기다린다.
+    LaunchedEffect(weeklyReportLaunchRequest?.requestId, currentRoute) {
+        val request = weeklyReportLaunchRequest ?: return@LaunchedEffect
+        val homeExists = runCatching { navController.getBackStackEntry(Screen.HOME) }.isSuccess
+        if (currentRoute != Screen.HOME && !homeExists) return@LaunchedEffect
+
+        if (currentRoute != Screen.HOME) {
+            navController.popBackStack(Screen.HOME, inclusive = false)
+        }
+        pagerState.scrollToPage(homePage)
+        weeklyReportModalId = request.reportId
+        showWeeklyReportModal = true
+        onWeeklyReportLaunchConsumed()
+    }
 
     // 다른 화면에서 특정 탭 route로 새로 진입할 때(예: 프로필→보관함) 그 탭 페이지로 점프시킨다.
     // back stack entry id 기준이라, 상세 화면에서 뒤로 돌아오는 pop은 이미 처리된 entry라 다시 점프하지 않는다

@@ -13,6 +13,7 @@ import com.talkqquest.app.feature.home.data.model.UserMe
 import com.talkqquest.app.feature.home.data.model.UserSettings
 import com.talkqquest.app.feature.home.data.model.UserSettingsUpdateRequest
 import com.talkqquest.app.feature.home.data.model.UserUpdateRequest
+import com.talkqquest.app.feature.mission.data.model.XpSummary
 import okhttp3.MultipartBody
 import retrofit2.http.Body
 import retrofit2.http.GET
@@ -31,6 +32,9 @@ interface HomeApi {
 
     @GET("api/v1/users/me/dashboard")
     suspend fun getMyPageDashboard(): ApiResponse<MyPageDashboard>
+
+    @GET("api/v1/xp/summary")
+    suspend fun getXpSummary(): ApiResponse<XpSummary>
 
     @PATCH("api/v1/users/me")
     suspend fun updateMe(@Body request: UserUpdateRequest): ApiResponse<Unit>

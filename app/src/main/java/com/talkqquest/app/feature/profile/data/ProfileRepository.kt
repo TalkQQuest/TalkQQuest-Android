@@ -1,4 +1,4 @@
-﻿package com.talkqquest.app.feature.profile.data
+package com.talkqquest.app.feature.profile.data
 
 import com.talkqquest.app.core.network.ApiResult
 import com.talkqquest.app.core.network.serverCall
@@ -14,6 +14,7 @@ import com.talkqquest.app.feature.home.data.model.UserMe
 import com.talkqquest.app.feature.home.data.model.UserSettings
 import com.talkqquest.app.feature.home.data.model.UserSettingsUpdateRequest
 import com.talkqquest.app.feature.home.data.model.UserUpdateRequest
+import com.talkqquest.app.feature.mission.data.model.XpSummary
 import com.talkqquest.app.feature.notification.data.NotificationApi
 import com.talkqquest.app.feature.notification.data.model.NotificationSettings
 import com.talkqquest.app.feature.notification.data.model.NotificationSettingsUpdateRequest
@@ -31,6 +32,9 @@ class ProfileRepository @Inject constructor(
 
     suspend fun getMyPageDashboard(): ApiResult<MyPageDashboard> =
         serverCall { homeApi.getMyPageDashboard() }
+
+    suspend fun getXpSummary(): ApiResult<XpSummary> =
+        serverCall { homeApi.getXpSummary() }
 
     suspend fun getMyBadges(): ApiResult<MyBadgesResponse> =
         serverCall { homeApi.getMyBadges() }

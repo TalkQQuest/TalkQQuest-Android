@@ -47,12 +47,12 @@ import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.MultipartBody
 import okhttp3.RequestBody.Companion.toRequestBody
 
-// 하단 탭 4개(홈·미션·보관함·프로필)를 하나의 HorizontalPager에 담아 손가락 추종 슬라이드를 제공한다.
-// - 페이지 = BottomNavItem.entries 순서와 1:1 매칭.
-// - pagerState는 MainScreen에서 호이스팅해 넘겨받아 하단바(전역)와 상태를 공유한다.
-// - 각 탭 콘텐츠(HomeScreen/MissionListScreen/ArchiveHomeScreen/ProfileScreen)는 그대로 두고,
-//   기존 NavGraph destination에 있던 콜백 배선만 이 파일의 탭 컴포저블로 옮겼다.
-// - 상세 화면(미션 상세·대화·보관함 상세 등)은 여전히 NavGraph의 별도 destination이며 페이저 위로 push 된다.
+// ?�단 ??4�??�·�??�·보관?�·프로필)�??�나??HorizontalPager???�아 ?��???추종 ?�라?�드�??�공?�다.
+// - ?�이지 = BottomNavItem.entries ?�서?� 1:1 매칭.
+// - pagerState??MainScreen?�서 ?�이?�팅???�겨받아 ?�단�??�역)?� ?�태�?공유?�다.
+// - �???콘텐�?HomeScreen/MissionListScreen/ArchiveHomeScreen/ProfileScreen)??그�?�??�고,
+//   기존 NavGraph destination???�던 콜백 배선�????�일????컴포?�블로 ??��??
+// - ?�세 ?�면(미션 ?�세·?�?�·보관???�세 ???� ?�전??NavGraph??별도 destination?�며 ?�이?� ?�로 push ?�다.
 @Composable
 fun MainTabsPager(
     navController: NavHostController,
@@ -61,26 +61,26 @@ fun MainTabsPager(
     onShowWeeklyReportModal: (String?) -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
-    // 홈의 티어 승급 안내 시트처럼 딤이 깔린 모달이 떠 있는 동안은 탭 스와이프를 끈다.
-    // (시트가 페이저 페이지 안에 들어 있어서, 안 끄면 모달 위에서 쓸었을 때 옆 탭으로 넘어가 버림)
+    // ?�의 ?�어 ?�급 ?�내 ?�트처럼 ?�이 깔린 모달?????�는 ?�안?� ???��??�프�??�다.
+    // (?�트가 ?�이?� ?�이지 ?�에 ?�어 ?�어?? ???�면 모달 ?�에???�었????????���??�어가 버림)
     var modalSheetOpen by remember { mutableStateOf(false) }
     var showHomeBadgeCollection by remember { mutableStateOf(false) }
     var homeResumeAnimationTrigger by remember { mutableIntStateOf(0) }
     var homeExitResetToken by remember { mutableIntStateOf(0) }
-    // 홈에서 NavGraph의 별도 화면을 연 경우에만 true가 된다.
-    // 하단 탭 이동과 앱 백그라운드는 이 값을 건드리지 않아 XP 상태를 그대로 보존한다.
+    // ?�에??NavGraph??별도 ?�면????경우?�만 true가 ?�다.
+    // ?�단 ???�동�???백그?�운?�는 ??값을 건드리�? ?�아 XP ?�태�?그�?�?보존?�다.
     var homeDetailExitPending by remember { mutableStateOf(false) }
     var homeDetailReplayPending by remember { mutableStateOf(false) }
     var badgeReplayPending by remember { mutableStateOf(false) }
-    // HorizontalPager가 멀어진 홈 페이지를 폐기해도 이 값은 상위 셸에 남는다.
-    // true는 앱 최초 진입 또는 명시적인 별도 화면 복귀에서만 사용한다.
+    // HorizontalPager가 멀?�진 ???�이지�??�기?�도 ??값�? ?�위 ?�에 ?�는??
+    // true????최초 진입 ?�는 명시?�인 별도 ?�면 복�??�서�??�용?�다.
     var animateHomeXpFromZero by remember { mutableStateOf(true) }
-    // 최초 ON_RESUME은 HomeViewModel의 최초 데이터 도착과 같은 홈 진입이다.
-    // 이때는 HomeLevelCard가 자체적으로 0 → XP를 재생하므로 복귀 신호를 추가하지 않는다.
+    // 최초 ON_RESUME?� HomeViewModel??최초 ?�이???�착�?같�? ??진입?�다.
+    // ?�때??HomeLevelCard가 ?�체?�으�?0 ??XP�??�생?��?�?복�? ?�호�?추�??��? ?�는??
     var hasConsumedInitialHomeResume by remember { mutableStateOf(false) }
     val pagerScope = rememberCoroutineScope()
-    // 기본값(화면 폭의 50%)은 천천히 드래그할 때 이동 거리가 길게 느껴진다.
-    // 짧은 스와이프에도 반응하되 실수로 탭이 바뀌지 않는 25% 지점에서 다음 페이지로 스냅한다.
+    // 기본�??�면 ??�� 50%)?� 천천???�래그할 ???�동 거리가 길게 ?�껴진다.
+    // 짧�? ?��??�프?�도 반응?�되 ?�수�???�� 바뀌�? ?�는 25% 지?�에???�음 ?�이지�??�냅?�다.
     val tabFlingBehavior = PagerDefaults.flingBehavior(
         state = pagerState,
         snapPositionalThreshold = 0.25f,
@@ -101,8 +101,8 @@ fun MainTabsPager(
         }
     }
     BackHandler(enabled = showHomeBadgeCollection, onBack = returnFromHomeBadgeCollection)
-    // 뱃지 컬렉션에서 하단 홈 탭으로 직접 돌아오는 경로도, 홈에 완전히 도착한 뒤 재생한다.
-    // 일반 하단 탭 왕복에는 badgeReplayPending이 없으므로 아무 동작도 하지 않는다.
+    // 뱃�? 컬렉?�에???�단 ????���?직접 ?�아?�는 경로?? ?�에 ?�전???�착?????�생?�다.
+    // ?�반 ?�단 ???�복?�는 badgeReplayPending???�으므�??�무 ?�작???��? ?�는??
     LaunchedEffect(pagerState.settledPage, badgeReplayPending) {
         if (pagerState.settledPage == homePage && badgeReplayPending) {
             badgeReplayPending = false
@@ -112,7 +112,7 @@ fun MainTabsPager(
     }
     LifecycleEventEffect(Lifecycle.Event.ON_STOP) {
         if (homeDetailExitPending) {
-            // 화면 전환이 끝나 홈이 보이지 않을 때만 0으로 준비해, 나가는 도중 번쩍임을 막는다.
+            // ?�면 ?�환???�나 ?�이 보이지 ?�을 ?�만 0?�로 준비해, ?��????�중 번쩍?�을 막는??
             homeDetailExitPending = false
             homeDetailReplayPending = true
             animateHomeXpFromZero = true
@@ -132,7 +132,7 @@ fun MainTabsPager(
     HorizontalPager(
         state = pagerState,
         modifier = modifier.fillMaxSize(),
-        // 인접 탭을 미리 구성해 스와이프 중 빈 화면 없이 콘텐츠가 따라오게 한다.
+        // ?�접 ??�� 미리 구성???��??�프 �?�??�면 ?�이 콘텐츠�? ?�라?�게 ?�다.
         beyondViewportPageCount = 1,
         userScrollEnabled = !modalSheetOpen,
         flingBehavior = tabFlingBehavior,
@@ -150,7 +150,7 @@ fun MainTabsPager(
                     showHomeBadgeCollection = true
                     pagerScope.launch {
                         pagerState.animateScrollToPage(profilePage)
-                        // 홈이 완전히 화면 밖으로 나간 뒤에만 0으로 준비한다.
+                        // ?�이 ?�전???�면 밖으�??�간 ?�에�?0?�로 준비한??
                         animateHomeXpFromZero = true
                         homeExitResetToken++
                         badgeReplayPending = true
@@ -193,12 +193,12 @@ private fun HomeTab(
             onHomeDetailExit()
             navController.navigate("mission_detail/$missionId")
         },
-        // "다른 미션 보기" → 홈 소속 미션 목록(예전 헤더). 미션 탭으로 전환하지 않고 홈 탭 유지.
+        // "?�른 미션 보기" ?????�속 미션 목록(?�전 ?�더). 미션 ??���??�환?��? ?�고 ?????��?.
         onOtherMissionsClick = {
             onHomeDetailExit()
             navController.navigate(Screen.MISSION_LIST_HOME)
         },
-        // 알림 아이콘 ripple이 먼저 보인 후 화면이 전환되도록 짧게 지연합니다.
+        // ?�림 ?�이�?ripple??먼�? 보인 ???�면???�환?�도�?짧게 지?�합?�다.
         onNotificationClick = {
             homeScope.launch {
                 delay(140)
@@ -208,9 +208,9 @@ private fun HomeTab(
         },
         onShowWeeklyReportModal = onShowWeeklyReportModal,
         onBadgeCollectionClick = onBadgeCollectionClick,
-        // 티어 승급 안내 시트가 하단 네비를 덮는 동안 네비를 가림.
+        // ?�어 ?�급 ?�내 ?�트가 ?�단 ?�비�???�� ?�안 ?�비�?가�?
         onSheetTopChange = onOverlaySheetTop,
-        // 그 시트가 떠 있는 동안 탭 스와이프를 끔(모달이라 뒤 화면으로 못 넘어가야 함).
+        // �??�트가 ???�는 ?�안 ???��??�프�???모달?�라 ???�면?�로 �??�어가????.
         onModalSheetChange = onModalSheetChange,
     )
 }
@@ -223,9 +223,9 @@ private fun MissionTab(
     MissionListScreen(
         onBack = { navController.popBackStack() },
         onMissionClick = { missionId -> navController.navigate("mission_detail/$missionId") },
-        onSheetTopChange = onOverlaySheetTop, // 바텀시트가 올라올 때 오버레이 처리를 위한 콜백
+        onSheetTopChange = onOverlaySheetTop, // 바�??�트가 ?�라?????�버?�이 처리�??�한 콜백
         onSavedListClick = { navController.navigate("${Screen.ARCHIVE_LIST}/0") },
-        // 헤더 폴더는 보관함 목록의 미션 탭으로 바로 이동한다.
+        // ?�더 ?�더??보�???목록??미션 ??���?바로 ?�동?�다.
         onArchiveClick = { navController.navigate("${Screen.ARCHIVE_LIST}/0") },
     )
 }
@@ -239,7 +239,7 @@ private fun ArchiveTab(navController: NavHostController) {
         onNavigateToList = { tabIndex: Int ->
             navController.navigate("${Screen.ARCHIVE_LIST}/$tabIndex")
         },
-        // 💡 [수정됨] isWeeklyCompare 파라미터 추가 및 라우팅 분기 처리 적용
+        // ?�� [?�정?? isWeeklyCompare ?�라미터 추�? �??�우??분기 처리 ?�용
         onNavigateToDetail = { activityId: String, type: ActivityType, isWeeklyCompare: Boolean ->
             when (type) {
                 ActivityType.CONVERSATION -> navController.navigate("archive_conversation_detail/$activityId")
@@ -267,11 +267,12 @@ private fun ProfileTab(
     val profileViewModel: ProfileViewModel = hiltViewModel()
     val profileUiState by profileViewModel.uiState.collectAsState()
     val dashboard = profileUiState.dashboard
+    val xpSummary = profileUiState.xpSummary
     val profile = profileUiState.profile
     val nickname = dashboard?.nickname?.takeIf { it.isNotBlank() }
         ?: profile?.nickname
         ?: profile?.name
-        ?: "다민"
+        ?: "?��?"
     val earnedBadgeCount = dashboard?.badges?.size
         ?: profileUiState.badges.count { it.isEarned }.takeIf { it > 0 }
         ?: 5
@@ -279,6 +280,7 @@ private fun ProfileTab(
 
     LaunchedEffect(showHomeBadgeCollection) {
         profileViewModel.loadDashboard()
+        profileViewModel.loadXpSummary()
         if (showHomeBadgeCollection) profileViewModel.loadBadges()
     }
 
@@ -306,8 +308,9 @@ private fun ProfileTab(
     } else ProfileScreen(
         nickname = nickname,
         avatarUrl = dashboard?.avatarUrl ?: profile?.avatarUrl,
-        level = dashboard?.level ?: profile?.level ?: 2,
-        xp = dashboard?.xp ?: profile?.xp ?: 30,
+        level = xpSummary?.level ?: dashboard?.level ?: profile?.level ?: 2,
+        xp = xpSummary?.currentXp ?: dashboard?.xp ?: profile?.xp ?: 30,
+        nextLevelXp = xpSummary?.nextLevelXp ?: 100,
         earnedBadgeCount = earnedBadgeCount,
         weeklyCompletedCount = weeklyMissionStatus?.completed ?: 5,
         weeklyTotalCount = weeklyMissionStatus?.total ?: 7,

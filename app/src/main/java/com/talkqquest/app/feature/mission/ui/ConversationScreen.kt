@@ -199,7 +199,17 @@ fun ConversationScreen(
         onBackClick = { viewModel.setLeaveDialogVisible(true) },
         onCompleteClick = { viewModel.setCompleteDialogVisible(true) },
         onCompleteDismiss = { viewModel.setCompleteDialogVisible(false) },
-        onCompleteConfirm = { onExitConfirm(viewModel.elapsedSeconds()) },
+        onCompleteConfirm = {
+            if (uiState.messages.any { it.isFromUser }) {
+                onExitConfirm(viewModel.elapsedSeconds())
+            } else {
+                // 사용자 발화가 없으면 완료·XP 화면으로 보내지 않고 대화만 종료한다.
+                // 서버도 같은 조건에서 미션 기록과 mission_completed 알림 생성을 막지만,
+                // 앱에서도 먼저 분기해 400 오류 화면이 잠깐 노출되지 않게 한다.
+                viewModel.abandonConversation()
+                onBack()
+            }
+        },
         onLeaveDismiss = { viewModel.setLeaveDialogVisible(false) },
         // 나가기 = 대화 포기. 서버에 열려 있는 대화를 abandoned로 닫고 화면을 벗어난다.
         // 예전엔 아무것도 안 보내서 서버엔 in_progress로 남았다.

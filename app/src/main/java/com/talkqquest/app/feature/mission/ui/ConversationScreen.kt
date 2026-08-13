@@ -1,5 +1,6 @@
 package com.talkqquest.app.feature.mission.ui
 
+import android.graphics.BlurMaskFilter
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
@@ -70,13 +71,19 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Paint
+import androidx.compose.ui.graphics.drawscope.clipRect
+import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEventType
@@ -321,7 +328,12 @@ private fun ConversationContent(
 ) {
     val recommendationTitleKorean = "톡깨의 추천 답변"
     val recommendationTitleCollapsed = "답장이 고민되시나요?"
-    val recommendationsReady = uiState.recommendations.isNotEmpty()
+    // 서버 응답과 실제 표시 목록을 분리한다. 새 응답이 도착해도 기존 문구를 즉시
+    // 갈아 끼우지 않고, 기존 문구 퇴장 → 교체 → 새 문구 등장 순서로 보여 준다.
+    var displayedRecommendations by remember { mutableStateOf<List<String>>(emptyList()) }
+    var recommendationsPresented by remember { mutableStateOf(false) }
+    val recommendationItemsProgress = remember { Animatable(0f) }
+    val recommendationsReady = recommendationsPresented && displayedRecommendations.isNotEmpty()
     val recommendationTitleShineProgress = remember { Animatable(0f) }
     // 0 = 펼친 제목, 1 = 접힌 제목. 중간 탭은 현재 값에서 목표만 반대로 바꿔 자연스럽게 되감는다.
     val recommendationTitleTransitionProgress = remember {
@@ -334,6 +346,44 @@ private fun ConversationContent(
     // 화면 상태 반영보다 빠르게 연속 탭해도, 가장 마지막 탭 방향을 기준으로 삼는다.
     var requestedRecommendationsExpanded by remember {
         mutableStateOf(recommendationsReady && uiState.recommendationsExpanded)
+    }
+
+    LaunchedEffect(uiState.recommendations) {
+        val incoming = uiState.recommendations
+        if (incoming == displayedRecommendations) return@LaunchedEffect
+
+        if (incoming.isEmpty()) {
+            recommendationItemsProgress.animateTo(
+                targetValue = 0f,
+                animationSpec = tween(160, easing = FastOutSlowInEasing),
+            )
+            recommendationsPresented = false
+            displayedRecommendations = emptyList()
+            return@LaunchedEffect
+        }
+
+        if (displayedRecommendations.isEmpty()) {
+            // 최초 응답: 접힌 바가 먼저 자리 잡은 다음 카드와 문구를 일정한 박자로 펼친다.
+            displayedRecommendations = incoming
+            recommendationItemsProgress.snapTo(0f)
+            withFrameNanos { }
+            recommendationsPresented = true
+            delay(80)
+        } else {
+            // 갱신 응답: 이전 문구가 완전히 사라진 프레임에서만 실제 데이터를 교체한다.
+            recommendationItemsProgress.animateTo(
+                targetValue = 0f,
+                animationSpec = tween(180, easing = FastOutSlowInEasing),
+            )
+            displayedRecommendations = incoming
+            recommendationItemsProgress.snapTo(0f)
+            withFrameNanos { }
+        }
+
+        recommendationItemsProgress.animateTo(
+            targetValue = 1f,
+            animationSpec = tween(420, easing = LinearEasing),
+        )
     }
 
     LaunchedEffect(uiState.recommendationsExpanded) {
@@ -407,7 +457,9 @@ private fun ConversationContent(
     // 좌표 실측(px): 출발점(입력창)·도착점(리스트 바닥) 계산용
     var contentOrigin by remember { androidx.compose.runtime.mutableStateOf(Offset.Zero) }
     var contentWidthPx by remember { mutableIntStateOf(0) }
-    var listBottomGlobalY by remember { androidx.compose.runtime.mutableStateOf(0f) }
+    // 좌표는 비행 말풍선의 layout 단계에서만 읽는다. 일반 상태로 두면 추천 카드 높이가
+    // 변하는 매 프레임 ConversationContent 전체가 재컴포지션된다.
+    val listBottomGlobalY = remember { FloatArray(1) }
     var inputLeftGlobalX by remember { androidx.compose.runtime.mutableStateOf(0f) }
     var inputBottomGlobalY by remember { androidx.compose.runtime.mutableStateOf(0f) }
     val lastMessage = uiState.messages.lastOrNull()
@@ -494,37 +546,20 @@ private fun ConversationContent(
             }
         }
 
-        // ── 메시지 영역 + 하단부(추천 답변·입력창) 겹침 ──
-        // 목록이 하단부 뒤까지 깔리고, 그 경계에서 배경색으로 녹아 사라짐(CSS 하단 스크롤 마스크).
-        // 목록을 하단부 위에서 끊으면 옛 메시지가 카드 경계에서 뚝 잘려 마스크를 쓸 수 없음.
+        // ── 메시지 영역 + 하단부(추천 답변·입력창) ──
+        // 두 영역을 같은 Column에서 측정해야 추천 카드가 커지는 첫 프레임부터 메시지 영역도
+        // 함께 줄어든다. 겹쳐 배치한 뒤 측정값을 다음 프레임에 전달하면 말풍선이 먼저 가려진다.
         val listState = rememberLazyListState()
-        val scrollScope = rememberCoroutineScope()
         val density = LocalDensity.current
-        // 하단부(카드+입력창+네비 여백) 실측 높이 — 목록 아래 여백·마스크 크기가 이 값을 따라감
-        var bottomSectionHeight by remember { mutableStateOf(0.dp) }
-        Box(modifier = Modifier.fillMaxWidth().weight(1f)) {
+        Column(modifier = Modifier.fillMaxWidth().weight(1f)) {
         Box(
             modifier = Modifier
-                .fillMaxSize()
-                // 영역 높이가 변하는 동안(키보드) 매 프레임
-                // 맨 아래로 붙잡아 마지막 메시지가 가려지지 않게 함. (reverseLayout이라 0 = 최신)
-                .onSizeChanged {
-                    if (uiState.messages.isNotEmpty()) {
-                        scrollScope.launch { listState.scrollToItem(0) }
-                    }
-                },
+                .fillMaxWidth()
+                .weight(1f),
         ) {
             // 위로 스크롤해 옛 메시지를 보다가 새 메시지가 오면 바닥으로 복귀
             LaunchedEffect(uiState.messages.size) {
                 if (uiState.messages.isNotEmpty()) listState.animateScrollToItem(0)
-            }
-            // 카드 높이가 변하는 매 프레임마다 scrollToItem을 호출하면 목록 재배치가 겹쳐
-            // 추천 카드가 탁탁 끊겨 보인다. 전환이 끝난 뒤 한 번만 최신 메시지를 맞춘다.
-            LaunchedEffect(uiState.recommendations, uiState.recommendationsExpanded) {
-                if (uiState.messages.isNotEmpty()) {
-                    delay(RECOMMENDATION_LAYOUT_SETTLE_MILLIS)
-                    listState.scrollToItem(0)
-                }
             }
             // 메시지별 등장 애니메이션을 "처음 나타날 때 한 번만" 돌리기 위한 기록
             val animatedMessageIds = remember { mutableSetOf<String>() }
@@ -541,10 +576,8 @@ private fun ConversationContent(
                 // start 13 = 아바타 왼끝(CSS left 13). 아바타(40)+간격(8)을 더해 말풍선이 61에서 시작한다.
                 // end 16 = 메시지 컬럼 오른끝 377 (393-16)
                 // top 16 = 헤더 끝(92) → 메시지·아바타 시작(top 108) (CSS Frame 427320981)
-                // bottom = 하단부 높이 + 16 → 평소엔 최신 메시지가 카드 바로 위에 놓이고,
-                // 위로 스크롤하면 옛 메시지가 그 여백(=카드 뒤)으로 내려가며 마스크에 녹아 사라짐
                 contentPadding = androidx.compose.foundation.layout.PaddingValues(
-                    start = 13.dp, end = 16.dp, top = 16.dp, bottom = bottomSectionHeight + 16.dp,
+                    start = 13.dp, end = 16.dp, top = 16.dp, bottom = 16.dp,
                 ),
             ) {
                 items(count = uiState.messages.size, key = { uiState.messages[uiState.messages.size - 1 - it].id }) { reversedIndex ->
@@ -625,41 +658,13 @@ private fun ConversationContent(
             )
         }
 
-        // 아래 스크롤 마스크 (CSS Frame 427320988): 하단부 위 88을 그라데이션으로 덮어
-        // 옛 메시지가 카드에 닿기 전에 배경색으로 녹아 사라지게 함. 그 아래(하단부 높이만큼)는
-        // 단색 — 카드 좌우 16 여백으로 메시지가 비쳐 지나가는 것도 같이 가림.
-        // 하단부보다 먼저 그려 카드·입력창 뒤에 깔림 (CSS 레이어 순서와 동일).
-        // ★위치·크기 갱신(UI 13차): "스크롤 마스크"는 y653~741(높이 88) — 카드(566~763)·
-        //   입력창(736~780) "뒤"에 겹치는 밴드고, 카드 위 메시지 영역엔 마스크가 없다.
-        //   아래끝을 입력창 바닥에 정렬한다(11차의 112 → 13차 88).
-        Column(modifier = Modifier.align(Alignment.BottomCenter).fillMaxWidth()) {
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(88.dp) // CSS 마스크 높이 그대로 (그라데이션 정의역도 88 기준)
-                    .background(scrollMaskBrush()),
-            )
-            // 입력창 아래(시스템 네비 존)로 스크롤돼 내려간 옛 메시지 가림 — CSS엔 이 구간 정의가
-            // 없어(목업 리스트가 780에서 끝남) 그라데이션 끝 알파(0.8)를 그대로 이어 채움.
-            val navBarInset = with(LocalDensity.current) { WindowInsets.navigationBars.getBottom(this).toDp() }
-            val navGap = if (WindowInsets.ime.getBottom(LocalDensity.current) > 0) 8.dp else 24.dp
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(navGap + navBarInset)
-                    .background(Gray50.copy(alpha = 0.8f)),
-            )
-        }
-
         // ── 하단: 추천 답변 + 입력창 (시스템 네비 위 24 = CSS 입력창 바닥 780 → 네비존 804) ──
         Column(
             modifier = Modifier
-                .align(Alignment.BottomCenter)
                 .fillMaxWidth()
-                // 실측: 목록 아래 여백·마스크 크기 기준 + 비행 도착점(=하단부 위 끝, 예전 리스트 바닥과 동일)
+                // 비행 도착점은 메시지 영역과 하단부가 맞닿는 현재 위치다.
                 .onGloballyPositioned {
-                    listBottomGlobalY = it.positionInRoot().y
-                    bottomSectionHeight = with(density) { it.size.height.toDp() }
+                    listBottomGlobalY[0] = it.positionInRoot().y
                 }
                 .padding(horizontal = 16.dp)
                 .navigationBarsPadding()
@@ -675,9 +680,10 @@ private fun ConversationContent(
             Box(modifier = Modifier.fillMaxWidth()) {
                 RecommendationPanel(
                     expanded = recommendationsReady && uiState.recommendationsExpanded,
-                    recommendations = uiState.recommendations,
-                    titleTransitionProgress = recommendationTitleTransitionProgress.value,
-                    titleShineProgress = recommendationTitleShineProgress.value,
+                    recommendations = displayedRecommendations,
+                    itemsTransitionProgress = { recommendationItemsProgress.value },
+                    titleTransitionProgress = { recommendationTitleTransitionProgress.value },
+                    titleShineProgress = { recommendationTitleShineProgress.value },
                     rippleInteractionSource = recommendationRippleInteraction,
                     onToggle = ::toggleRecommendationsWithTitleAnimation,
                     onSelect = onSelectRecommendation,
@@ -697,7 +703,7 @@ private fun ConversationContent(
                 )
             }
         }
-        } // 메시지+하단부 겹침 Box
+        } // 메시지+하단부 Column
     }
     // 비행 중인 말풍선 오버레이 (입력창·네비 위에 그려짐)
     flightMessage?.let { flying ->
@@ -706,7 +712,7 @@ private fun ConversationContent(
             progress = { flightProgress.value },
             contentOrigin = { contentOrigin },
             contentWidthPx = { contentWidthPx },
-            listBottomGlobalY = { listBottomGlobalY },
+            listBottomGlobalY = { listBottomGlobalY[0] },
             inputLeftGlobalX = { inputLeftGlobalX },
             inputBottomGlobalY = { inputBottomGlobalY },
         )
@@ -949,8 +955,9 @@ private fun TimeLabel(time: String) {
 private fun RecommendationPanel(
     expanded: Boolean,
     recommendations: List<String>,
-    titleTransitionProgress: Float,
-    titleShineProgress: Float,
+    itemsTransitionProgress: () -> Float,
+    titleTransitionProgress: () -> Float,
+    titleShineProgress: () -> Float,
     rippleInteractionSource: MutableInteractionSource,
     onToggle: () -> Unit,
     onSelect: (String) -> Unit,
@@ -991,18 +998,35 @@ private fun RecommendationPanel(
         bottomStart = bottomCorner,
         bottomEnd = bottomCorner,
     )
+    // softShadow는 draw마다 Paint와 BlurMaskFilter를 새로 만든다. 펼침 중에는 크기가
+    // 매 프레임 바뀌므로 같은 모양의 Paint를 여기서 한 번만 만들어 재사용한다.
+    val shadowBlurPx = with(LocalDensity.current) { 24.dp.toPx() }
+    val shadowPaint = remember(shadowBlurPx) {
+        Paint().apply {
+            color = Gray1000.copy(alpha = 0.01f)
+            val radius = ((shadowBlurPx / 2f - 0.5f) / 0.57735f).coerceAtLeast(0.1f)
+            asFrameworkPaint().maskFilter = BlurMaskFilter(radius, BlurMaskFilter.Blur.NORMAL)
+        }
+    }
 
     Column(modifier = Modifier.fillMaxWidth()) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(horizontal = sideInset)
-                .softShadow(
-                    color = Gray1000.copy(alpha = 0.01f),
-                    offsetY = 8.dp,
-                    blur = 24.dp,
-                    cornerRadius = topCorner,
-                )
+                .drawBehind {
+                    drawIntoCanvas { canvas ->
+                        canvas.drawRoundRect(
+                            left = 0f,
+                            top = 8.dp.toPx(),
+                            right = size.width,
+                            bottom = size.height + 8.dp.toPx(),
+                            radiusX = topCorner.toPx(),
+                            radiusY = topCorner.toPx(),
+                            paint = shadowPaint,
+                        )
+                    }
+                }
                 .clip(panelShape)
                 .background(Color.White),
         ) {
@@ -1020,7 +1044,7 @@ private fun RecommendationPanel(
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Spacer(Modifier.width(headerLeadingInset))
-                RecommendationHeaderLabel(
+                AnimatedRecommendationHeaderLabel(
                     transitionProgress = titleTransitionProgress,
                     shineProgress = titleShineProgress,
                 )
@@ -1056,13 +1080,19 @@ private fun RecommendationPanel(
                 Column {
                     Spacer(Modifier.height(8.dp))
                     Column(
-                        modifier = Modifier.padding(start = 16.dp, end = 16.dp, bottom = 39.dp),
+                        modifier = Modifier
+                            .animateContentSize(
+                                animationSpec = tween(420, easing = FastOutSlowInEasing),
+                                alignment = Alignment.BottomStart,
+                            )
+                            .padding(start = 16.dp, end = 16.dp, bottom = 39.dp),
                         verticalArrangement = Arrangement.spacedBy(8.dp),
                     ) {
                         recommendations.forEachIndexed { index, text ->
                             RecommendationChip(
                                 text = text,
                                 index = index,
+                                transitionProgress = itemsTransitionProgress,
                                 onSelect = onSelect,
                             )
                         }
@@ -1078,29 +1108,19 @@ private fun RecommendationPanel(
 private fun RecommendationChip(
     text: String,
     index: Int,
+    transitionProgress: () -> Float,
     onSelect: (String) -> Unit,
 ) {
-    val entranceProgress = remember(text) { Animatable(0f) }
-    LaunchedEffect(text) {
-        entranceProgress.snapTo(0f)
-        delay(index * 70L)
-        entranceProgress.animateTo(
-            targetValue = 1f,
-            animationSpec = tween(durationMillis = 360, easing = FastOutSlowInEasing),
-        )
-    }
     val entranceOffset = with(LocalDensity.current) { 4.dp.toPx() }
     Box(
         modifier = Modifier
             .graphicsLayer {
-                alpha = entranceProgress.value
-                translationY = entranceOffset * (1f - entranceProgress.value)
+                val start = (index * 0.12f).coerceAtMost(0.36f)
+                val localProgress = ((transitionProgress() - start) / (1f - start)).coerceIn(0f, 1f)
+                val easedProgress = FastOutSlowInEasing.transform(localProgress)
+                alpha = easedProgress
+                translationY = entranceOffset * (1f - easedProgress)
             }
-            .animateContentSize(
-                animationSpec = tween(durationMillis = 480, easing = FastOutSlowInEasing),
-                // 입력창과 맞닿은 아래쪽을 고정하고 위쪽 경계만 움직인다.
-                alignment = Alignment.BottomStart,
-            )
             .clip(RoundedCornerShape(24.dp))
             .background(Gray100)
             .clickable { onSelect(text) }
@@ -1110,7 +1130,6 @@ private fun RecommendationChip(
     }
 }
 
-private const val RECOMMENDATION_LAYOUT_SETTLE_MILLIS = 560L
 
 // 추천 답변 카드 (펼침, CSS Frame 427320994): 흰색 r24(위만), 헤더줄 + 칩들.
 // 아래 39(칩→카드끝) = 입력창과의 간격 12 + 입력창이 겹치는 구간 27 (CSS 좌표 검산).
@@ -1254,6 +1273,84 @@ private fun CollapsedRecommendationBar(
 }
 
 @Composable
+private fun AnimatedRecommendationHeaderLabel(
+    transitionProgress: () -> Float,
+    shineProgress: () -> Float,
+) {
+    Image(
+        painter = painterResource(R.drawable.ic_conversation_lightbulb),
+        contentDescription = null,
+        colorFilter = ColorFilter.tint(Primary600),
+        modifier = Modifier.size(19.dp),
+    )
+    Spacer(Modifier.width(6.dp))
+    Box {
+        // 두 제목을 항상 같은 컴포지션에 둔다. 진행값은 draw 단계에서만 읽고,
+        // 28~72% 구간을 겹쳐 기존 문구가 사라진 뒤 새 문구가 탁 생기는 틈을 없앤다.
+        Text(
+            text = "톡깨의 추천 답변",
+            style = TqType.BodyM.figma(),
+            color = Primary600,
+            modifier = Modifier.recommendationTitleTransitionLayer(
+                transitionProgress = transitionProgress,
+                expandedTitle = true,
+            ),
+        )
+        Text(
+            text = "답장이 고민되시나요?",
+            style = TqType.BodyM.figma(),
+            color = Primary600,
+            modifier = Modifier.recommendationTitleTransitionLayer(
+                transitionProgress = transitionProgress,
+                expandedTitle = false,
+            ),
+        )
+        AnimatedRecommendationShineOverlay(
+            text = "톡깨의 추천 답변",
+            shineProgress = shineProgress,
+        )
+    }
+}
+
+private fun Modifier.recommendationTitleTransitionLayer(
+    transitionProgress: () -> Float,
+    expandedTitle: Boolean,
+): Modifier = this
+    .graphicsLayer {
+        val progress = transitionProgress().coerceIn(0f, 1f)
+        val visibility = if (expandedTitle) {
+            ((0.72f - progress) / 0.44f).coerceIn(0f, 1f)
+        } else {
+            ((progress - 0.28f) / 0.44f).coerceIn(0f, 1f)
+        }
+        alpha = FastOutSlowInEasing.transform(visibility)
+    }
+    .drawWithContent {
+        val progress = transitionProgress().coerceIn(0f, 1f)
+        val visibility = if (expandedTitle) {
+            ((0.72f - progress) / 0.44f).coerceIn(0f, 1f)
+        } else {
+            ((progress - 0.28f) / 0.44f).coerceIn(0f, 1f)
+        }
+        if (visibility > 0f) {
+            if (expandedTitle) {
+                clipRect(right = size.width * visibility) { this@drawWithContent.drawContent() }
+            } else {
+                clipRect(left = size.width * (1f - visibility)) { this@drawWithContent.drawContent() }
+            }
+        }
+    }
+
+@Composable
+private fun AnimatedRecommendationShineOverlay(
+    text: String,
+    shineProgress: () -> Float,
+) {
+    // 광택 값도 이 작은 레이어 안에서만 읽는다.
+    RecommendationShineOverlay(text = text, shineProgress = shineProgress())
+}
+
+@Composable
 private fun RecommendationHeaderLabel(
     text: String = "톡깨의 추천 답변",
     transitionProgress: Float? = null,
@@ -1267,21 +1364,22 @@ private fun RecommendationHeaderLabel(
         modifier = Modifier.size(19.dp),
     )
     Spacer(Modifier.width(6.dp))
-    when {
-        transitionProgress == null -> RecommendationTitle(text = text, shineProgress = titleShine)
-        transitionProgress <= 0f -> RecommendationTitle(
-            text = "톡깨의 추천 답변",
-            shineProgress = titleShine,
-        )
-        transitionProgress >= 1f -> RecommendationTitle(
-            text = "답장이 고민되시나요?",
-            shineProgress = 0f,
-        )
-        else -> SequentialRecommendationTitle(
-            previousText = "톡깨의 추천 답변",
-            targetText = "답장이 고민되시나요?",
-            progress = transitionProgress,
-        )
+    if (transitionProgress == null) {
+        RecommendationTitle(text = text, shineProgress = titleShine)
+    } else {
+        // 전환 끝점에서도 같은 두 Text 레이어를 유지한다. 끝나는 순간 Sequential →
+        // 일반 Text로 구조를 교체하면 실기기에서 한 프레임 갱신처럼 번쩍여 보인다.
+        Box {
+            SequentialRecommendationTitle(
+                previousText = "톡깨의 추천 답변",
+                targetText = "답장이 고민되시나요?",
+                progress = transitionProgress,
+            )
+            RecommendationShineOverlay(
+                text = "톡깨의 추천 답변",
+                shineProgress = titleShine,
+            )
+        }
     }
 }
 
@@ -1346,14 +1444,20 @@ private fun RecommendationWipeText(
 
 @Composable
 private fun RecommendationTitle(text: String, shineProgress: Float) {
-    if (shineProgress == 0f) {
+    Box {
         Text(text = text, style = TqType.BodyM.figma(), color = Primary600)
-        return
+        RecommendationShineOverlay(text = text, shineProgress = shineProgress)
     }
+}
+
+@Composable
+private fun RecommendationShineOverlay(text: String, shineProgress: Float) {
     var titleWidthPx by remember(text) { mutableStateOf(0) }
     val sweepDistance = titleWidthPx.coerceAtLeast(1).toFloat() * 3f
     val brush = Brush.linearGradient(
-        colors = listOf(Primary600, Primary600, Color.White, Primary600, Primary600),
+        // 기본 글자는 아래 레이어가 계속 그린다. 이 레이어는 흰 광택만 투명하게
+        // 지나가므로 진행값을 1→0으로 되돌려도 화면 모양이 바뀌지 않는다.
+        colors = listOf(Color.Transparent, Color.Transparent, Color.White, Color.Transparent, Color.Transparent),
         // 광택 중심이 글자 시작 바깥(-0.5폭)에서 끝 바깥(1.5폭)까지 지나간다.
         start = Offset((shineProgress * sweepDistance) - (titleWidthPx * 1.5f), 0f),
         end = Offset((shineProgress * sweepDistance) - (titleWidthPx * 0.5f), 0f),

@@ -1,4 +1,4 @@
-﻿package com.talkqquest.app.feature.notification.data.model
+package com.talkqquest.app.feature.notification.data.model
 
 import kotlinx.serialization.Serializable
 

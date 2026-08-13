@@ -1,4 +1,4 @@
-﻿package com.talkqquest.app.feature.notification.data
+package com.talkqquest.app.feature.notification.data
 
 import com.talkqquest.app.core.network.ApiResponse
 import com.talkqquest.app.feature.notification.data.model.NotificationSettings

@@ -32,6 +32,8 @@ data class GrowthTierReport(
     val nextStarsNeeded: Int,                // 다음 티어까지 남은 별 수 ("별 N개")
     val nextTierName: String,                // 다음 티어 이름 ("플래티넘")
     val competencies: List<Competency>,      // 핵심 역량 4축 (친절/주도/공감/질문)
+    // AI 상세 리포트에서 이번 점수로 마름모 하나를 완성했는지. 별 완성 연출에만 쓴다.
+    val completedDiamondThisReport: Boolean = false,
 )
 
 // 핵심 역량 4축 — 레이더(마름모) 위치·범례·체크 계산에 씀.
@@ -186,6 +188,21 @@ fun GrowthReportResponse.toGrowthTierReport(gains: List<Int> = emptyList()): Gro
         empathy = growthTotals.empathyTotal,
         questionLink = growthTotals.questionLinkTotal,
     )
+    // growthTotals에는 이번 미션 점수가 이미 포함된다. 직전 진행도와 비교해,
+    // 이번 리포트에서 새 마름모(=별)가 완성됐는지만 판별한다.
+    val beforeProgress = TierProgress.of(
+        kindness = (growthTotals.kindnessTotal - gains.getOrElse(0) { 0 }).coerceAtLeast(0),
+        initiative = (growthTotals.initiativeTotal - gains.getOrElse(1) { 0 }).coerceAtLeast(0),
+        empathy = (growthTotals.empathyTotal - gains.getOrElse(2) { 0 }).coerceAtLeast(0),
+        questionLink = (growthTotals.questionLinkTotal - gains.getOrElse(3) { 0 }).coerceAtLeast(0),
+    )
+    fun completedDiamonds(tierName: String, stars: Int): Int {
+        val tierIndex = TierProgress.TIERS.indexOf(tierName).coerceAtLeast(0)
+        return tierIndex * TierProgress.STARS_PER_TIER + stars
+    }
+    val completedDiamondThisReport = gains.size >= 4 &&
+        completedDiamonds(progress.tierName, progress.tierStars) >
+        completedDiamonds(beforeProgress.tierName, beforeProgress.tierStars)
     // 공감만 축 라벨("공감 표현")과 범례 라벨("공감 능력")이 다르다 — CSS 그대로.
     val axes = listOf(
         Triple(CompetencyAxis.KINDNESS, "친절한 태도", "친절한 태도"),
@@ -198,6 +215,7 @@ fun GrowthReportResponse.toGrowthTierReport(gains: List<Int> = emptyList()): Gro
         tierStars = progress.tierStars,
         nextStarsNeeded = progress.nextStarsNeeded,
         nextTierName = progress.nextTierName,
+        completedDiamondThisReport = completedDiamondThisReport,
         competencies = axes.mapIndexed { i, (axis, label, legendLabel) ->
             Competency(
                 axis = axis,

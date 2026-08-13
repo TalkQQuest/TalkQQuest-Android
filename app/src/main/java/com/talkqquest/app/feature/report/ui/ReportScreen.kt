@@ -51,7 +51,6 @@ import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Path
-import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalDensity
@@ -211,6 +210,7 @@ private fun ReportContent(
     // info 아이콘 → 티어 승급 안내 바텀시트
     var showTierHelp by remember { mutableStateOf(false) }
     var tierAutoTrigger by remember { mutableStateOf(0) }
+    var completedDiamondTrigger by remember { mutableStateOf(0) }
 
     Box(modifier = Modifier.fillMaxSize()) {
         Column(
@@ -255,11 +255,16 @@ private fun ReportContent(
                     nextTierName = growth.nextTierName,
                     onInfoClick = { showTierHelp = true },
                     autoTrigger = tierAutoTrigger,
+                    completedDiamondTrigger = completedDiamondTrigger,
                 )
                 Spacer(Modifier.height(13.dp))
                 CompetencyCard(
                     competencies = growth.competencies,
-                    onCompletionAnimationFinished = { tierAutoTrigger++ },
+                    completedDiamondThisReport = growth.completedDiamondThisReport,
+                    onCompletionAnimationFinished = {
+                        tierAutoTrigger++
+                        if (growth.completedDiamondThisReport) completedDiamondTrigger++
+                    },
                 )
             }
 
@@ -292,14 +297,27 @@ private fun TierCard(
     nextTierName: String,
     onInfoClick: () -> Unit,
     autoTrigger: Int,
+    completedDiamondTrigger: Int,
 ) {
     val tierVisualShine = remember { Animatable(0f) }
+    val completedStarScale = remember { Animatable(1f) }
+    val completedStarAlpha = remember { Animatable(1f) }
     var playTierAnimation by remember { mutableStateOf<() -> Unit>({}) }
 
     suspend fun playTierVisualShine() {
         tierVisualShine.snapTo(0f)
         tierVisualShine.animateTo(1f, tween(300, easing = LinearEasing))
         tierVisualShine.snapTo(0f)
+    }
+
+    LaunchedEffect(completedDiamondTrigger) {
+        if (completedDiamondTrigger == 0) return@LaunchedEffect
+        // 마지막 빈 별이 중심에서 생겨나 제자리 크기로 안착한다.
+        completedStarAlpha.snapTo(0f)
+        completedStarScale.snapTo(0.15f)
+        completedStarAlpha.animateTo(1f, tween(120, easing = FastOutSlowInEasing))
+        completedStarScale.animateTo(1.18f, tween(220, easing = FastOutSlowInEasing))
+        completedStarScale.animateTo(1f, tween(110, easing = FastOutSlowInEasing))
     }
 
     Column(
@@ -435,11 +453,20 @@ private fun TierCard(
                 )
                 Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                     repeat(3) { i ->
+                        val isNewlyCompletedStar = i == tierStars - 1
                         Icon(
                             painter = painterResource(R.drawable.ic_tier_star),
                             contentDescription = null,
                             tint = if (i < tierStars) StarYellow else Gray300,
-                            modifier = Modifier.size(15.dp),
+                            modifier = Modifier
+                                .size(15.dp)
+                                .graphicsLayer {
+                                    if (isNewlyCompletedStar) {
+                                        scaleX = completedStarScale.value
+                                        scaleY = completedStarScale.value
+                                        alpha = completedStarAlpha.value
+                                    }
+                                },
                         )
                     }
                 }
@@ -635,6 +662,7 @@ private fun TierNameWipeLayer(
 @Composable
 private fun CompetencyCard(
     competencies: List<Competency>,
+    completedDiamondThisReport: Boolean,
     onCompletionAnimationFinished: () -> Unit,
 ) {
     val byAxis = competencies.associateBy { it.axis }
@@ -646,6 +674,7 @@ private fun CompetencyCard(
     var gainsVisible by remember { mutableStateOf(false) }
     var legendScoresVisible by remember { mutableStateOf(false) }
     var completionChecksVisible by remember { mutableStateOf(false) }
+    val completionEnergy = remember { Animatable(0f) }
     val radarScale by animateFloatAsState(
         targetValue = if (radarEntered) 1f else 0f,
         animationSpec = tween(durationMillis = 400, easing = FastOutSlowInEasing),
@@ -662,7 +691,13 @@ private fun CompetencyCard(
         label = "competencyGainsRise",
     )
 
-    LaunchedEffect(Unit) {
+    suspend fun playCompletionSequence() {
+        radarEntered = false
+        gainsVisible = false
+        legendScoresVisible = false
+        completionChecksVisible = false
+        completionEnergy.snapTo(0f)
+        withFrameNanos { }
         radarEntered = true
         delay(400) // 보라 데이터 마름모가 완성된 뒤 +획득 수치를 함께 표시한다.
         gainsVisible = true
@@ -671,7 +706,16 @@ private fun CompetencyCard(
         delay(720) // 아래 점수의 상승이 완전히 끝난 뒤에만 만점 체크를 보여 준다.
         completionChecksVisible = true
         delay(340) // 원 채움(240ms)과 체크 등장(140ms 지연 + 160ms)을 모두 마친다.
+        if (completedDiamondThisReport) {
+            // 네 축의 에너지가 중심으로 모인 뒤 별을 완성한다.
+            completionEnergy.snapTo(0f)
+            completionEnergy.animateTo(1f, tween(180, easing = FastOutSlowInEasing))
+        }
         onCompletionAnimationFinished()
+    }
+
+    LaunchedEffect(Unit) {
+        playCompletionSequence()
     }
 
     Column(
@@ -709,6 +753,8 @@ private fun CompetencyCard(
                     bottom = frac(bottom),
                     left = frac(left),
                     dataScale = radarScale,
+                    completionEnergy = completionEnergy.value,
+                    showCompletionEnergy = completedDiamondThisReport,
                     modifier = Modifier.size(176.dp),
                 )
                 if (right != null) AxisLabel(right.label, right.gain, gainAlpha, gainOffsetY)
@@ -768,6 +814,8 @@ private fun RadarChart(
     bottom: Float,
     left: Float,
     dataScale: Float = 1f,
+    completionEnergy: Float = 0f,
+    showCompletionEnergy: Boolean = false,
     modifier: Modifier = Modifier,
 ) {
     Canvas(modifier = modifier) {
@@ -805,6 +853,24 @@ private fun RadarChart(
         // 꼭짓점 점 (Purple/600)
         listOf(pTop, pRight, pBottom, pLeft).forEach {
             drawCircle(Primary600, radius = dot * dataScale, center = it)
+        }
+
+        // 마름모 완성 순간, 네 축 끝점이 중심으로 짧게 빨려 들어가 별 완성을 연결한다.
+        if (showCompletionEnergy && completionEnergy > 0f) {
+            val outerPoints = listOf(
+                Offset(cx, cy - r), Offset(cx + r, cy), Offset(cx, cy + r), Offset(cx - r, cy),
+            )
+            outerPoints.forEach { outer ->
+                val point = Offset(
+                    x = outer.x + (cx - outer.x) * completionEnergy,
+                    y = outer.y + (cy - outer.y) * completionEnergy,
+                )
+                drawCircle(
+                    color = Primary600.copy(alpha = 1f - completionEnergy),
+                    radius = dot * (1f - completionEnergy * 0.35f),
+                    center = point,
+                )
+            }
         }
     }
 }

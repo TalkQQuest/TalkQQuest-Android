@@ -534,10 +534,38 @@ private fun NotificationCard(
         verticalAlignment = Alignment.Top,
         ) {
         Column(
-            modifier = Modifier.weight(1f),
+            modifier = Modifier.fillMaxWidth(),
             verticalArrangement = Arrangement.spacedBy(2.dp), // CSS gap 2
         ) {
-            Text(text = item.category, style = TqType.BodyS, color = Gray500)
+            // 시간은 첫 줄에서만 본문 폭을 나눈다. 본문은 다음 줄 전체 폭을 사용해야
+            // "방금"·"1일 전"처럼 시간 문자열 길이가 달라도 같은 문구가 같은 줄 수로 보인다.
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(
+                    text = item.category,
+                    style = TqType.BodyS.figma(),
+                    color = Gray500,
+                    modifier = Modifier.weight(1f),
+                )
+                // 피그마 Frame 427321606/608: 시간과 점은 세로가 아니라 같은 20dp 줄의 가로 배치.
+                // 점이 사라져도 이 줄의 높이는 변하지 않아 제목↔본문 2dp 간격과 카드 높이가 고정된다.
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(3.dp),
+                ) {
+                    Text(text = item.timeText, style = TqType.BodyS.figma(), color = Gray400)
+                    if (item.isUnread) {
+                        Box(
+                            modifier = Modifier
+                                .size(7.dp)
+                                .clip(CircleShape)
+                                .background(Primary600),
+                        )
+                    }
+                }
+            }
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(
                     text = item.body,
@@ -553,29 +581,15 @@ private fun NotificationCard(
                             strictness = LineBreak.Strictness.Normal,
                             wordBreak = LineBreak.WordBreak.Phrase,
                         ),
-                    ),
+                    ).figma(),
                     color = Gray900,
+                    modifier = if (item.hasLink) Modifier.weight(1f) else Modifier,
                 )
                 if (item.hasLink) {
                     Icon(
                         painter = painterResource(R.drawable.ic_forward_chevron),
                         contentDescription = null,
                         tint = Gray600, // CSS Icon border 2px #475569
-                    )
-                }
-            }
-        }
-        // CSS Frame 427321606/427321608: align-items: flex-start · gap 3 → 점도 상단 정렬
-        Column(horizontalAlignment = Alignment.End) {
-            Text(text = item.timeText, style = TqType.BodyS, color = Gray400)
-            if (item.isUnread) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Spacer(Modifier.width(3.dp)) // CSS gap 3
-                    Box(
-                        modifier = Modifier
-                            .size(7.dp)
-                            .clip(CircleShape)
-                            .background(Primary600),
                     )
                 }
             }

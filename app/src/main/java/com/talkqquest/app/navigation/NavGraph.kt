@@ -94,6 +94,7 @@ fun NavGraph(
     pagerState: PagerState,
     modifier: Modifier = Modifier,
     onOverlaySheetTop: (Float?) -> Unit = {},
+    onShowWeeklyReportModal: () -> Unit = {},
 ) {
     val tabRoutes = BottomNavItem.entries.map { it.route }.toSet()
     fun AnimatedContentTransitionScope<NavBackStackEntry>.isTabSwitch() =
@@ -559,7 +560,7 @@ fun NavGraph(
         }
 
         composable(Screen.HOME) {
-            MainTabsPager(navController, pagerState, onOverlaySheetTop)
+            MainTabsPager(navController, pagerState, onOverlaySheetTop, onShowWeeklyReportModal)
         }
 
         composable(Screen.NOTIFICATION) {

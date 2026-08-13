@@ -1,5 +1,6 @@
 package com.talkqquest.app.feature.mission.ui
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.SizeTransform
@@ -172,6 +173,15 @@ fun ConversationScreen(
     onBack: () -> Unit = {},                         // 뒤로가기 → 저장하지 않고 종료
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    // 기기 뒤로가기도 헤더 뒤로가기와 같은 "대화 이탈" 흐름을 탄다.
+    // 확인 팝업이 떠 있을 때는 화면을 나가지 않고 해당 팝업만 닫는다.
+    BackHandler {
+        when {
+            uiState.showCompleteDialog -> viewModel.setCompleteDialogVisible(false)
+            uiState.showLeaveDialog -> viewModel.setLeaveDialogVisible(false)
+            else -> viewModel.setLeaveDialogVisible(true)
+        }
+    }
     ConversationScreen(
         uiState = uiState,
         onRetry = viewModel::startConversation,

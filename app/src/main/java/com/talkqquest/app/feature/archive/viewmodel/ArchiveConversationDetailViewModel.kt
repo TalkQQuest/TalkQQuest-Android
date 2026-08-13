@@ -25,11 +25,13 @@ data class ArchiveConversationDetailUiState(
     val isLoading: Boolean = true,
     val title: String = "",
     val date: String = "",
-    val time: String = "", // 💡 UI 카드의 소요 시간("mm:ss")
+    val time: String = "", // UI 카드의 소요 시간("mm:ss")
     val duration: String = "", // "MM분 ss초" 텍스트 데이터
+    val description: String = "", // 💡 상단 대화 카드용 짧은 요약
     val summaryKeywords: List<String> = emptyList(),
-    val summaryText: String = "",
-    val mainContentText: String = "",
+    val summaryText: String = "", // 💡 중간 '대화 요약' 줄글
+    val mainContentText: String = "", // (기존 코드와의 호환성을 위해 유지)
+    val keyPoints: List<String> = emptyList(), // 💡 하단 '주요 내용' 불릿 리스트
     val feedbacks: List<AiFeedbackItem> = emptyList(),
     val messages: List<ReviewChatMessage> = emptyList(),
     val isReviewMode: Boolean = false,
@@ -93,7 +95,6 @@ class ArchiveConversationDetailViewModel @Inject constructor(
                         } else ""
                     } catch (e: Exception) { "" }
 
-                    // 💡 핵심 수정: UI의 time 변수에 첫 메시지 시간이 아닌 API의 소요 시간(duration)을 매핑합니다.
                     val parsedTime = data.duration ?: "00:00"
 
                     val parsedDuration = data.duration?.split(":")?.let { parts ->
@@ -109,11 +110,13 @@ class ArchiveConversationDetailViewModel @Inject constructor(
                             isLoading = false,
                             title = data.missionTitle ?: "대화 상세",
                             date = parsedDate,
-                            time = parsedTime, // <- 여기에 "05:30" 이 들어감
-                            duration = parsedDuration, // <- 여기에 "5분 30초"가 들어감
+                            time = parsedTime,
+                            duration = parsedDuration,
+                            description = data.description ?: data.summary ?: "", // 상단 카드용
                             summaryKeywords = data.summaryChips,
-                            summaryText = data.summary ?: "",
+                            summaryText = data.summary ?: "", // 중간 대화 요약용
                             mainContentText = data.summary ?: "",
+                            keyPoints = data.keyPoints, // 하단 주요 내용용(불릿)
                             feedbacks = mappedFeedbacks,
                             messages = mappedMessages
                         )

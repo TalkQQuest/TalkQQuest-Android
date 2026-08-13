@@ -52,6 +52,7 @@ import com.talkqquest.app.core.designsystem.Primary600
 import com.talkqquest.app.core.designsystem.Success
 import com.talkqquest.app.core.designsystem.TalkQQuestTheme
 import com.talkqquest.app.core.designsystem.White
+import com.talkqquest.app.feature.home.data.model.ArchiveRecentItem
 
 private enum class ProfileActivityType {
     Mission,
@@ -139,7 +140,19 @@ private val RecentActivities = listOf(
 @Composable
 fun ProfileRecentMissionScreen(
     onBack: () -> Unit = {},
+    recentItems: List<ArchiveRecentItem> = emptyList(),
+    usePreviewData: Boolean = false,
 ) = FitDesign(contentAlignment = Alignment.TopCenter) {
+    val activities = remember(recentItems, usePreviewData) {
+        recentItems.mapNotNull { it.toProfileActivityItem() }
+            .ifEmpty { if (usePreviewData) RecentActivities else emptyList() }
+    }
+    val completedMissionCount = remember(activities, usePreviewData) {
+        if (usePreviewData) 5 else activities.count { it.type == ProfileActivityType.Mission }
+    }
+    val earnedXp = remember(activities, usePreviewData) {
+        if (usePreviewData) 160 else activities.sumOf { it.xp ?: 0 }
+    }
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -152,6 +165,8 @@ fun ProfileRecentMissionScreen(
         )
 
         RecentSummaryCard(
+            completedMissionCount = completedMissionCount,
+            earnedXp = earnedXp,
             modifier = Modifier
                 .offset(x = 16.dp, y = 104.dp)
                 .size(width = 361.dp, height = 80.dp),
@@ -172,15 +187,54 @@ fun ProfileRecentMissionScreen(
                 .size(width = 361.dp, height = 349.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
-            RecentActivities.forEach { activity ->
+            activities.forEach { activity ->
                 RecentActivitySummaryCard(activity = activity)
             }
         }
     }
 }
 
+
+private fun ArchiveRecentItem.toProfileActivityItem(): ProfileActivityItem? {
+    val normalizedType = type.lowercase()
+    return when (normalizedType) {
+        "mission" -> ProfileActivityItem(
+            type = ProfileActivityType.Mission,
+            title = title,
+            status = "",
+            difficulty = difficulty.orEmpty(),
+            category = category ?: tags.firstOrNull().orEmpty(),
+            minutes = estimatedMinutes,
+            xp = rewardXp,
+        )
+        "conversation" -> ProfileActivityItem(
+            type = ProfileActivityType.Conversation,
+            title = title,
+            status = "대화 완료",
+            date = createdAt.toProfileDate(),
+        )
+        "phrase" -> ProfileActivityItem(
+            type = ProfileActivityType.Sentence,
+            title = title,
+            status = "문장 저장",
+            date = createdAt.toProfileDate(),
+        )
+        "report" -> ProfileActivityItem(
+            type = ProfileActivityType.Report,
+            title = title,
+            status = "리포트 열람",
+            date = createdAt.toProfileDate(),
+        )
+        else -> null
+    }
+}
+
+private fun String.toProfileDate(): String =
+    take(10).replace("-", ".")
 @Composable
 private fun RecentSummaryCard(
+    completedMissionCount: Int,
+    earnedXp: Int,
     modifier: Modifier = Modifier,
 ) {
     Box(
@@ -190,7 +244,7 @@ private fun RecentSummaryCard(
     ) {
         SummaryMetric(
             label = "최근 완료한 미션",
-            value = "5",
+            value = completedMissionCount.toString(),
             modifier = Modifier
                 .offset(x = 35.dp, y = 12.dp)
                 .size(width = 105.dp, height = 56.dp),
@@ -203,7 +257,7 @@ private fun RecentSummaryCard(
         )
         SummaryMetric(
             label = "획득한 경험치",
-            value = "+ 160 XP",
+            value = "+ $earnedXp XP",
             modifier = Modifier
                 .offset(x = 221.dp, y = 12.dp)
                 .size(width = 105.dp, height = 56.dp),
@@ -466,7 +520,7 @@ internal fun ProfileSimpleTopBar(
 @Composable
 private fun ProfileRecentMissionScreenPreview() {
     TalkQQuestTheme {
-        ProfileRecentMissionScreen()
+        ProfileRecentMissionScreen(usePreviewData = true)
     }
 }
 

@@ -1,4 +1,4 @@
-package com.talkqquest.app.feature.profile.ui
+﻿package com.talkqquest.app.feature.profile.ui
 
 import android.net.Uri
 
@@ -139,7 +139,7 @@ fun ProfileInfoScreen(
             }
             ProfileInfoRow(
                 title = "${nickname}님의 대화 고민",
-                titleWidth = 145,
+                titleWidth = null,
                 modifier = Modifier
                     .offset(y = if (isEmailMember) 92.dp else 46.dp)
                     .size(width = 371.dp, height = 44.dp),
@@ -154,7 +154,7 @@ private fun ProfileInfoRow(
     title: String,
     modifier: Modifier = Modifier,
     trailing: String? = null,
-    titleWidth: Int = 129,
+    titleWidth: Int? = 129,
     onClick: () -> Unit = {},
 ) {
     Row(
@@ -165,7 +165,7 @@ private fun ProfileInfoRow(
             text = title,
             style = TqType.BodyL,
             color = Gray800,
-            modifier = Modifier.size(width = titleWidth.dp, height = 24.dp),
+            modifier = Modifier.size(width = titleWidth!!.dp, height = 24.dp),
         )
         Spacer(Modifier.weight(1f))
         if (trailing != null) {
@@ -208,3 +208,5 @@ private fun ProfileInfoSocialMemberScreenPreview() {
         ProfileInfoScreen(isEmailMember = false)
     }
 }
+
+

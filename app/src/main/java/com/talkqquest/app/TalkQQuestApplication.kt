@@ -1,4 +1,4 @@
-package com.talkqquest.app
+﻿package com.talkqquest.app
 
 import android.app.Application
 import com.kakao.sdk.common.KakaoSdk
@@ -10,18 +10,13 @@ import javax.inject.Inject
 
 @HiltAndroidApp
 class TalkQQuestApplication : Application() {
-
     @Inject lateinit var pushTokenRegistrar: PushTokenRegistrar
 
     override fun onCreate() {
         super.onCreate()
 
-        // FCM 알림 채널 생성 (없으면 알림이 안 뜸)
+        // FCM 기본 알림 채널을 생성하고, 저장된 로그인 세션이 있으면 현재 기기 토큰을 서버에 등록한다.
         PushNotifications.createDefaultChannel(this)
-
-        // 이 기기의 FCM 토큰을 서버에 등록. 토큰 발급 시점(onNewToken)은 보통 설치 직후 한 번뿐이라
-        // 이미 깔려 있던 기기는 그때가 지나 있다. 앱 시작마다 현재 토큰을 다시 올려 채운다.
-        // 로그인 전이면 401로 끝나고, 다음 실행(로그인 후)에서 다시 올라간다.
         pushTokenRegistrar.registerCurrentToken()
 
         if (BuildConfig.KAKAO_NATIVE_APP_KEY.isNotBlank()) {

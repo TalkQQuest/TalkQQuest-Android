@@ -2,8 +2,8 @@
 
 import kotlinx.serialization.Serializable
 
-// GET /api/v1/notifications 응답 data — { notifications: [...] }.
-// dev 백엔드 실계약(notification.dto.ts NotificationItem) 대조 확정 — 2026-07-25.
+// GET /api/v1/notifications ?묐떟 data ??{ notifications: [...] }.
+// dev 諛깆뿏???ㅺ퀎??notification.dto.ts NotificationItem) ?議??뺤젙 ??2026-07-25.
 @Serializable
 data class NotificationsResponse(
     val notifications: List<NotificationItemDto> = emptyList(),
@@ -13,31 +13,31 @@ data class NotificationsResponse(
 data class NotificationItemDto(
     val id: String = "",
     val type: String = "",         // mission_reminder | report_ready | ...
-    val title: String = "",        // 카드 위 작은 줄 (예: "새로운 리포트가 도착했어요!")
-    val body: String? = null,      // 카드 아래 줄 (nullable) — dev 실계약 필드명 (이전 추정 message에서 정정)
+    val title: String = "",        // 移대뱶 ???묒? 以?(?? "?덈줈??由ы룷?멸? ?꾩갑?덉뼱??")
+    val body: String? = null,      // 移대뱶 ?꾨옒 以?(nullable) ??dev ?ㅺ퀎???꾨뱶紐?(?댁쟾 異붿젙 message?먯꽌 ?뺤젙)
     val isRead: Boolean = false,
-    val createdAt: String = "",    // ISO (예: 2026-07-22T09:51:57.440Z)
+    val createdAt: String = "",    // ISO (?? 2026-07-22T09:51:57.440Z)
 )
 
-// GET/PATCH /api/v1/notifications/settings — dev NotificationSettingsResponseDto.
-// ※ 이 화면(알림창)에는 설정 UI가 없다. 설정 행은 프로필 설정 화면(A담당)에 있고,
-//   여기는 API 계약만 보관한다.
+// GET/PATCH /api/v1/notifications/settings ??dev NotificationSettingsResponseDto.
+// ?????붾㈃(?뚮┝李??먮뒗 ?ㅼ젙 UI媛 ?녿떎. ?ㅼ젙 ?됱? ?꾨줈???ㅼ젙 ?붾㈃(A?대떦)???덇퀬,
+//   ?ш린??API 怨꾩빟留?蹂닿??쒕떎.
 @Serializable
 data class NotificationSettings(
     val missionReminder: Boolean = false,
     val communityApproved: Boolean = false,
     val reportReady: Boolean = false,
     val marketing: Boolean = false,
-    // 미션 리마인드를 보낼 시각. "HH:mm" 24시간 표기, 서버 기본값 "09:00" (백엔드 보고 2026-08-11).
-    // 앱은 저장만 하면 되고 그 시각에 실제로 알림을 보내는 건 서버가 한다 — 따로 부를 API가 없다.
-    // ★형식이 어긋나면 400(VALIDATION_ERROR "missionReminderTime은 HH:mm 형식이어야 합니다")이다.
-    //   실서버 호출로 확인함. "9:00"·"09:00:00"·"9시" 전부 거절되니 두 자리로 맞춰 보낼 것.
+    // 誘몄뀡 由щ쭏?몃뱶瑜?蹂대궪 ?쒓컖. "HH:mm" 24?쒓컙 ?쒓린, ?쒕쾭 湲곕낯媛?"09:00" (諛깆뿏??蹂닿퀬 2026-08-11).
+    // ?깆? ??λ쭔 ?섎㈃ ?섍퀬 洹??쒓컖???ㅼ젣濡??뚮┝??蹂대궡??嫄??쒕쾭媛 ?쒕떎 ???곕줈 遺瑜?API媛 ?녿떎.
+    // ?낇삎?앹씠 ?닿툔?섎㈃ 400(VALIDATION_ERROR "missionReminderTime? HH:mm ?뺤떇?댁뼱???⑸땲??)?대떎.
+    //   ?ㅼ꽌踰??몄텧濡??뺤씤?? "9:00"쨌"09:00:00"쨌"9?? ?꾨? 嫄곗젅?섎땲 ???먮━濡?留욎떠 蹂대궪 寃?
     val missionReminderTime: String = "09:00",
 )
 
-// PATCH 본문 — 부분 업데이트라 바꿀 항목만 담는다(나머지는 null이면 안 보냄).
-// 응답 DTO(NotificationSettings)를 그대로 본문에 쓰면 손대지 않은 항목까지 기본값으로 덮어써서,
-// 시각 하나 바꾸려다 알림 스위치가 전부 꺼진다.
+// PATCH 蹂몃Ц ??遺遺??낅뜲?댄듃??諛붽? ??ぉ留??대뒗???섎㉧吏??null?대㈃ ??蹂대깂).
+// ?묐떟 DTO(NotificationSettings)瑜?洹몃?濡?蹂몃Ц???곕㈃ ?먮?吏 ?딆? ??ぉ源뚯? 湲곕낯媛믪쑝濡???뼱?⑥꽌,
+// ?쒓컖 ?섎굹 諛붽씀?ㅻ떎 ?뚮┝ ?ㅼ쐞移섍? ?꾨? 爰쇱쭊??
 @Serializable
 data class NotificationSettingsUpdateRequest(
     val missionReminder: Boolean? = null,
@@ -48,17 +48,16 @@ data class NotificationSettingsUpdateRequest(
 )
 
 
-// 화면용 모델 — 알림 카드 1장 (디자인: 위 작은 회색 줄 + 아래 굵은 줄 + 시간 + 안읽음 점).
+// ?붾㈃??紐⑤뜽 ???뚮┝ 移대뱶 1??(?붿옄?? ???묒? ?뚯깋 以?+ ?꾨옒 援듭? 以?+ ?쒓컙 + ?덉씫????.
 
 
 data class NotificationUiItem(
     val id: String,
-    val category: String,  // 위 작은 줄 (Body/S Gray500)
-    val body: String,      // 아래 굵은 줄 (Body/L Medium Gray900)
-    val timeText: String,  // 방금 / N분 전 / N시간 전 / N일 전 / yyyy.MM.dd
-    val isUnread: Boolean, // true = 보라 점 표시
-    // 주간 비교 리포트 알림만 아래 줄 옆에 화살표가 붙는다 — 눌러서 바로 리포트로 이동하는 통로라서
-    // (CSS "알림창" Frame 427321769). 나머지 알림은 읽고 마는 것이라 화살표가 없다.
+    val category: String,  // ???묒? 以?(Body/S Gray500)
+    val body: String,      // ?꾨옒 援듭? 以?(Body/L Medium Gray900)
+    val timeText: String,  // 諛⑷툑 / N遺???/ N?쒓컙 ??/ N????/ yyyy.MM.dd
+    val isUnread: Boolean, // true = 蹂대씪 ???쒖떆
+    // 二쇨컙 鍮꾧탳 由ы룷???뚮┝留??꾨옒 以??놁뿉 ?붿궡?쒓? 遺숇뒗?????뚮윭??諛붾줈 由ы룷?몃줈 ?대룞?섎뒗 ?듬줈?쇱꽌
+    // (CSS "?뚮┝李? Frame 427321769). ?섎㉧吏 ?뚮┝? ?쎄퀬 留덈뒗 寃껋씠???붿궡?쒓? ?녿떎.
     val hasLink: Boolean = false,
 )
-

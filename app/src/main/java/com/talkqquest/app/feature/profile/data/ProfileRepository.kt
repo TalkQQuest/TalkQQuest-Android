@@ -3,6 +3,7 @@
 import com.talkqquest.app.core.network.ApiResult
 import com.talkqquest.app.core.network.serverCall
 import com.talkqquest.app.feature.home.data.HomeApi
+import com.talkqquest.app.feature.home.data.model.ArchiveSummary
 import com.talkqquest.app.feature.home.data.model.CurrentPasswordVerifyRequest
 import com.talkqquest.app.feature.home.data.model.LegalDocument
 import com.talkqquest.app.feature.home.data.model.MyBadgesResponse
@@ -34,6 +35,9 @@ class ProfileRepository @Inject constructor(
     suspend fun getMyBadges(): ApiResult<MyBadgesResponse> =
         serverCall { homeApi.getMyBadges() }
 
+    suspend fun getArchiveSummary(): ApiResult<ArchiveSummary> =
+        serverCall { homeApi.getArchiveSummary() }
+
     suspend fun getServiceTerms(): ApiResult<LegalDocument> =
         serverCall { homeApi.getServiceTerms() }
 
@@ -43,15 +47,39 @@ class ProfileRepository @Inject constructor(
     suspend fun getUserSettings(): ApiResult<UserSettings> =
         when (val result = serverCall { notificationApi.getSettings() }) {
             is ApiResult.Success -> ApiResult.Success(result.data.toUserSettings())
-            is ApiResult.Error -> result
+            is ApiResult.Error -> if (result.code == 404) serverCall { homeApi.getUserSettings() } else result
             is ApiResult.Exception -> result
         }
 
     suspend fun uploadProfileImage(image: MultipartBody.Part): ApiResult<ProfileImageUploadResponse> =
         serverCall { homeApi.uploadProfileImage(image) }
+
     suspend fun updateUserSettings(request: UserSettingsUpdateRequest): ApiResult<Unit> =
+        when (val result = updateNotificationSettings(request)) {
+            is ApiResult.Success -> result
+            is ApiResult.Error -> if (result.code == 404) updateHomeUserSettings(request) else result
+            is ApiResult.Exception -> result
+        }
+
+    private suspend fun updateNotificationSettings(request: UserSettingsUpdateRequest): ApiResult<Unit> =
         try {
             val response = notificationApi.updateSettings(request.toNotificationSettingsUpdateRequest())
+            if (response.success) {
+                ApiResult.Success(Unit)
+            } else {
+                ApiResult.Error(code = null, message = response.message)
+            }
+        } catch (e: HttpException) {
+            ApiResult.Error(code = e.code(), message = e.message())
+        } catch (e: IOException) {
+            ApiResult.Exception(e)
+        } catch (e: Exception) {
+            ApiResult.Exception(e)
+        }
+
+    private suspend fun updateHomeUserSettings(request: UserSettingsUpdateRequest): ApiResult<Unit> =
+        try {
+            val response = homeApi.updateUserSettings(request)
             if (response.success) {
                 ApiResult.Success(Unit)
             } else {
@@ -120,6 +148,7 @@ private fun NotificationSettings.toUserSettings() = UserSettings(
     reportReady = reportReady,
     marketing = marketing,
 )
+
 private fun UserSettingsUpdateRequest.toNotificationSettingsUpdateRequest() =
     NotificationSettingsUpdateRequest(
         missionReminder = missionReminder,
@@ -128,4 +157,3 @@ private fun UserSettingsUpdateRequest.toNotificationSettingsUpdateRequest() =
         reportReady = reportReady,
         marketing = marketing,
     )
-

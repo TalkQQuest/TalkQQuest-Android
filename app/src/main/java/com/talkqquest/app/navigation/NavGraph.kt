@@ -1,4 +1,4 @@
-﻿package com.talkqquest.app.navigation
+package com.talkqquest.app.navigation
 
 import android.content.Context
 import android.net.Uri
@@ -912,7 +912,23 @@ fun NavGraph(
         }
 
         composable(Screen.PROFILE_RECENT_MISSION) {
-            ProfileRecentMissionScreen(onBack = { navController.popBackStack() })
+            val context = LocalContext.current
+            val profileViewModel: ProfileViewModel = hiltViewModel()
+            val profileUiState by profileViewModel.uiState.collectAsState()
+
+            LaunchedEffect(Unit) {
+                profileViewModel.loadArchiveSummary()
+            }
+
+            profileUiState.errorMessage?.let { message ->
+                Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
+                profileViewModel.clearError()
+            }
+
+            ProfileRecentMissionScreen(
+                recentItems = profileUiState.archiveSummary?.recentItems.orEmpty(),
+                onBack = { navController.popBackStack() },
+            )
         }
 
         composable(Screen.PROFILE_SETTINGS) {
@@ -1109,12 +1125,32 @@ fun NavGraph(
         }
 
         composable(Screen.PROFILE_CONCERN) {
+            val context = LocalContext.current
+            val profileViewModel: ProfileViewModel = hiltViewModel()
+            val profileUiState by profileViewModel.uiState.collectAsState()
+            val profile = profileUiState.profile
+            val dashboard = profileUiState.dashboard
+            val nickname = dashboard?.nickname?.takeIf { it.isNotBlank() }
+                ?: profile?.nickname?.takeIf { it.isNotBlank() }
+                ?: profile?.name?.takeIf { it.isNotBlank() }
+                ?: "사용자"
+
+            LaunchedEffect(Unit) {
+                profileViewModel.loadDashboard()
+            }
+
+            profileUiState.errorMessage?.let { message ->
+                Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
+                profileViewModel.clearError()
+            }
+
             fun startConcernEdit() {
                 isConcernEditMode = true
                 navController.navigate(Screen.ONBOARDING_PERSONALITY)
             }
 
             ProfileConcernScreen(
+                nickname = nickname,
                 onBack = { navController.popBackStack() },
                 onPersonalityClick = { startConcernEdit() },
                 onDifficultyClick = { startConcernEdit() },

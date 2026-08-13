@@ -90,6 +90,12 @@ import com.talkqquest.app.feature.report.data.model.CompetencyAxis
 import com.talkqquest.app.feature.report.data.model.GrowthTierReport
 import com.talkqquest.app.feature.report.viewmodel.ReportUiState
 import com.talkqquest.app.feature.report.viewmodel.ReportViewModel
+import androidx.compose.runtime.snapshotFlow
+import androidx.compose.ui.layout.LayoutCoordinates
+import androidx.compose.ui.layout.onGloballyPositioned
+import com.talkqquest.app.core.designsystem.LocalStatusBarCompensation
+import com.talkqquest.app.core.designsystem.coverStatusBarCompensation
+import kotlinx.coroutines.flow.first
 
 // ── 성장 리포트 (CSS UI-14 "성장 리포트" 프레임 전사 — 성장 티어 시스템 시각화) ──
 // 실전 티어 카드(티어 휘장 + 별) + 핵심 역량 카드(마름모 4축 레이더 + 4행 범례).
@@ -212,7 +218,45 @@ private fun ReportContent(
     var tierAutoTrigger by remember { mutableStateOf(0) }
     var completedDiamondTrigger by remember { mutableStateOf(0) }
 
-    Box(modifier = Modifier.fillMaxSize()) {
+    // 승급 모션(꼭짓점 집결 → 별 → 비행 → 딤·휘장). 마름모를 완성한 회차에만 재생된다.
+    val motion = rememberTierMotion()
+    val promotion = growth.promotion
+    // 마름모 중심과 별 자리는 서로 다른 카드에 있다. 오버레이가 쓰는 좌표계로 환산하려면
+    // 두 좌표를 이 루트 Box 기준으로 옮겨야 한다.
+    var motionRoot by remember { mutableStateOf<LayoutCoordinates?>(null) }
+    // 빈 곳을 누르면 연출을 처음부터 다시 본다.
+    var replayKey by remember(growth) { mutableStateOf(0) }
+    // 모션이 끝나면 카드가 승급 후 상태로 갈아탄다(그 전까지는 직전 상태).
+    var swapped by remember(growth) { mutableStateOf(false) }
+    val shownTierName = if (swapped && promotion != null) promotion.newTierName else growth.tierName
+    val shownStars = when {
+        swapped && promotion != null -> promotion.newTierStars
+        motion.litStars >= 0 -> motion.litStars
+        else -> growth.tierStars
+    }
+    val shownNextStarsNeeded =
+        if (swapped && promotion != null) promotion.newNextStarsNeeded else growth.nextStarsNeeded
+    val shownNextTierName =
+        if (swapped && promotion != null) promotion.newNextTierName else growth.nextTierName
+    // 승급 후에는 마름모도 리셋된 값으로 내려앉는다 — 왜 점수가 줄었는지가 눈에 보이게.
+    val shownCompetencies = if (swapped && promotion != null) {
+        growth.competencies.mapIndexed { i, c ->
+            c.copy(score = promotion.afterScores.getOrElse(i) { c.score }, gain = 0, startScore = c.score)
+        }
+    } else {
+        growth.competencies
+    }
+
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .onGloballyPositioned { motionRoot = it }
+            .clickable(
+                interactionSource = remember { MutableInteractionSource() },
+                indication = null,
+                onClick = { replayKey++ },
+            ),
+    ) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -249,21 +293,35 @@ private fun ReportContent(
             // 카드 묶음 (left 16, gap 13)
             Column(modifier = Modifier.padding(horizontal = 16.dp)) {
                 TierCard(
-                    tierName = growth.tierName,
-                    tierStars = growth.tierStars,
-                    nextStarsNeeded = growth.nextStarsNeeded,
-                    nextTierName = growth.nextTierName,
+                    tierName = shownTierName,
+                    tierStars = shownStars,
+                    nextStarsNeeded = shownNextStarsNeeded,
+                    nextTierName = shownNextTierName,
                     onInfoClick = { showTierHelp = true },
                     autoTrigger = tierAutoTrigger,
                     completedDiamondTrigger = completedDiamondTrigger,
+                    landPunchSlot = if (motion.litStars > 0) motion.litStars - 1 else -1,
+                    landPunch = motion.landPunch.value,
+                    onStarSlotsPositioned = { slots, coords ->
+                        val root = motionRoot ?: return@TierCard
+                        motion.starSlots = slots.map { root.localPositionOf(coords, it) }
+                    },
                 )
                 Spacer(Modifier.height(13.dp))
                 CompetencyCard(
-                    competencies = growth.competencies,
+                    competencies = shownCompetencies,
                     completedDiamondThisReport = growth.completedDiamondThisReport,
                     onCompletionAnimationFinished = {
                         tierAutoTrigger++
-                        if (growth.completedDiamondThisReport) completedDiamondTrigger++
+                        // 승급 모션이 별을 직접 날려 꽂으므로, 그때는 별이 제자리에서 튀어나오는
+                        // 연출(completedDiamondTrigger)을 겹쳐 재생하지 않는다.
+                        if (growth.completedDiamondThisReport && promotion == null) completedDiamondTrigger++
+                    },
+                    replayKey = replayKey,
+                    convergeProgress = motion.converge.value,
+                    onRadarCenterPositioned = { center, coords ->
+                        val root = motionRoot ?: return@CompetencyCard
+                        motion.radarCenter = root.localPositionOf(coords, center)
                     },
                 )
             }
@@ -285,6 +343,40 @@ private fun ReportContent(
             visible = showTierHelp,
             onDismiss = { showTierHelp = false },
         )
+
+        // 승급 모션 오버레이 — 날아가는 별과 딤·휘장은 카드 위에 그려야 해서 최상단에 둔다.
+        if (promotion != null) {
+            val scope = rememberCoroutineScope()
+            TierPromotionOverlay(
+                motion = motion,
+                newTierName = promotion.newTierName,
+                newTierEmblemRes = tierEmblemSmallRes(promotion.newTierName),
+                onDismiss = { scope.launch { motion.dismissCelebration(); motion.settle() } },
+                // FitDesign이 위쪽에 넣어 둔 상태바 보정분까지 딤이 덮게 한다(승급 안내 시트와 동일).
+                modifier = Modifier.coverStatusBarCompensation(LocalStatusBarCompensation.current),
+            )
+            // 만점 체크와 좌표 확보를 "안에서" 기다린다. 이 둘을 key로 두면 재생 도중 조건이
+            // 다시 평가되며 코루틴이 취소돼 축하 화면이 걷히지 않은 채 멈춘다.
+            LaunchedEffect(growth, replayKey) {
+                val base = tierAutoTrigger // 이번 회차의 만점 체크가 끝나는 시점만 기다린다
+                motion.reset()
+                swapped = false
+                snapshotFlow { tierAutoTrigger > base && motion.ready }.first { it }
+                delay(220) // 체크가 다 켜진 걸 눈으로 확인할 틈
+                motion.play(
+                    slot = promotion.slotIndex,
+                    isTierUp = promotion.isTierUp,
+                    onTierSwap = { swapped = true },
+                )
+                if (promotion.isTierUp) {
+                    delay(1800) // 휘장을 보고 있을 시간(탭하면 바로 닫힌다)
+                    motion.dismissCelebration()
+                } else {
+                    swapped = true
+                }
+                motion.settle() // 새 마름모가 다시 피어나며 끝난다
+            }
+        }
     }
 }
 
@@ -298,6 +390,11 @@ private fun TierCard(
     onInfoClick: () -> Unit,
     autoTrigger: Int,
     completedDiamondTrigger: Int,
+    // 승급 모션용 — 방금 별이 박힌 자리(-1이면 없음)와 그 튕김 진행값.
+    landPunchSlot: Int = -1,
+    landPunch: Float = 0f,
+    // 별 3칸의 중심 좌표를 이 Row 기준으로 올려 준다(오버레이가 루트 좌표로 환산).
+    onStarSlotsPositioned: (List<Offset>, LayoutCoordinates) -> Unit = { _, _ -> },
 ) {
     val tierVisualShine = remember { Animatable(0f) }
     val completedStarScale = remember { Animatable(1f) }
@@ -451,9 +548,22 @@ private fun TierCard(
                     onPlayReady = { playTierAnimation = it },
                     autoTrigger = autoTrigger,
                 )
-                Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(4.dp),
+                    modifier = Modifier.onGloballyPositioned { coords ->
+                        // 별 하나 15dp + 간격 4dp. 각 칸의 중심을 Row 좌표계로 계산한다.
+                        val h = coords.size.height.toFloat()
+                        val step = coords.size.width.toFloat() / 3f
+                        onStarSlotsPositioned(
+                            List(3) { i -> Offset(step * i + step / 2f, h / 2f) },
+                            coords,
+                        )
+                    },
+                ) {
                     repeat(3) { i ->
                         val isNewlyCompletedStar = i == tierStars - 1
+                        // 날아온 별이 박히는 칸은 한 번 크게 튕긴다.
+                        val punch = if (i == landPunchSlot) 1f + landPunch * 0.55f else 1f
                         Icon(
                             painter = painterResource(R.drawable.ic_tier_star),
                             contentDescription = null,
@@ -465,6 +575,10 @@ private fun TierCard(
                                         scaleX = completedStarScale.value
                                         scaleY = completedStarScale.value
                                         alpha = completedStarAlpha.value
+                                    }
+                                    if (punch != 1f) {
+                                        scaleX = punch
+                                        scaleY = punch
                                     }
                                 },
                         )
@@ -664,6 +778,11 @@ private fun CompetencyCard(
     competencies: List<Competency>,
     completedDiamondThisReport: Boolean,
     onCompletionAnimationFinished: () -> Unit,
+    // 값이 바뀔 때마다 등장 연출을 처음부터 다시 재생한다.
+    replayKey: Int = 0,
+    // 승급 모션 — 1이면 네 꼭짓점이 마름모 중심으로 모인다.
+    convergeProgress: Float = 0f,
+    onRadarCenterPositioned: (Offset, LayoutCoordinates) -> Unit = { _, _ -> },
 ) {
     val byAxis = competencies.associateBy { it.axis }
     val top = byAxis[CompetencyAxis.KINDNESS]
@@ -690,6 +809,12 @@ private fun CompetencyCard(
         animationSpec = tween(durationMillis = 260, easing = FastOutSlowInEasing),
         label = "competencyGainsRise",
     )
+    // 아래 점수가 올라가는 것과 같은 박자로 마름모도 직전 값에서 이번 값까지 자란다.
+    val fillProgress by animateFloatAsState(
+        targetValue = if (legendScoresVisible) 1f else 0f,
+        animationSpec = tween(durationMillis = 650, easing = FastOutSlowInEasing),
+        label = "competencyRadarFill",
+    )
 
     suspend fun playCompletionSequence() {
         radarEntered = false
@@ -714,7 +839,7 @@ private fun CompetencyCard(
         onCompletionAnimationFinished()
     }
 
-    LaunchedEffect(Unit) {
+    LaunchedEffect(replayKey) {
         playCompletionSequence()
     }
 
@@ -753,14 +878,22 @@ private fun CompetencyCard(
                 ) {
                     if (left != null) AxisLabel(left.label, left.gain, gainAlpha, gainOffsetY)
                     RadarChart(
-                        top = frac(top),
-                        right = frac(right),
-                        bottom = frac(bottom),
-                        left = frac(left),
+                        top = fracAt(top, fillProgress),
+                        right = fracAt(right, fillProgress),
+                        bottom = fracAt(bottom, fillProgress),
+                        left = fracAt(left, fillProgress),
                         dataScale = radarScale,
                         completionEnergy = completionEnergy.value,
                         showCompletionEnergy = completedDiamondThisReport,
-                        modifier = Modifier.size(176.dp),
+                        convergeProgress = convergeProgress,
+                        modifier = Modifier
+                            .size(176.dp)
+                            .onGloballyPositioned { coords ->
+                                onRadarCenterPositioned(
+                                    Offset(coords.size.width / 2f, coords.size.height / 2f),
+                                    coords,
+                                )
+                            },
                     )
                     if (right != null) AxisLabel(right.label, right.gain, gainAlpha, gainOffsetY)
                 }
@@ -782,6 +915,14 @@ private fun CompetencyCard(
             }
         }
     }
+}
+
+// progress 0이면 직전 값(startScore), 1이면 이번 값(score).
+// 증가분을 모르는 경로(보관함 등)는 두 값이 같아 그냥 제자리에 머문다.
+private fun fracAt(c: Competency?, progress: Float): Float {
+    if (c == null || c.maxScore == 0) return 0f
+    val before = c.startScore.coerceAtLeast(0).toFloat() / c.maxScore
+    return (before + (frac(c) - before) * progress).coerceIn(0f, 1f)
 }
 
 private fun frac(c: Competency?): Float =
@@ -837,6 +978,8 @@ private fun RadarChart(
     dataScale: Float = 1f,
     completionEnergy: Float = 0f,
     showCompletionEnergy: Boolean = false,
+    // 승급 모션 — 1이면 네 꼭짓점이 중심으로 빨려 들어가고 보라 마름모는 사라진다.
+    convergeProgress: Float = 0f,
     modifier: Modifier = Modifier,
 ) {
     Canvas(modifier = modifier) {
@@ -859,21 +1002,41 @@ private fun RadarChart(
 
         // 데이터 폴리곤 (Purple/200 채움 + Purple/600 선)
         // 거미줄은 고정. 보라 데이터 마름모만 중심에서 각 축 값까지 자란다.
-        val pTop = Offset(cx, cy - r * top * dataScale)
-        val pRight = Offset(cx + r * right * dataScale, cy)
-        val pBottom = Offset(cx, cy + r * bottom * dataScale)
-        val pLeft = Offset(cx - r * left * dataScale, cy)
+        // 승급 모션에서는 converge가 올라가며 네 꼭짓점이 중심으로 빨려 들어간다.
+        val pull = 1f - convergeProgress
+        val pTop = Offset(cx, cy - r * top * dataScale * pull)
+        val pRight = Offset(cx + r * right * dataScale * pull, cy)
+        val pBottom = Offset(cx, cy + r * bottom * dataScale * pull)
+        val pLeft = Offset(cx - r * left * dataScale * pull, cy)
         val data = Path().apply {
             moveTo(pTop.x, pTop.y); lineTo(pRight.x, pRight.y)
             lineTo(pBottom.x, pBottom.y); lineTo(pLeft.x, pLeft.y); close()
         }
         // Vector 78: Purple/200 채움 + Purple/600 선, 요소 전체 opacity 0.6 → 안쪽 격자가 비쳐 보임
-        drawPath(data, color = Primary200.copy(alpha = 0.6f))
-        drawPath(data, color = Primary600.copy(alpha = 0.6f), style = Stroke(width = 1.dp.toPx()))
+        // 집결이 끝날 무렵 면은 먼저 지워 별만 남게 한다.
+        val faceAlpha = 0.6f * (1f - convergeProgress)
+        drawPath(data, color = Primary200.copy(alpha = faceAlpha))
+        drawPath(data, color = Primary600.copy(alpha = faceAlpha), style = Stroke(width = 1.dp.toPx()))
 
-        // 꼭짓점 점 (Purple/600)
+        // 꼭짓점 점 (Purple/600) — 모이는 동안 조금 굵어지며 노란빛으로 물든다.
+        val dotColor = androidx.compose.ui.graphics.lerp(Primary600, StarYellow, convergeProgress)
+        val dotScale = dataScale * (1f + convergeProgress * 0.9f)
         listOf(pTop, pRight, pBottom, pLeft).forEach {
-            drawCircle(Primary600, radius = dot * dataScale, center = it)
+            drawCircle(dotColor, radius = dot * dotScale, center = it)
+        }
+        // 다 모이면 중심에서 빛이 한 번 터진다(별이 태어나는 자리).
+        if (convergeProgress > 0.55f) {
+            val burst = (convergeProgress - 0.55f) / 0.45f
+            val burstR = r * 0.55f * burst + 1f
+            drawCircle(
+                brush = Brush.radialGradient(
+                    colors = listOf(Color(0xFFFFD874).copy(alpha = 0.75f * burst), Color.Transparent),
+                    center = Offset(cx, cy),
+                    radius = burstR,
+                ),
+                radius = burstR,
+                center = Offset(cx, cy),
+            )
         }
 
         // 마름모 완성 순간, 네 축 끝점이 중심으로 짧게 빨려 들어가 별 완성을 연결한다.
@@ -903,7 +1066,7 @@ private fun LegendRow(
     showFinalScore: Boolean,
     showCompletionCheck: Boolean,
 ) {
-    val startScore = (competency.score - competency.gain).coerceAtLeast(0)
+    val startScore = competency.startScore.coerceAtLeast(0)
     val displayedScore by animateIntAsState(
         targetValue = if (showFinalScore) competency.score else startScore,
         animationSpec = tween(durationMillis = 650, easing = FastOutSlowInEasing),

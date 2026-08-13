@@ -32,6 +32,9 @@ import com.talkqquest.app.core.designsystem.White
 @Composable
 fun ProfileConcernScreen(
     nickname: String = "사용자",
+    personalityType: String? = null,
+    difficultSituations: List<String> = emptyList(),
+    purpose: List<String> = emptyList(),
     onBack: () -> Unit = {},
     onPersonalityClick: () -> Unit = {},
     onDifficultyClick: () -> Unit = {},
@@ -52,7 +55,7 @@ fun ProfileConcernScreen(
         ) {
             ProfileConcernRow(
                 label = "평소 대화할 때 ${nickname}님의 모습은",
-                value = "사교적이고 활발한 편이에요",
+                value = personalityType.toPersonalityDisplay(),
                 onClick = onPersonalityClick,
                 modifier = Modifier
                     .offset(x = 16.dp, y = 14.dp)
@@ -60,7 +63,7 @@ fun ProfileConcernScreen(
             )
             ProfileConcernRow(
                 label = "대화할 때 가장 어려운 점은 뭔가요?",
-                value = "주제고민·말문막힘",
+                value = difficultSituations.toConcernDisplay("아직 선택한 어려운 점이 없어요"),
                 onClick = onDifficultyClick,
                 modifier = Modifier
                     .offset(x = 16.dp, y = 88.dp)
@@ -68,7 +71,7 @@ fun ProfileConcernScreen(
             )
             ProfileConcernRow(
                 label = "어떤 대화를 연습하고 싶으신가요?",
-                value = "침묵 줄이기·친해지는 대화",
+                value = purpose.toConcernDisplay("아직 선택한 연습 목표가 없어요"),
                 onClick = onGoalClick,
                 modifier = Modifier
                     .offset(x = 16.dp, y = 162.dp)
@@ -124,6 +127,16 @@ private fun ProfileConcernRow(
         }
     }
 }
+
+private fun String?.toPersonalityDisplay(): String = when (this) {
+    "introvert" -> "조용하고 신중해요"
+    "extrovert" -> "사교적이고 활발한 편이에요"
+    "ambivert" -> "상황에 따라 달라요"
+    else -> "아직 선택한 모습이 없어요"
+}
+
+private fun List<String>.toConcernDisplay(emptyText: String): String =
+    filter { it.isNotBlank() }.joinToString("·").ifBlank { emptyText }
 
 @Preview(showSystemUi = true, device = "spec:width=393dp,height=852dp")
 @Composable

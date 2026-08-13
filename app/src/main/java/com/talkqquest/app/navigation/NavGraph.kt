@@ -1,4 +1,4 @@
-package com.talkqquest.app.navigation
+﻿package com.talkqquest.app.navigation
 
 import android.content.Context
 import android.net.Uri
@@ -105,8 +105,9 @@ fun NavGraph(
     val slideSpec = tween<IntOffset>(300)
     var isConcernEditMode by remember { mutableStateOf(false) }
     var concernPersonalityType by remember { mutableStateOf("introvert") }
-    var concernDifficultSituations by remember { mutableStateOf(listOf("주제고민", "말문 막힘")) }
-    var concernPurposes by remember { mutableStateOf(listOf("침묵 줄이기", "친해지는 대화")) }
+    var concernRefreshKey by remember { mutableStateOf(0) }
+    var concernDifficultSituations by remember { mutableStateOf(emptyList<String>()) }
+    var concernPurposes by remember { mutableStateOf(emptyList<String>()) }
 
     NavHost(
         navController = navController,
@@ -496,6 +497,7 @@ fun NavGraph(
         composable(Screen.ONBOARDING_GOAL) {
             val context = LocalContext.current
             val authViewModel: AuthViewModel = hiltViewModel()
+            val profileViewModel: ProfileViewModel = hiltViewModel()
             val authUiState by authViewModel.uiState.collectAsState()
 
             authUiState.errorMessage?.let { message ->
@@ -521,6 +523,8 @@ fun NavGraph(
                                 authViewModel.saveOnboardingStep(
                                     OnboardingStepSaveRequest(step = 3, purpose = concernPurposes),
                                 ) {
+                                    concernRefreshKey += 1
+                                    profileViewModel.loadProfile()
                                     isConcernEditMode = false
                                     navController.popBackStack(Screen.PROFILE_CONCERN, inclusive = false)
                                 }
@@ -1163,9 +1167,8 @@ fun NavGraph(
                 ?: profile?.nickname?.takeIf { it.isNotBlank() }
                 ?: profile?.name?.takeIf { it.isNotBlank() }
                 ?: "사용자"
-
-            LaunchedEffect(Unit) {
-                profileViewModel.loadDashboard()
+            LaunchedEffect(concernRefreshKey) {
+                profileViewModel.loadProfile()
             }
 
             profileUiState.errorMessage?.let { message ->
@@ -1173,13 +1176,23 @@ fun NavGraph(
                 profileViewModel.clearError()
             }
 
+            val personalityType = profile?.personalityType
+            val difficultSituations = profile?.difficultSituations.orEmpty()
+            val purposes = profile?.purpose.orEmpty()
+
             fun startConcernEdit() {
+                concernPersonalityType = personalityType ?: "introvert"
+                concernDifficultSituations = difficultSituations
+                concernPurposes = purposes
                 isConcernEditMode = true
                 navController.navigate(Screen.ONBOARDING_PERSONALITY)
             }
 
             ProfileConcernScreen(
                 nickname = nickname,
+                personalityType = personalityType,
+                difficultSituations = difficultSituations,
+                purpose = purposes,
                 onBack = { navController.popBackStack() },
                 onPersonalityClick = { startConcernEdit() },
                 onDifficultyClick = { startConcernEdit() },

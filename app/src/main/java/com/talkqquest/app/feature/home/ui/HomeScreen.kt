@@ -90,12 +90,11 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
-import androidx.lifecycle.Lifecycle
-import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlin.math.abs
+import kotlin.math.roundToInt
 import com.talkqquest.app.R
 import com.talkqquest.app.core.designsystem.Error
 import com.talkqquest.app.core.designsystem.FitDesign
@@ -140,42 +139,34 @@ fun HomeScreen(
     viewModel: HomeViewModel = hiltViewModel(),
     resumeAnimationTrigger: Int = 0,
     xpResetToken: Int = 0,
+    animateXpFromZero: Boolean = true,
+    onXpAnimationStarted: () -> Unit = {},
     onStartMissionClick: (String) -> Unit = {}, // 오늘의 미션 "미션 시작하기" → 미션 상세
     onOtherMissionsClick: () -> Unit = {},    // "다른 미션 보기" → 미션 목록
     onNotificationClick: () -> Unit = {},     // 상단 벨 → 알림창
-    onWeeklyReportClick: () -> Unit = {},     // 주간 비교 리포트 도착 모달 "보러가기" → 주간 비교 리포트
+    onShowWeeklyReportModal: () -> Unit = {}, // 주간 비교 리포트 도착 모달은 앱 최상위 레이어에서 표시
     onBadgeCollectionClick: () -> Unit = {}, // 나의 배지 컬렉션 → 프로필 배지 목록
     onSheetTopChange: (Float?) -> Unit = {},  // 티어 승급 안내 시트가 하단 네비를 덮는 동안 네비 가림
     onModalSheetChange: (Boolean) -> Unit = {}, // 티어 시트가 떠 있는 동안 탭 스와이프를 끄기 위한 신호
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
-    var hasConsumedInitialResume by remember { mutableStateOf(false) }
-    var lifecycleXpResetToken by remember { mutableIntStateOf(0) }
-    // 상세 화면으로 이동하거나 앱이 백그라운드로 갈 때 홈은 back stack에 남는다.
-    // 그 상태에선 Animatable도 그대로 남으므로, 떠나는 즉시 빈 게이지로 되돌린다.
-    LifecycleEventEffect(Lifecycle.Event.ON_STOP) {
-        lifecycleXpResetToken++
-    }
     LaunchedEffect(resumeAnimationTrigger) {
         if (resumeAnimationTrigger <= 0) return@LaunchedEffect
-        if (hasConsumedInitialResume) {
-            // 실제 복귀: 최신값을 조용히 다시 받는다.
-            viewModel.loadHome(showLoading = false)
-        } else {
-            // 최초 ON_RESUME: ViewModel init 조회가 이미 진행 중이므로 중복 호출하지 않는다.
-            hasConsumedInitialResume = true
-        }
+        // 별도 화면에서 실제로 돌아온 경우만 들어오는 신호다. 하단 탭·앱 재개에는 호출되지 않는다.
+        viewModel.loadHome(showLoading = false)
     }
     HomeScreen(
         uiState = uiState,
         xpAnimationTrigger = resumeAnimationTrigger,
-        xpResetToken = xpResetToken + lifecycleXpResetToken,
+        xpResetToken = xpResetToken,
+        animateXpFromZero = animateXpFromZero,
+        onXpAnimationStarted = onXpAnimationStarted,
         onRetry = viewModel::loadHome,
         onRefreshTodayMission = viewModel::refreshTodayMission,
         onStartMissionClick = onStartMissionClick,
         onOtherMissionsClick = onOtherMissionsClick,
         onNotificationClick = onNotificationClick,
-        onWeeklyReportClick = onWeeklyReportClick,
+        onShowWeeklyReportModal = onShowWeeklyReportModal,
         onBadgeCollectionClick = onBadgeCollectionClick,
         onSheetTopChange = onSheetTopChange,
         onModalSheetChange = onModalSheetChange,
@@ -187,12 +178,14 @@ private fun HomeScreen(
     uiState: HomeUiState,
     xpAnimationTrigger: Int = 0,
     xpResetToken: Int = 0,
+    animateXpFromZero: Boolean = true,
+    onXpAnimationStarted: () -> Unit = {},
     onRetry: () -> Unit,
     onRefreshTodayMission: () -> Unit = {},
     onStartMissionClick: (String) -> Unit = {},
     onOtherMissionsClick: () -> Unit = {},
     onNotificationClick: () -> Unit = {},
-    onWeeklyReportClick: () -> Unit = {},
+    onShowWeeklyReportModal: () -> Unit = {},
     onBadgeCollectionClick: () -> Unit = {},
     onSheetTopChange: (Float?) -> Unit = {},
     onModalSheetChange: (Boolean) -> Unit = {},
@@ -222,11 +215,13 @@ private fun HomeScreen(
                     isRefreshingMission = uiState.isRefreshingMission,
                     xpAnimationTrigger = xpAnimationTrigger,
                     xpResetToken = xpResetToken,
+                    animateXpFromZero = animateXpFromZero,
+                    onXpAnimationStarted = onXpAnimationStarted,
                     onStartMissionClick = onStartMissionClick,
                     onRefreshTodayMission = onRefreshTodayMission,
                     onOtherMissionsClick = onOtherMissionsClick,
                     onNotificationClick = onNotificationClick,
-                    onWeeklyReportClick = onWeeklyReportClick,
+                    onShowWeeklyReportModal = onShowWeeklyReportModal,
                     onBadgeCollectionClick = onBadgeCollectionClick,
                     onSheetTopChange = onSheetTopChange,
                     onModalSheetChange = onModalSheetChange,
@@ -267,17 +262,20 @@ private fun HomeContent(
     isRefreshingMission: Boolean = false,
     xpAnimationTrigger: Int = 0,
     xpResetToken: Int = 0,
+    animateXpFromZero: Boolean = true,
+    onXpAnimationStarted: () -> Unit = {},
     onStartMissionClick: (String) -> Unit = {},
     onRefreshTodayMission: () -> Unit = {},
     onOtherMissionsClick: () -> Unit = {},
     onNotificationClick: () -> Unit = {},
-    onWeeklyReportClick: () -> Unit = {},
+    onShowWeeklyReportModal: () -> Unit = {},
     onBadgeCollectionClick: () -> Unit = {},
     onSheetTopChange: (Float?) -> Unit = {},
     onModalSheetChange: (Boolean) -> Unit = {},
 ) {
-    // 검증용(임시): 상단 벨 탭으로 주간 비교 리포트 도착 모달 토글. 실제 트리거는 summary.hasNewWeeklyReport.
-    var showWeekly by remember { mutableStateOf(summary.hasNewWeeklyReport) }
+    LaunchedEffect(summary.hasNewWeeklyReport) {
+        if (summary.hasNewWeeklyReport) onShowWeeklyReportModal()
+    }
     var missionHasLongText by remember { mutableStateOf(false) }
     val scrollState = rememberScrollState()
     // 홈이 화면에서 벗어나는 순간 받은 reset 신호로 스크롤 위치도 항상 맨 위로 되돌린다.
@@ -330,6 +328,8 @@ private fun HomeContent(
                     tierStars = summary.tierStars,
                     xpAnimationTrigger = xpAnimationTrigger,
                     xpResetToken = xpResetToken,
+                    animateXpFromZero = animateXpFromZero,
+                    onXpAnimationStarted = onXpAnimationStarted,
                     onTierInfoClick = { showTierHelp = true },
                 )
                 Spacer(Modifier.height(12.dp)) // CSS 카드 스택 gap 12
@@ -352,15 +352,6 @@ private fun HomeContent(
                 // 콘텐츠가 화면에 모두 보여도 다른 미션 보기 카드 높이만큼 더 내려갈 수 있게 한다.
                 Spacer(Modifier.height(50.dp))
             }
-        }
-
-        // 주간 비교 리포트 도착 모달 — 설계상 고정 크기(302dp 카드) 모달이라 피그마 원본 크기로 띄운다.
-        // 홈 축소(scale)는 실제 2줄 미션을 담기 위한 콘텐츠 대응일 뿐, 모달 오버레이는 그걸 따라가지 않는다.
-        if (showWeekly) {
-            WeeklyReportModal(
-                onConfirm = { showWeekly = false; onWeeklyReportClick() },
-                onDismiss = { showWeekly = false },
-            )
         }
 
         // 티어 승급 안내 시트(공용) — 홈 축소(scale)와 무관하게 전체 화면에 오버레이.
@@ -606,11 +597,15 @@ private fun HomeLevelCard(
     tierStars: Int,
     xpAnimationTrigger: Int = 0,
     xpResetToken: Int = 0,
+    animateXpFromZero: Boolean = true,
+    onXpAnimationStarted: () -> Unit = {},
     onTierInfoClick: () -> Unit = {},
 ) {
     // 홈이 처음 보이거나 다른 화면에서 돌아올 때 현재 XP를 먼저 그리지 않는다.
     // 빈 게이지에서 최신 XP까지 한 번만 차오르게 한다.
-    val xpShown = remember { Animatable(0f) }
+    val xpShown = remember {
+        Animatable(if (animateXpFromZero) 0f else currentXp.toFloat())
+    }
     var displayLevel by remember { mutableIntStateOf(level) }
     val levelScale = remember { Animatable(1f) } // 레벨업 순간 Lv 글자가 튀는 배율
     val levelBurst = remember { Animatable(0f) } // 레벨업 순간 Lv 글자 주변 작은 폭죽 (완료 화면과 동일)
@@ -662,23 +657,29 @@ private fun HomeLevelCard(
         tierVisualPhase = 0
     }
     LaunchedEffect(xpResetToken) {
-        if (xpResetToken > 0) {
+        if (xpResetToken > 0 && animateXpFromZero) {
             xpShown.snapTo(0f)
         }
     }
     LaunchedEffect(level, currentXp, xpAnimationTrigger) {
-        if (xpAnimationTrigger == 0 && lastXpAnimationTrigger == 0) {
-            // 최초 홈 데이터도 빈 게이지에서 현재 XP까지 바로 한 번 재생한다.
-            displayLevel = level
-            xpShown.animateTo(
-                currentXp.toFloat(),
-                tween(durationMillis = 700, easing = xpFillEasing),
-            )
-            playTierGrowthSequence()
-        } else if (xpAnimationTrigger != lastXpAnimationTrigger) {
+        if (xpAnimationTrigger != lastXpAnimationTrigger) {
             lastXpAnimationTrigger = xpAnimationTrigger
             displayLevel = level
-            xpShown.snapTo(0f)
+            if (animateXpFromZero) {
+                onXpAnimationStarted()
+                xpShown.snapTo(0f)
+                xpShown.animateTo(
+                    currentXp.toFloat(),
+                    tween(durationMillis = 700, easing = xpFillEasing),
+                )
+                playTierGrowthSequence()
+            } else {
+                xpShown.snapTo(currentXp.toFloat())
+            }
+        } else if (xpAnimationTrigger == 0 && lastXpAnimationTrigger == 0 && animateXpFromZero) {
+            // 최초 홈 데이터도 빈 게이지에서 현재 XP까지 바로 한 번 재생한다.
+            onXpAnimationStarted()
+            displayLevel = level
             xpShown.animateTo(
                 currentXp.toFloat(),
                 tween(durationMillis = 700, easing = xpFillEasing),
@@ -700,13 +701,18 @@ private fun HomeLevelCard(
                 tween(durationMillis = 720, easing = xpFillEasing),
             )
             playTierGrowthSequence()
-        } else {
+        } else if (xpShown.value.roundToInt() != currentXp) {
             displayLevel = level
             xpShown.animateTo(
                 currentXp.toFloat(),
                 tween(durationMillis = 950, easing = xpFillEasing),
             )
             playTierGrowthSequence()
+        } else {
+            // 하단 탭 이동으로 홈 페이지가 폐기됐다 재생성된 경우: 현재값을 그대로 표시하고
+            // 최초 진입으로 오인한 게이지·티어 모션은 실행하지 않는다.
+            displayLevel = level
+            xpShown.snapTo(currentXp.toFloat())
         }
     }
     HomeCard(
@@ -1877,9 +1883,10 @@ private fun BadgeCollectionCard(onClick: () -> Unit = {}) {
         modifier = Modifier
             .fillMaxWidth()
             .height(64.dp)
-            .clickable(onClick = onClick)
             .clip(RoundedCornerShape(12.dp))
             .background(White)
+            // 클릭 물결도 카드의 둥근 모서리 안에서만 그려져야 한다.
+            .clickable(onClick = onClick)
             .padding(start = 20.dp, end = 16.dp), // CSS padding 10 16 10 20 (상하 10은 center로 흡수)
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically,

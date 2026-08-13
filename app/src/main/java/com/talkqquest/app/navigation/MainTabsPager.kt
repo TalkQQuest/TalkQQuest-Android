@@ -55,6 +55,7 @@ fun MainTabsPager(
     navController: NavHostController,
     pagerState: PagerState,
     onOverlaySheetTop: (Float?) -> Unit,
+    onShowWeeklyReportModal: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     // 홈의 티어 승급 안내 시트처럼 딤이 깔린 모달이 떠 있는 동안은 탭 스와이프를 끈다.
@@ -63,6 +64,14 @@ fun MainTabsPager(
     var showHomeBadgeCollection by remember { mutableStateOf(false) }
     var homeResumeAnimationTrigger by remember { mutableIntStateOf(0) }
     var homeExitResetToken by remember { mutableIntStateOf(0) }
+    // 홈에서 NavGraph의 별도 화면을 연 경우에만 true가 된다.
+    // 하단 탭 이동과 앱 백그라운드는 이 값을 건드리지 않아 XP 상태를 그대로 보존한다.
+    var homeDetailExitPending by remember { mutableStateOf(false) }
+    var homeDetailReplayPending by remember { mutableStateOf(false) }
+    var badgeReplayPending by remember { mutableStateOf(false) }
+    // HorizontalPager가 멀어진 홈 페이지를 폐기해도 이 값은 상위 셸에 남는다.
+    // true는 앱 최초 진입 또는 명시적인 별도 화면 복귀에서만 사용한다.
+    var animateHomeXpFromZero by remember { mutableStateOf(true) }
     // 최초 ON_RESUME은 HomeViewModel의 최초 데이터 도착과 같은 홈 진입이다.
     // 이때는 HomeLevelCard가 자체적으로 0 → XP를 재생하므로 복귀 신호를 추가하지 않는다.
     var hasConsumedInitialHomeResume by remember { mutableStateOf(false) }
@@ -75,25 +84,45 @@ fun MainTabsPager(
     )
     val homePage = BottomNavItem.entries.indexOf(BottomNavItem.Home)
     val profilePage = BottomNavItem.entries.indexOf(BottomNavItem.Profile)
+    val markHomeDetailExit: () -> Unit = {
+        homeDetailExitPending = true
+    }
     val returnFromHomeBadgeCollection: () -> Unit = {
         pagerScope.launch {
             pagerState.animateScrollToPage(homePage)
             showHomeBadgeCollection = false
+            if (badgeReplayPending) {
+                badgeReplayPending = false
+                homeResumeAnimationTrigger++
+            }
         }
     }
     BackHandler(enabled = showHomeBadgeCollection, onBack = returnFromHomeBadgeCollection)
-    LaunchedEffect(pagerState.currentPage) {
-        if (pagerState.currentPage != homePage) {
-            // 페이저는 홈을 composition에 보존하므로 탭 이동 시 게이지 상태를 명시적으로 비운다.
+    // 뱃지 컬렉션에서 하단 홈 탭으로 직접 돌아오는 경로도, 홈에 완전히 도착한 뒤 재생한다.
+    // 일반 하단 탭 왕복에는 badgeReplayPending이 없으므로 아무 동작도 하지 않는다.
+    LaunchedEffect(pagerState.settledPage, badgeReplayPending) {
+        if (pagerState.settledPage == homePage && badgeReplayPending) {
+            badgeReplayPending = false
+            showHomeBadgeCollection = false
+            homeResumeAnimationTrigger++
+        }
+    }
+    LifecycleEventEffect(Lifecycle.Event.ON_STOP) {
+        if (homeDetailExitPending) {
+            // 화면 전환이 끝나 홈이 보이지 않을 때만 0으로 준비해, 나가는 도중 번쩍임을 막는다.
+            homeDetailExitPending = false
+            homeDetailReplayPending = true
+            animateHomeXpFromZero = true
             homeExitResetToken++
         }
     }
     LifecycleEventEffect(Lifecycle.Event.ON_RESUME) {
-        if (pagerState.currentPage == BottomNavItem.entries.indexOf(BottomNavItem.Home)) {
-            if (hasConsumedInitialHomeResume) {
-                homeResumeAnimationTrigger++
-            } else {
+        if (pagerState.currentPage == homePage) {
+            if (!hasConsumedInitialHomeResume) {
                 hasConsumedInitialHomeResume = true
+            } else if (homeDetailReplayPending) {
+                homeDetailReplayPending = false
+                homeResumeAnimationTrigger++
             }
         }
     }
@@ -111,11 +140,21 @@ fun MainTabsPager(
                 navController = navController,
                 resumeAnimationTrigger = homeResumeAnimationTrigger,
                 xpResetToken = homeExitResetToken,
+                animateXpFromZero = animateHomeXpFromZero,
+                onXpAnimationStarted = { animateHomeXpFromZero = false },
                 onOverlaySheetTop = onOverlaySheetTop,
                 onBadgeCollectionClick = {
                     showHomeBadgeCollection = true
-                    pagerScope.launch { pagerState.animateScrollToPage(profilePage) }
+                    pagerScope.launch {
+                        pagerState.animateScrollToPage(profilePage)
+                        // 홈이 완전히 화면 밖으로 나간 뒤에만 0으로 준비한다.
+                        animateHomeXpFromZero = true
+                        homeExitResetToken++
+                        badgeReplayPending = true
+                    }
                 },
+                onHomeDetailExit = markHomeDetailExit,
+                onShowWeeklyReportModal = onShowWeeklyReportModal,
             ) { modalSheetOpen = it }
             BottomNavItem.Mission -> MissionTab(navController, pagerState, onOverlaySheetTop)
             BottomNavItem.Archive -> ArchiveTab(navController)
@@ -133,26 +172,38 @@ private fun HomeTab(
     navController: NavHostController,
     resumeAnimationTrigger: Int,
     xpResetToken: Int,
+    animateXpFromZero: Boolean,
+    onXpAnimationStarted: () -> Unit,
     onOverlaySheetTop: (Float?) -> Unit,
     onBadgeCollectionClick: () -> Unit,
+    onHomeDetailExit: () -> Unit,
+    onShowWeeklyReportModal: () -> Unit,
     onModalSheetChange: (Boolean) -> Unit,
 ) {
     val homeScope = rememberCoroutineScope()
     HomeScreen(
         resumeAnimationTrigger = resumeAnimationTrigger,
         xpResetToken = xpResetToken,
-        onStartMissionClick = { missionId -> navController.navigate("mission_detail/$missionId") },
+        animateXpFromZero = animateXpFromZero,
+        onXpAnimationStarted = onXpAnimationStarted,
+        onStartMissionClick = { missionId ->
+            onHomeDetailExit()
+            navController.navigate("mission_detail/$missionId")
+        },
         // "다른 미션 보기" → 홈 소속 미션 목록(예전 헤더). 미션 탭으로 전환하지 않고 홈 탭 유지.
-        onOtherMissionsClick = { navController.navigate(Screen.MISSION_LIST_HOME) },
+        onOtherMissionsClick = {
+            onHomeDetailExit()
+            navController.navigate(Screen.MISSION_LIST_HOME)
+        },
         // 알림 아이콘 ripple이 먼저 보인 후 화면이 전환되도록 짧게 지연합니다.
         onNotificationClick = {
             homeScope.launch {
                 delay(140)
+                onHomeDetailExit()
                 navController.navigate(Screen.NOTIFICATION)
             }
         },
-        // 주간 비교 리포트 도착 모달 "보러가기" → 주간 비교 리포트 (알림창 화살표와 같은 화면)
-        onWeeklyReportClick = { navController.navigate(Screen.WEEKLY_COMPARE) },
+        onShowWeeklyReportModal = onShowWeeklyReportModal,
         onBadgeCollectionClick = onBadgeCollectionClick,
         // 티어 승급 안내 시트가 하단 네비를 덮는 동안 네비를 가림.
         onSheetTopChange = onOverlaySheetTop,

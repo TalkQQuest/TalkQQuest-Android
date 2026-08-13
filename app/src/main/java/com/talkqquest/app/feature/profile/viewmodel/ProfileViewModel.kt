@@ -11,6 +11,7 @@ import com.talkqquest.app.feature.home.data.model.UserMe
 import com.talkqquest.app.feature.home.data.model.UserSettings
 import com.talkqquest.app.feature.home.data.model.UserSettingsUpdateRequest
 import com.talkqquest.app.feature.home.data.model.UserUpdateRequest
+import com.talkqquest.app.feature.mission.data.model.XpSummary
 import com.talkqquest.app.feature.profile.data.ProfileRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -25,6 +26,7 @@ data class ProfileUiState(
     val isLoading: Boolean = false,
     val profile: UserMe? = null,
     val dashboard: MyPageDashboard? = null,
+    val xpSummary: XpSummary? = null,
     val archiveSummary: ArchiveSummary? = null,
     val badges: List<MyBadge> = emptyList(),
     val serviceTerms: LegalDocument? = null,
@@ -60,6 +62,21 @@ class ProfileViewModel @Inject constructor(
             }
         }
     }
+    fun loadXpSummary() {
+        viewModelScope.launch {
+            when (val result = profileRepository.getXpSummary()) {
+                is ApiResult.Success -> _uiState.update {
+                    it.copy(xpSummary = result.data)
+                }
+                is ApiResult.Error -> _uiState.update {
+                    it.copy(errorMessage = result.message ?: "XP Á¤º¸¸¦ ºÒ·¯¿ÀÁö ¸øÇß¾î¿ä.")
+                }
+                is ApiResult.Exception -> _uiState.update {
+                    it.copy(errorMessage = networkErrorMessage)
+                }
+            }
+        }
+    }
     fun loadArchiveSummary() {
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true, errorMessage = null) }
@@ -68,7 +85,7 @@ class ProfileViewModel @Inject constructor(
                     it.copy(isLoading = false, archiveSummary = result.data)
                 }
                 is ApiResult.Error -> _uiState.update {
-                    it.copy(isLoading = false, errorMessage = result.message ?: "ìµœê·¼ í™œë™ì„ ë¶ˆëŸ¬ì˜¤ì§€ ëª»í–ˆì–´ìš”.")
+                    it.copy(isLoading = false, errorMessage = result.message ?: "ìµœê·¼ ?œë™??ë¶ˆëŸ¬?¤ì? ëª»í–ˆ?´ìš”.")
                 }
                 is ApiResult.Exception -> _uiState.update {
                     it.copy(isLoading = false, errorMessage = networkErrorMessage)

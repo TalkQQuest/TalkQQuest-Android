@@ -77,7 +77,7 @@ class ReportRepository @Inject constructor(
         competencies = listOf(
             Competency(CompetencyAxis.KINDNESS, "친절한 태도", "친절한 태도", score = 300, gain = 70),
             Competency(CompetencyAxis.INITIATIVE, "대화 주도", "대화 주도", score = 200, gain = 70),
-            Competency(CompetencyAxis.EMPATHY, "공감 표현", "공감 능력", score = 100, gain = 70),
+            Competency(CompetencyAxis.EMPATHY, "공감 능력", "공감 능력", score = 100, gain = 70),
             Competency(CompetencyAxis.QUESTION_LINK, "질문 연결성", "질문 연결성", score = 300, gain = 70),
         ),
     )

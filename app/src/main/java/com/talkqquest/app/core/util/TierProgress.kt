@@ -34,6 +34,7 @@ object TierProgress {
         val nextTierName: String,  // 마스터면 빈 문자열
         val nextStarsNeeded: Int,  // 마스터면 0
         val axisScores: List<Int>, // 친절·주도·공감·질문 순, 진행 중인 마름모의 축별 점수 0..300
+        val diamonds: Int,         // 지금까지 완성한 마름모 총개수 — 직전 상태와 비교해 승급을 판정한다
     )
 
     fun of(kindness: Int, initiative: Int, empathy: Int, questionLink: Int): Result {
@@ -53,6 +54,7 @@ object TierProgress {
             nextStarsNeeded = if (isMaster) 0 else STARS_PER_TIER - starsInTier,
             // 이월분이 300을 넘어도 차트는 300에서 멈춘다(넘겨 그리면 도형이 깨진다).
             axisScores = totals.map { (it - consumed).coerceIn(0, AXIS_MAX) },
+            diamonds = diamonds,
         )
     }
 }

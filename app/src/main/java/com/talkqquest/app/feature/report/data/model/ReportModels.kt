@@ -32,6 +32,22 @@ data class GrowthTierReport(
     val nextStarsNeeded: Int,                // 다음 티어까지 남은 별 수 ("별 N개")
     val nextTierName: String,                // 다음 티어 이름 ("플래티넘")
     val competencies: List<Competency>,      // 핵심 역량 4축 (친절/주도/공감/질문)
+    // AI 상세 리포트에서 이번 점수로 마름모 하나를 완성했는지. 별 완성 연출에만 쓴다.
+    val completedDiamondThisReport: Boolean = false,
+    // 마름모를 완성한 회차의 "그 다음 상태". 승급 모션이 이 값으로 화면을 갈아 끼운다.
+    val promotion: TierPromotion? = null,
+)
+
+// 4축이 전부 300을 채우는 순간이 마름모 완성이고, 그 즉시 축 점수는 이월분만 남기고 리셋된다.
+// 서버는 리셋된 뒤의 누적값만 주기 때문에 증가분(gains)을 빼서 직전 상태를 되돌려 계산한다.
+data class TierPromotion(
+    val slotIndex: Int,                 // 이번에 불이 들어오는 별 자리 (0..2)
+    val isTierUp: Boolean,              // 별 3개를 채워 티어 자체가 바뀌는가
+    val newTierName: String,            // 완성 후 티어 이름
+    val newTierStars: Int,              // 완성 후 별 수
+    val newNextStarsNeeded: Int,
+    val newNextTierName: String,
+    val afterScores: List<Int>,         // 완성 후 리셋된 축 점수 (친절·주도·공감·질문)
 )
 
 // 핵심 역량 4축 — 레이더(마름모) 위치·범례·체크 계산에 씀.
@@ -40,10 +56,13 @@ enum class CompetencyAxis { KINDNESS, INITIATIVE, EMPATHY, QUESTION_LINK }
 data class Competency(
     val axis: CompetencyAxis,   // 마름모 축 매핑(위=친절/오른=주도/아래=공감/왼=질문)
     val label: String,          // 레이더 축 라벨 ("친절한 태도")
-    val legendLabel: String,    // 범례 라벨 (CSS상 공감은 축="공감 표현"/범례="공감 능력"로 달라 분리)
+    val legendLabel: String,    // 범례 라벨
     val score: Int,             // 현재 점수 0..maxScore
     val gain: Int,              // 이번에 획득한 점수 ("+70")
     val maxScore: Int = 300,    // 축당 만점(300점 = 별 1개)
+    // 마름모·범례 숫자가 어디서 출발할지. 보통은 score - gain이지만, 마름모가 완성되는 회차는
+    // score가 300(만점)으로 고정돼 그 뺄셈이 직전 값과 맞지 않아 따로 받는다.
+    val startScore: Int = (score - gain).coerceAtLeast(0),
 )
 
 // 주간 비교 리포트 탭
@@ -186,28 +205,51 @@ fun GrowthReportResponse.toGrowthTierReport(gains: List<Int> = emptyList()): Gro
         empathy = growthTotals.empathyTotal,
         questionLink = growthTotals.questionLinkTotal,
     )
-    // 공감만 축 라벨("공감 표현")과 범례 라벨("공감 능력")이 다르다 — CSS 그대로.
+    // growthTotals에는 이번 미션 점수가 이미 포함된다. 직전 진행도와 비교해,
+    // 이번 리포트에서 새 마름모(=별)가 완성됐는지만 판별한다.
+    val beforeProgress = TierProgress.of(
+        kindness = (growthTotals.kindnessTotal - gains.getOrElse(0) { 0 }).coerceAtLeast(0),
+        initiative = (growthTotals.initiativeTotal - gains.getOrElse(1) { 0 }).coerceAtLeast(0),
+        empathy = (growthTotals.empathyTotal - gains.getOrElse(2) { 0 }).coerceAtLeast(0),
+        questionLink = (growthTotals.questionLinkTotal - gains.getOrElse(3) { 0 }).coerceAtLeast(0),
+    )
+    // 완성 마름모 개수는 TierProgress가 직접 준다(티어·별에서 되계산할 필요 없음).
+    val completedDiamondThisReport = gains.size >= 4 && progress.diamonds > beforeProgress.diamonds
     val axes = listOf(
         Triple(CompetencyAxis.KINDNESS, "친절한 태도", "친절한 태도"),
         Triple(CompetencyAxis.INITIATIVE, "대화 주도", "대화 주도"),
-        Triple(CompetencyAxis.EMPATHY, "공감 표현", "공감 능력"),
+        Triple(CompetencyAxis.EMPATHY, "공감 능력", "공감 능력"),
         Triple(CompetencyAxis.QUESTION_LINK, "질문 연결성", "질문 연결성"),
     )
+    // 완성 회차면 화면을 직전 상태로 세우고, 승급 모션이 끝나면서 완성 후 상태로 갈아탄다.
+    val shown = if (completedDiamondThisReport) beforeProgress else progress
     return GrowthTierReport(
-        tierName = progress.tierName,
-        tierStars = progress.tierStars,
-        nextStarsNeeded = progress.nextStarsNeeded,
-        nextTierName = progress.nextTierName,
+        tierName = shown.tierName,
+        tierStars = shown.tierStars,
+        nextStarsNeeded = shown.nextStarsNeeded,
+        nextTierName = shown.nextTierName,
+        completedDiamondThisReport = completedDiamondThisReport,
         competencies = axes.mapIndexed { i, (axis, label, legendLabel) ->
             Competency(
                 axis = axis,
                 label = label,
                 legendLabel = legendLabel,
-                score = progress.axisScores[i],
+                // 완성 회차면 4축이 만점까지 차오르는 것을 보여 준 뒤 모션이 리셋 값으로 갈아 끼운다.
+                score = if (completedDiamondThisReport) TierProgress.AXIS_MAX else progress.axisScores[i],
                 gain = gains.getOrElse(i) { 0 },
                 maxScore = TierProgress.AXIS_MAX,
+                startScore = beforeProgress.axisScores[i],
             )
         },
+        promotion = if (!completedDiamondThisReport) null else TierPromotion(
+            slotIndex = beforeProgress.tierStars.coerceIn(0, TierProgress.STARS_PER_TIER - 1),
+            isTierUp = progress.tierName != beforeProgress.tierName,
+            newTierName = progress.tierName,
+            newTierStars = progress.tierStars,
+            newNextStarsNeeded = progress.nextStarsNeeded,
+            newNextTierName = progress.nextTierName,
+            afterScores = progress.axisScores,
+        ),
     )
 }
 

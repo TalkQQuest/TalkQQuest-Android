@@ -71,14 +71,21 @@ class NotificationRepository @Inject constructor(
         }
     }
 
+    // 2026-08-13 백엔드가 삭제 API를 만들어 줘 서버에서 실제로 지운다.
+    // 로컬 기록은 그대로 남겨 둔다 — 서버 삭제가 실패해도 화면에서는 사라진 상태를 유지하고,
+    // 예전에 로컬로만 지운 알림이 되살아나지 않게 하기 위해서다.
     suspend fun deleteNotification(notificationId: String) {
         locallyDeletedIds.add(notificationId)
         notificationDataStore.addDeletedNotificationIds(listOf(notificationId))
+        if (!notificationId.startsWith("stub-")) {
+            serverCall { notificationApi.deleteNotification(notificationId) }
+        }
     }
 
     suspend fun deleteAllNotifications(notificationIds: Collection<String>) {
         locallyDeletedIds.addAll(notificationIds)
         notificationDataStore.addDeletedNotificationIds(notificationIds)
+        serverCall { notificationApi.deleteAllNotifications() }
     }
 
     private fun NotificationUiItem.withLocalReadState(): NotificationUiItem =
@@ -91,15 +98,16 @@ class NotificationRepository @Inject constructor(
         timeText = relativeTime(createdAt),
         isUnread = !isRead,
         hasLink = isWeeklyCompare,
+        linkReportId = referenceId?.takeIf { isWeeklyCompare && it.isNotBlank() },
     )
 
     // 주간 비교 리포트 알림인지 — 이 알림만 화살표가 붙어 눌러서 바로 리포트로 간다.
-    // ★서버가 이 알림에 어떤 type을 쓰는지 아직 못 받았다. 지금까지 받은 type 목록은
-    //   mission_reminder / report_ready / community_approved / event 뿐이고 주간 비교용이 없다.
-    //   그래서 type에 weekly가 들어있는지를 먼저 보고, 아니면 제목 문구로 판별한다.
-    //   백엔드에서 정확한 값을 받으면 이 한 곳만 그 값 비교로 바꾸면 된다.
+    // referenceType(백엔드 추가 2026-08-13)이 리포트 계열이면 그것으로 판별하고,
+    // 아직 그 값이 안 오는 알림은 예전처럼 type·제목 문구로 판별한다.
     private val NotificationItemDto.isWeeklyCompare: Boolean
-        get() = type.contains("weekly", ignoreCase = true) || title.contains("주간 비교")
+        get() = referenceType?.contains("weekly", ignoreCase = true) == true ||
+            type.contains("weekly", ignoreCase = true) ||
+            title.contains("주간 비교")
 }
 
 // ISO 시각 → 디자인 표기(방금 / N분 전 / N시간 전 / N일 전 / yyyy.MM.dd)

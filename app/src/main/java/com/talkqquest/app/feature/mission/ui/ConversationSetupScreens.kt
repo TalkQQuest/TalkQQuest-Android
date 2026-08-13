@@ -32,6 +32,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -66,6 +67,7 @@ import kotlin.math.roundToInt
 import kotlinx.coroutines.launch
 import com.talkqquest.app.core.designsystem.FitDesign
 import com.talkqquest.app.core.designsystem.Gray200
+import com.talkqquest.app.core.designsystem.Gray100
 import com.talkqquest.app.core.designsystem.Gray300
 import com.talkqquest.app.core.designsystem.Gray400
 import com.talkqquest.app.core.designsystem.Gray500
@@ -223,21 +225,26 @@ private fun cardLabelColor(selected: Boolean) = if (selected) Primary700 else Gr
 private fun PlaceCard(
     option: PlaceOption,
     selected: Boolean,
+    enabled: Boolean = true,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val iconCircleColor by animateColorAsState(
-        targetValue = if (selected) Primary200 else Gray200,
+        targetValue = when {
+            !enabled -> Gray200
+            selected -> Primary200
+            else -> Gray200
+        },
         animationSpec = tween(220, easing = FastOutSlowInEasing),
         label = "placeCardIconCircleColor",
     )
     val iconColor by animateColorAsState(
-        targetValue = cardIconTint(selected, Gray400),
+        targetValue = if (!enabled) Gray300 else cardIconTint(selected, Gray400),
         animationSpec = tween(220, easing = FastOutSlowInEasing),
         label = "placeCardIconColor",
     )
     val labelColor by animateColorAsState(
-        targetValue = cardLabelColor(selected),
+        targetValue = if (!enabled) Gray400 else cardLabelColor(selected),
         animationSpec = tween(220, easing = FastOutSlowInEasing),
         label = "placeCardLabelColor",
     )
@@ -249,6 +256,7 @@ private fun PlaceCard(
             .background(Color.Transparent)
             .border(1.dp, Color.Transparent, RoundedCornerShape(16.dp))
             .clickable(
+                enabled = enabled,
                 interactionSource = remember { MutableInteractionSource() },
                 indication = null,
                 onClick = onClick,
@@ -280,7 +288,11 @@ private fun PlaceCard(
             Text(text = option.label, style = TqType.TitleL.figma(), color = labelColor)
             if (option.subtitle != null) {
                 // 세부 설명 = Body/M Gray/700(#334155). 선택돼도 색이 안 바뀐다(filled 변형도 Gray/700 그대로)
-                Text(text = option.subtitle, style = TqType.BodyM.figma(), color = Gray700)
+                Text(
+                    text = option.subtitle,
+                    style = TqType.BodyM.figma(),
+                    color = if (enabled) Gray700 else Gray400,
+                )
             }
         }
     }
@@ -292,8 +304,26 @@ fun ConversationSetup1Screen(
     onNext: () -> Unit = {},
     // 고른 장소를 서버 enum으로 바꿔 넘긴다. 카드 목록이 여기 있으니 매핑도 여기서 한다.
     onSelect: (MissionSetupEnvironment) -> Unit = {},
+    initialSelection: MissionSetupEnvironment? = null,
+    disabledOptions: Set<MissionSetupEnvironment> = emptySet(),
+    isLoading: Boolean = false,
 ) {
-    var selected by remember { mutableStateOf<Int?>(null) }
+    if (isLoading) {
+        FitDesign {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(Gray50),
+                contentAlignment = Alignment.Center,
+            ) {
+                CircularProgressIndicator(color = Primary600)
+            }
+        }
+        return
+    }
+    var selected by remember(initialSelection) {
+        mutableStateOf(initialSelection?.let(SetupEnvironmentByIndex::indexOf)?.takeIf { it >= 0 })
+    }
     var hasMovedSelection by remember { mutableStateOf(false) }
     SetupStepScaffold(step = 1, onBack = onBack, nextEnabled = selected != null, onNext = onNext) {
         SetupHeader("어디에서 나눌 대화인가요?", "대화 장소를 선택해주세요.")
@@ -328,7 +358,9 @@ fun ConversationSetup1Screen(
         Box(
             modifier = Modifier.fillMaxWidth(),
         ) {
-            bounds.values.forEach { (offset, size) ->
+            bounds.forEach { (index, measured) ->
+                val (offset, size) = measured
+                val disabled = SetupEnvironmentByIndex[index] in disabledOptions
                 Box(
                     modifier = Modifier
                         .offset { offset }
@@ -337,7 +369,7 @@ fun ConversationSetup1Screen(
                             with(density) { size.height.toDp() },
                         )
                         .clip(RoundedCornerShape(16.dp))
-                        .background(Gray50)
+                        .background(if (disabled) Gray100 else Gray50)
                         .border(1.dp, Gray200, RoundedCornerShape(16.dp)),
                 )
             }
@@ -363,9 +395,11 @@ fun ConversationSetup1Screen(
                 verticalArrangement = Arrangement.spacedBy(12.dp),
             ) {
                 placeOptions.forEachIndexed { i, opt ->
+                    val enabled = SetupEnvironmentByIndex[i] !in disabledOptions
                     PlaceCard(
                         option = opt,
                         selected = selected == i,
+                        enabled = enabled,
                         onClick = {
                             if (selected != null && selected != i) hasMovedSelection = true
                             selected = i
@@ -388,14 +422,20 @@ fun ConversationSetup1Screen(
 // 카드: 173x90, radius 16, 아이콘(30) 위 + 라벨 아래. 행 gap 17 · 열 gap 15.
 
 @Composable
-private fun PartnerCard(option: IconOption, selected: Boolean, onClick: () -> Unit, modifier: Modifier = Modifier) {
+private fun PartnerCard(
+    option: IconOption,
+    selected: Boolean,
+    enabled: Boolean = true,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
     val iconColor by animateColorAsState(
-        targetValue = cardIconTint(selected, Gray400),
+        targetValue = if (!enabled) Gray300 else cardIconTint(selected, Gray400),
         animationSpec = tween(220, easing = FastOutSlowInEasing),
         label = "partnerCardIconColor",
     )
     val labelColor by animateColorAsState(
-        targetValue = cardLabelColor(selected),
+        targetValue = if (!enabled) Gray400 else cardLabelColor(selected),
         animationSpec = tween(220, easing = FastOutSlowInEasing),
         label = "partnerCardLabelColor",
     )
@@ -406,6 +446,7 @@ private fun PartnerCard(option: IconOption, selected: Boolean, onClick: () -> Un
             .background(Color.Transparent)
             .border(1.dp, Color.Transparent, RoundedCornerShape(16.dp))
             .clickable(
+                enabled = enabled,
                 interactionSource = remember { MutableInteractionSource() },
                 indication = null,
                 onClick = onClick,
@@ -430,8 +471,12 @@ fun ConversationSetup2Screen(
     onBack: () -> Unit = {},
     onNext: () -> Unit = {},
     onSelect: (MissionSetupPartnerRole) -> Unit = {},
+    initialSelection: MissionSetupPartnerRole? = null,
+    disabledOptions: Set<MissionSetupPartnerRole> = emptySet(),
 ) {
-    var selected by remember { mutableStateOf<Int?>(null) }
+    var selected by remember(initialSelection) {
+        mutableStateOf(initialSelection?.let(SetupPartnerRoleByIndex::indexOf)?.takeIf { it >= 0 })
+    }
     var hasMovedSelection by remember { mutableStateOf(false) }
     SetupStepScaffold(step = 2, onBack = onBack, nextEnabled = selected != null, onNext = onNext) {
         SetupHeader("대화할 상대를 골라볼까요?", "누구와 대화할 지 선택해주세요.")
@@ -464,7 +509,9 @@ fun ConversationSetup2Screen(
                     gridWindowOffset = IntOffset(position.x.roundToInt(), position.y.roundToInt())
                 },
         ) {
-            bounds.values.forEach { (offset, size) ->
+            bounds.forEach { (index, measured) ->
+                val (offset, size) = measured
+                val disabled = SetupPartnerRoleByIndex[index] in disabledOptions
                 Box(
                     Modifier
                         .offset { offset }
@@ -473,7 +520,7 @@ fun ConversationSetup2Screen(
                             with(density) { size.height.toDp() },
                         )
                         .clip(RoundedCornerShape(16.dp))
-                        .background(Gray50)
+                        .background(if (disabled) Gray100 else Gray50)
                         .border(1.dp, Gray200, RoundedCornerShape(16.dp)),
                 )
             }
@@ -505,9 +552,11 @@ fun ConversationSetup2Screen(
                     ) {
                         rowItems.forEach { opt ->
                             val idx = partnerOptions.indexOf(opt)
+                            val enabled = SetupPartnerRoleByIndex[idx] !in disabledOptions
                             PartnerCard(
                                 option = opt,
                                 selected = selected == idx,
+                                enabled = enabled,
                                 onClick = {
                                     if (selected != null && selected != idx) hasMovedSelection = true
                                     selected = idx
@@ -543,13 +592,18 @@ fun ConversationSetup2Screen(
 private fun PillOption(
     label: String,
     selected: Boolean,
+    enabled: Boolean = true,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
     height: Int,
     radius: Int,
 ) {
     val textColor by animateColorAsState(
-        targetValue = if (selected) Primary50 else Gray800,
+        targetValue = when {
+            !enabled -> Gray400
+            selected -> Primary50
+            else -> Gray800
+        },
         animationSpec = tween(220, easing = FastOutSlowInEasing),
         label = "pillOptionTextColor",
     )
@@ -561,6 +615,7 @@ private fun PillOption(
             .background(Color.Transparent)
             .border(1.dp, Color.Transparent, RoundedCornerShape(radius.dp))
             .clickable(
+                enabled = enabled,
                 interactionSource = remember { MutableInteractionSource() },
                 indication = null,
                 onClick = onClick,
@@ -588,9 +643,17 @@ fun ConversationSetup3Screen(
     onNext: () -> Unit = {},
     onSelectGender: (MissionSetupPartnerGender) -> Unit = {},
     onSelectAgeGroup: (MissionSetupPartnerAgeGroup) -> Unit = {},
+    initialGender: MissionSetupPartnerGender? = null,
+    initialAgeGroup: MissionSetupPartnerAgeGroup? = null,
+    disabledGenders: Set<MissionSetupPartnerGender> = emptySet(),
+    disabledAgeGroups: Set<MissionSetupPartnerAgeGroup> = emptySet(),
 ) {
-    var gender by remember { mutableStateOf<Int?>(null) }
-    var age by remember { mutableStateOf<Int?>(null) }
+    var gender by remember(initialGender) {
+        mutableStateOf(initialGender?.let(SetupGenderByIndex::indexOf)?.takeIf { it >= 0 })
+    }
+    var age by remember(initialAgeGroup) {
+        mutableStateOf(initialAgeGroup?.let(SetupAgeGroupByIndex::indexOf)?.takeIf { it >= 0 })
+    }
     SetupStepScaffold(step = 3, onBack = onBack, nextEnabled = gender != null && age != null, onNext = onNext) {
         SetupHeader("어떤 상대와 대화해볼까요?", "대화할 상대의 성별과 나이대를 선택해주세요.")
         Spacer(Modifier.height(36.dp))
@@ -628,7 +691,9 @@ fun ConversationSetup3Screen(
                             genderParent.value = IntOffset(p.x.roundToInt(), p.y.roundToInt())
                         },
                 ) {
-                    genderBounds.values.forEach { (offset, size) ->
+                    genderBounds.forEach { (index, measured) ->
+                        val (offset, size) = measured
+                        val disabled = SetupGenderByIndex[index] in disabledGenders
                         Box(
                             Modifier
                                 .offset { offset }
@@ -637,7 +702,8 @@ fun ConversationSetup3Screen(
                                     with(density) { size.height.toDp() },
                                 )
                                 .clip(RoundedCornerShape(18.dp))
-                                .border(1.dp, Gray300, RoundedCornerShape(18.dp)),
+                                .background(if (disabled) Gray100 else Color.Transparent)
+                                .border(1.dp, if (disabled) Gray200 else Gray300, RoundedCornerShape(18.dp)),
                         )
                     }
                     if (genderSize != IntSize.Zero) {
@@ -652,9 +718,11 @@ fun ConversationSetup3Screen(
                     }
                     Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
                         genderOptions.forEachIndexed { i, label ->
+                            val enabled = SetupGenderByIndex[i] !in disabledGenders
                             PillOption(
                                 label,
                                 gender == i,
+                                enabled,
                                 {
                                     if (gender != null && gender != i) genderMoved = true
                                     gender = i
@@ -700,7 +768,9 @@ fun ConversationSetup3Screen(
                             ageParent.value = IntOffset(p.x.roundToInt(), p.y.roundToInt())
                         },
                 ) {
-                    ageBounds.values.forEach { (offset, size) ->
+                    ageBounds.forEach { (index, measured) ->
+                        val (offset, size) = measured
+                        val disabled = SetupAgeGroupByIndex[index] in disabledAgeGroups
                         Box(
                             Modifier
                                 .offset { offset }
@@ -709,7 +779,8 @@ fun ConversationSetup3Screen(
                                     with(density) { size.height.toDp() },
                                 )
                                 .clip(RoundedCornerShape(24.dp))
-                                .border(1.dp, Gray300, RoundedCornerShape(24.dp)),
+                                .background(if (disabled) Gray100 else Color.Transparent)
+                                .border(1.dp, if (disabled) Gray200 else Gray300, RoundedCornerShape(24.dp)),
                         )
                     }
                     if (ageSize != IntSize.Zero) {
@@ -727,10 +798,12 @@ fun ConversationSetup3Screen(
                             Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                                 rowItems.forEach { label ->
                                     val idx = ageOptions.indexOf(label)
+                                    val enabled = SetupAgeGroupByIndex[idx] !in disabledAgeGroups
                                     val pillMod = if (idx == ageOptions.lastIndex) Modifier else Modifier.width(82.dp)
                                     PillOption(
                                         label,
                                         age == idx,
+                                        enabled,
                                         {
                                             if (age != null && age != idx) ageMoved = true
                                             age = idx
@@ -757,7 +830,14 @@ fun ConversationSetup3Screen(
 // 5점 점 척도: 안 선택 25 Gray300 / 선택 29 Primary600 + 글로우, 연결선 3 Gray300.
 
 @Composable
-private fun DotScale(value: Int, onValueChange: (Int) -> Unit, left: String, center: String, right: String) {
+private fun DotScale(
+    value: Int,
+    onValueChange: (Int) -> Unit,
+    left: String,
+    center: String,
+    right: String,
+    disabledValues: Set<Int> = emptySet(),
+) {
     val progress = remember { Animatable(0f) }
     val scope = rememberCoroutineScope()
     var displayedValue by remember { mutableIntStateOf(value) }
@@ -799,7 +879,11 @@ private fun DotScale(value: Int, onValueChange: (Int) -> Unit, left: String, cen
                     cap = StrokeCap.Round,
                 )
                 repeat(5) { index ->
-                    drawCircle(Gray300, idleRadius, androidx.compose.ui.geometry.Offset(firstX + step * index, centerY))
+                    drawCircle(
+                        if (index in disabledValues) Gray200 else Gray300,
+                        idleRadius,
+                        androidx.compose.ui.geometry.Offset(firstX + step * index, centerY),
+                    )
                 }
 
                 val sourceX = firstX + step * motionStart
@@ -870,6 +954,7 @@ private fun DotScale(value: Int, onValueChange: (Int) -> Unit, left: String, cen
                             .weight(1f)
                             .fillMaxSize()
                             .clickable(
+                                enabled = i !in disabledValues,
                                 interactionSource = remember { MutableInteractionSource() },
                                 indication = null,
                                 onClick = {
@@ -905,9 +990,13 @@ fun ConversationSetup4Screen(
     onFormalityChange: (Int) -> Unit = {},
     // 설정 저장 요청이 날아가는 동안 "대화 시작하기"를 잠근다(두 번 눌러 두 번 저장되는 것 방지).
     isSaving: Boolean = false,
+    initialIntimacy: Int = 2,
+    initialFormality: Int = 2,
+    disabledIntimacy: Set<Int> = emptySet(),
+    disabledFormality: Set<Int> = emptySet(),
 ) {
-    var intimacy by remember { mutableIntStateOf(2) } // 기본 중앙(보통)
-    var tone by remember { mutableIntStateOf(2) }
+    var intimacy by remember(initialIntimacy) { mutableIntStateOf(initialIntimacy.coerceIn(0, 4)) }
+    var tone by remember(initialFormality) { mutableIntStateOf(initialFormality.coerceIn(0, 4)) }
     SetupStepScaffold(step = 4, onBack = onBack, nextEnabled = !isSaving, onNext = onNext, nextText = "대화 시작하기") {
         SetupHeader("마지막으로,\n관계를 조금 더 정해볼까요?", "친밀도와 말투를 선택하면 준비가 끝나요.") // CSS 수동 줄바꿈: "마지막으로," 뒤 개행(2줄)
         Spacer(Modifier.height(36.dp))
@@ -917,11 +1006,25 @@ fun ConversationSetup4Screen(
         ) {
             Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
                 SectionTitle("관계 친밀도")
-                DotScale(intimacy, { intimacy = it; onIntimacyChange(it) }, "매우 낯선 사이", "보통", "매우 친한 사이")
+                DotScale(
+                    intimacy,
+                    { intimacy = it; onIntimacyChange(it) },
+                    "매우 낯선 사이",
+                    "보통",
+                    "매우 친한 사이",
+                    disabledIntimacy,
+                )
             }
             Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
                 SectionTitle("대화 말투")
-                DotScale(tone, { tone = it; onFormalityChange(it) }, "편한 말투", "보통", "격식있는 말투")
+                DotScale(
+                    tone,
+                    { tone = it; onFormalityChange(it) },
+                    "편한 말투",
+                    "보통",
+                    "격식있는 말투",
+                    disabledFormality,
+                )
             }
         }
     }

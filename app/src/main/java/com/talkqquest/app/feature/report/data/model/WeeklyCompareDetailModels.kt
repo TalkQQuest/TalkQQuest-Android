@@ -31,6 +31,9 @@ data class WeeklyCompareDetailResponse(
     // 실서버 3건으로 확인: weekIndex 4의 previous가 3, 2의 previous가 null.
     val previousReportId: String? = null,
     val nextReportId: String? = null,
+    // 완성된 주차 문구. 백엔드 추가(2026-08-13) — 실측 "7월 4주차 → 8월 1주차".
+    // weekIndex는 가입일 기준 N번째 주라 달력 주차를 만들 수 없었는데, 이 값이 생겨 그대로 쓴다.
+    val periodLabel: String? = null,
     val data: WeeklyCompareDetailData = WeeklyCompareDetailData(),
 )
 
@@ -42,6 +45,10 @@ data class WeeklyCompareDetailData(
     val overallScoreChange: OverallScoreChangeDto = OverallScoreChangeDto(),
     val metricChanges: List<WeeklyMetricChangeDto> = emptyList(),
     val highlights: List<String> = emptyList(),
+    // 자주 연습한 주제 · 미션 진행률. 백엔드 추가(2026-08-13)로 이 응답만으로 화면이 채워진다.
+    // 이전에는 없어서 성장 리포트(GET /reports/growth)를 따로 한 번 더 불렀다.
+    val topCategories: List<TopCategoryDto> = emptyList(),
+    val missionProgress: MissionProgressDto = MissionProgressDto(),
 )
 
 // POST .../save, DELETE .../{id} — 저장 토글. 성장 리포트와 달리 원본은 안 지워진다.

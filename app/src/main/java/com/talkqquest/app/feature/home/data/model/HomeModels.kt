@@ -20,9 +20,15 @@ data class HomeSummary(
     // 성장 리포트와 같은 계산(core/util/TierProgress)을 써야 두 화면이 어긋나지 않는다.
     val tierName: String = "골드",  // 티어 이름 (브론즈/실버/골드/플래티넘/다이아/마스터)
     val tierStars: Int = 2,         // 채워진 별 수 0~3 (티어 내 단계)
-    // 안 읽은 주간 비교 리포트가 있으면 홈 진입 시 도착 모달을 띄운다(백엔드 1번째 보고: 주간=목록·홈 알림 진입).
-    // TODO(백엔드 연동): 서버가 '안 읽은 주간 비교 리포트 존재' 신호를 주면 매핑.
-    val hasNewWeeklyReport: Boolean = false,
+    // 새 주간 비교 리포트 도착 신호. 백엔드 추가(2026-08-13) — 홈 진입 시 도착 모달을 띄우고,
+    // "보러가기"는 reportId로 그 리포트를 바로 연다(목록 최신을 추측하지 않는다).
+    val newWeeklyCompareReport: NewWeeklyCompareReport? = null,
+)
+
+@Serializable
+data class NewWeeklyCompareReport(
+    val available: Boolean = false,
+    val reportId: String? = null,
 )
 
 @Serializable
@@ -185,6 +191,6 @@ data class TodayMission(
     val estimatedMinutes: Int,
     val rewardXp: Int,
     val refreshCount: Int = 0,
-    val refreshLimit: Int = 0,
-    val remainingRefreshes: Int = 0,
+    val refreshLimit: Int? = null,
+    val remainingRefreshes: Int? = null,
 )

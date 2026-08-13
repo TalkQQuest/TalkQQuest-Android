@@ -21,6 +21,7 @@ import androidx.compose.ui.unit.dp
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.talkqquest.app.core.designsystem.Gray50
+import com.talkqquest.app.feature.home.ui.WeeklyReportModal
 import dev.chrisbanes.haze.HazeState
 import dev.chrisbanes.haze.hazeSource
 
@@ -29,6 +30,9 @@ import dev.chrisbanes.haze.hazeSource
 @Composable
 fun MainScreen() {
     val navController = rememberNavController()
+    var showWeeklyReportModal by remember { mutableStateOf(false) }
+    // 도착 모달이 열어야 할 리포트 id(서버 newWeeklyCompareReport.reportId). 비면 가장 최근 주차.
+    var weeklyReportModalId by remember { mutableStateOf<String?>(null) }
 
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route
@@ -88,6 +92,10 @@ fun MainScreen() {
                 .fillMaxSize()
                 .hazeSource(state = hazeState),
             onOverlaySheetTop = { overlaySheetTop = it },
+            onShowWeeklyReportModal = { reportId ->
+                weeklyReportModalId = reportId
+                showWeeklyReportModal = true
+            },
         )
         if (showBottomBar) {
             TqBottomBar(
@@ -109,5 +117,14 @@ fun MainScreen() {
                     },
             )
         }
+        // 별도 Dialog 창이 아니라 앱 최상위 레이어에 배치해, 카드 하단까지 퇴장 모션이 잘리지 않는다.
+        WeeklyReportModal(
+            visible = showWeeklyReportModal,
+            onConfirm = {
+                showWeeklyReportModal = false
+                navController.navigate("weekly_compare?reportId=${weeklyReportModalId.orEmpty()}")
+            },
+            onDismiss = { showWeeklyReportModal = false },
+        )
     }
 }

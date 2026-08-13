@@ -9,6 +9,7 @@ import com.talkqquest.app.feature.mission.data.model.MissionSetupPartnerAgeGroup
 import com.talkqquest.app.feature.mission.data.model.MissionSetupEnvironment
 import com.talkqquest.app.feature.mission.data.model.MissionSetupPartnerGender
 import com.talkqquest.app.feature.mission.data.model.MissionSetupPartnerRole
+import com.talkqquest.app.feature.mission.data.model.MissionSetupGuideline
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -33,9 +34,42 @@ class ConversationSetupViewModel @Inject constructor(
     private val _selection = MutableStateFlow(ConversationSetupSelection())
     val selection: StateFlow<ConversationSetupSelection> = _selection.asStateFlow()
 
+    private val _guideline = MutableStateFlow<MissionSetupGuideline?>(null)
+    val guideline: StateFlow<MissionSetupGuideline?> = _guideline.asStateFlow()
+    private val _isGuidelineReady = MutableStateFlow(false)
+    val isGuidelineReady: StateFlow<Boolean> = _isGuidelineReady.asStateFlow()
+    private var loadedMissionId: String? = null
+
     // 저장 요청이 날아가는 동안 "대화 시작하기"를 두 번 누르지 못하게 하는 표시.
     private val _isSaving = MutableStateFlow(false)
     val isSaving: StateFlow<Boolean> = _isSaving.asStateFlow()
+
+    fun loadGuideline(missionId: String) {
+        if (loadedMissionId == missionId) return
+        if (missionId.isBlank()) {
+            _isGuidelineReady.value = true
+            return
+        }
+        loadedMissionId = missionId
+        _isGuidelineReady.value = false
+        viewModelScope.launch {
+            val result = missionRepository.getMissionDetail(missionId)
+            val guideline = (result as? ApiResult.Success)?.data?.setupGuideline
+            if (guideline != null) {
+                _guideline.value = guideline
+                val defaults = guideline.defaults
+                _selection.value = ConversationSetupSelection(
+                    environment = defaults.environment,
+                    partnerRole = defaults.partnerRole,
+                    partnerGender = defaults.partnerGender,
+                    partnerAgeGroup = defaults.partnerAgeGroup,
+                    intimacyIndex = (defaults.intimacyLevel - 1).coerceIn(0, 4),
+                    formalityIndex = (defaults.formalityLevel - 1).coerceIn(0, 4),
+                )
+            }
+            _isGuidelineReady.value = true
+        }
+    }
 
     fun selectEnvironment(value: MissionSetupEnvironment) =
         _selection.update { it.copy(environment = value) }

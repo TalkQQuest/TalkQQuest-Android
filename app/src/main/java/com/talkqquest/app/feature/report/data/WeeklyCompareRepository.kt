@@ -6,7 +6,6 @@ import com.talkqquest.app.feature.report.data.model.CategoryRank
 import com.talkqquest.app.feature.report.data.model.MetricChange
 import com.talkqquest.app.feature.report.data.model.WeeklyCompareDetail
 import com.talkqquest.app.feature.report.data.model.WeeklyCompareListItem
-import com.talkqquest.app.feature.report.data.model.toGrowthReport
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -16,8 +15,9 @@ import javax.inject.Singleton
 //
 // 서버 구조(2026-08-10 백엔드 개편, 2026-08-11 실호출 확인):
 //   GET /reports/weekly-compare        → 목록 (주차 이동용). 최신이 앞
-//   GET /reports/weekly-compare/{id}   → 상세 (지표 4축 변화·하이라이트)
-// 화면에 필요한 「자주 연습한 주제」와 「미션 진행률」은 주간 응답에 없어 성장 리포트에서 가져온다.
+//   GET /reports/weekly-compare/{id}   → 상세 (주차 문구·지표 4축 변화·하이라이트·주제·미션 진행률)
+// 2026-08-13 백엔드 반영으로 「자주 연습한 주제」·「미션 진행률」·주차 문구가 상세에 들어왔다.
+// 그 전에는 성장 리포트(GET /reports/growth)를 한 번 더 불러 채웠는데, 이제 호출하지 않는다.
 @Singleton
 class WeeklyCompareRepository @Inject constructor(
     private val reportApi: ReportApi,
@@ -39,9 +39,7 @@ class WeeklyCompareRepository @Inject constructor(
         if (reportId.isNullOrBlank()) return ApiResult.Success(fallback)
 
         val detail = serverCall { reportApi.getWeeklyCompareDetail(reportId) }
-        val growth = serverCall { reportApi.getGrowth() }
         val d = (detail as? ApiResult.Success)?.data
-        val g = (growth as? ApiResult.Success)?.data?.toGrowthReport()
 
         // 상세를 못 받으면 주차 라벨도 이웃 id도 없어 좌우 이동이 통째로 막힌다.
         // 반쪽짜리로 그리지 말고 다른 실패 경로와 똑같이 시안 목업으로 떨어뜨린다.
@@ -54,21 +52,27 @@ class WeeklyCompareRepository @Inject constructor(
         val highlights = d.data.highlights.filter { it.isNotBlank() }.takeIf { it.isNotEmpty() }
             ?: fallback.highlights
 
+        // 서버가 "7월 4주차 → 8월 1주차" 한 문장으로 준다. 화면은 화살표 좌우로 나눠 그리므로 쪼갠다.
+        // 형식이 달라지면 쪼개기가 실패하므로 그때는 weekIndex로 만든 예전 라벨을 쓴다.
+        val period = d.periodLabel?.split("→")?.map { it.trim() }?.takeIf { it.size == 2 }
+        val topics = d.data.topCategories
+            .map { CategoryRank(name = it.category, count = it.count) }
+            .takeIf { it.isNotEmpty() } ?: fallback.topics
+
         return ApiResult.Success(
             WeeklyCompareDetail(
                 id = d.id.ifBlank { reportId },
                 isSaved = d.isSaved,
                 prevReportId = d.previousReportId,
                 nextReportId = d.nextReportId,
-                // TODO(백엔드 확인): 서버는 달력 주차를 안 준다. weekIndex(가입일 기준 N번째 주)뿐이라
-                //   시안의 "7월 4주차 → 8월 1주차"를 그대로 만들 수 없다. 임시로 weekIndex를 쓴다.
-                prevWeekLabel = weekLabel(d.weekIndex - 1),
-                thisWeekLabel = weekLabel(d.weekIndex),
+                prevWeekLabel = period?.get(0) ?: weekLabel(d.weekIndex - 1),
+                thisWeekLabel = period?.get(1) ?: weekLabel(d.weekIndex),
                 metrics = metrics,
                 highlights = highlights,
-                topics = g?.categoryRanks?.takeIf { it.isNotEmpty() } ?: fallback.topics,
-                completedMissions = g?.completedMissions ?: fallback.completedMissions,
-                totalMissions = g?.totalMissions ?: fallback.totalMissions,
+                topics = topics,
+                completedMissions = d.data.missionProgress.completed,
+                // 전체 미션 수가 0이면 진행률이 0%로 고정돼 도넛이 죽는다 — 그때만 목업 값으로 받친다.
+                totalMissions = d.data.missionProgress.total.takeIf { it > 0 } ?: fallback.totalMissions,
             ),
         )
     }

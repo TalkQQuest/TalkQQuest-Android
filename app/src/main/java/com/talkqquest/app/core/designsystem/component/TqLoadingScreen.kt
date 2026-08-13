@@ -57,6 +57,7 @@ import com.talkqquest.app.core.designsystem.Primary500
 import com.talkqquest.app.core.designsystem.TqType
 import kotlin.math.PI
 import kotlin.math.sin
+import kotlinx.coroutines.isActive
 
 // ── 공용 대기 화면 ──
 // 시안의 "대화 진입 애니메이션"(B담당)과 "온보딩->홈 애니메이션"(A담당)이 같은 프레임을 쓴다.
@@ -143,18 +144,24 @@ fun TqLoadingScreen(
 private fun TqLoadingHammer(onFinished: () -> Unit) {
     val fillProgress = remember { Animatable(0f) }
     LaunchedEffect(Unit) {
-        fillProgress.snapTo(0f)
-        fillProgress.animateTo(
-            targetValue = 1f,
-            animationSpec = keyframes {
-                durationMillis = 1_500
-                0f at 0
-                1f at 1_000 using FastOutSlowInEasing
-                1f at 1_300
-                1f at 1_500
-            },
-        )
-        onFinished()
+        var didFinishFirstCycle = false
+        while (isActive) {
+            fillProgress.snapTo(0f)
+            fillProgress.animateTo(
+                targetValue = 1f,
+                animationSpec = keyframes {
+                    durationMillis = 1_500
+                    0f at 0
+                    1f at 1_000 using FastOutSlowInEasing
+                    1f at 1_300
+                    1f at 1_500
+                },
+            )
+            if (!didFinishFirstCycle) {
+                didFinishFirstCycle = true
+                onFinished()
+            }
+        }
     }
 
     val progress = fillProgress.value

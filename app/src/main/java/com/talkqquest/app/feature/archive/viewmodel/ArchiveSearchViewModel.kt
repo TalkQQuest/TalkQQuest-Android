@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.talkqquest.app.core.network.ApiResult
 import com.talkqquest.app.feature.archive.data.ArchiveRepository
+import com.talkqquest.app.feature.archive.data.model.ArchiveSearchItem
 import com.talkqquest.app.feature.archive.ui.ArchiveMissionItem
 import com.talkqquest.app.feature.archive.ui.BookmarkArchiveItem
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -164,46 +165,71 @@ class ArchiveSearchViewModel @Inject constructor(
 
     fun refreshData() {
         viewModelScope.launch {
-            when (val result = repository.searchArchives()) {
-                is ApiResult.Success -> {
-                    val items = result.data.items
-                    val allMissions = items.filter { it.type.lowercase() == "mission" }.map {
-                        ArchiveMissionItem(id = it.missionId ?: it.id, title = it.title, category = it.category ?: "", difficulty = it.difficulty ?: "", duration = it.estimatedMinutes ?: 0, xp = it.rewardXp ?: 0, isCompleted = it.missionStatus == "completed", isSaved = it.isBookmarked, completedDate = formatIsoDate(it.createdAt))
-                    }
+            val allFetchedItems = mutableListOf<ArchiveSearchItem>()
+            var currentPage = 1
+            var totalPages = 1
+            var hasErrorOnFirstPage = false
 
-                    val allConversations = items.filter { it.type.lowercase() == "conversation" }.map {
-                        RecentActivity(
-                            id = it.referenceId ?: it.id,
-                            type = ActivityType.CONVERSATION,
-                            title = it.title,
-                            status = "대화 완료",
-                            date = formatIsoDate(it.createdAt),
-                            duration = it.duration ?: "",
-                            tags = it.tags,
-                            summary = it.description
-                        )
+            // 💡 서버 에러가 나지 않도록 50개 단위의 안전한 사이즈로 모든 페이지를 순회하며 긁어옵니다.
+            while (currentPage <= totalPages) {
+                when (val result = repository.searchArchives(page = currentPage, size = 50)) {
+                    is ApiResult.Success -> {
+                        allFetchedItems.addAll(result.data.items)
+                        totalPages = result.data.pageInfo?.totalPages ?: 1
+                        currentPage++
                     }
-                    val allSentences = items.filter { it.type.lowercase() == "phrase" || it.type.lowercase() == "sentence" }.map { BookmarkArchiveItem(id = it.referenceId ?: it.id, title = it.title, status = "문장 저장", date = formatIsoDate(it.createdAt), isSaved = it.isBookmarked, memoKeywords = it.tags, memoText = "", relatedConversationId = "") }
-
-                    // 💡 [수정] 리포트 타입 판별 적용
-                    val allReports = items.filter { it.type.lowercase() == "report" }.map {
-                        val statusLabel = if (it.title.contains("주간 비교")) "주간 비교 리포트" else "성장 리포트"
-                        BookmarkArchiveItem(
-                            id = it.referenceId ?: it.id,
-                            title = it.title,
-                            status = statusLabel,
-                            date = formatIsoDate(it.createdAt),
-                            isSaved = it.isBookmarked,
-                            memoKeywords = it.tags,
-                            memoText = "",
-                            relatedConversationId = ""
-                        )
+                    else -> {
+                        if (currentPage == 1) hasErrorOnFirstPage = true
+                        break
                     }
-
-                    _uiState.update { state -> state.copy(allMissions = allMissions, allConversations = allConversations, allSentences = allSentences, allReports = allReports) }
                 }
-                is ApiResult.Error -> {}
-                is ApiResult.Exception -> {}
+            }
+
+            // 💡 데이터를 성공적으로 불러왔다면 매핑하여 UI를 업데이트합니다.
+            if (!hasErrorOnFirstPage) {
+                val allMissions = allFetchedItems.filter { it.type.lowercase() == "mission" }.map {
+                    ArchiveMissionItem(id = it.missionId ?: it.id, title = it.title, category = it.category ?: "", difficulty = it.difficulty ?: "", duration = it.estimatedMinutes ?: 0, xp = it.rewardXp ?: 0, isCompleted = it.missionStatus == "completed", isSaved = it.isBookmarked, completedDate = formatIsoDate(it.createdAt))
+                }
+
+                val allConversations = allFetchedItems.filter { it.type.lowercase() == "conversation" }.map {
+                    RecentActivity(
+                        id = it.referenceId ?: it.id,
+                        type = ActivityType.CONVERSATION,
+                        title = it.title,
+                        status = "대화 완료",
+                        date = formatIsoDate(it.createdAt),
+                        duration = it.duration ?: "",
+                        tags = it.tags,
+                        summary = it.description
+                    )
+                }
+
+                val allSentences = allFetchedItems.filter { it.type.lowercase() == "phrase" || it.type.lowercase() == "sentence" }.map {
+                    BookmarkArchiveItem(id = it.referenceId ?: it.id, title = it.title, status = "문장 저장", date = formatIsoDate(it.createdAt), isSaved = it.isBookmarked, memoKeywords = it.tags, memoText = "", relatedConversationId = "")
+                }
+
+                val allReports = allFetchedItems.filter { it.type.lowercase() == "report" }.map {
+                    val statusLabel = if (it.title.contains("주간 비교")) "주간 비교 리포트" else "성장 리포트"
+                    BookmarkArchiveItem(
+                        id = it.referenceId ?: it.id,
+                        title = it.title,
+                        status = statusLabel,
+                        date = formatIsoDate(it.createdAt),
+                        isSaved = it.isBookmarked,
+                        memoKeywords = it.tags,
+                        memoText = "",
+                        relatedConversationId = ""
+                    )
+                }
+
+                _uiState.update { state ->
+                    state.copy(
+                        allMissions = allMissions,
+                        allConversations = allConversations,
+                        allSentences = allSentences,
+                        allReports = allReports
+                    )
+                }
             }
         }
     }

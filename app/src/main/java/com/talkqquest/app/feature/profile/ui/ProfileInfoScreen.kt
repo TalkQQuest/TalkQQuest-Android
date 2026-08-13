@@ -1,4 +1,4 @@
-﻿package com.talkqquest.app.feature.profile.ui
+package com.talkqquest.app.feature.profile.ui
 
 import android.net.Uri
 

@@ -1,5 +1,6 @@
 package com.talkqquest.app.feature.report.viewmodel
 
+import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.talkqquest.app.core.network.ApiResult
@@ -42,7 +43,13 @@ data class WeeklyCompareUiState(
 @HiltViewModel
 class WeeklyCompareViewModel @Inject constructor(
     private val weeklyCompareRepository: WeeklyCompareRepository,
+    savedStateHandle: SavedStateHandle,
 ) : ViewModel() {
+
+    // 홈 도착 모달·알림에서 특정 리포트를 지정해 들어올 때 쓰는 id.
+    // 비어 있으면(보관함 등 일반 진입) 목록의 가장 최근 리포트를 연다.
+    private val startReportId: String =
+        savedStateHandle.get<String>("reportId").orEmpty()
 
     private val _uiState = MutableStateFlow(WeeklyCompareUiState())
     val uiState: StateFlow<WeeklyCompareUiState> = _uiState.asStateFlow()
@@ -60,9 +67,12 @@ class WeeklyCompareViewModel @Inject constructor(
             when (val r = weeklyCompareRepository.getWeekList()) {
                 is ApiResult.Success -> {
                     _uiState.update { it.copy(weekCount = r.data.size) }
-                    // 목록은 "어느 리포트로 들어갈지"에만 쓴다 — 맨 앞이 가장 최근.
+                    // 지정해 들어온 리포트가 있으면 그것부터, 없으면 목록 맨 앞(가장 최근).
                     // 목록이 비면 id = null → Repository가 시안 목업을 돌려줘 화면이 비지 않는다.
-                    loadDetail(r.data.firstOrNull()?.id, initial = true)
+                    loadDetail(
+                        startReportId.ifBlank { null } ?: r.data.firstOrNull()?.id,
+                        initial = true,
+                    )
                 }
                 is ApiResult.Error -> _uiState.update {
                     it.copy(isLoading = false, errorMessage = r.message)

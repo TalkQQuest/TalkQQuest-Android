@@ -18,6 +18,13 @@ import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
@@ -35,8 +42,6 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.em
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.window.Popup
-import androidx.compose.ui.window.PopupProperties
 import com.talkqquest.app.R
 import com.talkqquest.app.core.designsystem.Gray50
 import com.talkqquest.app.core.designsystem.Gray500
@@ -49,7 +54,8 @@ import com.talkqquest.app.core.designsystem.White
 
 // 주간 비교 리포트 도착 모달 (홈 알림 진입). CSS UI-14 "주간 비교 리포트(모달)" 1:1 전사.
 // 서버 주간 비교 리포트가 목록 방식으로 바뀌어(백엔드 1번째 보고) 홈 알림으로 뜨는 그 팝업.
-// nav 위까지 딤 덮으려 Popup(별도 윈도우)으로 띄움 — 하단 네비도 함께 어두워짐(op bg가 전체 393x852).
+// 앱 최상위 레이어에 놓인다. 별도 Dialog 창을 쓰면 창 하단에서 퇴장 모션이 잘릴 수 있어,
+// 대화 종료 팝업과 같이 같은 Compose 루트에서 딤과 카드를 함께 애니메이션한다.
 
 private val FullLeading = LineHeightStyle(
     alignment = LineHeightStyle.Alignment.Center,
@@ -59,26 +65,41 @@ private fun TextStyle.figma(): TextStyle = copy(lineHeightStyle = FullLeading)
 
 @Composable
 fun WeeklyReportModal(
+    visible: Boolean,
     onConfirm: () -> Unit,
     onDismiss: () -> Unit,
 ) {
-    Popup(
-        alignment = Alignment.Center,
-        onDismissRequest = onDismiss,
-        properties = PopupProperties(focusable = true), // 뒤로가기로 닫힘
-    ) {
-        // 딤 배경(op bg): 전체 Gray/700 #334155 @ 0.23. 배경 탭 시 닫힘(리플 없음).
-        val scrimInteraction = remember { MutableInteractionSource() }
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(Gray700.copy(alpha = 0.23f))
-                .clickable(interactionSource = scrimInteraction, indication = null, onClick = onDismiss),
-            contentAlignment = Alignment.Center,
+    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            // 대화 완료 확인 팝업과 동일한 360ms 딤 페이드.
+            AnimatedVisibility(
+                visible = visible,
+                enter = fadeIn(tween(360, easing = FastOutSlowInEasing)),
+                exit = fadeOut(tween(360, easing = FastOutSlowInEasing)),
+            ) {
+                val scrimInteraction = remember { MutableInteractionSource() }
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(Gray700.copy(alpha = 0.23f))
+                        .clickable(interactionSource = scrimInteraction, indication = null, onClick = onDismiss),
+                )
+        }
+
+        AnimatedVisibility(
+            visible = visible,
+            enter = fadeIn(tween(360, easing = FastOutSlowInEasing)) +
+                scaleIn(initialScale = 0.86f, animationSpec = tween(360, easing = FastOutSlowInEasing)),
+            exit = fadeOut(tween(360, easing = FastOutSlowInEasing)) +
+                scaleOut(targetScale = 0.86f, animationSpec = tween(360, easing = FastOutSlowInEasing)),
         ) {
+            // AnimatedVisibility의 영역을 카드 크기가 아니라 화면 전체로 유지한다.
+            // 카드 자체에 준 24dp offset이 애니메이션 경계 밖으로 나가 하단부터 잘리던 현상을 막는다.
+            Box(
+                modifier = Modifier.fillMaxSize(),
+                contentAlignment = Alignment.Center,
+            ) {
             // 카드: 302 폭, White, radius 16, padding 10/4/20, gap 16
             // 위치: 화면 중앙 기준 아래로 offset(눈 기준 조정값). CSS top 264는 중앙(248)보다 조금 아래.
-            // Popup 안에선 WindowInsets가 0이라 절대좌표 앵커가 안 돼 이 방식이 유일하게 결과와 대응.
             val cardInteraction = remember { MutableInteractionSource() }
             Column(
                 modifier = Modifier
@@ -172,6 +193,7 @@ fun WeeklyReportModal(
                     )
                 }
             }
+            }
         }
     }
 }
@@ -180,6 +202,6 @@ fun WeeklyReportModal(
 @Composable
 private fun WeeklyReportModalPreview() {
     TalkQQuestTheme {
-        WeeklyReportModal(onConfirm = {}, onDismiss = {})
+        WeeklyReportModal(visible = true, onConfirm = {}, onDismiss = {})
     }
 }

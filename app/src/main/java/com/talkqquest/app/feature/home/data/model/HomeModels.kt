@@ -1,11 +1,11 @@
-package com.talkqquest.app.feature.home.data.model
+﻿package com.talkqquest.app.feature.home.data.model
 
 import com.talkqquest.app.core.util.GrowthTotalsDto
 import kotlinx.serialization.Serializable
 
 @Serializable
 data class HomeSummary(
-    val nickname: String = "", // 서버가 null 가능(닉네임 미설정 계정 실측) → coerce로 ""가 됨. 표시는 Repository가 폴백.
+    val nickname: String = "", // ?쒕쾭媛 null 媛???됰꽕??誘몄꽕??怨꾩젙 ?ㅼ륫) ??coerce濡?""媛 ?? ?쒖떆??Repository媛 ?대갚.
     val level: Int,
     val currentXp: Int,
     val nextLevelXp: Int,
@@ -14,14 +14,14 @@ data class HomeSummary(
     val communityCount: Int,
     val questionOfDay: String? = null,
     val hasNewNotification: Boolean = false,
-    // 능력치 누적 원값 4개 — 실전 티어의 원천. 서버가 홈 요약에도 함께 내려준다(스웨거 HomeSummaryResponseDto).
+    // ?λ젰移??꾩쟻 ?먭컪 4媛????ㅼ쟾 ?곗뼱???먯쿇. ?쒕쾭媛 ???붿빟?먮룄 ?④퍡 ?대젮以???ㅼ썾嫄?HomeSummaryResponseDto).
     val growthTotals: GrowthTotalsDto = GrowthTotalsDto(),
-    // 실전 티어(레벨 카드 표시) — 서버가 주는 값이 아니라 위 growthTotals로 Repository가 계산해 채운다.
-    // 성장 리포트와 같은 계산(core/util/TierProgress)을 써야 두 화면이 어긋나지 않는다.
-    val tierName: String = "골드",  // 티어 이름 (브론즈/실버/골드/플래티넘/다이아/마스터)
-    val tierStars: Int = 2,         // 채워진 별 수 0~3 (티어 내 단계)
-    // 새 주간 비교 리포트 도착 신호. 백엔드 추가(2026-08-13) — 홈 진입 시 도착 모달을 띄우고,
-    // "보러가기"는 reportId로 그 리포트를 바로 연다(목록 최신을 추측하지 않는다).
+    // ?ㅼ쟾 ?곗뼱(?덈꺼 移대뱶 ?쒖떆) ???쒕쾭媛 二쇰뒗 媛믪씠 ?꾨땲????growthTotals濡?Repository媛 怨꾩궛??梨꾩슫??
+    // ?깆옣 由ы룷?몄? 媛숈? 怨꾩궛(core/util/TierProgress)???⑥빞 ???붾㈃???닿툔?섏? ?딅뒗??
+    val tierName: String = "怨⑤뱶",  // ?곗뼱 ?대쫫 (釉뚮줎利??ㅻ쾭/怨⑤뱶/?뚮옒?곕꽆/?ㅼ씠??留덉뒪??
+    val tierStars: Int = 2,         // 梨꾩썙吏?蹂???0~3 (?곗뼱 ???④퀎)
+    // ??二쇨컙 鍮꾧탳 由ы룷???꾩갑 ?좏샇. 諛깆뿏??異붽?(2026-08-13) ????吏꾩엯 ???꾩갑 紐⑤떖???꾩슦怨?
+    // "蹂대윭媛湲???reportId濡?洹?由ы룷?몃? 諛붾줈 ?곕떎(紐⑸줉 理쒖떊??異붿륫?섏? ?딅뒗??.
     val newWeeklyCompareReport: NewWeeklyCompareReport? = null,
 )
 
@@ -42,6 +42,11 @@ data class UserMe(
     val xp: Int = 0,
     val dailyConversationGoal: Int = 1,
     val onboardingCompleted: Boolean = false,
+    val personalityType: String? = null,
+    val difficultSituations: List<String> = emptyList(),
+    val purpose: List<String> = emptyList(),
+    val preferredStyle: String? = null,
+    val interests: List<String> = emptyList(),
 )
 
 @Serializable

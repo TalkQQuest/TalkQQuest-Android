@@ -30,6 +30,16 @@ class TqMessagingService : FirebaseMessagingService() {
     override fun onMessageReceived(message: RemoteMessage) {
         val title = message.notification?.title ?: message.data["title"] ?: "TalkQQuest"
         val body = message.notification?.body ?: message.data["body"] ?: ""
+
+        // 휴대폰 실제 알림은 주간 비교 리포트 도착 안내만 표시한다.
+        // 미션 완료 등 나머지 알림은 서버 목록에 남아 앱 내부 알림창에서만 확인한다.
+        if (!title.contains(WEEKLY_COMPARE_NOTIFICATION_TEXT) &&
+            !body.contains(WEEKLY_COMPARE_NOTIFICATION_TEXT)
+        ) {
+            Log.d(TAG, "앱 내부 전용 알림 — 시스템 알림 표시 생략")
+            return
+        }
+
         showNotification(title, body)
     }
 
@@ -62,5 +72,6 @@ class TqMessagingService : FirebaseMessagingService() {
 
     companion object {
         private const val TAG = "TqMessaging"
+        private const val WEEKLY_COMPARE_NOTIFICATION_TEXT = "주간 비교 리포트"
     }
 }

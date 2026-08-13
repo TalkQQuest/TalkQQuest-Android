@@ -56,6 +56,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.zIndex
 import androidx.compose.ui.platform.LocalContext
@@ -552,18 +553,19 @@ private fun NotificationCard(
                 // 피그마 Frame 427321606/608: 시간과 점은 세로가 아니라 같은 20dp 줄의 가로 배치.
                 // 점이 사라져도 이 줄의 높이는 변하지 않아 제목↔본문 2dp 간격과 카드 높이가 고정된다.
                 Row(
-                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.height(20.dp),
+                    verticalAlignment = Alignment.Top,
                     horizontalArrangement = Arrangement.spacedBy(3.dp),
                 ) {
                     Text(text = item.timeText, style = TqType.BodyS.figma(), color = Gray400)
-                    if (item.isUnread) {
-                        Box(
-                            modifier = Modifier
-                                .size(7.dp)
-                                .clip(CircleShape)
-                                .background(Primary600),
-                        )
-                    }
+                    // CSS Frame 427321605: 7x7 점은 20dp 시간 줄의 상단에 붙는다.
+                    // 읽음 상태에서도 자리는 유지하고 투명하게만 바꿔 카드·시간 위치가 변하지 않게 한다.
+                    Box(
+                        modifier = Modifier
+                            .size(7.dp)
+                            .clip(CircleShape)
+                            .background(if (item.isUnread) Primary600 else Color.Transparent),
+                    )
                 }
             }
             Row(verticalAlignment = Alignment.CenterVertically) {

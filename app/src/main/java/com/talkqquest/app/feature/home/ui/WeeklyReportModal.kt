@@ -46,6 +46,7 @@ import com.talkqquest.app.R
 import com.talkqquest.app.core.designsystem.Gray50
 import com.talkqquest.app.core.designsystem.Gray500
 import com.talkqquest.app.core.designsystem.Gray700
+import com.talkqquest.app.core.designsystem.ModalDimOverlay
 import com.talkqquest.app.core.designsystem.Gray800
 import com.talkqquest.app.core.designsystem.Primary600
 import com.talkqquest.app.core.designsystem.TalkQQuestTheme
@@ -70,20 +71,7 @@ fun WeeklyReportModal(
     onDismiss: () -> Unit,
 ) {
     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-            // 대화 완료 확인 팝업과 동일한 360ms 딤 페이드.
-            AnimatedVisibility(
-                visible = visible,
-                enter = fadeIn(tween(360, easing = FastOutSlowInEasing)),
-                exit = fadeOut(tween(360, easing = FastOutSlowInEasing)),
-            ) {
-                val scrimInteraction = remember { MutableInteractionSource() }
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .background(Gray700.copy(alpha = 0.23f))
-                        .clickable(interactionSource = scrimInteraction, indication = null, onClick = onDismiss),
-                )
-        }
+        ModalDimOverlay(visible = visible, onDismiss = onDismiss)
 
         AnimatedVisibility(
             visible = visible,

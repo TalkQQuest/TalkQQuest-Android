@@ -49,11 +49,14 @@ import com.talkqquest.app.core.designsystem.Gray50
 import com.talkqquest.app.core.designsystem.Gray500
 import com.talkqquest.app.core.designsystem.Gray600
 import com.talkqquest.app.core.designsystem.Gray800
+import com.talkqquest.app.core.designsystem.ModalDimOverlay
 import com.talkqquest.app.core.designsystem.PretendardFamily
 import com.talkqquest.app.core.designsystem.Primary50
 import com.talkqquest.app.core.designsystem.Primary600
 import com.talkqquest.app.core.designsystem.TalkQQuestTheme
 import com.talkqquest.app.core.designsystem.White
+import com.talkqquest.app.core.designsystem.modalCardEnter
+import com.talkqquest.app.core.designsystem.modalCardExit
 import com.talkqquest.app.core.designsystem.component.MenuRippleGroupState
 import com.talkqquest.app.core.designsystem.component.TqAnchoredMenuRow
 import com.talkqquest.app.core.designsystem.component.menuRowTextRippleAnchor
@@ -260,13 +263,12 @@ fun ProfileSettingsScreen(
             )
         }
 
-        if (showTimePicker) {
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .background(Color(0xFF273449).copy(alpha = 0.24f))
-                    .clickable { showTimePicker = false },
-            )
+        ModalDimOverlay(visible = showTimePicker, onDismiss = { showTimePicker = false })
+        androidx.compose.animation.AnimatedVisibility(
+            visible = showTimePicker,
+            enter = modalCardEnter(),
+            exit = modalCardExit(),
+        ) {
             ReminderTimeDialog(
                 selectedTime = reminderTime,
                 onCancel = { showTimePicker = false },

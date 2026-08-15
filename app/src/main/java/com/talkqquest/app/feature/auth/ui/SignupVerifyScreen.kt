@@ -1,5 +1,9 @@
 package com.talkqquest.app.feature.auth.ui
 
+import androidx.activity.compose.BackHandler
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -45,6 +49,8 @@ import com.talkqquest.app.core.designsystem.Gray50
 import com.talkqquest.app.core.designsystem.Gray500
 import com.talkqquest.app.core.designsystem.Gray700
 import com.talkqquest.app.core.designsystem.Gray800
+import com.talkqquest.app.core.designsystem.ModalDimDurationMillis
+import com.talkqquest.app.core.designsystem.ModalDimOverlay
 import com.talkqquest.app.core.designsystem.Primary500
 import com.talkqquest.app.core.designsystem.TalkQQuestTheme
 import com.talkqquest.app.core.designsystem.TqType
@@ -59,13 +65,46 @@ fun SignupVerifyScreen(
     email: String = "Talkqquest1234@gmail.com",
     isCodeError: Boolean = false,
     onBack: () -> Unit = {},
-    onVerifyCode: (String) -> Unit = {},
+    onVerifyCode: (String, () -> Unit) -> Unit = { _, _ -> },
+    onVerificationSuccess: () -> Unit = {},
     onCodeChange: () -> Unit = {},
     onResendClick: () -> Unit = {},
 ) = FitDesign(compensateStatusBar = false) {
     var code by remember { mutableStateOf("") }
     var remainingSeconds by remember { mutableStateOf(EmailVerificationDurationSeconds) }
+    var dimVisible by remember { mutableStateOf(false) }
+    var sheetVisible by remember { mutableStateOf(false) }
+    var isClosing by remember { mutableStateOf(false) }
+    var closeAction by remember { mutableStateOf<(() -> Unit)?>(null) }
     val timerText = "${remainingSeconds / 60}:${(remainingSeconds % 60).toString().padStart(2, '0')}"
+    val sheetOffset by animateDpAsState(
+        targetValue = if (sheetVisible) 0.dp else 428.dp,
+        animationSpec = tween(ModalDimDurationMillis, easing = FastOutSlowInEasing),
+        label = "signupVerifySheetOffset",
+    )
+
+    fun dismiss(afterDismiss: () -> Unit) {
+        if (isClosing) return
+        isClosing = true
+        dimVisible = false
+        sheetVisible = false
+        closeAction = afterDismiss
+    }
+
+    LaunchedEffect(Unit) {
+        dimVisible = true
+        sheetVisible = true
+    }
+
+    LaunchedEffect(isClosing) {
+        if (!isClosing) return@LaunchedEffect
+        delay(ModalDimDurationMillis.toLong())
+        closeAction?.invoke()
+    }
+
+    BackHandler {
+        dismiss(onBack)
+    }
 
     LaunchedEffect(remainingSeconds) {
         if (remainingSeconds > 0) {
@@ -85,7 +124,7 @@ fun SignupVerifyScreen(
             .background(Gray50),
     ) {
         IconButton(
-            onClick = onBack,
+            onClick = { dismiss(onBack) },
             modifier = Modifier
                 .offset(x = 0.dp, y = 48.dp)
                 .size(44.dp),
@@ -118,7 +157,11 @@ fun SignupVerifyScreen(
             placeholder = "",
             onValueChange = {},
             actionText = "\uC778\uC99D",
-            onActionClick = { if (code.length == 6) onVerifyCode(code) },
+            onActionClick = {
+                if (code.length == 6) {
+                    onVerifyCode(code) { dismiss(onVerificationSuccess) }
+                }
+            },
             actionCornerRadius = 12.dp,
             modifier = Modifier
                 .fillMaxWidth()
@@ -127,15 +170,11 @@ fun SignupVerifyScreen(
                 .height(88.dp),
         )
 
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(Color(0xFF334155).copy(alpha = 0.23f)),
-        )
+        ModalDimOverlay(visible = dimVisible)
 
         Box(
             modifier = Modifier
-                .offset(y = 424.dp)
+                .offset(y = 424.dp + sheetOffset)
                 .fillMaxWidth()
                 .height(428.dp)
                 .clip(RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp))
@@ -206,7 +245,7 @@ fun SignupVerifyScreen(
                     val digits = input.filter { it.isDigit() }.take(6)
                     if (digits != code) onCodeChange()
                     code = digits
-                    if (digits.length == 6) onVerifyCode(digits)
+                    if (digits.length == 6) onVerifyCode(digits) { dismiss(onVerificationSuccess) }
                 },
                 singleLine = true,
                 textStyle = TqType.HeadingXL.copy(

@@ -84,6 +84,7 @@ import com.talkqquest.app.core.designsystem.Gray700
 import com.talkqquest.app.core.designsystem.Gray800
 import com.talkqquest.app.core.designsystem.Gray900
 import com.talkqquest.app.core.designsystem.LocalStatusBarCompensation
+import com.talkqquest.app.core.designsystem.ModalDimOverlay
 import com.talkqquest.app.core.designsystem.Error
 import com.talkqquest.app.core.designsystem.Primary600
 import com.talkqquest.app.core.designsystem.TalkQQuestTheme
@@ -377,23 +378,11 @@ private fun NotificationDeleteAllDialog(
         )
     }
     Box(modifier = Modifier.fillMaxSize()) {
-        AnimatedVisibility(
+        ModalDimOverlay(
             visible = visible,
-            enter = fadeIn(tween(360, easing = FastOutSlowInEasing)),
-            exit = fadeOut(tween(360, easing = FastOutSlowInEasing)),
+            onDismiss = onDismiss,
             modifier = Modifier.coverStatusBarCompensation(LocalStatusBarCompensation.current),
-        ) {
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .background(Gray700.copy(alpha = 0.23f))
-                    .clickable(
-                        interactionSource = remember { MutableInteractionSource() },
-                        indication = null,
-                        onClick = onDismiss,
-                    ),
-            )
-        }
+        )
         AnimatedVisibility(
             visible = visible,
             enter = fadeIn(tween(360, easing = FastOutSlowInEasing)),

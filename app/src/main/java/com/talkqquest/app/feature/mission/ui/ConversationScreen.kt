@@ -119,6 +119,7 @@ import com.talkqquest.app.core.designsystem.Gray800
 import com.talkqquest.app.core.designsystem.Gray900
 import com.talkqquest.app.core.designsystem.LocalDesignScale
 import com.talkqquest.app.core.designsystem.LocalStatusBarCompensation
+import com.talkqquest.app.core.designsystem.ModalDimOverlay
 import com.talkqquest.app.core.designsystem.Primary600
 import com.talkqquest.app.core.designsystem.TalkQQuestTheme
 import com.talkqquest.app.core.designsystem.TqType
@@ -272,23 +273,11 @@ private fun ConversationScreen(
         // ★ 별도 FitDesign으로 감싸지 않는다: 이미 이 화면 전체가 바깥 FitDesign 안이라
         //   여기서 또 감싸면 팝업만 다른 좌표계가 돼 위치가 어긋남(살짝 아래로 밀렸던 원인).
         //   메인 콘텐츠와 같은 프레임에 두면 CSS top 313이 다른 요소들과 동일 규칙으로 맞음.
-        androidx.compose.animation.AnimatedVisibility(
+        ModalDimOverlay(
             visible = uiState.showCompleteDialog || uiState.showLeaveDialog,
-            enter = fadeIn(tween(360, easing = FastOutSlowInEasing)),
-            exit = fadeOut(tween(360, easing = FastOutSlowInEasing)),
+            onDismiss = if (uiState.showCompleteDialog) onCompleteDismiss else onLeaveDismiss,
             modifier = Modifier.coverStatusBarCompensation(LocalStatusBarCompensation.current),
-        ) {
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .background(Gray700.copy(alpha = 0.23f))
-                    .clickable(
-                        interactionSource = remember { MutableInteractionSource() },
-                        indication = null,
-                        onClick = if (uiState.showCompleteDialog) onCompleteDismiss else onLeaveDismiss,
-                    ),
-            )
-        }
+        )
         AnimatedVisibility(
             visible = uiState.showCompleteDialog,
             enter = fadeIn(tween(360, easing = FastOutSlowInEasing)) +

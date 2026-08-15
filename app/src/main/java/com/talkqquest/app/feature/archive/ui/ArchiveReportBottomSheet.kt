@@ -25,6 +25,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.talkqquest.app.core.designsystem.Gray800
+import com.talkqquest.app.core.designsystem.ModalDimColor
+import com.talkqquest.app.core.designsystem.ModalSystemBars
 import com.talkqquest.app.core.designsystem.TalkQQuestTheme
 import com.talkqquest.app.core.designsystem.TqType
 import com.talkqquest.app.core.designsystem.White
@@ -38,6 +40,7 @@ fun ArchiveReportBottomSheet(
     onFilterSelected: (String) -> Unit,
     onDismissRequest: () -> Unit
 ) {
+    ModalSystemBars(isVisible)
     if (isVisible) {
         val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 
@@ -45,6 +48,7 @@ fun ArchiveReportBottomSheet(
             onDismissRequest = onDismissRequest,
             sheetState = sheetState,
             containerColor = White,
+            scrimColor = ModalDimColor,
             // 💡 CSS 명세 반영: border-radius: 36px 36px 0px 0px;
             shape = RoundedCornerShape(topStart = 36.dp, topEnd = 36.dp),
             // CSS 패딩(상단 28px)을 정확히 맞추기 위해 기본 드래그 핸들은 숨김 처리

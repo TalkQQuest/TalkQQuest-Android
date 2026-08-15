@@ -39,11 +39,14 @@ import com.talkqquest.app.core.designsystem.Gray500
 import com.talkqquest.app.core.designsystem.Gray700
 import com.talkqquest.app.core.designsystem.Gray800
 import com.talkqquest.app.core.designsystem.Gray900
+import com.talkqquest.app.core.designsystem.ModalDimOverlay
 import com.talkqquest.app.core.designsystem.Primary600
 import com.talkqquest.app.core.designsystem.Success
 import com.talkqquest.app.core.designsystem.TalkQQuestTheme
 import com.talkqquest.app.core.designsystem.TqType
 import com.talkqquest.app.core.designsystem.White
+import com.talkqquest.app.core.designsystem.modalCardEnter
+import com.talkqquest.app.core.designsystem.modalCardExit
 import com.talkqquest.app.core.designsystem.component.TqButton
 import com.talkqquest.app.core.designsystem.component.PasswordVisibilityToggle
 
@@ -140,21 +143,18 @@ fun ProfileNewPasswordScreen(
                 .size(width = 361.dp, height = 52.dp),
         )
 
-        if (showCompletionDialog) {
-            ProfileNewPasswordCompleteDialog(onConfirmClick = onCompletionConfirm)
-        }
+        ProfileNewPasswordCompleteDialog(visible = showCompletionDialog, onConfirmClick = onCompletionConfirm)
     }
 }
 
 @Composable
 private fun ProfileNewPasswordCompleteDialog(
+    visible: Boolean,
     onConfirmClick: () -> Unit,
 ) {
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(Gray700.copy(alpha = 0.23f)),
-    ) {
+    ModalDimOverlay(visible = visible)
+    androidx.compose.animation.AnimatedVisibility(visible, enter = modalCardEnter(), exit = modalCardExit()) {
+    Box(modifier = Modifier.fillMaxSize()) {
         Box(
             modifier = Modifier
                 .offset(x = 28.dp, y = 313.dp)
@@ -200,6 +200,7 @@ private fun ProfileNewPasswordCompleteDialog(
                 )
             }
         }
+    }
     }
 }
 

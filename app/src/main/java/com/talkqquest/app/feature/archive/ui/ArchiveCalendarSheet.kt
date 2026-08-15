@@ -40,6 +40,8 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.talkqquest.app.core.designsystem.Gray600
+import com.talkqquest.app.core.designsystem.ModalDimColor
+import com.talkqquest.app.core.designsystem.ModalSystemBars
 import com.talkqquest.app.core.designsystem.Primary600
 import com.talkqquest.app.core.designsystem.TalkQQuestTheme
 import com.talkqquest.app.core.designsystem.TqType
@@ -60,6 +62,7 @@ fun TqCalendarBottomSheet(
     onDateSelected: (LocalDate) -> Unit,
     onDismissRequest: () -> Unit
 ) {
+    ModalSystemBars(isVisible)
     if (isVisible) {
         val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
         val coroutineScope = rememberCoroutineScope()
@@ -72,6 +75,7 @@ fun TqCalendarBottomSheet(
             sheetState = sheetState,
             shape = RoundedCornerShape(topStart = 48.dp, topEnd = 48.dp),
             containerColor = White,
+            scrimColor = ModalDimColor,
             dragHandle = null
         ) {
             Column(

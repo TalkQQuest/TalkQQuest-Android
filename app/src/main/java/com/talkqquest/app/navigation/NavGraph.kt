@@ -5,6 +5,8 @@ import android.widget.Toast
 import androidx.compose.animation.AnimatedContentTransitionScope
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.EnterTransition
+import androidx.compose.animation.ExitTransition
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.scaleIn
@@ -122,10 +124,12 @@ fun NavGraph(
         exitTransition = {
             if (initialState.destination.route == Screen.SPLASH) fadeOut(tween(300))
             else if (isTabSwitch()) fadeOut(tween(300))
+            else if (targetState.destination.route == Screen.SIGNUP_VERIFY) ExitTransition.None
             else slideOutOfContainer(AnimatedContentTransitionScope.SlideDirection.Left, slideSpec)
         },
         popEnterTransition = {
             if (isTabSwitch()) fadeIn(tween(300))
+            else if (initialState.destination.route == Screen.SIGNUP_VERIFY) EnterTransition.None
             else slideIntoContainer(AnimatedContentTransitionScope.SlideDirection.Right, slideSpec)
         },
         popExitTransition = {
@@ -315,7 +319,13 @@ fun NavGraph(
             )
         }
 
-        composable(Screen.SIGNUP_VERIFY) {
+        composable(
+            route = Screen.SIGNUP_VERIFY,
+            enterTransition = { EnterTransition.None },
+            exitTransition = { ExitTransition.None },
+            popEnterTransition = { EnterTransition.None },
+            popExitTransition = { ExitTransition.None },
+        ) {
             val context = LocalContext.current
             val authViewModel: AuthViewModel = hiltViewModel()
             val authUiState by authViewModel.uiState.collectAsState()
@@ -333,13 +343,16 @@ fun NavGraph(
                 email = email.ifBlank { "Talkqquest1234@gmail.com" },
                 isCodeError = isVerificationCodeError,
                 onBack = { navController.popBackStack() },
-                onVerifyCode = { code ->
+                onVerifyCode = { code, onSuccess ->
                     hasSubmittedVerification = true
                     isVerificationCodeError = false
                     authViewModel.verifyEmailCode(email, code) {
-                        navController.currentBackStackEntry?.savedStateHandle?.set("signup_email", email)
-                        navController.navigate(Screen.SIGNUP_PASSWORD)
+                        onSuccess()
                     }
+                },
+                onVerificationSuccess = {
+                    navController.currentBackStackEntry?.savedStateHandle?.set("signup_email", email)
+                    navController.navigate(Screen.SIGNUP_PASSWORD)
                 },
                 onCodeChange = {
                     isVerificationCodeError = false

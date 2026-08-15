@@ -52,11 +52,14 @@ import com.talkqquest.app.core.designsystem.Gray500
 import com.talkqquest.app.core.designsystem.Gray700
 import com.talkqquest.app.core.designsystem.Gray800
 import com.talkqquest.app.core.designsystem.Gray900
+import com.talkqquest.app.core.designsystem.ModalDimOverlay
 import com.talkqquest.app.core.designsystem.PretendardFamily
 import com.talkqquest.app.core.designsystem.Primary100
 import com.talkqquest.app.core.designsystem.Primary600
 import com.talkqquest.app.core.designsystem.TalkQQuestTheme
 import com.talkqquest.app.core.designsystem.White
+import com.talkqquest.app.core.designsystem.modalCardEnter
+import com.talkqquest.app.core.designsystem.modalCardExit
 import com.talkqquest.app.core.designsystem.component.TextAnchoredPillRipple
 import com.talkqquest.app.core.designsystem.component.rememberHapticTick
 import com.talkqquest.app.core.designsystem.component.rememberTextPillRippleBounds
@@ -191,17 +194,16 @@ fun ProfileBadgesScreen(
                 .zIndex(1f),
         )
 
-        selectedBadge?.let { badge ->
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .background(Color(0xFF334155).copy(alpha = 0.23f))
-                    .clickable { selectedBadge = null },
-            )
-            BadgeDetailDialog(
-                badge = badge,
-                onClose = { selectedBadge = null },
-            )
+        val badge = selectedBadge
+        ModalDimOverlay(visible = badge != null, onDismiss = { selectedBadge = null })
+        androidx.compose.animation.AnimatedVisibility(
+            visible = badge != null,
+            enter = modalCardEnter(),
+            exit = modalCardExit(),
+        ) {
+            badge?.let {
+                BadgeDetailDialog(badge = it, onClose = { selectedBadge = null })
+            }
         }
     }
 }

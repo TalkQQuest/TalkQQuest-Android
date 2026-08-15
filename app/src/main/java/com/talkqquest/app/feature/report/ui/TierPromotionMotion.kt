@@ -37,6 +37,8 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.style.LineHeightStyle
 import androidx.compose.ui.unit.dp
+import com.talkqquest.app.core.designsystem.ModalDimColor
+import com.talkqquest.app.core.designsystem.ModalSystemBars
 import com.talkqquest.app.core.designsystem.TqType
 import kotlin.math.cos
 import kotlin.math.sin
@@ -45,11 +47,7 @@ import kotlin.math.sin
 // 마름모 4꼭짓점이 중앙으로 모여 별 하나가 되고, 그 별이 위 티어 카드의 빈 별 자리로 날아가 박힌다.
 // 그 별로 3개가 차면(= 티어 승급) 딤이 깔리고 새 휘장이 등장한다.
 //
-// 딤은 "대화 이탈 팝업"과 같은 결(360ms · FastOutSlowInEasing · Gray700)을 쓰되,
-// 그 위에 휘장을 세워야 해서 알파만 0.23 → 0.78 로 올렸다. 팝업 딤을 그대로 쓰면
-// 뒤의 흰 카드가 비쳐서 휘장도 문구도 묻힌다.
-private val DimColor = Color(0xFF1E293B) // Gray800 — 팝업 딤보다 한 단계 어두운 쪽
-private const val DIM_ALPHA = 0.78f
+// 딤은 "대화 이탈 팝업"과 같은 360ms · FastOutSlowInEasing · Gray700 23%를 쓴다.
 
 private val MotionStarYellow = Color(0xFFF9AC17)   // 티어 카드 별과 같은 값
 private val MotionStarLight = Color(0xFFFFD874)
@@ -146,6 +144,7 @@ internal fun TierPromotionOverlay(
     onDismiss: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    ModalSystemBars(motion.dim.value)
     val density = LocalDensity.current
     val flyingStarPx = with(density) { 34.dp.toPx() }
     val slotStarPx = with(density) { 15.dp.toPx() }
@@ -154,7 +153,7 @@ internal fun TierPromotionOverlay(
         // 1) 딤 — 승급일 때만. 대화 팝업과 같은 결로 스르륵 올라온다.
         if (motion.dim.value > 0f) {
             Canvas(modifier = Modifier.fillMaxSize()) {
-                drawRect(color = DimColor.copy(alpha = DIM_ALPHA * motion.dim.value))
+                drawRect(color = ModalDimColor.copy(alpha = ModalDimColor.alpha * motion.dim.value))
             }
         }
 

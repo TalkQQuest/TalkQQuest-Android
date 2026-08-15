@@ -555,7 +555,3 @@ private fun ProfileScreenPreview() {
         ProfileScreen()
     }
 }
-<<<<<<< Updated upstream
-=======
-
->>>>>>> Stashed changes

@@ -26,6 +26,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 
 import com.talkqquest.app.core.designsystem.Gray800
+import com.talkqquest.app.core.designsystem.ModalDimColor
+import com.talkqquest.app.core.designsystem.ModalSystemBars
 import com.talkqquest.app.core.designsystem.TqType
 import com.talkqquest.app.core.designsystem.White
 import com.talkqquest.app.feature.archive.viewmodel.ArchiveSortType
@@ -38,10 +40,12 @@ fun ArchiveSortSheet(
     onSortSelected: (ArchiveSortType) -> Unit,
     onDismissRequest: () -> Unit
 ) {
+    ModalSystemBars(isVisible)
     if (isVisible) {
         ModalBottomSheet(
             onDismissRequest = onDismissRequest,
             containerColor = White,
+            scrimColor = ModalDimColor,
             shape = RoundedCornerShape(topStart = 36.dp, topEnd = 36.dp),
             dragHandle = { BottomSheetDefaults.DragHandle() }
         ) {

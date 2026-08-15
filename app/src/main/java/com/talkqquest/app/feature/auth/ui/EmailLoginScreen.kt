@@ -195,23 +195,30 @@ private fun LoginTextField(
                     .height(61.dp)
                     .clip(RoundedCornerShape(8.dp))
                     .background(White)
-                    .border(width = 1.dp, color = Gray300, shape = RoundedCornerShape(8.dp))
-                    .padding(start = 22.dp, end = if (passwordVisible == null) 22.dp else 66.dp),
-                contentAlignment = Alignment.CenterStart,
+                    .border(width = 1.dp, color = Gray300, shape = RoundedCornerShape(8.dp)),
             ) {
-                if (value.isBlank()) {
-                    Text(
-                        text = placeholder,
-                        style = TqType.TitleL,
-                        color = Gray300,
-                    )
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(start = 22.dp, end = if (passwordVisible == null) 22.dp else 66.dp),
+                    contentAlignment = Alignment.CenterStart,
+                ) {
+                    if (value.isBlank()) {
+                        Text(
+                            text = placeholder,
+                            style = TqType.TitleL,
+                            color = Gray300,
+                        )
+                    }
+                    innerTextField()
                 }
-                innerTextField()
                 if (passwordVisible != null && onTogglePasswordVisibility != null) {
                     PasswordVisibilityToggle(
                         passwordVisible = passwordVisible,
                         onToggle = onTogglePasswordVisibility,
-                        modifier = Modifier.align(Alignment.CenterEnd),
+                        modifier = Modifier
+                            .align(Alignment.CenterEnd)
+                            .padding(end = 6.dp),
                     )
                 }
             }

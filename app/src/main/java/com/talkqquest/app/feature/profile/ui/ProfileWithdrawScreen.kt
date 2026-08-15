@@ -37,10 +37,13 @@ import com.talkqquest.app.core.designsystem.Gray50
 import com.talkqquest.app.core.designsystem.Gray500
 import com.talkqquest.app.core.designsystem.Gray700
 import com.talkqquest.app.core.designsystem.Gray800
+import com.talkqquest.app.core.designsystem.ModalDimOverlay
 import com.talkqquest.app.core.designsystem.Primary600
 import com.talkqquest.app.core.designsystem.TalkQQuestTheme
 import com.talkqquest.app.core.designsystem.TqType
 import com.talkqquest.app.core.designsystem.White
+import com.talkqquest.app.core.designsystem.modalCardEnter
+import com.talkqquest.app.core.designsystem.modalCardExit
 
 @Composable
 fun ProfileWithdrawScreen(
@@ -135,13 +138,12 @@ fun ProfileWithdrawScreen(
             )
         }
 
-        if (showConfirm) {
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .background(Color(0xFF334155).copy(alpha = 0.23f))
-                    .clickable { showConfirm = false },
-            )
+        ModalDimOverlay(visible = showConfirm, onDismiss = { showConfirm = false })
+        androidx.compose.animation.AnimatedVisibility(
+            visible = showConfirm,
+            enter = modalCardEnter(),
+            exit = modalCardExit(),
+        ) {
             WithdrawConfirmDialog(
                 onCancel = { showConfirm = false },
                 onConfirm = {
@@ -246,7 +248,6 @@ private fun ProfileWithdrawScreenPreview() {
         ProfileWithdrawScreen()
     }
 }
-
 
 
 

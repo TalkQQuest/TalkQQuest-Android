@@ -54,6 +54,11 @@ import com.talkqquest.app.core.designsystem.Primary50
 import com.talkqquest.app.core.designsystem.Primary600
 import com.talkqquest.app.core.designsystem.TalkQQuestTheme
 import com.talkqquest.app.core.designsystem.White
+import com.talkqquest.app.core.designsystem.component.MenuRippleGroupState
+import com.talkqquest.app.core.designsystem.component.TqAnchoredMenuRow
+import com.talkqquest.app.core.designsystem.component.menuRowTextRippleAnchor
+import com.talkqquest.app.core.designsystem.component.rememberMenuRippleGroup
+import com.talkqquest.app.core.designsystem.component.rememberMenuRowTextLayoutCallback
 import com.talkqquest.app.core.designsystem.softShadow
 
 private val SettingsTitleStyle = TextStyle(
@@ -127,6 +132,7 @@ fun ProfileSettingsScreen(
                 .offset(x = 16.dp, y = 190.dp)
                 .size(width = 362.dp, height = 214.dp),
         ) {
+            val notificationGroup = rememberMenuRippleGroup()
             SettingsSectionLabel(
                 text = "알림",
                 modifier = Modifier
@@ -138,8 +144,12 @@ fun ProfileSettingsScreen(
                 checked = initialPushEnabled,
                 onCheckedChange = onPushEnabledChange,
                 modifier = Modifier
-                    .offset(x = 16.dp, y = 46.dp)
+                    .offset(y = 40.dp)
+                    .size(width = 362.dp, height = 56.dp),
+                contentModifier = Modifier
+                    .offset(x = 16.dp, y = 6.dp)
                     .size(width = 329.dp, height = 44.dp),
+                group = notificationGroup,
             )
             SettingsToggleRow(
                 title = "미션 리마인드",
@@ -147,15 +157,23 @@ fun ProfileSettingsScreen(
                 checked = initialReminderEnabled,
                 onCheckedChange = onReminderEnabledChange,
                 modifier = Modifier
-                    .offset(x = 16.dp, y = 102.dp)
+                    .offset(y = 96.dp)
+                    .size(width = 362.dp, height = 56.dp),
+                contentModifier = Modifier
+                    .offset(x = 16.dp, y = 6.dp)
                     .size(width = 330.dp, height = 44.dp),
+                group = notificationGroup,
             )
             SettingsTimeRow(
                 time = reminderTime,
                 onClick = { showTimePicker = true },
                 modifier = Modifier
-                    .offset(x = 16.dp, y = 158.dp)
+                    .offset(y = 152.dp)
+                    .size(width = 362.dp, height = 56.dp),
+                contentModifier = Modifier
+                    .offset(x = 16.dp, y = 6.dp)
                     .size(width = 330.dp, height = 44.dp),
+                group = notificationGroup,
             )
         }
 
@@ -164,6 +182,7 @@ fun ProfileSettingsScreen(
                 .offset(x = 16.dp, y = 416.dp)
                 .size(width = 362.dp, height = 146.dp),
         ) {
+            val accountGroup = rememberMenuRippleGroup()
             SettingsSectionLabel(
                 text = "계정",
                 modifier = Modifier
@@ -174,15 +193,23 @@ fun ProfileSettingsScreen(
                 title = "내 정보",
                 onClick = onEditProfileClick,
                 modifier = Modifier
-                    .offset(x = 16.dp, y = 46.dp)
+                    .offset(y = 46.dp)
+                    .size(width = 362.dp, height = 44.dp),
+                contentModifier = Modifier
+                    .offset(x = 16.dp)
                     .size(width = 330.dp, height = 44.dp),
+                group = accountGroup,
             )
             SettingsArrowRow(
                 title = "연결된 계정",
                 trailing = connectedAccount,
                 modifier = Modifier
-                    .offset(x = 16.dp, y = 90.dp)
+                    .offset(y = 90.dp)
+                    .size(width = 362.dp, height = 44.dp),
+                contentModifier = Modifier
+                    .offset(x = 16.dp)
                     .size(width = 330.dp, height = 44.dp),
+                group = accountGroup,
             )
         }
 
@@ -191,6 +218,7 @@ fun ProfileSettingsScreen(
                 .offset(x = 16.dp, y = 574.dp)
                 .size(width = 362.dp, height = 190.dp),
         ) {
+            val legalGroup = rememberMenuRippleGroup()
             SettingsSectionLabel(
                 text = "법적 정보 및 기타",
                 modifier = Modifier
@@ -201,22 +229,34 @@ fun ProfileSettingsScreen(
                 title = "약관 및 개인정보 처리 방침",
                 onClick = onTermsClick,
                 modifier = Modifier
-                    .offset(x = 16.dp, y = 46.dp)
+                    .offset(y = 46.dp)
+                    .size(width = 362.dp, height = 44.dp),
+                contentModifier = Modifier
+                    .offset(x = 16.dp)
                     .size(width = 330.dp, height = 44.dp),
+                group = legalGroup,
             )
             SettingsArrowRow(
                 title = "문의하기",
                 onClick = onSupportClick,
                 modifier = Modifier
-                    .offset(x = 16.dp, y = 90.dp)
+                    .offset(y = 90.dp)
+                    .size(width = 362.dp, height = 44.dp),
+                contentModifier = Modifier
+                    .offset(x = 16.dp)
                     .size(width = 330.dp, height = 44.dp),
+                group = legalGroup,
             )
             SettingsArrowRow(
                 title = "탈퇴하기",
                 onClick = onWithdrawClick,
                 modifier = Modifier
-                    .offset(x = 16.dp, y = 134.dp)
+                    .offset(y = 134.dp)
+                    .size(width = 362.dp, height = 44.dp),
+                contentModifier = Modifier
+                    .offset(x = 16.dp)
                     .size(width = 330.dp, height = 44.dp),
+                group = legalGroup,
             )
         }
 
@@ -323,14 +363,23 @@ private fun SettingsToggleRow(
     checked: Boolean,
     onCheckedChange: (Boolean) -> Unit,
     modifier: Modifier = Modifier,
+    contentModifier: Modifier = Modifier,
     description: String? = null,
+    group: MenuRippleGroupState? = null,
 ) {
-    Box(modifier = modifier.profileItemClick { onCheckedChange(!checked) }) {
+    TqAnchoredMenuRow(modifier = modifier, group = group, onClick = { onCheckedChange(!checked) }) { anchor ->
+        val titleLayout = rememberMenuRowTextLayoutCallback(anchor, "title", title, SettingsBodyLargeStyle)
+        val descriptionLayout = description?.let {
+            rememberMenuRowTextLayoutCallback(anchor, "description", it, SettingsBodySmallStyle)
+        }
+        Box(modifier = contentModifier) {
         Text(
             text = title,
             style = SettingsBodyLargeStyle,
             color = Gray800,
+            onTextLayout = titleLayout,
             modifier = Modifier
+                .menuRowTextRippleAnchor(anchor, "title")
                 .offset(y = if (description == null) 10.dp else 0.dp)
                 .size(width = if (description == null) 180.dp else 208.dp, height = 24.dp),
         )
@@ -339,7 +388,9 @@ private fun SettingsToggleRow(
                 text = description,
                 style = SettingsBodySmallStyle,
                 color = Gray500,
+                onTextLayout = descriptionLayout!!,
                 modifier = Modifier
+                    .menuRowTextRippleAnchor(anchor, "description")
                     .offset(y = 24.dp)
                     .size(width = 208.dp, height = 20.dp),
             )
@@ -350,6 +401,7 @@ private fun SettingsToggleRow(
                 .align(Alignment.CenterEnd)
                 .size(width = 52.dp, height = 32.dp),
         )
+        }
     }
 }
 
@@ -378,13 +430,20 @@ private fun SettingsTimeRow(
     time: String,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
+    contentModifier: Modifier = Modifier,
+    group: MenuRippleGroupState? = null,
 ) {
-    Box(modifier = modifier.profileItemClick(onClick = onClick)) {
+    TqAnchoredMenuRow(modifier = modifier, group = group, onClick = onClick) { anchor ->
+        val titleLayout = rememberMenuRowTextLayoutCallback(anchor, "title", "미션 리마인드 시간", SettingsBodyLargeStyle)
+        val timeLayout = rememberMenuRowTextLayoutCallback(anchor, "time", time, SettingsBodyLargeStyle)
+        Box(modifier = contentModifier) {
         Text(
             text = "미션 리마인드 시간",
             style = SettingsBodyLargeStyle,
             color = Gray800,
+            onTextLayout = titleLayout,
             modifier = Modifier
+                .menuRowTextRippleAnchor(anchor, "title")
                 .align(Alignment.CenterStart)
                 .size(width = 150.dp, height = 24.dp),
         )
@@ -398,7 +457,10 @@ private fun SettingsTimeRow(
                 text = time,
                 style = SettingsBodyLargeStyle,
                 color = Gray500,
-                modifier = Modifier.size(width = 61.dp, height = 24.dp),
+                onTextLayout = timeLayout,
+                modifier = Modifier
+                    .menuRowTextRippleAnchor(anchor, "time")
+                    .size(width = 61.dp, height = 24.dp),
             )
             Box(
                 modifier = Modifier.size(44.dp),
@@ -412,6 +474,7 @@ private fun SettingsTimeRow(
                 )
             }
         }
+        }
     }
 }
 
@@ -419,15 +482,24 @@ private fun SettingsTimeRow(
 private fun SettingsArrowRow(
     title: String,
     modifier: Modifier = Modifier,
+    contentModifier: Modifier = Modifier,
     trailing: String? = null,
     onClick: () -> Unit = {},
+    group: MenuRippleGroupState? = null,
 ) {
-    Box(modifier = modifier.profileItemClick(onClick = onClick)) {
+    TqAnchoredMenuRow(modifier = modifier, group = group, onClick = onClick) { anchor ->
+        val titleLayout = rememberMenuRowTextLayoutCallback(anchor, "title", title, SettingsBodyLargeStyle)
+        val trailingLayout = trailing?.let {
+            rememberMenuRowTextLayoutCallback(anchor, "trailing", it, SettingsBodyLargeStyle)
+        }
+        Box(modifier = contentModifier) {
         Text(
             text = title,
             style = SettingsBodyLargeStyle,
             color = Gray800,
+            onTextLayout = titleLayout,
             modifier = Modifier
+                .menuRowTextRippleAnchor(anchor, "title")
                 .align(Alignment.CenterStart)
                 .size(width = 210.dp, height = 24.dp),
         )
@@ -437,7 +509,9 @@ private fun SettingsArrowRow(
                 style = SettingsBodyLargeStyle,
                 color = Gray500,
                 textAlign = TextAlign.End,
+                onTextLayout = trailingLayout!!,
                 modifier = Modifier
+                    .menuRowTextRippleAnchor(anchor, "trailing")
                     .align(Alignment.CenterEnd)
                     .padding(end = 44.dp)
                     .size(width = 195.dp, height = 24.dp),
@@ -452,6 +526,7 @@ private fun SettingsArrowRow(
                 .size(44.dp)
                 .padding(horizontal = 7.dp, vertical = 6.dp),
         )
+        }
     }
 }
 
@@ -663,8 +738,3 @@ private fun ProfileSettingsScreenPreview() {
         ProfileSettingsScreen()
     }
 }
-
-
-
-
-

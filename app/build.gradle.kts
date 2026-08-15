@@ -53,6 +53,9 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
+            // 발표/데모용으로 릴리스를 바로 설치·구동할 수 있게 디버그 키로 서명(내부용).
+            // 릴리스는 AOT 최적화 + baseline-prof.txt 적용으로 콜드스타트가 debug보다 크게 빠르다.
+            signingConfig = signingConfigs.getByName("debug")
         }
     }
     compileOptions {
@@ -116,6 +119,10 @@ dependencies {
 
     // Local storage
     implementation(libs.androidx.datastore.preferences)
+
+    // Baseline Profile 설치기 — 릴리스 빌드에서 앱/Compose 번들 프로파일을 설치해 콜드스타트 가속.
+    // (src/main/baseline-prof.txt + Compose/AndroidX 라이브러리에 동봉된 프로파일)
+    implementation(libs.androidx.profileinstaller)
 
     // Social login
     implementation(libs.kakao.sdk.user)

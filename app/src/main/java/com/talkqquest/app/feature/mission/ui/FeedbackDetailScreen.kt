@@ -65,6 +65,7 @@ import com.talkqquest.app.core.designsystem.TalkQQuestTheme
 import com.talkqquest.app.core.designsystem.TqType
 import com.talkqquest.app.core.designsystem.White
 import com.talkqquest.app.core.designsystem.component.TqButton
+import com.talkqquest.app.core.designsystem.component.rememberHapticTick
 import com.talkqquest.app.core.designsystem.softShadow
 import com.talkqquest.app.feature.mission.data.stubItemTexts
 import com.talkqquest.app.feature.mission.data.model.FeedbackResult
@@ -171,6 +172,7 @@ private fun FeedbackDetailContent(
     onOtherMissions: () -> Unit,
     onTogglePhraseSave: () -> Unit,
 ) {
+    val tick = rememberHapticTick()
     // 배너에 보여줄 항목 — 범위 밖 값(딥링크 등)은 첫 항목으로
     val (label, score) = result.scoreItems().getOrElse(itemIndex) { result.scoreItems().first() }
     // 잘한 점·개선할 점·베스트 문장은 항목별 값 (없으면 피드백 공통 값으로 폴백)
@@ -188,7 +190,7 @@ private fun FeedbackDetailContent(
                 modifier = Modifier
                     .size(44.dp)
                     .clip(CircleShape)
-                    .clickable(onClick = onBack),
+                    .clickable(onClick = { tick(); onBack() }),
                 contentAlignment = Alignment.Center,
             ) {
                 Icon(

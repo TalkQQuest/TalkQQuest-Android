@@ -97,6 +97,7 @@ fun TqLoadingScreen(
     onAnimationFinished: () -> Unit = {},
     compensateStatusBar: Boolean = true,
 ) = FitDesign(compensateStatusBar = compensateStatusBar) {
+    val tick = rememberHapticTick()
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -109,7 +110,7 @@ fun TqLoadingScreen(
                     .offset(y = 8.dp)
                     .size(44.dp)
                     .clip(CircleShape)
-                    .clickable(onClick = onBack),
+                    .clickable(onClick = { tick(); onBack() }),
                 contentAlignment = Alignment.Center,
             ) {
                 Icon(

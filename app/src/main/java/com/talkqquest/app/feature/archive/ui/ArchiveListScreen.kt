@@ -3,6 +3,7 @@ package com.talkqquest.app.feature.archive.ui
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -38,12 +39,15 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.clipToBounds
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.zIndex
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
@@ -51,19 +55,22 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 
 import com.talkqquest.app.R
 import com.talkqquest.app.core.designsystem.FitDesign
-import com.talkqquest.app.core.designsystem.Gray1000
+import com.talkqquest.app.core.designsystem.component.rememberHapticTick
 import com.talkqquest.app.core.designsystem.Gray300
 import com.talkqquest.app.core.designsystem.Gray400
 import com.talkqquest.app.core.designsystem.Gray50
 import com.talkqquest.app.core.designsystem.Gray500
 import com.talkqquest.app.core.designsystem.Gray800
-import com.talkqquest.app.core.designsystem.Gray900
-import com.talkqquest.app.core.designsystem.Primary50
-import com.talkqquest.app.core.designsystem.Primary600
 import com.talkqquest.app.core.designsystem.TalkQQuestTheme
 import com.talkqquest.app.core.designsystem.TqType
-import com.talkqquest.app.core.designsystem.White
-import com.talkqquest.app.core.designsystem.softShadow
+import com.talkqquest.app.core.designsystem.component.SlidingChipRow
+import com.talkqquest.app.core.designsystem.component.TextAnchoredPillRipple
+import com.talkqquest.app.core.designsystem.component.rememberTextPillRippleBounds
+import com.talkqquest.app.core.designsystem.component.rememberTextPillRippleGlyphBounds
+import com.talkqquest.app.core.designsystem.component.rememberTextPillRippleGlyphBoundsUpdater
+import com.talkqquest.app.core.designsystem.component.rememberTextPillRippleParentPosition
+import com.talkqquest.app.core.designsystem.component.textPillRippleAnchor
+import com.talkqquest.app.core.designsystem.component.textPillRippleParentPosition
 
 import com.talkqquest.app.feature.archive.viewmodel.ArchiveUiState
 import com.talkqquest.app.feature.archive.viewmodel.ArchiveViewModel
@@ -72,6 +79,7 @@ import com.talkqquest.app.feature.archive.viewmodel.RecentActivity
 import com.talkqquest.app.feature.mission.ui.figma
 
 import kotlinx.coroutines.launch
+import kotlin.math.floor
 
 @Composable
 fun ArchiveListScreen(
@@ -130,14 +138,34 @@ private fun ArchiveListScreenContent(
     onReportClick: (String, Boolean) -> Unit,
     onToggleReportSave: (String) -> Unit
 ) {
+    val tick = rememberHapticTick()
     val tabs = listOf("미션", "대화", "문장", "리포트")
     val pagerState = rememberPagerState(initialPage = initialTabIndex, pageCount = { tabs.size })
     val coroutineScope = rememberCoroutineScope()
+    val missionFilterScrollState = rememberScrollState()
+    val pagePosition = (pagerState.currentPage + pagerState.currentPageOffsetFraction)
+        .coerceIn(0f, (tabs.lastIndex).toFloat())
+    val filterRegionHeights = listOf(61.dp, 16.dp, 16.dp, 48.dp)
+    val lowerPage = floor(pagePosition).toInt()
+    val upperPage = (lowerPage + 1).coerceAtMost(tabs.lastIndex)
+    val pageProgress = pagePosition - lowerPage
+    val filterRegionHeight = filterRegionHeights[lowerPage] +
+        (filterRegionHeights[upperPage] - filterRegionHeights[lowerPage]) * pageProgress
+    val missionFilterProgress = pagePosition.coerceIn(0f, 1f)
+    val missionFilterTranslationY = 27.dp - (61.dp * missionFilterProgress)
+    val missionFilterAlpha = 1f - missionFilterProgress
+    val reportFilterProgress = (pagePosition - 2f).coerceIn(0f, 1f)
+    val reportFilterTranslationY = (-32).dp + (48.dp * reportFilterProgress)
+    val reportFilterAlpha = reportFilterProgress
+    val isMissionFilterInteractive = pagerState.settledPage == 0 && !pagerState.isScrollInProgress
+    val isReportFilterInteractive = pagerState.settledPage == 3 && !pagerState.isScrollInProgress
 
     var showReportFilterSheet by remember { mutableStateOf(false) }
 
-    LaunchedEffect(pagerState.currentPage) {
-        onFilterSelect("전체")
+    LaunchedEffect(pagerState.settledPage) {
+        if (uiState.selectedFilter != "전체") {
+            onFilterSelect("전체")
+        }
     }
 
     FitDesign {
@@ -160,7 +188,7 @@ private fun ArchiveListScreenContent(
                             .size(44.dp)
                             .align(Alignment.CenterStart)
                             .clip(CircleShape)
-                            .clickable(onClick = onBackClick),
+                            .clickable(onClick = { tick(); onBackClick() }),
                         contentAlignment = Alignment.Center
                     ) {
                         Icon(
@@ -176,7 +204,8 @@ private fun ArchiveListScreenContent(
                 Spacer(modifier = Modifier.height(16.dp))
                 Box(modifier = Modifier
                     .fillMaxWidth()
-                    .height(38.dp)) {
+                    .height(38.dp)
+                    .zIndex(1f)) {
                     Box(modifier = Modifier
                         .fillMaxWidth()
                         .height(1.dp)
@@ -187,17 +216,39 @@ private fun ArchiveListScreenContent(
                         .padding(horizontal = 16.dp)) {
                         tabs.forEachIndexed { index, tab ->
                             val isActive = (pagerState.currentPage == index)
+                            val interactionSource = remember { MutableInteractionSource() }
+                            val textBounds = rememberTextPillRippleBounds()
+                            val glyphBounds = rememberTextPillRippleGlyphBounds()
+                            val tabTextStyle = TqType.TitleL.figma()
+                            val onTextLayout = rememberTextPillRippleGlyphBoundsUpdater(
+                                glyphBounds,
+                                tab,
+                                tabTextStyle,
+                            )
+                            val parentPosition = rememberTextPillRippleParentPosition()
                             Box(
                                 modifier = Modifier
                                     .weight(1f)
-                                    .clip(RoundedCornerShape(12.dp))
-                                    .clickable {
+                                    .clickable(
+                                        interactionSource = interactionSource,
+                                        indication = null,
+                                    ) {
                                         coroutineScope.launch { pagerState.animateScrollToPage(index) }
-                                    },
+                                    }
+                                    .textPillRippleParentPosition(parentPosition),
                                 contentAlignment = Alignment.TopCenter
                             ) {
+                                TextAnchoredPillRipple(textBounds.value, glyphBounds.value, parentPosition.value, interactionSource)
                                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                    Text(tab, style = TqType.TitleL.figma(), color = if (isActive) Gray800 else Gray400, modifier = Modifier.height(28.dp))
+                                    Text(
+                                        tab,
+                                        style = tabTextStyle,
+                                        color = if (isActive) Gray800 else Gray400,
+                                        onTextLayout = onTextLayout,
+                                        modifier = Modifier
+                                            .height(28.dp)
+                                            .textPillRippleAnchor(textBounds),
+                                    )
                                     Spacer(modifier = Modifier.height(10.dp))
                                 }
                                 if (isActive) Box(
@@ -212,57 +263,71 @@ private fun ArchiveListScreenContent(
                 }
 
                 // [3] 필터 영역
-                when (pagerState.currentPage) {
-                    0 -> {
-                        Spacer(modifier = Modifier.height(27.dp))
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .horizontalScroll(rememberScrollState())
-                                .padding(horizontal = 15.dp),
-                            horizontalArrangement = Arrangement.spacedBy(8.dp)
-                        ) {
-                            listOf("전체", "완료", "미완료").forEach { filter ->
-                                FilterChip(
-                                    text = filter,
-                                    isSelected = uiState.selectedFilter == filter,
-                                    onClick = { onFilterSelect(filter) }
-                                )
-                            }
-                        }
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(filterRegionHeight)
+                        .clipToBounds()
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .align(Alignment.TopStart)
+                            .then(
+                                if (isMissionFilterInteractive) {
+                                    Modifier.horizontalScroll(missionFilterScrollState)
+                                } else {
+                                    Modifier
+                                }
+                            )
+                            .padding(horizontal = 15.dp)
+                            .graphicsLayer {
+                                translationY = missionFilterTranslationY.toPx()
+                                alpha = missionFilterAlpha
+                            },
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        val missionFilterOptions = listOf("전체", "완료", "미완료")
+                        SlidingChipRow(
+                            options = missionFilterOptions,
+                            selectedIndex = missionFilterOptions.indexOf(uiState.selectedFilter).takeIf { it >= 0 },
+                            onSelect = { index -> onFilterSelect(missionFilterOptions[index]) },
+                            interactionEnabled = isMissionFilterInteractive,
+                        )
                     }
-                    3 -> {
-                        Spacer(modifier = Modifier.height(16.dp))
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .align(Alignment.TopStart)
+                            .padding(horizontal = 22.dp)
+                            .graphicsLayer {
+                                translationY = reportFilterTranslationY.toPx()
+                                alpha = reportFilterAlpha
+                            },
+                        horizontalArrangement = Arrangement.Start
+                    ) {
                         Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(2.dp),
                             modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(horizontal = 22.dp),
-                            horizontalArrangement = Arrangement.Start
+                                .clip(RoundedCornerShape(percent = 50))
+                                .clickable(enabled = isReportFilterInteractive) {
+                                    showReportFilterSheet = true
+                                }
+                                .padding(vertical = 4.dp)
                         ) {
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(2.dp),
-                                modifier = Modifier
-                                    .clip(RoundedCornerShape(4.dp))
-                                    .clickable { showReportFilterSheet = true }
-                                    .padding(vertical = 4.dp)
-                            ) {
-                                Text(
-                                    text = uiState.selectedFilter,
-                                    style = TqType.BodyL.copy(fontWeight = FontWeight.Medium).figma(),
-                                    color = Gray500
-                                )
-                                Icon(
-                                    imageVector = Icons.Default.KeyboardArrowDown,
-                                    contentDescription = "필터 선택",
-                                    tint = Gray500,
-                                    modifier = Modifier.size(24.dp)
-                                )
-                            }
+                            Text(
+                                text = uiState.selectedFilter,
+                                style = TqType.BodyL.copy(fontWeight = FontWeight.Medium).figma(),
+                                color = Gray500
+                            )
+                            Icon(
+                                imageVector = Icons.Default.KeyboardArrowDown,
+                                contentDescription = "필터 선택",
+                                tint = Gray500,
+                                modifier = Modifier.size(24.dp)
+                            )
                         }
-                    }
-                    else -> {
-                        Spacer(modifier = Modifier.height(16.dp))
                     }
                 }
 
@@ -376,36 +441,6 @@ private fun ArchiveListScreenContent(
                 onDismissRequest = { showReportFilterSheet = false }
             )
         }
-    }
-}
-
-// ── 필터 칩 UI (미션 전용) ──
-@Composable
-private fun FilterChip(text: String, isSelected: Boolean, onClick: () -> Unit) {
-    val shape = RoundedCornerShape(20.dp)
-    val baseModifier = if (isSelected) {
-        Modifier
-            .clip(shape)
-            .background(Primary600)
-    } else {
-        Modifier
-            .softShadow(color = Gray1000.copy(alpha = 0.01f), offsetY = 8.dp, blur = 24.dp, cornerRadius = 20.dp)
-            .clip(shape)
-            .background(White)
-    }
-
-    Box(
-        modifier = baseModifier
-            .clickable(onClick = onClick)
-            .height(34.dp)
-            .padding(horizontal = 18.dp),
-        contentAlignment = Alignment.Center
-    ) {
-        Text(
-            text = text,
-            style = if (isSelected) TqType.BodyM.copy(fontWeight = FontWeight.Medium).figma() else TqType.BodyM.figma(),
-            color = if (isSelected) Primary50 else Gray900
-        )
     }
 }
 

@@ -3,6 +3,7 @@
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.heightIn
@@ -12,17 +13,21 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.SpanStyle
@@ -36,6 +41,8 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.em
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.zIndex
+import kotlinx.coroutines.launch
 import com.talkqquest.app.R
 import com.talkqquest.app.core.designsystem.FitDesign
 import com.talkqquest.app.core.designsystem.Gray300
@@ -50,6 +57,14 @@ import com.talkqquest.app.core.designsystem.Primary100
 import com.talkqquest.app.core.designsystem.Primary600
 import com.talkqquest.app.core.designsystem.TalkQQuestTheme
 import com.talkqquest.app.core.designsystem.White
+import com.talkqquest.app.core.designsystem.component.TextAnchoredPillRipple
+import com.talkqquest.app.core.designsystem.component.rememberHapticTick
+import com.talkqquest.app.core.designsystem.component.rememberTextPillRippleBounds
+import com.talkqquest.app.core.designsystem.component.rememberTextPillRippleGlyphBounds
+import com.talkqquest.app.core.designsystem.component.rememberTextPillRippleGlyphBoundsUpdater
+import com.talkqquest.app.core.designsystem.component.rememberTextPillRippleParentPosition
+import com.talkqquest.app.core.designsystem.component.textPillRippleAnchor
+import com.talkqquest.app.core.designsystem.component.textPillRippleParentPosition
 
 data class ProfileBadgeUi(
     val id: String,
@@ -125,12 +140,12 @@ fun ProfileBadgesScreen(
     badges: List<ProfileBadgeUi> = DefaultProfileBadges,
     onBack: () -> Unit = {},
 ) = FitDesign(compensateStatusBar = false, contentAlignment = Alignment.TopCenter) {
-    var selectedTab by remember { mutableIntStateOf(0) }
+    val pagerState = rememberPagerState(pageCount = { 3 })
+    val scope = rememberCoroutineScope()
     var selectedBadge by remember { mutableStateOf<ProfileBadgeUi?>(null) }
-    val visibleBadges = when (selectedTab) {
-        1 -> badges.filterNot { it.isEarned }
-        2 -> badges.filter { it.isEarned }
-        else -> badges
+
+    LaunchedEffect(pagerState.settledPage) {
+        selectedBadge = null
     }
 
     Box(
@@ -140,16 +155,40 @@ fun ProfileBadgesScreen(
     ) {
         BadgesTopBar(onBack = onBack)
         BadgeTabs(
-            selectedTab = selectedTab,
+            selectedTab = pagerState.currentPage,
+            pagePosition = pagerState.currentPage + pagerState.currentPageOffsetFraction,
             onSelectTab = {
-                selectedTab = it
                 selectedBadge = null
+                scope.launch { pagerState.animateScrollToPage(it) }
             },
         )
-        BadgeNotice(earnedCount = badges.count { it.isEarned })
-        BadgeGrid(
-            badges = visibleBadges,
-            onBadgeClick = { badge -> selectedBadge = badge },
+        HorizontalPager(
+            state = pagerState,
+            modifier = Modifier
+                .offset(y = 146.dp)
+                .size(width = 393.dp, height = 706.dp)
+                .clipToBounds(),
+        ) { page ->
+            val pageBadges = when (page) {
+                1 -> badges.filterNot { it.isEarned }
+                2 -> badges.filter { it.isEarned }
+                else -> badges
+            }
+            val scrollState = rememberScrollState()
+
+            BadgeGrid(
+                badges = pageBadges,
+                scrollState = scrollState,
+                onBadgeClick = { badge -> selectedBadge = badge },
+            )
+        }
+        // This remains non-interactive so horizontal drags beginning on the notice
+        // continue to be handled by the pager underneath it.
+        BadgeNotice(
+            earnedCount = badges.count { it.isEarned },
+            modifier = Modifier
+                .offset(x = 16.dp, y = 169.dp)
+                .zIndex(1f),
         )
 
         selectedBadge?.let { badge ->
@@ -191,8 +230,9 @@ private fun BadgeBackButton(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val tick = rememberHapticTick()
     Box(
-        modifier = modifier.profileCircleClick(onClick = onClick),
+        modifier = modifier.profileCircleClick(onClick = { tick(); onClick() }),
         contentAlignment = Alignment.Center,
     ) {
         Icon(
@@ -207,6 +247,7 @@ private fun BadgeBackButton(
 @Composable
 private fun BadgeTabs(
     selectedTab: Int,
+    pagePosition: Float,
     onSelectTab: (Int) -> Unit,
 ) {
     val labels = listOf("\uC804\uCCB4", "\uC9C4\uD589\uC911", "\uB2EC\uC131")
@@ -218,21 +259,15 @@ private fun BadgeTabs(
             .size(width = 393.dp, height = 38.dp),
     ) {
         labels.forEachIndexed { index, label ->
-            Box(
+            BadgeTab(
+                label = label,
+                labelWidth = widths[index],
+                selected = selectedTab == index,
+                onClick = { onSelectTab(index) },
                 modifier = Modifier
                     .offset(x = (index * 131).dp)
                     .size(width = 131.dp, height = 36.dp)
-                    .profileItemClick { onSelectTab(index) },
-                contentAlignment = Alignment.TopCenter,
-            ) {
-                Text(
-                    text = label,
-                    style = BadgeTabStyle,
-                    color = if (selectedTab == index) Gray800 else Gray400,
-                    textAlign = TextAlign.Center,
-                    modifier = Modifier.size(width = widths[index], height = 28.dp),
-                )
-            }
+            )
         }
         Box(
             modifier = Modifier
@@ -243,11 +278,7 @@ private fun BadgeTabs(
         Box(
             modifier = Modifier
                 .offset(
-                    x = when (selectedTab) {
-                        1 -> 171.dp
-                        2 -> 300.dp
-                        else -> 43.dp
-                    },
+                    x = badgeTabIndicatorOffset(pagePosition),
                     y = 36.dp,
                 )
                 .size(width = 52.dp, height = 3.dp)
@@ -258,10 +289,50 @@ private fun BadgeTabs(
 }
 
 @Composable
-private fun BadgeNotice(earnedCount: Int) {
+private fun BadgeTab(
+    label: String,
+    labelWidth: androidx.compose.ui.unit.Dp,
+    selected: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val interactionSource = remember { MutableInteractionSource() }
+    val textBounds = rememberTextPillRippleBounds()
+    val glyphBounds = rememberTextPillRippleGlyphBounds()
+    val onTextLayout = rememberTextPillRippleGlyphBoundsUpdater(glyphBounds, label, BadgeTabStyle)
+    val parentPosition = rememberTextPillRippleParentPosition()
+
     Box(
-        modifier = Modifier
-            .offset(x = 16.dp, y = 169.dp)
+        modifier = modifier
+            .clickable(
+                interactionSource = interactionSource,
+                indication = null,
+                onClick = onClick,
+            )
+            .textPillRippleParentPosition(parentPosition),
+        contentAlignment = Alignment.TopCenter,
+    ) {
+        TextAnchoredPillRipple(textBounds.value, glyphBounds.value, parentPosition.value, interactionSource)
+        Text(
+            text = label,
+            style = BadgeTabStyle,
+            color = if (selected) Gray800 else Gray400,
+            textAlign = TextAlign.Center,
+            onTextLayout = onTextLayout,
+            modifier = Modifier
+                .size(width = labelWidth, height = 28.dp)
+                .textPillRippleAnchor(textBounds),
+        )
+    }
+}
+
+@Composable
+private fun BadgeNotice(
+    earnedCount: Int,
+    modifier: Modifier = Modifier,
+) {
+    Box(
+        modifier = modifier
             .size(width = 361.dp, height = 48.dp)
             .clip(RoundedCornerShape(8.dp))
             .background(Primary100),
@@ -297,18 +368,20 @@ private fun BadgeNotice(earnedCount: Int) {
 @Composable
 private fun BadgeGrid(
     badges: List<ProfileBadgeUi>,
+    scrollState: androidx.compose.foundation.ScrollState,
     onBadgeClick: (ProfileBadgeUi) -> Unit,
+    modifier: Modifier = Modifier,
 ) {
     val rowCount = ((badges.size + 2) / 3).coerceAtLeast(1)
     val contentHeight = ((rowCount - 1) * 146 + 124).dp
+    val scrollContentHeight = maxOf(800.dp, 94.dp + contentHeight + 140.dp)
 
     Box(
-        modifier = Modifier
-            .offset(x = 0.dp, y = 240.dp)
-            .size(width = 393.dp, height = 488.dp)
-            .verticalScroll(rememberScrollState()),
+        modifier = modifier
+            .size(width = 393.dp, height = 706.dp)
+            .verticalScroll(scrollState),
     ) {
-        Box(modifier = Modifier.size(width = 393.dp, height = contentHeight)) {
+        Box(modifier = Modifier.size(width = 393.dp, height = scrollContentHeight)) {
             badges.forEachIndexed { index, badge ->
                 val row = index / 3
                 val column = index % 3
@@ -316,7 +389,7 @@ private fun BadgeGrid(
                     badge = badge,
                     onClick = { onBadgeClick(badge) },
                     modifier = Modifier
-                        .offset(x = (23 + column * 122).dp, y = (row * 146).dp)
+                        .offset(x = (23 + column * 122).dp, y = (94 + row * 146).dp)
                         .size(width = 100.dp, height = 124.dp),
                 )
             }
@@ -474,4 +547,11 @@ private fun ProfileBadgeUi.labelWidthDp(): Int = when (name) {
     "\uAFB8\uC900\uD55C \uB300\uD654 \uC2B5\uAD00" -> 105
     "\uC77C\uC8FC\uC77C\uC758 \uBCC0\uD654" -> 87
     else -> 100
+}
+
+private fun badgeTabIndicatorOffset(pagePosition: Float) = when {
+    pagePosition <= 0f -> 43.dp
+    pagePosition < 1f -> (43f + 128f * pagePosition).dp
+    pagePosition < 2f -> (171f + 129f * (pagePosition - 1f)).dp
+    else -> 300.dp
 }

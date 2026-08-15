@@ -29,6 +29,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.talkqquest.app.core.designsystem.FitDesign
@@ -39,6 +41,7 @@ import com.talkqquest.app.core.designsystem.Gray800
 import com.talkqquest.app.core.designsystem.Primary600
 import com.talkqquest.app.core.designsystem.TalkQQuestTheme
 import com.talkqquest.app.core.designsystem.TqType
+import com.talkqquest.app.core.designsystem.component.PasswordVisibilityToggle
 
 @Composable
 fun SignupPasswordScreen(
@@ -46,6 +49,7 @@ fun SignupPasswordScreen(
     onNextClick: (String) -> Unit = {},
 ) = FitDesign(compensateStatusBar = false) {
     var password by remember { mutableStateOf("") }
+    var passwordVisible by remember { mutableStateOf(false) }
     val hasValidLength = password.length in 8..16
     val hasLetterAndDigit = password.any { it.isLetter() } && password.any { it.isDigit() }
     val canContinue = hasValidLength && hasLetterAndDigit
@@ -97,15 +101,12 @@ fun SignupPasswordScreen(
                 placeholder = "비밀번호 입력",
                 onValueChange = { password = it.take(16) },
                 keyboardType = KeyboardType.Password,
+                visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
                 trailing = {
-                    Box(
-                        modifier = Modifier
-                            .width(44.dp)
-                            .height(44.dp),
-                        contentAlignment = Alignment.BottomCenter,
-                    ) {
-                        EyeOffIcon(modifier = Modifier.size(24.dp))
-                    }
+                    PasswordVisibilityToggle(
+                        passwordVisible = passwordVisible,
+                        onToggle = { passwordVisible = !passwordVisible },
+                    )
                 },
                 modifier = Modifier
                     .fillMaxWidth()

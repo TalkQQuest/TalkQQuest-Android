@@ -85,6 +85,7 @@ import com.talkqquest.app.core.designsystem.TqType
 import com.talkqquest.app.core.designsystem.White
 import com.talkqquest.app.core.designsystem.component.TierPromotionSheet
 import com.talkqquest.app.core.designsystem.component.TqButton
+import com.talkqquest.app.core.designsystem.component.rememberHapticTick
 import com.talkqquest.app.feature.report.data.model.Competency
 import com.talkqquest.app.feature.report.data.model.CompetencyAxis
 import com.talkqquest.app.feature.report.data.model.GrowthTierReport
@@ -213,6 +214,7 @@ private fun ReportContent(
     onBack: () -> Unit,
     onSaveClick: (String) -> Unit = {},
 ) {
+    val tick = rememberHapticTick()
     // info 아이콘 → 티어 승급 안내 바텀시트
     var showTierHelp by remember { mutableStateOf(false) }
     var tierAutoTrigger by remember { mutableStateOf(0) }
@@ -264,7 +266,7 @@ private fun ReportContent(
                     modifier = Modifier
                         .size(44.dp)
                         .clip(CircleShape)
-                        .clickable(onClick = onBack),
+                        .clickable(onClick = { tick(); onBack() }),
                     contentAlignment = Alignment.Center,
                 ) {
                     Icon(

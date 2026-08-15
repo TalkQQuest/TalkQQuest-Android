@@ -37,6 +37,11 @@ import com.talkqquest.app.core.designsystem.PretendardFamily
 import com.talkqquest.app.core.designsystem.TalkQQuestTheme
 import com.talkqquest.app.core.designsystem.TqType
 import com.talkqquest.app.core.designsystem.White
+import com.talkqquest.app.core.designsystem.component.MenuRippleGroupState
+import com.talkqquest.app.core.designsystem.component.TqAnchoredMenuRow
+import com.talkqquest.app.core.designsystem.component.menuRowTextRippleAnchor
+import com.talkqquest.app.core.designsystem.component.rememberMenuRippleGroup
+import com.talkqquest.app.core.designsystem.component.rememberMenuRowTextLayoutCallback
 import com.talkqquest.app.core.designsystem.softShadow
 
 @Composable
@@ -64,6 +69,7 @@ fun ProfileTermsScreen(
                 .clip(RoundedCornerShape(16.dp))
                 .background(White),
         ) {
+            val termsGroup = rememberMenuRippleGroup()
             Text(
                 text = "상세 내용을 확인할 수 있어요",
                 style = TqType.BodyM,
@@ -76,15 +82,23 @@ fun ProfileTermsScreen(
                 title = "이용약관",
                 onClick = onTermsClick,
                 modifier = Modifier
-                    .offset(x = 16.dp, y = 46.dp)
+                    .offset(y = 46.dp)
+                    .size(width = 362.dp, height = 44.dp),
+                contentModifier = Modifier
+                    .offset(x = 16.dp)
                     .size(width = 330.dp, height = 44.dp),
+                group = termsGroup,
             )
             TermsMenuRow(
                 title = "개인정보 처리방침",
                 onClick = onPrivacyClick,
                 modifier = Modifier
-                    .offset(x = 16.dp, y = 90.dp)
+                    .offset(y = 90.dp)
+                    .size(width = 362.dp, height = 44.dp),
+                contentModifier = Modifier
+                    .offset(x = 16.dp)
                     .size(width = 330.dp, height = 44.dp),
+                group = termsGroup,
             )
         }
     }
@@ -94,22 +108,31 @@ private fun TermsMenuRow(
     title: String,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
+    contentModifier: Modifier = Modifier,
+    group: MenuRippleGroupState? = null,
 ) {
-    Row(
-        modifier = modifier.profileItemClick(onClick = onClick),
-        verticalAlignment = Alignment.CenterVertically,
+    TqAnchoredMenuRow(modifier = modifier, group = group, onClick = onClick) { anchor ->
+        val titleStyle = TqType.BodyL.copy(fontWeight = FontWeight.Medium)
+        val titleLayout = rememberMenuRowTextLayoutCallback(anchor, "title", title, titleStyle)
+        Row(
+            modifier = contentModifier,
+            verticalAlignment = Alignment.CenterVertically,
     ) {
         Text(
             text = title,
-            style = TqType.BodyL.copy(fontWeight = FontWeight.Medium),
+            style = titleStyle,
             color = Gray800,
-            modifier = Modifier.weight(1f),
+            onTextLayout = titleLayout,
+            modifier = Modifier
+                .menuRowTextRippleAnchor(anchor, "title")
+                .weight(1f),
         )
         Icon(
             imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
             contentDescription = null,
             tint = Gray700,
         )
+        }
     }
 }
 
@@ -272,8 +295,6 @@ private fun ProfileTermsDetailScreenPreview() {
         ProfileTermsDetailScreen(title = "이용약관", sections = ServiceTermsSections)
     }
 }
-
-
 
 
 

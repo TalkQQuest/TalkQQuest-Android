@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.talkqquest.app.core.network.ApiResult
 import com.talkqquest.app.feature.home.data.HomeRepository
+import com.talkqquest.app.feature.home.data.HomeSummaryCache
 import com.talkqquest.app.feature.home.data.model.HomeSummary
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -34,6 +35,7 @@ data class HomeUiState(
 @HiltViewModel
 class HomeViewModel @Inject constructor(
     private val homeRepository: HomeRepository,
+    private val homeSummaryCache: HomeSummaryCache, // 스플래시 프리페치 결과 — 있으면 스피너 없이 즉시 표시
 ) : ViewModel() {
 
     // _uiState: 내부에서만 값을 바꾸는 원본(Mutable). 밖에는 읽기 전용(uiState)만 공개.
@@ -41,8 +43,15 @@ class HomeViewModel @Inject constructor(
     val uiState: StateFlow<HomeUiState> = _uiState.asStateFlow()
 
     // 화면이 처음 뜰 때 자동으로 1번 불러옴.
+    // 스플래시에서 방금 받아둔 요약이 있으면 그걸로 바로 그리고(스피너 생략), 뒤에서 조용히 최신화한다.
     init {
-        loadHome()
+        val prefetched = homeSummaryCache.takeFresh()
+        if (prefetched != null) {
+            _uiState.update { it.copy(isLoading = false, summary = prefetched) }
+            loadHome(showLoading = false)
+        } else {
+            loadHome()
+        }
     }
 
     // 에러 시 '다시 시도' 버튼에서도 호출 → public.

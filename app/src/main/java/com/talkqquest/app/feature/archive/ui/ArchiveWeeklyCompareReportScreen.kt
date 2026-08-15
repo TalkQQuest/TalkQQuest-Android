@@ -56,6 +56,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.talkqquest.app.R
 import com.talkqquest.app.core.designsystem.Error
 import com.talkqquest.app.core.designsystem.FitDesign
+import com.talkqquest.app.core.designsystem.component.rememberHapticTick
 import com.talkqquest.app.core.designsystem.Gray100
 import com.talkqquest.app.core.designsystem.Gray1000
 import com.talkqquest.app.core.designsystem.Gray200
@@ -130,6 +131,7 @@ private fun ArchiveWeeklyCompareReportContent(
     onPrevWeek: () -> Unit,
     onNextWeek: () -> Unit
 ) {
+    val tick = rememberHapticTick()
     val weeklyData = uiState.weekly ?: WeeklyCompareReport(
         metrics = listOf(
             MetricChange("친절한 태도", 240, 300),
@@ -182,7 +184,7 @@ private fun ArchiveWeeklyCompareReportContent(
                     .size(44.dp)
                     .align(Alignment.CenterStart)
                     .clip(CircleShape)
-                    .clickable(onClick = onBackClick),
+                    .clickable(onClick = { tick(); onBackClick() }),
                 contentAlignment = Alignment.Center,
             ) {
                 Icon(

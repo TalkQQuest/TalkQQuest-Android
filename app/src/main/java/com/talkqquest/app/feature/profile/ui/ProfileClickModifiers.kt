@@ -8,7 +8,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import com.talkqquest.app.core.designsystem.Primary600
 
 @Composable
 internal fun Modifier.profileItemClick(
@@ -16,7 +15,7 @@ internal fun Modifier.profileItemClick(
     onClick: () -> Unit,
 ): Modifier = clickable(
     interactionSource = remember { MutableInteractionSource() },
-    indication = ripple(bounded = true, color = Primary600),
+    indication = ripple(bounded = true),
     enabled = enabled,
     onClick = onClick,
 )
@@ -27,7 +26,7 @@ internal fun Modifier.profileCircleClick(
     onClick: () -> Unit,
 ): Modifier = clip(CircleShape).clickable(
     interactionSource = remember { MutableInteractionSource() },
-    indication = ripple(bounded = true, color = Primary600),
+    indication = ripple(bounded = true),
     enabled = enabled,
     onClick = onClick,
 )

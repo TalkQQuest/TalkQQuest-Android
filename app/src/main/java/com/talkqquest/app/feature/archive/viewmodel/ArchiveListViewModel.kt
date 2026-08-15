@@ -50,6 +50,7 @@ class ArchiveViewModel @Inject constructor(
     }
 
     fun selectFilter(filter: String) {
+        if (_uiState.value.selectedFilter == filter) return
         _uiState.update { it.copy(selectedFilter = filter) }
         refreshData() // 필터(완료/미완료 등)가 바뀔 때만 데이터를 새로 고침
     }

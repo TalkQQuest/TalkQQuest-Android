@@ -24,7 +24,6 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
-import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
@@ -46,6 +45,7 @@ import com.talkqquest.app.core.designsystem.TalkQQuestTheme
 import com.talkqquest.app.core.designsystem.TqType
 import com.talkqquest.app.core.designsystem.White
 import com.talkqquest.app.core.designsystem.component.TqButton
+import com.talkqquest.app.core.designsystem.component.PasswordVisibilityToggle
 
 private const val ProfileCurrentPasswordSample = "Talkee3643@@"
 
@@ -59,7 +59,7 @@ fun ProfileNewPasswordScreen(
     onCompletionConfirm: () -> Unit = {},
 ) = FitDesign(contentAlignment = Alignment.TopCenter) {
     var password by remember { mutableStateOf(initialPassword) }
-    var showPassword by remember { mutableStateOf(true) }
+    var showPassword by remember { mutableStateOf(false) }
     var samePasswordError by remember { mutableStateOf(initialSamePasswordError) }
     val lengthSatisfied = password.length in 8..16
     val hasLetter = password.any { it.isLetter() }
@@ -260,13 +260,12 @@ private fun ProfileNewPasswordInputCard(
         Box(
             modifier = Modifier
                 .align(Alignment.CenterEnd)
-                .size(44.dp)
-                .profileCircleClick(onClick = onTogglePassword),
+                .size(44.dp),
             contentAlignment = Alignment.Center,
         ) {
-            ProfileNewPasswordEyeIcon(
-                tint = if (samePasswordError) Gray400 else Gray400,
-                modifier = Modifier.size(24.dp),
+            PasswordVisibilityToggle(
+                passwordVisible = showPassword,
+                onToggle = onTogglePassword,
             )
         }
     }
@@ -319,28 +318,6 @@ private fun ProfileNewPasswordMessage(
             modifier = Modifier
                 .offset(x = 24.dp, y = 2.dp)
                 .size(width = 282.dp, height = 20.dp),
-        )
-    }
-}
-
-@Composable
-private fun ProfileNewPasswordEyeIcon(
-    tint: Color,
-    modifier: Modifier = Modifier,
-) {
-    Canvas(modifier = modifier) {
-        val strokeWidth = 1.6.dp.toPx()
-        drawOval(
-            color = tint,
-            topLeft = Offset(size.width * 0.14f, size.height * 0.31f),
-            size = androidx.compose.ui.geometry.Size(size.width * 0.72f, size.height * 0.38f),
-            style = Stroke(width = strokeWidth),
-        )
-        drawCircle(
-            color = tint,
-            radius = size.minDimension * 0.12f,
-            center = Offset(size.width / 2f, size.height / 2f),
-            style = Stroke(width = strokeWidth),
         )
     }
 }
@@ -416,4 +393,3 @@ private fun ProfileNewPasswordConditionPreview() {
         ProfileNewPasswordScreen(initialPassword = "Talkee3643@@")
     }
 }
-

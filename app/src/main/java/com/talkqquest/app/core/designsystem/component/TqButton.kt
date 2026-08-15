@@ -28,9 +28,10 @@ fun TqButton(
 ) {
     val height = if (size == TqButtonSize.Large) 52.dp else 44.dp
     val radius = if (size == TqButtonSize.Large) 16.dp else 12.dp
+    val tick = rememberHapticTick()
 
     Button(
-        onClick = onClick,
+        onClick = { tick(); onClick() },
         modifier = modifier.height(height),
         enabled = enabled,
         shape = RoundedCornerShape(radius),

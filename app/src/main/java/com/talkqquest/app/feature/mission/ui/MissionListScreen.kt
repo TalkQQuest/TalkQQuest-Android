@@ -90,6 +90,7 @@ import com.talkqquest.app.core.designsystem.White
 import com.talkqquest.app.core.designsystem.softShadow
 import com.talkqquest.app.core.designsystem.component.TqButton
 import com.talkqquest.app.core.designsystem.component.TqButtonSize
+import com.talkqquest.app.core.designsystem.component.rememberHapticTick
 import com.talkqquest.app.feature.mission.data.model.MissionListItem
 import com.talkqquest.app.feature.mission.viewmodel.MissionListUiState
 import com.talkqquest.app.feature.mission.viewmodel.MissionListViewModel
@@ -249,6 +250,7 @@ private fun MissionListContent(
     onBack: () -> Unit,
     homeContext: Boolean,
 ) {
+    val tick = rememberHapticTick()
     val targetMissions = uiState.filteredMissions
     var animatedSlots by remember { mutableStateOf(targetMissions) }
     var visibleSlotCount by remember { mutableIntStateOf(targetMissions.size) }
@@ -299,7 +301,7 @@ private fun MissionListContent(
                             .offset(x = (-16).dp) // 콘텐츠 좌우 16 패딩 상쇄 → 터치영역 left 0
                             .size(44.dp)
                             .clip(CircleShape) // 눌림 효과 동그라미 (아이콘 버튼 관례)
-                            .clickable(onClick = onBack),
+                            .clickable(onClick = { tick(); onBack() }),
                         contentAlignment = Alignment.Center,
                     ) {
                         Icon(

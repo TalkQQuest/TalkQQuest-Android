@@ -58,6 +58,7 @@ import com.talkqquest.app.core.designsystem.TalkQQuestTheme
 import com.talkqquest.app.core.designsystem.TqType
 import com.talkqquest.app.core.designsystem.White
 import com.talkqquest.app.core.designsystem.component.TqButton
+import com.talkqquest.app.core.designsystem.component.rememberHapticTick
 
 private const val MaxMultiSelectCount = 2
 private const val CustomDifficultyMaxLength = 30
@@ -69,6 +70,7 @@ fun OnboardingPersonalityScreen(
     onBack: () -> Unit = {},
     onNextClick: (String) -> Unit = {},
 ) = FitDesign(compensateStatusBar = false) {
+    val tick = rememberHapticTick()
     val personalityTypes = listOf("introvert", "extrovert", "ambivert")
     var selectedIndex by remember(initialPersonalityType) {
         mutableStateOf(personalityTypes.indexOf(initialPersonalityType).takeIf { it >= 0 } ?: 0)
@@ -81,7 +83,7 @@ fun OnboardingPersonalityScreen(
             .background(Gray50),
     ) {
         IconButton(
-            onClick = onBack,
+            onClick = { tick(); onBack() },
             modifier = Modifier
                 .offset(x = 0.dp, y = 48.dp)
                 .size(44.dp),
@@ -175,6 +177,7 @@ fun OnboardingDifficultyScreen(
     onBack: () -> Unit = {},
     onNextClick: (List<String>) -> Unit = {},
 ) = FitDesign(compensateStatusBar = false) {
+    val tick = rememberHapticTick()
     var selected by remember(initialSelected) { mutableStateOf(initialSelected.toSet()) }
     var customText by remember { mutableStateOf("") }
 
@@ -184,7 +187,7 @@ fun OnboardingDifficultyScreen(
             .background(Gray50),
     ) {
         IconButton(
-            onClick = onBack,
+            onClick = { tick(); onBack() },
             modifier = Modifier
                 .offset(x = 0.dp, y = 48.dp)
                 .size(44.dp),
@@ -339,6 +342,7 @@ fun OnboardingGoalScreen(
     onBack: () -> Unit = {},
     onCompleteClick: (List<String>) -> Unit = {},
 ) = FitDesign(compensateStatusBar = false) {
+    val tick = rememberHapticTick()
     var selected by remember(initialSelected) { mutableStateOf(initialSelected.toSet()) }
 
     Box(
@@ -347,7 +351,7 @@ fun OnboardingGoalScreen(
             .background(Gray50),
     ) {
         IconButton(
-            onClick = onBack,
+            onClick = { tick(); onBack() },
             modifier = Modifier
                 .offset(x = 0.dp, y = 48.dp)
                 .size(44.dp),
@@ -602,6 +606,7 @@ private fun OnboardingStepFrame(
     onBottomButtonClick: () -> Unit,
     content: @Composable ColumnScope.() -> Unit,
 ) {
+    val tick = rememberHapticTick()
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -619,7 +624,7 @@ private fun OnboardingStepFrame(
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 IconButton(
-                    onClick = onBack,
+                    onClick = { tick(); onBack() },
                     modifier = Modifier.size(32.dp),
                 ) {
                     Image(

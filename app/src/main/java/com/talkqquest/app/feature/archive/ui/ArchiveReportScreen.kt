@@ -86,6 +86,7 @@ import com.talkqquest.app.core.designsystem.Primary600
 import com.talkqquest.app.core.designsystem.TalkQQuestTheme
 import com.talkqquest.app.core.designsystem.TqType
 import com.talkqquest.app.core.designsystem.White
+import com.talkqquest.app.core.designsystem.component.rememberHapticTick
 import com.talkqquest.app.core.designsystem.softShadow
 import com.talkqquest.app.feature.archive.viewmodel.ArchiveReportUiState
 import com.talkqquest.app.feature.archive.viewmodel.ArchiveReportViewModel
@@ -159,6 +160,7 @@ private fun ArchiveGrowthReportContent(
 ) {
     var showTierHelp by remember { mutableStateOf(false) }
     var tierAutoTrigger by remember { mutableStateOf(0) }
+    val tick = rememberHapticTick()
 
     val growthData = uiState.growth ?: GrowthReport(
         tierName = "골드",
@@ -185,7 +187,7 @@ private fun ArchiveGrowthReportContent(
                     modifier = Modifier
                         .size(44.dp)
                         .clip(CircleShape)
-                        .clickable(onClick = onBackClick),
+                        .clickable(onClick = { tick(); onBackClick() }),
                     contentAlignment = Alignment.Center,
                 ) {
                     Icon(painter = painterResource(R.drawable.ic_back_chevron), contentDescription = "뒤로가기", tint = Gray500)

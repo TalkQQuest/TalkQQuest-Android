@@ -20,6 +20,7 @@ class HomeRepository @Inject constructor(
     private val missionApi: MissionApi, // 오늘의 미션 카드 — 미션 API 재사용 (둘 다 B파트)
     private val notificationRepository: NotificationRepository, // 알림창과 홈 종이 같은 읽음 상태를 공유
     private val userXpStore: UserXpStore, // 미션 완료 XP가 홈에도 보이게 공유 (서버 완료 후 sync됨)
+    private val homeSummaryCache: HomeSummaryCache, // 스플래시 프리페치 결과를 담아 홈 진입 시 즉시 표시
 ) {
     // 홈 요약 — GET /api/v1/home/summary (dev 배포 기준 구현됨): 닉네임·레벨·XP·카운트·오늘의 질문을 한 번에.
     // 오늘의 미션이 응답에 없거나 null이면 /missions/today로 폴백. XP는 완료 가산 보존 위해 1회만 seed하고 이후 로컬 유지.
@@ -39,23 +40,23 @@ class HomeRepository @Inject constructor(
                     empathy = d.growthTotals.empathyTotal,
                     questionLink = d.growthTotals.questionLinkTotal,
                 )
-                return ApiResult.Success(
-                    d.copy(
-                        tierName = tier.tierName,
-                        tierStars = tier.tierStars,
-                        // 닉네임 미설정 계정(null→"") 폴백: /users/me의 nickname→name → 그래도 없으면 stub 문구
-                        nickname = d.nickname.ifBlank { fallbackNickname() },
-                        level = userXpStore.level,
-                        currentXp = userXpStore.currentXp,
-                        nextLevelXp = userXpStore.nextLevelXp,
-                        // 홈 요약의 todayMission에는 재추천 횟수가 없을 수 있으므로 전용 응답을 우선한다.
-                        // 전용 조회가 실패할 때만 홈 요약 값으로 돌아가 카드 자체는 유지한다.
-                        todayMission = fetchTodayMission() ?: d.todayMission ?: stubHomeSummary.todayMission,
-                        questionOfDay = d.questionOfDay ?: stubHomeSummary.questionOfDay,
-                        // /home/summary엔 알림 필드가 없어(실측) 알림 API로 별도 계산
-                        hasNewNotification = hasUnreadNotification(),
-                    ),
+                val summary = d.copy(
+                    tierName = tier.tierName,
+                    tierStars = tier.tierStars,
+                    // 닉네임 미설정 계정(null→"") 폴백: /users/me의 nickname→name → 그래도 없으면 stub 문구
+                    nickname = d.nickname.ifBlank { fallbackNickname() },
+                    level = userXpStore.level,
+                    currentXp = userXpStore.currentXp,
+                    nextLevelXp = userXpStore.nextLevelXp,
+                    // 홈 요약의 todayMission에는 재추천 횟수가 없을 수 있으므로 전용 응답을 우선한다.
+                    // 전용 조회가 실패할 때만 홈 요약 값으로 돌아가 카드 자체는 유지한다.
+                    todayMission = fetchTodayMission() ?: d.todayMission ?: stubHomeSummary.todayMission,
+                    questionOfDay = d.questionOfDay ?: stubHomeSummary.questionOfDay,
+                    // /home/summary엔 알림 필드가 없어(실측) 알림 API로 별도 계산
+                    hasNewNotification = hasUnreadNotification(),
                 )
+                homeSummaryCache.put(summary) // 스플래시 프리페치 시 홈이 즉시 쓰도록 저장
+                return ApiResult.Success(summary)
             }
             else -> return ApiResult.Success( // 오프라인/데모 폴백: 기존 stub 그대로
                 stubHomeSummary.copy(

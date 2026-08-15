@@ -90,6 +90,14 @@ import com.talkqquest.app.core.designsystem.TalkQQuestTheme
 import com.talkqquest.app.core.designsystem.TqType
 
 import com.talkqquest.app.core.designsystem.White
+import com.talkqquest.app.core.designsystem.component.TextAnchoredPillRipple
+import com.talkqquest.app.core.designsystem.component.rememberHapticTick
+import com.talkqquest.app.core.designsystem.component.rememberTextPillRippleBounds
+import com.talkqquest.app.core.designsystem.component.rememberTextPillRippleGlyphBounds
+import com.talkqquest.app.core.designsystem.component.rememberTextPillRippleGlyphBoundsUpdater
+import com.talkqquest.app.core.designsystem.component.rememberTextPillRippleParentPosition
+import com.talkqquest.app.core.designsystem.component.textPillRippleAnchor
+import com.talkqquest.app.core.designsystem.component.textPillRippleParentPosition
 import com.talkqquest.app.core.designsystem.coverStatusBarCompensation
 import com.talkqquest.app.feature.notification.data.model.NotificationUiItem
 import com.talkqquest.app.feature.notification.viewmodel.NotificationUiState
@@ -167,8 +175,19 @@ private fun NotificationScreen(
     onNotificationDelete: (String) -> Unit = {},
     onDeleteAllNotifications: () -> Unit = {},
 ) = FitDesign { // 다른 화면들과 동일: 작은 화면에선 디자인(393x852) 통째 축소
+    val tick = rememberHapticTick()
     var deleteTargetId by remember { mutableStateOf<String?>(null) }
     var showDeleteAllDialog by remember { mutableStateOf(false) }
+    val deleteAllInteractionSource = remember { MutableInteractionSource() }
+    val deleteAllTextBounds = rememberTextPillRippleBounds()
+    val deleteAllGlyphBounds = rememberTextPillRippleGlyphBounds()
+    val deleteAllTextStyle = TqType.BodyS.copy(fontWeight = FontWeight.Medium)
+    val deleteAllOnTextLayout = rememberTextPillRippleGlyphBoundsUpdater(
+        deleteAllGlyphBounds,
+        "전체 삭제",
+        deleteAllTextStyle,
+    )
+    val deleteAllParentPosition = rememberTextPillRippleParentPosition()
     val leaveScreen: () -> Unit = {
         // 화면 전환과 삭제 팝업의 되감기 모션을 같은 프레임에 시작한다.
         deleteTargetId = null
@@ -209,8 +228,8 @@ private fun NotificationScreen(
                     .clip(CircleShape)
                     .clickable(
                         interactionSource = backInteraction,
-                        indication = ripple(bounded = true, color = Primary600),
-                        onClick = leaveScreen,
+                        indication = ripple(bounded = true),
+                        onClick = { tick(); leaveScreen() },
                     ),
                 contentAlignment = Alignment.Center,
             ) {
@@ -237,16 +256,27 @@ private fun NotificationScreen(
                 Box(
                     modifier = Modifier
                         .size(width = 88.dp, height = 44.dp)
-                        .clip(RoundedCornerShape(12.dp))
-                        .clickable {
+                        .clickable(
+                            interactionSource = deleteAllInteractionSource,
+                            indication = null,
+                        ) {
                             showDeleteAllDialog = true
-                        },
+                        }
+                        .textPillRippleParentPosition(deleteAllParentPosition),
                     contentAlignment = Alignment.Center,
                 ) {
+                    TextAnchoredPillRipple(
+                        deleteAllTextBounds.value,
+                        deleteAllGlyphBounds.value,
+                        deleteAllParentPosition.value,
+                        deleteAllInteractionSource,
+                    )
                     Text(
                         text = "전체 삭제",
-                        style = TqType.BodyS.copy(fontWeight = FontWeight.Medium),
+                        style = deleteAllTextStyle,
                         color = Gray600,
+                        onTextLayout = deleteAllOnTextLayout,
+                        modifier = Modifier.textPillRippleAnchor(deleteAllTextBounds),
                     )
                 }
             }

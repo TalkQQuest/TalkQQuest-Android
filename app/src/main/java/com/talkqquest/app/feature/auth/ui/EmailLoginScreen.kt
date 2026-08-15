@@ -30,6 +30,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
@@ -47,6 +48,7 @@ import com.talkqquest.app.core.designsystem.TalkQQuestTheme
 import com.talkqquest.app.core.designsystem.TqType
 import com.talkqquest.app.core.designsystem.White
 import com.talkqquest.app.core.designsystem.component.TqButton
+import com.talkqquest.app.core.designsystem.component.PasswordVisibilityToggle
 
 @Composable
 fun EmailLoginScreen(
@@ -59,6 +61,7 @@ fun EmailLoginScreen(
 ) = FitDesign(compensateStatusBar = false) {
     var email by remember { mutableStateOf(initialEmail) }
     var password by remember { mutableStateOf(initialPassword) }
+    var passwordVisible by remember { mutableStateOf(false) }
 
     Box(
         modifier = Modifier
@@ -123,6 +126,8 @@ fun EmailLoginScreen(
                 onValueChange = { password = it.take(16) },
                 keyboardType = KeyboardType.Password,
                 textColor = Gray800,
+                passwordVisible = passwordVisible,
+                onTogglePasswordVisibility = { passwordVisible = !passwordVisible },
                 modifier = Modifier.offset(y = 139.dp),
             )
 
@@ -163,6 +168,8 @@ private fun LoginTextField(
     onValueChange: (String) -> Unit,
     keyboardType: KeyboardType,
     visualTransformation: VisualTransformation = VisualTransformation.None,
+    passwordVisible: Boolean? = null,
+    onTogglePasswordVisibility: (() -> Unit)? = null,
     textColor: Color = Gray900,
     modifier: Modifier = Modifier,
 ) {
@@ -176,7 +183,11 @@ private fun LoginTextField(
         textStyle = TqType.TitleL.copy(color = textColor, fontWeight = FontWeight.SemiBold),
         cursorBrush = SolidColor(Primary600),
         keyboardOptions = KeyboardOptions(keyboardType = keyboardType),
-        visualTransformation = visualTransformation,
+        visualTransformation = when (passwordVisible) {
+            true -> VisualTransformation.None
+            false -> PasswordVisualTransformation()
+            null -> visualTransformation
+        },
         decorationBox = { innerTextField ->
             Box(
                 modifier = Modifier
@@ -185,7 +196,7 @@ private fun LoginTextField(
                     .clip(RoundedCornerShape(8.dp))
                     .background(White)
                     .border(width = 1.dp, color = Gray300, shape = RoundedCornerShape(8.dp))
-                    .padding(start = 22.dp, end = 22.dp),
+                    .padding(start = 22.dp, end = if (passwordVisible == null) 22.dp else 66.dp),
                 contentAlignment = Alignment.CenterStart,
             ) {
                 if (value.isBlank()) {
@@ -196,6 +207,13 @@ private fun LoginTextField(
                     )
                 }
                 innerTextField()
+                if (passwordVisible != null && onTogglePasswordVisibility != null) {
+                    PasswordVisibilityToggle(
+                        passwordVisible = passwordVisible,
+                        onToggle = onTogglePasswordVisibility,
+                        modifier = Modifier.align(Alignment.CenterEnd),
+                    )
+                }
             }
         },
     )

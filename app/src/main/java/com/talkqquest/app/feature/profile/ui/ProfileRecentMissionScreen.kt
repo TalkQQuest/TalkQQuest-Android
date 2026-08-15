@@ -51,6 +51,7 @@ import com.talkqquest.app.core.designsystem.Primary600
 import com.talkqquest.app.core.designsystem.Success
 import com.talkqquest.app.core.designsystem.TalkQQuestTheme
 import com.talkqquest.app.core.designsystem.White
+import com.talkqquest.app.core.designsystem.component.rememberHapticTick
 import com.talkqquest.app.feature.home.data.model.ArchiveRecentItem
 
 private enum class ProfileActivityType {
@@ -484,6 +485,7 @@ internal fun ProfileSimpleTopBar(
     modifier: Modifier = Modifier,
     backIconStartPadding: Dp = 0.dp,
 ) {
+    val tick = rememberHapticTick()
     Box(
         modifier = modifier
             .fillMaxWidth()
@@ -493,7 +495,7 @@ internal fun ProfileSimpleTopBar(
             modifier = Modifier
                 .offset(x = backIconStartPadding, y = 48.dp)
                 .size(44.dp)
-                .profileCircleClick(onClick = onBack),
+                .profileCircleClick(onClick = { tick(); onBack() }),
             contentAlignment = Alignment.Center,
         ) {
             Icon(

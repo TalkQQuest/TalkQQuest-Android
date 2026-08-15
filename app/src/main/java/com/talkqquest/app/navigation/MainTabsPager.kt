@@ -83,6 +83,7 @@ fun MainTabsPager(
         snapPositionalThreshold = 0.25f,
     )
     val homePage = BottomNavItem.entries.indexOf(BottomNavItem.Home)
+    val archivePage = BottomNavItem.entries.indexOf(BottomNavItem.Archive)
     val profilePage = BottomNavItem.entries.indexOf(BottomNavItem.Profile)
     val markHomeDetailExit: () -> Unit = {
         homeDetailExitPending = true
@@ -162,6 +163,11 @@ fun MainTabsPager(
                 navController = navController,
                 showHomeBadgeCollection = showHomeBadgeCollection,
                 onHomeBadgeCollectionBack = returnFromHomeBadgeCollection,
+                onArchiveClick = {
+                    pagerScope.launch {
+                        pagerState.animateScrollToPage(archivePage)
+                    }
+                },
             )
         }
     }
@@ -259,6 +265,7 @@ private fun ProfileTab(
     navController: NavHostController,
     showHomeBadgeCollection: Boolean = false,
     onHomeBadgeCollectionBack: () -> Unit = {},
+    onArchiveClick: () -> Unit,
 ) {
     val context = LocalContext.current
     val profileViewModel: ProfileViewModel = hiltViewModel()
@@ -324,6 +331,6 @@ private fun ProfileTab(
         onSettingsClick = { navController.navigate(Screen.PROFILE_SETTINGS) },
         onBadgesClick = { navController.navigate(Screen.PROFILE_BADGES) },
         onRecentMissionClick = { navController.navigate(Screen.PROFILE_RECENT_MISSION) },
-        onArchiveClick = { navController.navigate(Screen.ARCHIVE_HOME) },
+        onArchiveClick = onArchiveClick,
     )
 }

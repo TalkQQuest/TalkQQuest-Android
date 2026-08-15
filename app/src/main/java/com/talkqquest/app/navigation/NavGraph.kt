@@ -3,9 +3,11 @@ package com.talkqquest.app.navigation
 import android.net.Uri
 import android.widget.Toast
 import androidx.compose.animation.AnimatedContentTransitionScope
+import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
 import androidx.compose.foundation.pager.PagerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -84,6 +86,7 @@ import com.talkqquest.app.feature.archive.ui.ArchiveReportScreen
 import com.talkqquest.app.feature.archive.ui.ArchiveWeeklyCompareReportScreen
 import com.talkqquest.app.feature.archive.viewmodel.ActivityType
 import com.talkqquest.app.navigation.Screen
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 private const val NOTIFICATION_READ_REFRESH_KEY = "notification_read_refresh"
@@ -111,11 +114,14 @@ fun NavGraph(
         startDestination = Screen.SPLASH,
         modifier = modifier,
         enterTransition = {
-            if (isTabSwitch()) fadeIn(tween(300))
+            if (initialState.destination.route == Screen.SPLASH)
+                fadeIn(tween(300)) + scaleIn(initialScale = 0.96f, animationSpec = tween(300))
+            else if (isTabSwitch()) fadeIn(tween(300))
             else slideIntoContainer(AnimatedContentTransitionScope.SlideDirection.Left, slideSpec)
         },
         exitTransition = {
-            if (isTabSwitch()) fadeOut(tween(300))
+            if (initialState.destination.route == Screen.SPLASH) fadeOut(tween(300))
+            else if (isTabSwitch()) fadeOut(tween(300))
             else slideOutOfContainer(AnimatedContentTransitionScope.SlideDirection.Left, slideSpec)
         },
         popEnterTransition = {
@@ -130,6 +136,11 @@ fun NavGraph(
         composable(Screen.SPLASH) {
             val context = LocalContext.current
             val authViewModel: AuthViewModel = hiltViewModel()
+            val minSplashMillis = 1000L
+            val fadeMillis = 300
+            val contentAlpha = remember { Animatable(0f) }
+            var pendingDestination by remember { mutableStateOf<String?>(null) }
+            val start = remember { System.currentTimeMillis() }
             fun navigateFromSplash(destination: String) {
                 navController.navigate(destination) {
                     popUpTo(Screen.SPLASH) { inclusive = true }
@@ -138,15 +149,25 @@ fun NavGraph(
             }
 
             LaunchedEffect(Unit) {
+                // checkStoredSession\uC740 \uB0B4\uBD80\uC5D0\uC11C viewModelScope.launch\uB85C \uB124\uD2B8\uC6CC\uD06C \uD638\uCD9C\uC744 \uB744\uC6B0\uACE0
+                // \uC989\uC2DC \uBC18\uD658\uD55C\uB2E4 \u2014 \uBA3C\uC800 \uD638\uCD9C\uD574\uC57C \uC544\uB798 \uD398\uC774\uB4DC\uC778 \uB300\uAE30\uAC00 \uB124\uD2B8\uC6CC\uD06C \uC2DC\uC791\uC744 \uB2A6\uCD94\uC9C0 \uC54A\uB294\uB2E4.
                 authViewModel.checkStoredSession(
-                    onAuthenticated = { navigateFromSplash(Screen.HOME) },
-                    onUnauthenticated = { navigateFromSplash(Screen.LOGIN) },
+                    onAuthenticated = { pendingDestination = Screen.HOME },
+                    onUnauthenticated = { pendingDestination = Screen.LOGIN },
                     onNetworkError = {
                         Toast.makeText(context, "\uB124\uD2B8\uC6CC\uD06C \uC5F0\uACB0\uC744 \uD655\uC778\uD574\uC8FC\uC138\uC694.", Toast.LENGTH_SHORT).show()
                     },
                 )
+                contentAlpha.animateTo(1f, animationSpec = tween(fadeMillis))
             }
-            SplashScreen()
+
+            LaunchedEffect(pendingDestination) {
+                val destination = pendingDestination ?: return@LaunchedEffect
+                val remaining = (minSplashMillis - (System.currentTimeMillis() - start)).coerceAtLeast(0L)
+                delay(remaining)
+                navigateFromSplash(destination)
+            }
+            SplashScreen(alpha = contentAlpha.value)
         }
 
         composable(Screen.LOGIN) {
@@ -443,7 +464,13 @@ fun NavGraph(
                 onNextClick = { personalityType ->
                     if (isConcernEditMode) {
                         concernPersonalityType = personalityType
-                        navController.navigate(Screen.ONBOARDING_DIFFICULTY)
+                        authViewModel.saveOnboardingStep(
+                            OnboardingStepSaveRequest(step = 1, personalityType = personalityType),
+                        ) {
+                            concernRefreshKey += 1
+                            isConcernEditMode = false
+                            navController.popBackStack(Screen.PROFILE_CONCERN, inclusive = false)
+                        }
                     } else {
                         authViewModel.saveOnboardingStep(
                             OnboardingStepSaveRequest(
@@ -470,13 +497,19 @@ fun NavGraph(
 
             OnboardingDifficultyScreen(
                 initialSelected = if (isConcernEditMode) concernDifficultSituations else emptyList(),
-                onBack = { navController.popBackStack() },
+                onBack = { isConcernEditMode = false; navController.popBackStack() },
                 onNextClick = { difficultSituations ->
                     if (difficultSituations.isEmpty()) {
                         Toast.makeText(context, "어려운 점을 선택해주세요.", Toast.LENGTH_SHORT).show()
                     } else if (isConcernEditMode) {
                         concernDifficultSituations = difficultSituations
-                        navController.navigate(Screen.ONBOARDING_GOAL)
+                        authViewModel.saveOnboardingStep(
+                            OnboardingStepSaveRequest(step = 2, difficultSituations = difficultSituations),
+                        ) {
+                            concernRefreshKey += 1
+                            isConcernEditMode = false
+                            navController.popBackStack(Screen.PROFILE_CONCERN, inclusive = false)
+                        }
                     } else {
                         authViewModel.saveOnboardingStep(
                             OnboardingStepSaveRequest(
@@ -505,27 +538,19 @@ fun NavGraph(
             OnboardingGoalScreen(
                 initialSelected = if (isConcernEditMode) concernPurposes else emptyList(),
                 completeButtonText = if (isConcernEditMode) "저장" else "완료",
-                onBack = { navController.popBackStack() },
+                onBack = { isConcernEditMode = false; navController.popBackStack() },
                 onCompleteClick = { purpose ->
                     if (purpose.isEmpty()) {
                         Toast.makeText(context, "연습 목표를 선택해주세요.", Toast.LENGTH_SHORT).show()
                     } else if (isConcernEditMode) {
                         concernPurposes = purpose
                         authViewModel.saveOnboardingStep(
-                            OnboardingStepSaveRequest(step = 1, personalityType = concernPersonalityType),
+                            OnboardingStepSaveRequest(step = 3, purpose = purpose),
                         ) {
-                            authViewModel.saveOnboardingStep(
-                                OnboardingStepSaveRequest(step = 2, difficultSituations = concernDifficultSituations),
-                            ) {
-                                authViewModel.saveOnboardingStep(
-                                    OnboardingStepSaveRequest(step = 3, purpose = concernPurposes),
-                                ) {
-                                    concernRefreshKey += 1
-                                    profileViewModel.loadProfile()
-                                    isConcernEditMode = false
-                                    navController.popBackStack(Screen.PROFILE_CONCERN, inclusive = false)
-                                }
-                            }
+                            concernRefreshKey += 1
+                            profileViewModel.loadProfile()
+                            isConcernEditMode = false
+                            navController.popBackStack(Screen.PROFILE_CONCERN, inclusive = false)
                         }
                     } else {
                         authViewModel.saveOnboardingStep(
@@ -1175,12 +1200,12 @@ fun NavGraph(
             val difficultSituations = profile?.difficultSituations.orEmpty()
             val purposes = profile?.purpose.orEmpty()
 
-            fun startConcernEdit() {
+            fun startConcernEdit(target: String) {
                 concernPersonalityType = personalityType ?: "introvert"
                 concernDifficultSituations = difficultSituations
                 concernPurposes = purposes
                 isConcernEditMode = true
-                navController.navigate(Screen.ONBOARDING_PERSONALITY)
+                navController.navigate(target)
             }
 
             ProfileConcernScreen(
@@ -1189,9 +1214,9 @@ fun NavGraph(
                 difficultSituations = difficultSituations,
                 purpose = purposes,
                 onBack = { navController.popBackStack() },
-                onPersonalityClick = { startConcernEdit() },
-                onDifficultyClick = { startConcernEdit() },
-                onGoalClick = { startConcernEdit() },
+                onPersonalityClick = { startConcernEdit(Screen.ONBOARDING_PERSONALITY) },
+                onDifficultyClick = { startConcernEdit(Screen.ONBOARDING_DIFFICULTY) },
+                onGoalClick = { startConcernEdit(Screen.ONBOARDING_GOAL) },
             )
         }
 

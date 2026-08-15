@@ -55,6 +55,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 
 import com.talkqquest.app.R
 import com.talkqquest.app.core.designsystem.FitDesign
+import com.talkqquest.app.core.designsystem.component.rememberHapticTick
 import com.talkqquest.app.core.designsystem.Gray100
 import com.talkqquest.app.core.designsystem.Gray1000
 import com.talkqquest.app.core.designsystem.Gray200
@@ -158,6 +159,7 @@ private fun ArchiveConversationDetailContent(
     onBackClick: () -> Unit,
     onShowReviewClick: () -> Unit
 ) {
+    val tick = rememberHapticTick()
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -167,7 +169,7 @@ private fun ArchiveConversationDetailContent(
         Column(modifier = Modifier.fillMaxSize()) {
             Box(modifier = Modifier.fillMaxWidth().padding(top = 8.dp).height(44.dp)) {
                 Box(
-                    modifier = Modifier.size(44.dp).align(Alignment.CenterStart).clip(CircleShape).clickable(onClick = onBackClick),
+                    modifier = Modifier.size(44.dp).align(Alignment.CenterStart).clip(CircleShape).clickable(onClick = { tick(); onBackClick() }),
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(

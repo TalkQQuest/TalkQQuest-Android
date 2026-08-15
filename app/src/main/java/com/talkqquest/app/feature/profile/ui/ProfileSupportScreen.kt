@@ -29,6 +29,11 @@ import com.talkqquest.app.core.designsystem.Gray800
 import com.talkqquest.app.core.designsystem.TalkQQuestTheme
 import com.talkqquest.app.core.designsystem.TqType
 import com.talkqquest.app.core.designsystem.White
+import com.talkqquest.app.core.designsystem.component.MenuRippleGroupState
+import com.talkqquest.app.core.designsystem.component.TqAnchoredMenuRow
+import com.talkqquest.app.core.designsystem.component.menuRowTextRippleAnchor
+import com.talkqquest.app.core.designsystem.component.rememberMenuRippleGroup
+import com.talkqquest.app.core.designsystem.component.rememberMenuRowTextLayoutCallback
 import com.talkqquest.app.core.designsystem.softShadow
 
 @Composable
@@ -70,36 +75,69 @@ fun ProfileSupportScreen(
                     .offset(x = 16.dp, y = 12.dp)
                     .size(width = 330.dp, height = 22.dp),
             )
-            Column(
+            val supportGroup = rememberMenuRippleGroup()
+            SupportRow(
+                title = "자주 묻는 질문",
                 modifier = Modifier
-                    .offset(x = 16.dp, y = 46.dp)
-                    .size(width = 330.dp, height = 88.dp),
-            ) {
-                SupportRow(title = "자주 묻는 질문")
-                SupportRow(title = "이메일 문의", trailing = "talkqquest@naver.com")
-            }
+                    .offset(y = 46.dp)
+                    .size(width = 362.dp, height = 44.dp),
+                contentModifier = Modifier
+                    .offset(x = 16.dp)
+                    .size(width = 330.dp, height = 44.dp),
+                group = supportGroup,
+            )
+            SupportRow(
+                title = "이메일 문의",
+                trailing = "talkqquest@naver.com",
+                modifier = Modifier
+                    .offset(y = 90.dp)
+                    .size(width = 362.dp, height = 44.dp),
+                contentModifier = Modifier
+                    .offset(x = 16.dp)
+                    .size(width = 330.dp, height = 44.dp),
+                group = supportGroup,
+            )
         }
     }
 }
 @Composable
-private fun SupportRow(title: String, trailing: String? = null) {
-    Row(
-        modifier = Modifier
-            .size(width = 330.dp, height = 44.dp)
-            .profileItemClick { },
-        verticalAlignment = Alignment.CenterVertically,
+private fun SupportRow(
+    title: String,
+    trailing: String? = null,
+    modifier: Modifier = Modifier,
+    contentModifier: Modifier = Modifier,
+    group: MenuRippleGroupState? = null,
+) {
+    TqAnchoredMenuRow(modifier = modifier, group = group, onClick = {}) { anchor ->
+        val titleLayout = rememberMenuRowTextLayoutCallback(anchor, "title", title, TqType.BodyL)
+        val trailingLayout = trailing?.let {
+            rememberMenuRowTextLayoutCallback(anchor, "trailing", it, TqType.BodyM)
+        }
+        Row(
+            modifier = contentModifier,
+            verticalAlignment = Alignment.CenterVertically,
     ) {
         Text(
             text = title,
             style = TqType.BodyL,
             color = Gray800,
-            modifier = Modifier.weight(1f),
+            onTextLayout = titleLayout,
+            modifier = Modifier
+                .menuRowTextRippleAnchor(anchor, "title")
+                .weight(1f),
         )
         if (trailing != null) {
-            Text(text = trailing, style = TqType.BodyM, color = Gray500)
+            Text(
+                text = trailing,
+                style = TqType.BodyM,
+                color = Gray500,
+                onTextLayout = trailingLayout!!,
+                modifier = Modifier.menuRowTextRippleAnchor(anchor, "trailing"),
+            )
             Spacer(Modifier.size(width = 10.dp, height = 1.dp))
         }
         Icon(imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = null, tint = Gray700)
+        }
     }
 }
 
@@ -110,7 +148,5 @@ private fun ProfileSupportScreenPreview() {
         ProfileSupportScreen()
     }
 }
-
-
 
 

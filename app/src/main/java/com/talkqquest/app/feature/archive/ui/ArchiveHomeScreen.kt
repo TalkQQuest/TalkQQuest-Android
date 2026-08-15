@@ -3,6 +3,8 @@ package com.talkqquest.app.feature.archive.ui
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.indication
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -14,20 +16,23 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
+import androidx.compose.material3.ripple
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -139,29 +144,41 @@ private fun ArchiveHomeScreen(
                             .padding(horizontal = 16.dp),
                         verticalArrangement = Arrangement.spacedBy(2.dp)
                     ) {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
+                        val archiveInteractionSource = remember { MutableInteractionSource() }
+                        Box(
                             modifier = Modifier
                                 .size(width = 79.dp, height = 32.dp)
-                                .clip(CircleShape)
-                                .clickable(onClick = onArchiveBoxClick)
+                                .clickable(
+                                    interactionSource = archiveInteractionSource,
+                                    indication = null,
+                                    onClick = onArchiveBoxClick,
+                                )
                         ) {
-                            Text(
-                                text = "보관함",
-                                style = TqType.TitleL.figma(),
-                                color = Gray700,
-                                modifier = Modifier.width(47.dp)
-                            )
                             Box(
                                 modifier = Modifier
-                                    .size(width = 32.dp, height = 30.dp),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Icon(
-                                    painter = painterResource(id = R.drawable.ic_forward_chevron),
-                                    contentDescription = "보관함 전체 보기",
-                                    tint = Gray700,
+                                    .offset(x = (-16).dp, y = (-6).dp)
+                                    .size(width = 111.dp, height = 44.dp)
+                                    .clip(RoundedCornerShape(22.dp))
+                                    .indication(archiveInteractionSource, ripple(bounded = true)),
+                            )
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Text(
+                                    text = "보관함",
+                                    style = TqType.TitleL.figma(),
+                                    color = Gray700,
+                                    modifier = Modifier.width(47.dp)
                                 )
+                                Box(
+                                    modifier = Modifier
+                                        .size(width = 32.dp, height = 30.dp),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Icon(
+                                        painter = painterResource(id = R.drawable.ic_forward_chevron),
+                                        contentDescription = "보관함 전체 보기",
+                                        tint = Gray700,
+                                    )
+                                }
                             }
                         }
 

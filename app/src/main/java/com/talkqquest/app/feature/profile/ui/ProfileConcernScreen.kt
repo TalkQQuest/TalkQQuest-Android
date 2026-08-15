@@ -28,6 +28,11 @@ import com.talkqquest.app.core.designsystem.Gray800
 import com.talkqquest.app.core.designsystem.TalkQQuestTheme
 import com.talkqquest.app.core.designsystem.TqType
 import com.talkqquest.app.core.designsystem.White
+import com.talkqquest.app.core.designsystem.component.MenuRippleGroupState
+import com.talkqquest.app.core.designsystem.component.TqAnchoredMenuRow
+import com.talkqquest.app.core.designsystem.component.menuRowTextRippleAnchor
+import com.talkqquest.app.core.designsystem.component.rememberMenuRippleGroup
+import com.talkqquest.app.core.designsystem.component.rememberMenuRowTextLayoutCallback
 
 @Composable
 fun ProfileConcernScreen(
@@ -53,29 +58,42 @@ fun ProfileConcernScreen(
                 .clip(RoundedCornerShape(20.dp))
                 .background(White),
         ) {
+            val concernGroup = rememberMenuRippleGroup()
             ProfileConcernRow(
                 label = "평소 대화할 때 ${nickname}님의 모습은",
                 value = personalityType.toPersonalityDisplay(),
                 onClick = onPersonalityClick,
                 modifier = Modifier
-                    .offset(x = 16.dp, y = 14.dp)
+                    .offset(y = 2.dp)
+                    .size(width = 361.dp, height = 74.dp),
+                contentModifier = Modifier
+                    .offset(x = 16.dp, y = 12.dp)
                     .size(width = 345.dp, height = 50.dp),
+                group = concernGroup,
             )
             ProfileConcernRow(
                 label = "대화할 때 가장 어려운 점은 뭔가요?",
                 value = difficultSituations.toConcernDisplay("아직 선택한 어려운 점이 없어요"),
                 onClick = onDifficultyClick,
                 modifier = Modifier
-                    .offset(x = 16.dp, y = 88.dp)
+                    .offset(y = 76.dp)
+                    .size(width = 361.dp, height = 74.dp),
+                contentModifier = Modifier
+                    .offset(x = 16.dp, y = 12.dp)
                     .size(width = 345.dp, height = 50.dp),
+                group = concernGroup,
             )
             ProfileConcernRow(
                 label = "어떤 대화를 연습하고 싶으신가요?",
                 value = purpose.toConcernDisplay("아직 선택한 연습 목표가 없어요"),
                 onClick = onGoalClick,
                 modifier = Modifier
-                    .offset(x = 16.dp, y = 162.dp)
+                    .offset(y = 150.dp)
+                    .size(width = 361.dp, height = 74.dp),
+                contentModifier = Modifier
+                    .offset(x = 16.dp, y = 12.dp)
                     .size(width = 345.dp, height = 50.dp),
+                group = concernGroup,
             )
         }
     }
@@ -86,11 +104,17 @@ private fun ProfileConcernRow(
     label: String,
     value: String,
     modifier: Modifier = Modifier,
+    contentModifier: Modifier = Modifier,
     onClick: () -> Unit = {},
+    group: MenuRippleGroupState? = null,
 ) {
-    Row(
-        modifier = modifier.profileItemClick(onClick = onClick),
-        verticalAlignment = Alignment.CenterVertically,
+    TqAnchoredMenuRow(modifier = modifier, group = group, onClick = onClick) { anchor ->
+        val labelLayout = rememberMenuRowTextLayoutCallback(anchor, "label", label, TqType.BodyM)
+        val valueStyle = TqType.BodyL.copy(fontWeight = FontWeight.Medium)
+        val valueLayout = rememberMenuRowTextLayoutCallback(anchor, "value", value, valueStyle)
+        Row(
+            modifier = contentModifier,
+            verticalAlignment = Alignment.CenterVertically,
     ) {
         Column(
             modifier = Modifier.size(width = 304.dp, height = 50.dp),
@@ -101,15 +125,20 @@ private fun ProfileConcernRow(
                 color = Gray500,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
-                modifier = Modifier.size(width = 304.dp, height = 22.dp),
+                onTextLayout = labelLayout,
+                modifier = Modifier
+                    .menuRowTextRippleAnchor(anchor, "label")
+                    .size(width = 304.dp, height = 22.dp),
             )
             Text(
                 text = value,
-                style = TqType.BodyL.copy(fontWeight = FontWeight.Medium),
+                style = valueStyle,
                 color = Gray800,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
+                onTextLayout = valueLayout,
                 modifier = Modifier
+                    .menuRowTextRippleAnchor(anchor, "value")
                     .offset(y = 4.dp)
                     .size(width = 304.dp, height = 24.dp),
             )
@@ -124,6 +153,7 @@ private fun ProfileConcernRow(
                 tint = Gray600,
                 modifier = Modifier.size(28.dp),
             )
+        }
         }
     }
 }

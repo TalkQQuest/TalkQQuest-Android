@@ -55,7 +55,6 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 
 import com.talkqquest.app.R
 import com.talkqquest.app.core.designsystem.FitDesign
-import com.talkqquest.app.core.designsystem.Gray1000
 import com.talkqquest.app.core.designsystem.Gray300
 import com.talkqquest.app.core.designsystem.Gray400
 import com.talkqquest.app.core.designsystem.Gray50
@@ -68,7 +67,8 @@ import com.talkqquest.app.core.designsystem.Primary600
 import com.talkqquest.app.core.designsystem.TalkQQuestTheme
 import com.talkqquest.app.core.designsystem.TqType
 import com.talkqquest.app.core.designsystem.White
-import com.talkqquest.app.core.designsystem.softShadow
+import com.talkqquest.app.core.designsystem.component.SlidingChipRow
+import com.talkqquest.app.core.designsystem.component.rememberHapticTick
 
 import com.talkqquest.app.feature.archive.viewmodel.ActivityType
 import com.talkqquest.app.feature.archive.viewmodel.ArchiveSearchUiState
@@ -150,6 +150,7 @@ private fun ArchiveSearchScreenContent(
 ) {
     val dateFormatter = DateTimeFormatter.ofPattern("yyyy.MM.dd")
     val focusManager = LocalFocusManager.current
+    val tick = rememberHapticTick()
 
     var showBottomSheet by remember { mutableStateOf(false) }
     var isSelectingStartDate by remember { mutableStateOf(true) }
@@ -180,7 +181,7 @@ private fun ArchiveSearchScreenContent(
                             .size(44.dp)
                             .align(Alignment.CenterStart)
                             .clip(CircleShape)
-                            .clickable { onBackClick() },
+                            .clickable { tick(); onBackClick() },
                         contentAlignment = Alignment.Center
                     ) {
                         Icon(
@@ -428,11 +429,12 @@ private fun ArchiveSearchScreenContent(
                             Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
                                 Text(text = "기간", style = TqType.BodyL.copy(fontWeight = FontWeight.Medium).figma(), color = Gray900)
 
-                                Row(modifier = Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                    dateTabs.forEach { tab ->
-                                        FilterChip(text = tab, isSelected = uiState.selectedDateTab == tab, onClick = { onDateTabSelected(tab) })
-                                    }
-                                }
+                                SlidingChipRow(
+                                    options = dateTabs,
+                                    selectedIndex = dateTabs.indexOf(uiState.selectedDateTab).takeIf { it >= 0 },
+                                    onSelect = { index -> onDateTabSelected(dateTabs[index]) },
+                                    scrollable = true,
+                                )
 
                                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                                     DateInputBox(
@@ -456,11 +458,12 @@ private fun ArchiveSearchScreenContent(
                             Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
                                 Text(text = "카테고리", style = TqType.BodyL.copy(fontWeight = FontWeight.Medium).figma(), color = Gray900)
 
-                                Row(modifier = Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                    categoryTabs.forEach { tab ->
-                                        FilterChip(text = tab, isSelected = uiState.selectedCategoryTab == tab, onClick = { onCategoryTabSelected(tab) })
-                                    }
-                                }
+                                SlidingChipRow(
+                                    options = categoryTabs,
+                                    selectedIndex = categoryTabs.indexOf(uiState.selectedCategoryTab).takeIf { it >= 0 },
+                                    onSelect = { index -> onCategoryTabSelected(categoryTabs[index]) },
+                                    scrollable = true,
+                                )
                             }
                         }
                     }
@@ -524,30 +527,6 @@ private fun ActiveFilterChip(text: String, onRemove: () -> Unit) {
                 modifier = Modifier.size(16.dp)
             )
         }
-    }
-}
-
-// ==========================================
-// [필터 칩 공통 컴포넌트 (선택창 전용)]
-// ==========================================
-@Composable
-private fun FilterChip(text: String, isSelected: Boolean, onClick: () -> Unit) {
-    val backgroundColor = if (isSelected) Primary600 else White
-    val textColor = if (isSelected) White else Gray900
-    val borderModifier = if (isSelected) Modifier.border(1.dp, Primary600, RoundedCornerShape(20.dp)) else Modifier
-
-    Box(
-        modifier = Modifier
-            .height(34.dp)
-            .then(if (!isSelected) Modifier.softShadow(Gray1000.copy(alpha = 0.01f), offsetY = 8.dp, blur = 24.dp, cornerRadius = 20.dp) else Modifier)
-            .clip(RoundedCornerShape(20.dp))
-            .background(backgroundColor)
-            .then(borderModifier)
-            .clickable { onClick() }
-            .padding(horizontal = 18.dp, vertical = 4.dp),
-        contentAlignment = Alignment.Center
-    ) {
-        Text(text = text, style = TqType.LabelL.figma(), color = textColor)
     }
 }
 

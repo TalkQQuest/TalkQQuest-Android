@@ -53,6 +53,11 @@ import com.talkqquest.app.core.designsystem.Primary50
 import com.talkqquest.app.core.designsystem.Primary600
 import com.talkqquest.app.core.designsystem.TalkQQuestTheme
 import com.talkqquest.app.core.designsystem.White
+import com.talkqquest.app.core.designsystem.component.MenuRippleGroupState
+import com.talkqquest.app.core.designsystem.component.TqAnchoredMenuRow
+import com.talkqquest.app.core.designsystem.component.menuRowTextRippleAnchor
+import com.talkqquest.app.core.designsystem.component.rememberMenuRippleGroup
+import com.talkqquest.app.core.designsystem.component.rememberMenuRowTextLayoutCallback
 import com.talkqquest.app.core.designsystem.softShadow
 
 private val ProfileTitleStyle = TextStyle(
@@ -99,6 +104,9 @@ private val LabelMediumStyle = TextStyle(
     lineHeight = 18.sp,
 )
 
+// 홈 화면과 동일하게, 모든 내용이 들어오는 기기에서도 마이페이지를 조금 위로 올릴 수 있게 한다.
+private val ProfileScrollableContentHeight = 902.dp
+
 @Composable
 fun ProfileScreen(
     nickname: String = "다민",
@@ -116,7 +124,10 @@ fun ProfileScreen(
     onBadgesClick: () -> Unit = {},
     onRecentMissionClick: () -> Unit = {},
     onArchiveClick: () -> Unit = {},
-) = FitDesign(compensateStatusBar = false, contentAlignment = Alignment.TopCenter) {
+) = FitDesign(
+    compensateStatusBar = false,
+    scrollableContentHeight = ProfileScrollableContentHeight,
+) {
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -435,27 +446,40 @@ private fun ProfileMenuCard(
     modifier: Modifier = Modifier,
 ) {
     ProfileCard(modifier = modifier) {
+        val menuGroup = rememberMenuRippleGroup()
         ProfileMenuRow(
             title = "획득한 배지",
             trailing = badgeCount.toString(),
             onClick = onBadgesClick,
             modifier = Modifier
-                .offset(x = 16.dp, y = 10.dp)
+                .offset(y = 10.dp)
+                .size(width = 362.dp, height = 43.dp),
+            contentModifier = Modifier
+                .offset(x = 16.dp)
                 .size(width = 345.dp, height = 43.dp),
+            group = menuGroup,
         )
         ProfileMenuRow(
             title = "최근 활동 요약",
             onClick = onRecentMissionClick,
             modifier = Modifier
-                .offset(x = 16.dp, y = 53.dp)
+                .offset(y = 53.dp)
+                .size(width = 362.dp, height = 44.dp),
+            contentModifier = Modifier
+                .offset(x = 16.dp)
                 .size(width = 346.dp, height = 44.dp),
+            group = menuGroup,
         )
         ProfileMenuRow(
             title = "보관함",
             onClick = onArchiveClick,
             modifier = Modifier
-                .offset(x = 16.dp, y = 97.dp)
+                .offset(y = 97.dp)
+                .size(width = 362.dp, height = 44.dp),
+            contentModifier = Modifier
+                .offset(x = 16.dp)
                 .size(width = 346.dp, height = 44.dp),
+            group = menuGroup,
         )
     }
 }
@@ -466,44 +490,61 @@ private fun ProfileMenuRow(
     trailing: String? = null,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
+    contentModifier: Modifier = Modifier,
+    group: MenuRippleGroupState? = null,
 ) {
-    Box(
-        modifier = modifier.profileItemClick(onClick = onClick),
-        contentAlignment = Alignment.CenterStart,
-    ) {
-        Text(
-            text = title,
-            style = BodyLargeMediumStyle,
-            color = Gray800,
-            modifier = Modifier.size(width = 150.dp, height = 24.dp),
-        )
-        if (trailing != null) {
+    TqAnchoredMenuRow(
+        modifier = modifier,
+        group = group,
+        onClick = onClick,
+    ) { anchor ->
+        val titleLayout = rememberMenuRowTextLayoutCallback(anchor, "title", title, BodyLargeMediumStyle)
+        val trailingLayout = trailing?.let {
+            rememberMenuRowTextLayoutCallback(anchor, "trailing", it, BodyLargeMediumStyle)
+        }
+        Box(
+            modifier = contentModifier,
+            contentAlignment = Alignment.CenterStart,
+        ) {
             Text(
-                text = trailing,
+                text = title,
+                style = BodyLargeMediumStyle,
+                color = Gray800,
+                onTextLayout = titleLayout,
+                modifier = Modifier
+                    .menuRowTextRippleAnchor(anchor, "title")
+                    .size(width = 150.dp, height = 24.dp),
+            )
+            if (trailing != null) {
+                Text(
+                    text = trailing,
                 style = BodyLargeMediumStyle,
                 color = Gray900,
+                onTextLayout = trailingLayout!!,
                 modifier = Modifier
+                    .menuRowTextRippleAnchor(anchor, "trailing")
                     .align(Alignment.CenterEnd)
-                    .padding(end = 60.dp),
-            )
-            Image(
-                painter = painterResource(R.drawable.ic_profile_medal),
+                        .padding(end = 60.dp),
+                )
+                Image(
+                    painter = painterResource(R.drawable.ic_profile_medal),
+                    contentDescription = null,
+                    modifier = Modifier
+                        .align(Alignment.CenterEnd)
+                        .padding(end = 38.dp)
+                        .size(22.dp),
+                )
+            }
+            Icon(
+                imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
                 contentDescription = null,
+                tint = Gray600,
                 modifier = Modifier
                     .align(Alignment.CenterEnd)
-                    .padding(end = 38.dp)
-                    .size(22.dp),
+                    .size(width = 44.dp, height = 44.dp)
+                    .padding(horizontal = 7.dp, vertical = 6.dp),
             )
         }
-        Icon(
-            imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
-            contentDescription = null,
-            tint = Gray600,
-            modifier = Modifier
-                .align(Alignment.CenterEnd)
-                .size(width = 44.dp, height = 44.dp)
-                .padding(horizontal = 7.dp, vertical = 6.dp),
-        )
     }
 }
 
@@ -514,3 +555,7 @@ private fun ProfileScreenPreview() {
         ProfileScreen()
     }
 }
+<<<<<<< Updated upstream
+=======
+
+>>>>>>> Stashed changes

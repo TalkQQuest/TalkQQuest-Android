@@ -68,6 +68,7 @@ import com.talkqquest.app.core.designsystem.TqType
 import com.talkqquest.app.core.designsystem.White
 import com.talkqquest.app.core.designsystem.component.TqButton
 import com.talkqquest.app.core.designsystem.component.TqButtonSize
+import com.talkqquest.app.core.designsystem.component.rememberHapticTick
 import com.talkqquest.app.core.designsystem.softShadow
 import com.talkqquest.app.feature.mission.data.model.MissionDetail
 import com.talkqquest.app.feature.mission.data.model.MissionListItem
@@ -280,6 +281,7 @@ private fun MissionDetailContent(
         // CSS에서 그라데이션 끝(462)은 효과 카드 시작(437)보다 25 아래 — "카드 머리를 살짝 덮는" 관계.
         // 카드 위치는 화면 크기·문구 개수 따라 움직이므로 가정 계산 대신 실제 위치를 측정해 따라감.
         val density = LocalDensity.current
+        val tick = rememberHapticTick()
         var cardsTop by remember { mutableStateOf<Dp?>(null) }
         Box(
             modifier = Modifier
@@ -308,7 +310,7 @@ private fun MissionDetailContent(
                     modifier = Modifier
                         .size(44.dp)
                         .clip(CircleShape) // 눌림 효과를 네모 대신 동그라미로 (아이콘 버튼 관례)
-                        .clickable(onClick = onBack),
+                        .clickable(onClick = { tick(); onBack() }),
                     contentAlignment = Alignment.Center,
                 ) {
                     Icon(

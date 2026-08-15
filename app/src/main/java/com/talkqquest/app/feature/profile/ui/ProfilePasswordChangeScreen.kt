@@ -26,7 +26,6 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
-import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
@@ -46,6 +45,7 @@ import com.talkqquest.app.core.designsystem.TalkQQuestTheme
 import com.talkqquest.app.core.designsystem.TqType
 import com.talkqquest.app.core.designsystem.White
 import com.talkqquest.app.core.designsystem.component.TqButton
+import com.talkqquest.app.core.designsystem.component.PasswordVisibilityToggle
 
 
 @Composable
@@ -57,7 +57,7 @@ fun ProfilePasswordChangeScreen(
     onNextClick: (String) -> Unit = {},
 ) = FitDesign(contentAlignment = Alignment.TopCenter) {
     var password by remember { mutableStateOf(initialPassword) }
-    var showPassword by remember { mutableStateOf(true) }
+    var showPassword by remember { mutableStateOf(false) }
     var isError by remember { mutableStateOf(initialError) }
 
     LaunchedEffect(currentPasswordError) {
@@ -197,37 +197,14 @@ private fun ProfilePasswordInputCard(
         Box(
             modifier = Modifier
                 .align(Alignment.CenterEnd)
-                .size(44.dp)
-                .profileCircleClick(onClick = onTogglePassword),
+                .size(44.dp),
             contentAlignment = Alignment.Center,
         ) {
-            ProfilePasswordEyeIcon(
-                tint = if (isError) Gray700 else Gray400,
-                modifier = Modifier.size(24.dp),
+            PasswordVisibilityToggle(
+                passwordVisible = showPassword,
+                onToggle = onTogglePassword,
             )
         }
-    }
-}
-
-@Composable
-private fun ProfilePasswordEyeIcon(
-    tint: Color,
-    modifier: Modifier = Modifier,
-) {
-    Canvas(modifier = modifier) {
-        val strokeWidth = 1.6.dp.toPx()
-        drawOval(
-            color = tint,
-            topLeft = Offset(size.width * 0.14f, size.height * 0.31f),
-            size = androidx.compose.ui.geometry.Size(size.width * 0.72f, size.height * 0.38f),
-            style = Stroke(width = strokeWidth),
-        )
-        drawCircle(
-            color = tint,
-            radius = size.minDimension * 0.12f,
-            center = Offset(size.width / 2f, size.height / 2f),
-            style = Stroke(width = strokeWidth),
-        )
     }
 }
 

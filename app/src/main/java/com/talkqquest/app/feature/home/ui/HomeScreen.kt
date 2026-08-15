@@ -527,7 +527,7 @@ private fun HomeHeader(
                 .clip(CircleShape) // 리플이 원형으로 퍼지도록 먼저 원형 클립
                 .clickable(
                     interactionSource = bellInteraction,
-                    indication = ripple(bounded = true, color = Primary600), // 원 안을 채우는 원형 물결(브랜드색으로 진하게)
+                    indication = ripple(bounded = true), // 원 안을 채우는 원형 물결
                     onClick = onNotificationClick,
                 ),
             contentAlignment = Alignment.Center,
@@ -1662,7 +1662,7 @@ private fun HomeMissionCard(
                 contentAlignment = Alignment.Center,
             ) {
                 Text(
-                    text = if (mission.refreshLimit != null && mission.remainingRefreshes != null) {
+                    text = if (mission.refreshLimit != null && mission.remainingRefreshes != null && mission.remainingRefreshes > 0) {
                         "추천 ${mission.remainingRefreshes}"
                     } else {
                         "추천"

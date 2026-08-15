@@ -17,7 +17,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.graphics.drawscope.clipRect
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalFontFamilyResolver
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.withContext
 import androidx.compose.ui.unit.dp
+import com.talkqquest.app.core.designsystem.A2ZFamily
+import com.talkqquest.app.core.designsystem.PretendardFamily
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.talkqquest.app.core.designsystem.Gray50
@@ -36,6 +42,18 @@ fun MainScreen(
     onWeeklyReportLaunchConsumed: () -> Unit = {},
 ) {
     val navController = rememberNavController()
+
+    // 콜드스타트 폰트 워밍 — 스플래시가 떠 있는 동안 Pretendard·A2Z를 미리 로드해 둔다.
+    // 반드시 백그라운드(Default)에서: 메인 스레드에서 로드하면 4웨이트(약 10MB)가 한꺼번에 파싱되며
+    // 오히려 큰 프레임 드랍이 생긴다. 백그라운드로 옮겨 홈 첫 텍스트 전에 캐시만 데워둔다(글리프는 그대로).
+    val fontResolver = LocalFontFamilyResolver.current
+    LaunchedEffect(Unit) {
+        withContext(Dispatchers.Default) {
+            runCatching { fontResolver.preload(PretendardFamily) }
+            runCatching { fontResolver.preload(A2ZFamily) }
+        }
+    }
+
     var showWeeklyReportModal by remember { mutableStateOf(false) }
     // 도착 모달이 열어야 할 리포트 id(서버 newWeeklyCompareReport.reportId). 비면 가장 최근 주차.
     var weeklyReportModalId by remember { mutableStateOf<String?>(null) }
@@ -92,7 +110,16 @@ fun MainScreen(
 
         var overlaySheetTop by remember { mutableStateOf<Float?>(null) }
 
-        val showBottomBar = (currentRoute == null || currentRoute in bottomBarRoutes) &&
+        var splashSettled by remember { mutableStateOf(false) }
+        LaunchedEffect(currentRoute) {
+            if (!splashSettled && currentRoute != null && currentRoute != Screen.SPLASH) {
+                delay(300) // 스플래시→홈 크로스페이드(~300ms)가 끝날 때까지 대기
+                splashSettled = true
+            }
+        }
+
+        val showBottomBar = splashSettled &&
+            (currentRoute == null || currentRoute in bottomBarRoutes) &&
             (overlaySheetTop?.let { it > navTopPx } ?: true)
 
         NavGraph(

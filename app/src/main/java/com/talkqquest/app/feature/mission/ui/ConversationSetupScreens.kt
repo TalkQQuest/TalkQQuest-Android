@@ -82,6 +82,7 @@ import com.talkqquest.app.core.designsystem.TalkQQuestTheme
 import com.talkqquest.app.core.designsystem.TqType
 import com.talkqquest.app.core.designsystem.Gray50
 import com.talkqquest.app.core.designsystem.component.TqButton
+import com.talkqquest.app.core.designsystem.component.rememberHapticTick
 import com.talkqquest.app.feature.mission.data.model.MissionSetupEnvironment
 import com.talkqquest.app.feature.mission.data.model.MissionSetupPartnerAgeGroup
 import com.talkqquest.app.feature.mission.data.model.MissionSetupPartnerGender
@@ -137,6 +138,7 @@ private fun SetupStepScaffold(
     nextText: String = "다음",
     content: @Composable ColumnScope.() -> Unit,
 ) = FitDesign {
+    val tick = rememberHapticTick()
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -160,7 +162,7 @@ private fun SetupStepScaffold(
                     modifier = Modifier
                         .size(44.dp)
                         .clip(CircleShape)
-                        .clickable(onClick = onBack),
+                        .clickable(onClick = { tick(); onBack() }),
                     contentAlignment = Alignment.Center,
                 ) {
                     Icon(

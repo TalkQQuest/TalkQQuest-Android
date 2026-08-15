@@ -8,6 +8,7 @@ import com.talkqquest.app.feature.auth.data.EmailSignupRequest
 import com.talkqquest.app.feature.auth.data.OnboardingStepSaveRequest
 import com.talkqquest.app.feature.auth.data.SocialLoginData
 import com.talkqquest.app.feature.auth.data.SessionCheckResult
+import com.talkqquest.app.feature.home.data.HomeRepository
 import com.talkqquest.app.feature.home.data.model.LegalDocument
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -28,6 +29,7 @@ data class AuthUiState(
 @HiltViewModel
 class AuthViewModel @Inject constructor(
     private val authRepository: AuthRepository,
+    private val homeRepository: HomeRepository, // 스플래시에서 홈 요약을 병렬 프리페치하기 위해
 ) : ViewModel() {
     private val _uiState = MutableStateFlow(AuthUiState())
     val uiState: StateFlow<AuthUiState> = _uiState.asStateFlow()
@@ -39,6 +41,9 @@ class AuthViewModel @Inject constructor(
     ) {
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true, errorMessage = null) }
+            // 세션 확인(getMe)과 동시에 홈 요약을 미리 받아 캐시에 담아둔다(대기 안 함).
+            // 홈에 들어가면 두 번째 스피너 없이 바로 내용이 뜬다. 라우팅은 아래 결과가 그대로 결정.
+            launch { runCatching { homeRepository.getHomeSummary() } }
             when (authRepository.checkStoredSession()) {
                 SessionCheckResult.Authenticated -> {
                     _uiState.update { it.copy(isLoading = false) }

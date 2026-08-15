@@ -7,6 +7,8 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.ime
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.statusBars
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
@@ -72,16 +74,21 @@ fun Modifier.coverStatusBarCompensation(compensation: Dp): Modifier = layout { m
 fun FitDesign(
     compensateStatusBar: Boolean = true, // false = 중첩 사용(팝업 등)에서 상태바 보정 이중 적용 방지
     contentAlignment: Alignment? = null,
+    scrollableContentHeight: Dp? = null,
     content: @Composable () -> Unit,
 ) {
     BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
         val base = LocalDensity.current
         val statusInset = with(base) { WindowInsets.statusBars.getTop(this).toDp() }
-        val raw = minOf(
-            maxWidth / 393.dp,
-            (maxHeight - 140.dp) / 712.dp,
-            1f,
-        )
+        val raw = if (scrollableContentHeight == null) {
+            minOf(
+                maxWidth / 393.dp,
+                (maxHeight - 140.dp) / 712.dp,
+                1f,
+            )
+        } else {
+            minOf(maxWidth / 393.dp, 1f)
+        }
         // 키보드가 창을 리사이즈하는 기기에선 키보드가 뜰 때 maxHeight가 줄어 축소율이 폭락
         // (채팅 화면이 콩알만 해짐) → 키보드 없는 상태의 축소율을 잠가두고 IME 중엔 그 값 유지.
         val imeOpen = WindowInsets.ime.getBottom(base) > 0
@@ -107,7 +114,23 @@ fun FitDesign(
             }
         }
         Box(modifier = Modifier.fillMaxSize().padding(top = statusShortfall)) {
-            if (contentAlignment == null) {
+            if (scrollableContentHeight != null) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .verticalScroll(rememberScrollState()),
+                    contentAlignment = Alignment.TopCenter,
+                ) {
+                    Box(
+                        modifier = Modifier.size(
+                            width = 393.dp * scale,
+                            height = scrollableContentHeight * scale,
+                        ),
+                    ) {
+                        contentSlot()
+                    }
+                }
+            } else if (contentAlignment == null) {
                 contentSlot()
             } else {
                 Box(

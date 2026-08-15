@@ -47,6 +47,7 @@ import com.talkqquest.app.core.designsystem.Primary500
 import com.talkqquest.app.core.designsystem.Primary600
 import com.talkqquest.app.core.designsystem.TalkQQuestTheme
 import com.talkqquest.app.core.designsystem.White
+import com.talkqquest.app.core.designsystem.component.rememberHapticTick
 import com.talkqquest.app.core.designsystem.softShadow
 import dev.chrisbanes.haze.HazeState
 import dev.chrisbanes.haze.HazeTint
@@ -127,6 +128,7 @@ private fun TqBottomBarContent(
     hazeState: HazeState,
     modifier: Modifier = Modifier,
 ) {
+    val tick = rememberHapticTick()
     Box(
         modifier = modifier
             .navigationBarsPadding()
@@ -241,7 +243,7 @@ private fun TqBottomBarContent(
                                 .clickable(
                                     interactionSource = interaction,
                                     indication = null,
-                                ) { onTabClick(item.route) },
+                                ) { tick(); onTabClick(item.route) },
                             contentAlignment = Alignment.Center,
                         ) {
                             // 프로필만 선택 시 전용 이미지(보라 배경+연회색 사람), tint 없이 그림. 나머지는 단색 tint.

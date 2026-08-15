@@ -62,6 +62,7 @@ import com.talkqquest.app.core.designsystem.TalkQQuestTheme
 import com.talkqquest.app.core.designsystem.TqType
 import com.talkqquest.app.core.designsystem.White
 import com.talkqquest.app.core.designsystem.component.TqButton
+import com.talkqquest.app.core.designsystem.component.rememberHapticTick
 import com.talkqquest.app.core.designsystem.softShadow
 import com.talkqquest.app.feature.mission.data.model.FeedbackResult
 import com.talkqquest.app.feature.mission.data.model.scoreItems
@@ -148,6 +149,7 @@ private fun FeedbackContent(
     onHome: () -> Unit,
     initialStage: Int = 0, // 프리뷰용: 1이면 연출 끝 상태로 그림
 ) {
+    val tick = rememberHapticTick()
     // 항목 4종 = 명세(E101) 필드 고정 — 순서는 CSS 카드 순서 그대로 (상세 배너와 공유)
     val items = result.scoreItems()
 
@@ -182,7 +184,7 @@ private fun FeedbackContent(
                 modifier = Modifier
                     .size(44.dp)
                     .clip(CircleShape) // 눌림 효과 원형 (아이콘 버튼 관례)
-                    .clickable(onClick = onBack),
+                    .clickable(onClick = { tick(); onBack() }),
                 contentAlignment = Alignment.Center,
             ) {
                 Icon(

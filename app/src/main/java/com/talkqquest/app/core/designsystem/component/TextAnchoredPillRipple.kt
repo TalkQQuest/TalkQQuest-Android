@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.requiredSize
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.ripple
 import androidx.compose.runtime.Composable
@@ -29,12 +30,14 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontSynthesis
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.TextUnitType
 import androidx.compose.ui.unit.dp
 import kotlin.math.ceil
 import kotlin.math.floor
+import kotlin.math.roundToInt
 
 data class TextPillRippleBounds(
     val positionInParent: Offset,
@@ -158,12 +161,14 @@ fun BoxScope.TextAnchoredPillRipple(
     glyphBounds: TextPillRippleGlyphBounds?,
     parentPositionInRoot: Offset?,
     interactionSource: MutableInteractionSource,
+    horizontalInset: Dp = 18.dp,
+    verticalInset: Dp = 6.dp,
 ) {
     if (bounds == null || parentPositionInRoot == null) return
 
     with(LocalDensity.current) {
-        val horizontalInset = 18.dp.roundToPx()
-        val verticalInset = 6.dp.roundToPx()
+        val horizontalInsetPx = horizontalInset.roundToPx()
+        val verticalInsetPx = verticalInset.roundToPx()
         val visibleRect = glyphBounds?.rect ?: Rect(
             left = 0f,
             top = 0f,
@@ -172,10 +177,10 @@ fun BoxScope.TextAnchoredPillRipple(
         )
         val textLeftInParent = bounds.positionInRoot.x - parentPositionInRoot.x
         val textTopInParent = bounds.positionInRoot.y - parentPositionInRoot.y
-        val left = floor(textLeftInParent + visibleRect.left - horizontalInset).toInt()
-        val top = floor(textTopInParent + visibleRect.top - verticalInset).toInt()
-        val right = ceil(textLeftInParent + visibleRect.right + horizontalInset).toInt()
-        val bottom = ceil(textTopInParent + visibleRect.bottom + verticalInset).toInt()
+        val left = floor(textLeftInParent + visibleRect.left - horizontalInsetPx).toInt()
+        val top = floor(textTopInParent + visibleRect.top - verticalInsetPx).toInt()
+        val right = ceil(textLeftInParent + visibleRect.right + horizontalInsetPx).toInt()
+        val bottom = ceil(textTopInParent + visibleRect.bottom + verticalInsetPx).toInt()
 
         Box(
             modifier = Modifier
@@ -192,6 +197,47 @@ fun BoxScope.TextAnchoredPillRipple(
                     interactionSource = interactionSource,
                     indication = ripple(bounded = true),
                 ),
+        )
+    }
+}
+
+/**
+ * Pill ripple that wraps the whole clickable CONTENT (text + any adjacent icon),
+ * centered on it, keeping the content at its original position. Generalizes
+ * NicknamePillClick. The content and this pill MUST be direct siblings in the
+ * same Box; give the content `.onGloballyPositioned { pos = it.positionInParent(); size = it.size }`.
+ */
+@Composable
+fun BoxScope.ContentAnchoredPillRipple(
+    contentPositionInParent: Offset,
+    contentSize: IntSize,
+    interactionSource: MutableInteractionSource,
+    horizontalPadding: Dp = 12.dp,
+    verticalPadding: Dp = 9.dp,
+    trailingLayoutWidthToExclude: Dp = 0.dp,
+) {
+    if (contentSize == IntSize.Zero) return
+    val density = LocalDensity.current
+    with(density) {
+        Box(
+            modifier = Modifier
+                // The anchor position is already relative to this BoxScope's TopStart.
+                // Explicitly opt out of the caller Box's contentAlignment before applying it.
+                .align(Alignment.TopStart)
+                .offset {
+                    IntOffset(
+                        (contentPositionInParent.x - horizontalPadding.toPx()).roundToInt(),
+                        (contentPositionInParent.y - verticalPadding.toPx()).roundToInt(),
+                    )
+                }
+                .requiredSize(
+                    // A trailing touch container may be wider than the icon it centers. Exclude
+                    // only that non-visible tail so the effect remains centered on visible content.
+                    width = (contentSize.width.toDp() - trailingLayoutWidthToExclude).coerceAtLeast(0.dp) + horizontalPadding * 2,
+                    height = contentSize.height.toDp() + verticalPadding * 2,
+                )
+                .clip(RoundedCornerShape(percent = 50))
+                .indication(interactionSource, ripple(bounded = true)),
         )
     }
 }

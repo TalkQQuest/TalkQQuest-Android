@@ -4,7 +4,6 @@ import android.net.Uri
 import android.widget.Toast
 import androidx.compose.animation.AnimatedContentTransitionScope
 import androidx.compose.animation.core.Animatable
-import androidx.compose.animation.core.tween
 import androidx.compose.animation.EnterTransition
 import androidx.compose.animation.ExitTransition
 import androidx.compose.animation.fadeIn
@@ -21,7 +20,6 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.unit.IntOffset
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.talkqquest.app.feature.mission.viewmodel.ConversationSetupViewModel
@@ -88,6 +86,7 @@ import com.talkqquest.app.feature.archive.ui.ArchiveReportScreen
 import com.talkqquest.app.feature.archive.ui.ArchiveWeeklyCompareReportScreen
 import com.talkqquest.app.feature.archive.viewmodel.ActivityType
 import com.talkqquest.app.navigation.Screen
+import com.talkqquest.app.core.designsystem.ModalDimDurationMillis
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
@@ -104,7 +103,7 @@ fun NavGraph(
     val tabRoutes = BottomNavItem.entries.map { it.route }.toSet()
     fun AnimatedContentTransitionScope<NavBackStackEntry>.isTabSwitch() =
         initialState.destination.route in tabRoutes && targetState.destination.route in tabRoutes
-    val slideSpec = tween<IntOffset>(300)
+    val slideSpec = NavigationMotion.intOffsetSpec
     var isConcernEditMode by remember { mutableStateOf(false) }
     var concernPersonalityType by remember { mutableStateOf("introvert") }
     var concernRefreshKey by remember { mutableStateOf(0) }
@@ -117,23 +116,23 @@ fun NavGraph(
         modifier = modifier,
         enterTransition = {
             if (initialState.destination.route == Screen.SPLASH)
-                fadeIn(tween(300)) + scaleIn(initialScale = 0.96f, animationSpec = tween(300))
-            else if (isTabSwitch()) fadeIn(tween(300))
+                fadeIn(NavigationMotion.floatSpec) + scaleIn(initialScale = 0.96f, animationSpec = NavigationMotion.floatSpec)
+            else if (isTabSwitch()) fadeIn(NavigationMotion.floatSpec)
             else slideIntoContainer(AnimatedContentTransitionScope.SlideDirection.Left, slideSpec)
         },
         exitTransition = {
-            if (initialState.destination.route == Screen.SPLASH) fadeOut(tween(300))
-            else if (isTabSwitch()) fadeOut(tween(300))
+            if (initialState.destination.route == Screen.SPLASH) fadeOut(NavigationMotion.floatSpec)
+            else if (isTabSwitch()) fadeOut(NavigationMotion.floatSpec)
             else if (targetState.destination.route == Screen.SIGNUP_VERIFY) ExitTransition.None
             else slideOutOfContainer(AnimatedContentTransitionScope.SlideDirection.Left, slideSpec)
         },
         popEnterTransition = {
-            if (isTabSwitch()) fadeIn(tween(300))
+            if (isTabSwitch()) fadeIn(NavigationMotion.floatSpec)
             else if (initialState.destination.route == Screen.SIGNUP_VERIFY) EnterTransition.None
             else slideIntoContainer(AnimatedContentTransitionScope.SlideDirection.Right, slideSpec)
         },
         popExitTransition = {
-            if (isTabSwitch()) fadeOut(tween(300))
+            if (isTabSwitch()) fadeOut(NavigationMotion.floatSpec)
             else slideOutOfContainer(AnimatedContentTransitionScope.SlideDirection.Right, slideSpec)
         },
     ) {
@@ -141,7 +140,6 @@ fun NavGraph(
             val context = LocalContext.current
             val authViewModel: AuthViewModel = hiltViewModel()
             val minSplashMillis = 1000L
-            val fadeMillis = 300
             val contentAlpha = remember { Animatable(0f) }
             var pendingDestination by remember { mutableStateOf<String?>(null) }
             val start = remember { System.currentTimeMillis() }
@@ -162,7 +160,7 @@ fun NavGraph(
                         Toast.makeText(context, "\uB124\uD2B8\uC6CC\uD06C \uC5F0\uACB0\uC744 \uD655\uC778\uD574\uC8FC\uC138\uC694.", Toast.LENGTH_SHORT).show()
                     },
                 )
-                contentAlpha.animateTo(1f, animationSpec = tween(fadeMillis))
+                contentAlpha.animateTo(1f, animationSpec = NavigationMotion.floatSpec)
             }
 
             LaunchedEffect(pendingDestination) {
@@ -309,11 +307,14 @@ fun NavGraph(
             }
 
             SignupEmailScreen(
+                isSending = authUiState.isLoading,
                 onBack = { navController.popBackStack() },
                 onSendClick = { email ->
                     authViewModel.requestEmailCode(email) {
                         navController.currentBackStackEntry?.savedStateHandle?.set("signup_email", email.trim())
-                        navController.navigate(Screen.SIGNUP_VERIFY)
+                        navController.navigate(Screen.SIGNUP_VERIFY) {
+                            launchSingleTop = true
+                        }
                     }
                 },
             )
@@ -1033,6 +1034,7 @@ fun NavGraph(
                 onReminderTimeChange = profileViewModel::updateMissionReminderTime,
                 onBack = { navController.popBackStack() },
                 onEditProfileClick = { navController.navigate(Screen.PROFILE_INFO) },
+                onConnectedAccountClick = { navController.navigate(Screen.PROFILE_CONNECTED_ACCOUNT) },
                 onTermsClick = { navController.navigate(Screen.PROFILE_TERMS) },
                 onSupportClick = { navController.navigate(Screen.PROFILE_SUPPORT) },
                 onWithdrawClick = { navController.navigate(Screen.PROFILE_WITHDRAW) },
@@ -1135,6 +1137,18 @@ fun NavGraph(
             val profileViewModel: ProfileViewModel = hiltViewModel()
             val profileUiState by profileViewModel.uiState.collectAsState()
             var showPasswordChangedDialog by remember { mutableStateOf(false) }
+            var passwordChangedDismissStarted by remember { mutableStateOf(false) }
+            val scope = rememberCoroutineScope()
+
+            fun dismissPasswordChangedDialog() {
+                if (passwordChangedDismissStarted) return
+                passwordChangedDismissStarted = true
+                showPasswordChangedDialog = false
+                scope.launch {
+                    delay(ModalDimDurationMillis.toLong())
+                    navController.popBackStack(Screen.PROFILE_INFO, inclusive = false)
+                }
+            }
 
             profileUiState.errorMessage?.let { message ->
                 Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
@@ -1145,14 +1159,12 @@ fun NavGraph(
                 onBack = { navController.popBackStack() },
                 onConfirmClick = { newPassword ->
                     profileViewModel.changePassword(newPassword) {
+                        passwordChangedDismissStarted = false
                         showPasswordChangedDialog = true
                     }
                 },
                 showCompletionDialog = showPasswordChangedDialog,
-                onCompletionConfirm = {
-                    showPasswordChangedDialog = false
-                    navController.popBackStack(Screen.PROFILE_INFO, inclusive = false)
-                },
+                onCompletionConfirm = ::dismissPasswordChangedDialog,
             )
         }
 

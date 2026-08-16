@@ -1,17 +1,17 @@
 package com.talkqquest.app.feature.profile.ui
 
 import android.net.Uri
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
 
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -22,12 +22,18 @@ import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.positionInRoot
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
@@ -56,6 +62,7 @@ import com.talkqquest.app.core.designsystem.White
 import com.talkqquest.app.core.designsystem.component.MenuRippleGroupState
 import com.talkqquest.app.core.designsystem.component.TqAnchoredMenuRow
 import com.talkqquest.app.core.designsystem.component.menuRowTextRippleAnchor
+import com.talkqquest.app.core.designsystem.component.MenuRippleLayer
 import com.talkqquest.app.core.designsystem.component.rememberMenuRippleGroup
 import com.talkqquest.app.core.designsystem.component.rememberMenuRowTextLayoutCallback
 import com.talkqquest.app.core.designsystem.softShadow
@@ -124,11 +131,14 @@ fun ProfileScreen(
     onBadgesClick: () -> Unit = {},
     onRecentMissionClick: () -> Unit = {},
     onArchiveClick: () -> Unit = {},
-) = FitDesign(
-    compensateStatusBar = false,
-    scrollableContentHeight = ProfileScrollableContentHeight,
 ) {
-    Box(
+    var showPhotoPicker by remember { mutableStateOf(false) }
+    Box(Modifier.fillMaxSize()) {
+        FitDesign(
+            compensateStatusBar = false,
+            scrollableContentHeight = ProfileScrollableContentHeight,
+        ) {
+            Box(
         modifier = Modifier
             .fillMaxSize()
             .background(Gray50),
@@ -152,7 +162,7 @@ fun ProfileScreen(
             Image(
                 painter = painterResource(R.drawable.ic_profile_settings),
                 contentDescription = null,
-                modifier = Modifier.size(18.dp),
+                modifier = Modifier.size(24.dp),
             )
         }
 
@@ -160,7 +170,9 @@ fun ProfileScreen(
             nickname = nickname,
             avatarUrl = avatarUrl,
             onEditProfileClick = onEditProfileClick,
-            onAvatarClick = onAvatarClick,
+            onAvatarClick = {
+                showPhotoPicker = true
+            },
             modifier = Modifier
                 .offset(x = 150.5.dp, y = 126.dp)
                 .size(width = 93.dp, height = 172.dp),
@@ -193,6 +205,15 @@ fun ProfileScreen(
                 .offset(x = 16.dp, y = 564.dp)
                 .size(width = 362.dp, height = 151.dp),
         )
+
+            }
+        }
+        // FitDesign의 902dp 스크롤 콘텐츠 밖 viewport에만 picker를 배치한다.
+        ProfilePhotoPickerSheet(
+            visible = showPhotoPicker,
+            onDismiss = { showPhotoPicker = false },
+            onPhotoConfirmed = onAvatarClick,
+        )
     }
 }
 
@@ -201,21 +222,15 @@ private fun ProfileHeader(
     nickname: String,
     avatarUrl: String?,
     onEditProfileClick: () -> Unit,
-    onAvatarClick: (Uri) -> Unit,
+    onAvatarClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val imagePickerLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.GetContent(),
-    ) { uri ->
-        if (uri != null) onAvatarClick(uri)
-    }
-
     Box(modifier = modifier) {
         AvatarImage(
             avatarUrl = avatarUrl,
             modifier = Modifier
                 .size(93.dp)
-                .profileCircleClick { imagePickerLauncher.launch("image/*") },
+                .profileCircleClick(onClick = onAvatarClick),
         )
         Text(
             text = "$nickname 님",
@@ -312,12 +327,13 @@ private fun LevelCard(
                 .size(width = 23.dp, height = 22.dp),
         )
         Text(
-            text = "$xp /${nextLevelXp}XP",
+            text = "$xp / $nextLevelXp XP",
             style = LabelMediumStyle,
             color = Gray400,
+            textAlign = TextAlign.End,
             modifier = Modifier
-                .offset(x = 279.dp, y = 41.dp)
-                .size(width = 67.dp, height = 22.dp),
+                .offset(x = 236.dp, y = 41.dp)
+                .size(width = 110.dp, height = 22.dp),
         )
         Box(
             modifier = Modifier
@@ -348,14 +364,15 @@ private fun WeeklyMissionCard(
         Row(
             modifier = Modifier
                 .offset(x = 16.dp, y = 12.dp)
-                .size(width = 178.dp, height = 25.dp),
+                .height(25.dp),
             verticalAlignment = Alignment.Bottom,
+            horizontalArrangement = Arrangement.spacedBy(2.dp),
         ) {
             Text(
                 text = "이번 주 연속 미션",
                 style = BodyLargeMediumStyle,
                 color = Gray800,
-                modifier = Modifier.size(width = 149.dp, height = 24.dp),
+                modifier = Modifier.height(24.dp),
             )
             Image(
                 painter = painterResource(R.drawable.ic_profile_fire),
@@ -412,28 +429,18 @@ private fun CheckCircle(
     completed: Boolean,
     modifier: Modifier = Modifier,
 ) {
-    Box(
-        modifier = modifier
-            .clip(CircleShape)
-            .background(if (completed) Primary600 else Gray100),
-        contentAlignment = Alignment.Center,
-    ) {
-        if (completed) {
-            Canvas(modifier = Modifier.size(15.dp)) {
-                drawLine(
-                    color = Primary50,
-                    start = Offset(size.width * 0.08f, size.height * 0.52f),
-                    end = Offset(size.width * 0.4f, size.height * 0.82f),
-                    strokeWidth = 2.dp.toPx(),
-                )
-                drawLine(
-                    color = Primary50,
-                    start = Offset(size.width * 0.4f, size.height * 0.82f),
-                    end = Offset(size.width * 0.94f, size.height * 0.18f),
-                    strokeWidth = 2.dp.toPx(),
-                )
-            }
-        }
+    if (completed) {
+        Image(
+            painter = painterResource(R.drawable.ic_mission_day_checked),
+            contentDescription = null,
+            modifier = modifier,
+        )
+    } else {
+        Box(
+            modifier = modifier
+                .clip(CircleShape)
+                .background(Gray100),
+        )
     }
 }
 
@@ -445,8 +452,14 @@ private fun ProfileMenuCard(
     onArchiveClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    ProfileCard(modifier = modifier) {
-        val menuGroup = rememberMenuRippleGroup()
+    val menuGroup = rememberMenuRippleGroup()
+    ProfileCard(
+        modifier = modifier.onGloballyPositioned {
+            val top = it.positionInRoot().y
+            menuGroup.setEdges(top, top + it.size.height, fillFirst = true, fillLast = true)
+        },
+    ) {
+        MenuRippleLayer(menuGroup, Modifier.matchParentSize())
         ProfileMenuRow(
             title = "획득한 배지",
             trailing = badgeCount.toString(),

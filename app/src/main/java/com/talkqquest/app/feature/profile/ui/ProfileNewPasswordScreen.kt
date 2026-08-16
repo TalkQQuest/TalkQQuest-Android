@@ -152,7 +152,7 @@ private fun ProfileNewPasswordCompleteDialog(
     visible: Boolean,
     onConfirmClick: () -> Unit,
 ) {
-    ModalDimOverlay(visible = visible)
+    ModalDimOverlay(visible = visible, onDismiss = onConfirmClick)
     androidx.compose.animation.AnimatedVisibility(visible, enter = modalCardEnter(), exit = modalCardExit()) {
     Box(modifier = Modifier.fillMaxSize()) {
         Box(

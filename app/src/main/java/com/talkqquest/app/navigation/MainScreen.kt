@@ -113,7 +113,7 @@ fun MainScreen(
         var splashSettled by remember { mutableStateOf(false) }
         LaunchedEffect(currentRoute) {
             if (!splashSettled && currentRoute != null && currentRoute != Screen.SPLASH) {
-                delay(300) // 스플래시→홈 크로스페이드(~300ms)가 끝날 때까지 대기
+                delay(NavigationMotion.DurationMillis.toLong()) // 스플래시→홈 크로스페이드(~300ms)가 끝날 때까지 대기
                 splashSettled = true
             }
         }

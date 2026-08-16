@@ -15,6 +15,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -34,11 +35,17 @@ import com.talkqquest.app.core.designsystem.TqType
 
 @Composable
 fun SignupEmailScreen(
+    isSending: Boolean = false,
     onBack: () -> Unit = {},
     onSendClick: (String) -> Unit = {},
 ) = FitDesign(compensateStatusBar = false) {
     var email by remember { mutableStateOf("") }
+    var sendRequested by remember { mutableStateOf(false) }
     val backButtonTop = if (email.isBlank()) 48.dp else 50.dp
+
+    LaunchedEffect(isSending) {
+        if (!isSending) sendRequested = false
+    }
 
     Box(
         modifier = Modifier
@@ -79,7 +86,14 @@ fun SignupEmailScreen(
             placeholder = "Talkqquest1234@gmail.com",
             onValueChange = { email = it },
             actionText = "전송",
-            onActionClick = { onSendClick(email) },
+            actionEnabled = !(email.isNotBlank() && (isSending || sendRequested)),
+            onActionClick = sendClick@{
+                if (email.isNotBlank()) {
+                    if (isSending || sendRequested) return@sendClick
+                    sendRequested = true
+                }
+                onSendClick(email)
+            },
             keyboardType = KeyboardType.Email,
             modifier = Modifier
                 .fillMaxWidth()

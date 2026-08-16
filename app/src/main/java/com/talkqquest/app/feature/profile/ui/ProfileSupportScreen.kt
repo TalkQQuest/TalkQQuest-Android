@@ -18,6 +18,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.positionInRoot
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -30,6 +32,7 @@ import com.talkqquest.app.core.designsystem.TalkQQuestTheme
 import com.talkqquest.app.core.designsystem.TqType
 import com.talkqquest.app.core.designsystem.White
 import com.talkqquest.app.core.designsystem.component.MenuRippleGroupState
+import com.talkqquest.app.core.designsystem.component.MenuRippleLayer
 import com.talkqquest.app.core.designsystem.component.TqAnchoredMenuRow
 import com.talkqquest.app.core.designsystem.component.menuRowTextRippleAnchor
 import com.talkqquest.app.core.designsystem.component.rememberMenuRippleGroup
@@ -54,6 +57,7 @@ fun ProfileSupportScreen(
                 .offset(x = 20.dp, y = 111.dp)
                 .size(width = 152.dp, height = 28.dp),
         )
+        val supportGroup = rememberMenuRippleGroup()
         Box(
             modifier = Modifier
                 .offset(x = 16.dp, y = 155.dp)
@@ -65,8 +69,13 @@ fun ProfileSupportScreen(
                     cornerRadius = 16.dp,
                 )
                 .clip(RoundedCornerShape(16.dp))
-                .background(White),
+                .background(White)
+                .onGloballyPositioned {
+                    val top = it.positionInRoot().y
+                    supportGroup.setEdges(top, top + it.size.height, fillFirst = false, fillLast = true)
+                },
         ) {
+            MenuRippleLayer(supportGroup, Modifier.matchParentSize())
             Text(
                 text = "고객 지원",
                 style = TqType.BodyM,
@@ -75,7 +84,6 @@ fun ProfileSupportScreen(
                     .offset(x = 16.dp, y = 12.dp)
                     .size(width = 330.dp, height = 22.dp),
             )
-            val supportGroup = rememberMenuRippleGroup()
             SupportRow(
                 title = "자주 묻는 질문",
                 modifier = Modifier

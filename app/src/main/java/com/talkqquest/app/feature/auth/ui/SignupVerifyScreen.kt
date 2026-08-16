@@ -2,18 +2,21 @@ package com.talkqquest.app.feature.auth.ui
 
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.core.FastOutSlowInEasing
-import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.ime
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -29,13 +32,19 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
@@ -50,15 +59,19 @@ import com.talkqquest.app.core.designsystem.Gray500
 import com.talkqquest.app.core.designsystem.Gray700
 import com.talkqquest.app.core.designsystem.Gray800
 import com.talkqquest.app.core.designsystem.ModalDimDurationMillis
-import com.talkqquest.app.core.designsystem.ModalDimOverlay
+import com.talkqquest.app.core.designsystem.ModalDimColor
+import com.talkqquest.app.core.designsystem.ModalSystemBars
 import com.talkqquest.app.core.designsystem.Primary500
 import com.talkqquest.app.core.designsystem.TalkQQuestTheme
 import com.talkqquest.app.core.designsystem.TqType
 import com.talkqquest.app.core.designsystem.White
 import kotlinx.coroutines.delay
+import java.util.concurrent.atomic.AtomicBoolean
 
 private val VerificationCodeError = Color(0xFFF76161)
 private const val EmailVerificationDurationSeconds = 5 * 60
+// Figma Frame 250: sheet top (424) to keyboard top inside the sheet (135).
+private val VerificationSheetVisibleAboveIme = 135.dp
 
 @Composable
 fun SignupVerifyScreen(
@@ -72,33 +85,42 @@ fun SignupVerifyScreen(
 ) = FitDesign(compensateStatusBar = false) {
     var code by remember { mutableStateOf("") }
     var remainingSeconds by remember { mutableStateOf(EmailVerificationDurationSeconds) }
-    var dimVisible by remember { mutableStateOf(false) }
-    var sheetVisible by remember { mutableStateOf(false) }
     var isClosing by remember { mutableStateOf(false) }
     var closeAction by remember { mutableStateOf<(() -> Unit)?>(null) }
+    val dismissStarted = remember { AtomicBoolean(false) }
+    val modalProgress = remember { Animatable(0f) }
     val timerText = "${remainingSeconds / 60}:${(remainingSeconds % 60).toString().padStart(2, '0')}"
-    val sheetOffset by animateDpAsState(
-        targetValue = if (sheetVisible) 0.dp else 428.dp,
-        animationSpec = tween(ModalDimDurationMillis, easing = FastOutSlowInEasing),
-        label = "signupVerifySheetOffset",
-    )
+    val modalAnimation = tween<Float>(ModalDimDurationMillis, easing = FastOutSlowInEasing)
+    val sheetY = 424.dp + 428.dp * (1f - modalProgress.value)
+    var contentRootWindowY by remember { mutableFloatStateOf(Float.NaN) }
+    val density = LocalDensity.current
+    val decorView = LocalView.current.rootView
+    val imeBottomPx = WindowInsets.ime.getBottom(density)
+    val baseSheetTopWindowPx = with(density) { contentRootWindowY + 424.dp.toPx() }
+    val requiredVisiblePx = with(density) { VerificationSheetVisibleAboveIme.toPx() }
+    val keyboardTopWindowPx = decorView.height - imeBottomPx
+    val imeLiftPx = if (imeBottomPx > 0 && !contentRootWindowY.isNaN()) {
+        // Do not let the sheet cross above the FitDesign content root on very small screens.
+        (baseSheetTopWindowPx + requiredVisiblePx - keyboardTopWindowPx)
+            .coerceAtLeast(0f)
+            .coerceAtMost(baseSheetTopWindowPx - contentRootWindowY)
+    } else {
+        0f
+    }
 
     fun dismiss(afterDismiss: () -> Unit) {
-        if (isClosing) return
+        if (!dismissStarted.compareAndSet(false, true)) return
         isClosing = true
-        dimVisible = false
-        sheetVisible = false
         closeAction = afterDismiss
     }
 
     LaunchedEffect(Unit) {
-        dimVisible = true
-        sheetVisible = true
+        modalProgress.animateTo(1f, modalAnimation)
     }
 
     LaunchedEffect(isClosing) {
         if (!isClosing) return@LaunchedEffect
-        delay(ModalDimDurationMillis.toLong())
+        modalProgress.animateTo(0f, modalAnimation)
         closeAction?.invoke()
     }
 
@@ -121,7 +143,10 @@ fun SignupVerifyScreen(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(Gray50),
+            .background(Gray50)
+            .onGloballyPositioned { coordinates ->
+                contentRootWindowY = coordinates.localToWindow(Offset.Zero).y
+            },
     ) {
         IconButton(
             onClick = { dismiss(onBack) },
@@ -170,11 +195,23 @@ fun SignupVerifyScreen(
                 .height(88.dp),
         )
 
-        ModalDimOverlay(visible = dimVisible)
+        ModalSystemBars(modalProgress.value)
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(ModalDimColor.copy(alpha = ModalDimColor.alpha * modalProgress.value))
+                .clickable(
+                    interactionSource = remember { MutableInteractionSource() },
+                    indication = null,
+                    onClick = { dismiss(onBack) },
+                ),
+        )
 
         Box(
             modifier = Modifier
-                .offset(y = 424.dp + sheetOffset)
+                .offset(y = sheetY)
+                // Keep the entry animation hidden at 852dp; apply IME correction only as it enters.
+                .graphicsLayer { translationY = -imeLiftPx * modalProgress.value }
                 .fillMaxWidth()
                 .height(428.dp)
                 .clip(RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp))

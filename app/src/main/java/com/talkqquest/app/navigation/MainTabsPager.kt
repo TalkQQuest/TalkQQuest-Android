@@ -4,7 +4,6 @@ import android.net.Uri
 import android.widget.Toast
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedContentTransitionScope
-import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.layout.fillMaxSize
@@ -24,7 +23,6 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.unit.IntOffset
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavBackStackEntry
 import androidx.navigation.NavHostController
@@ -41,7 +39,6 @@ import com.talkqquest.app.feature.profile.ui.ProfileBadgesScreen
 import com.talkqquest.app.feature.profile.ui.ProfileBadgeUi
 import com.talkqquest.app.feature.profile.viewmodel.ProfileViewModel
 import com.talkqquest.app.feature.profile.data.toProfileImagePart
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 // 하단 탭 4개(홈, 미션, 보관함, 프로필)를 HorizontalPager로 묶어 스와이프 가능한 탭 화면을 구성한다.
@@ -81,6 +78,7 @@ fun MainTabsPager(
     val tabFlingBehavior = PagerDefaults.flingBehavior(
         state = pagerState,
         snapPositionalThreshold = 0.25f,
+        snapAnimationSpec = NavigationMotion.floatSpec,
     )
     val homePage = BottomNavItem.entries.indexOf(BottomNavItem.Home)
     val archivePage = BottomNavItem.entries.indexOf(BottomNavItem.Archive)
@@ -90,7 +88,7 @@ fun MainTabsPager(
     }
     val returnFromHomeBadgeCollection: () -> Unit = {
         pagerScope.launch {
-            pagerState.animateScrollToPage(homePage)
+            pagerState.animateScrollToPage(homePage, animationSpec = NavigationMotion.floatSpec)
             showHomeBadgeCollection = false
             if (badgeReplayPending) {
                 badgeReplayPending = false
@@ -147,7 +145,7 @@ fun MainTabsPager(
                 onBadgeCollectionClick = {
                     showHomeBadgeCollection = true
                     pagerScope.launch {
-                        pagerState.animateScrollToPage(profilePage)
+                        pagerState.animateScrollToPage(profilePage, animationSpec = NavigationMotion.floatSpec)
                         // 홈이 화면 밖으로 나간 뒤 돌아올 때 XP 애니메이션을 다시 준비한다.
                         animateHomeXpFromZero = true
                         homeExitResetToken++
@@ -165,7 +163,7 @@ fun MainTabsPager(
                 onHomeBadgeCollectionBack = returnFromHomeBadgeCollection,
                 onArchiveClick = {
                     pagerScope.launch {
-                        pagerState.animateScrollToPage(archivePage)
+                        pagerState.animateScrollToPage(archivePage, animationSpec = NavigationMotion.floatSpec)
                     }
                 },
             )
@@ -186,7 +184,6 @@ private fun HomeTab(
     onShowWeeklyReportModal: (String?) -> Unit,
     onModalSheetChange: (Boolean) -> Unit,
 ) {
-    val homeScope = rememberCoroutineScope()
     HomeScreen(
         resumeAnimationTrigger = resumeAnimationTrigger,
         xpResetToken = xpResetToken,
@@ -201,13 +198,9 @@ private fun HomeTab(
             onHomeDetailExit()
             navController.navigate(Screen.MISSION_LIST_HOME)
         },
-        // 알림 아이콘 ripple이 먼저 보인 뒤 화면이 전환되도록 짧게 지연한다.
         onNotificationClick = {
-            homeScope.launch {
-                delay(140)
-                onHomeDetailExit()
-                navController.navigate(Screen.NOTIFICATION)
-            }
+            onHomeDetailExit()
+            navController.navigate(Screen.NOTIFICATION)
         },
         onShowWeeklyReportModal = onShowWeeklyReportModal,
         onBadgeCollectionClick = onBadgeCollectionClick,

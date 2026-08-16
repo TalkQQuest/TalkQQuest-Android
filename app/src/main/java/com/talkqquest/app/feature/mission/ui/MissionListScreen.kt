@@ -77,6 +77,7 @@ import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.talkqquest.app.core.designsystem.Error
 import com.talkqquest.app.core.designsystem.FitDesign
+import com.talkqquest.app.core.designsystem.component.rememberHapticTick
 import com.talkqquest.app.core.designsystem.Gray1000
 import com.talkqquest.app.core.designsystem.Gray50
 import com.talkqquest.app.core.designsystem.Gray500
@@ -396,6 +397,7 @@ private fun MissionFilterChips(
     selectedFilter: String,
     onFilterSelect: (String) -> Unit,
 ) {
+    val tick = rememberHapticTick()
     var bounds by remember { mutableStateOf<Map<String, Pair<IntOffset, IntSize>>>(emptyMap()) }
     var parentOffset by remember { mutableStateOf(IntOffset.Zero) }
     var hasMovedSelection by remember { mutableStateOf(false) }
@@ -465,7 +467,10 @@ private fun MissionFilterChips(
                     selected = filter == selectedFilter,
                     selectionOverlay = true,
                     onClick = {
-                        if (filter != selectedFilter) hasMovedSelection = true
+                        if (filter != selectedFilter) {
+                            tick()
+                            hasMovedSelection = true
+                        }
                         onFilterSelect(filter)
                     },
                     modifier = Modifier.onGloballyPositioned { coordinates ->

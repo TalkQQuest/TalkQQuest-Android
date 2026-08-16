@@ -165,8 +165,10 @@ fun SlidingChipRow(
                                 interactionSource = remember { MutableInteractionSource() },
                                 indication = null,
                             ) {
-                                tick()
-                                if (selectedIndex != null && selectedIndex != i) moved = true
+                                if (selectedIndex != i) {
+                                    tick()
+                                    if (selectedIndex != null) moved = true
+                                }
                                 onSelect(i)
                             }
                             .padding(horizontal = 18.dp),

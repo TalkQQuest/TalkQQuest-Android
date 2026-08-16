@@ -19,8 +19,6 @@ import androidx.compose.animation.core.tween
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
-import androidx.compose.animation.scaleIn
-import androidx.compose.animation.scaleOut
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.animation.togetherWith
@@ -120,6 +118,8 @@ import com.talkqquest.app.core.designsystem.Gray900
 import com.talkqquest.app.core.designsystem.LocalDesignScale
 import com.talkqquest.app.core.designsystem.LocalStatusBarCompensation
 import com.talkqquest.app.core.designsystem.ModalDimOverlay
+import com.talkqquest.app.core.designsystem.modalCardEnter
+import com.talkqquest.app.core.designsystem.modalCardExit
 import com.talkqquest.app.core.designsystem.Primary600
 import com.talkqquest.app.core.designsystem.TalkQQuestTheme
 import com.talkqquest.app.core.designsystem.TqType
@@ -275,15 +275,13 @@ private fun ConversationScreen(
         //   메인 콘텐츠와 같은 프레임에 두면 CSS top 313이 다른 요소들과 동일 규칙으로 맞음.
         ModalDimOverlay(
             visible = uiState.showCompleteDialog || uiState.showLeaveDialog,
-            onDismiss = if (uiState.showCompleteDialog) onCompleteDismiss else onLeaveDismiss,
             modifier = Modifier.coverStatusBarCompensation(LocalStatusBarCompensation.current),
+            onDismiss = if (uiState.showCompleteDialog) onCompleteDismiss else onLeaveDismiss,
         )
         AnimatedVisibility(
             visible = uiState.showCompleteDialog,
-            enter = fadeIn(tween(360, easing = FastOutSlowInEasing)) +
-                scaleIn(initialScale = 0.86f, animationSpec = tween(360, easing = FastOutSlowInEasing)),
-            exit = fadeOut(tween(360, easing = FastOutSlowInEasing)) +
-                scaleOut(targetScale = 0.86f, animationSpec = tween(360, easing = FastOutSlowInEasing)),
+            enter = modalCardEnter(),
+            exit = modalCardExit(),
         ) {
             // CSS "대화 종료 팝업(완료 버튼)" — 헤더 "대화 완료"에서 열림
             ConversationConfirmDialog(
@@ -297,10 +295,8 @@ private fun ConversationScreen(
         }
         AnimatedVisibility(
             visible = uiState.showLeaveDialog,
-            enter = fadeIn(tween(360, easing = FastOutSlowInEasing)) +
-                scaleIn(initialScale = 0.86f, animationSpec = tween(360, easing = FastOutSlowInEasing)),
-            exit = fadeOut(tween(360, easing = FastOutSlowInEasing)) +
-                scaleOut(targetScale = 0.86f, animationSpec = tween(360, easing = FastOutSlowInEasing)),
+            enter = modalCardEnter(),
+            exit = modalCardExit(),
         ) {
             // CSS "대화 이탈 팝업(뒤로가기)" — 헤더 뒤로가기에서 열림. 확인 버튼만 RED
             ConversationConfirmDialog(

@@ -105,7 +105,9 @@ fun TqBottomBar(
             if (onShell) {
                 // 이미 페이저 위: 탭도 애니메이션 슬라이드로(네비게이션 없이 페이지만 이동).
                 if (page >= 0 && page != pagerState.currentPage) {
-                    scope.launch { pagerState.animateScrollToPage(page) }
+                    scope.launch {
+                        pagerState.animateScrollToPage(page, animationSpec = NavigationMotion.floatSpec)
+                    }
                 }
             } else {
                 // 상세 화면에서 탭을 누르면 해당 탭의 시작 화면으로 복귀.

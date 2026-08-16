@@ -28,7 +28,10 @@ fun TqChip(
     val tick = rememberHapticTick()
 
     Surface(
-        onClick = { tick(); onClick() },
+        onClick = {
+            if (!selected) tick()
+            onClick()
+        },
         modifier = modifier.height(40.dp),
         shape = RoundedCornerShape(20.dp),
         color = if (selected) Primary600 else White,

@@ -8,6 +8,7 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -19,7 +20,6 @@ import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
@@ -32,10 +32,13 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.positionInParent
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import com.talkqquest.app.R
 import com.talkqquest.app.core.designsystem.Gray700
@@ -43,6 +46,7 @@ import com.talkqquest.app.core.designsystem.Gray900
 import com.talkqquest.app.core.designsystem.TalkQQuestTheme
 import com.talkqquest.app.core.designsystem.TqType
 import com.talkqquest.app.core.designsystem.component.TqSaveSheetScaffold
+import com.talkqquest.app.core.designsystem.component.ContentAnchoredPillRipple
 import com.talkqquest.app.feature.mission.data.model.MissionListItem
 import kotlinx.coroutines.delay
 
@@ -134,31 +138,55 @@ private fun MissionSaveSheetContent(
         ) {
             Column {
                 Spacer(Modifier.height(12.dp)) // 묶음 간격 (CSS Frame 457 gap — 섹션과 함께 접히게 안쪽에)
-                Row(
-                    modifier = Modifier
-                        // CSS Frame 447의 "보관함" 텍스트 margin 0 -6px 중 왼쪽 몫은 적용하지 않는다.
-                        // 그대로 두면 제목만 저장됨/카드(x=16)보다 6 왼쪽으로 튀어나온다.
-                        // 프레임 폭도 선언 80 ↔ 계산 74(42-12+44)로 어긋나 의도치 않은 값 —
-                        // 디자이너 합의로 제거(문장·리포트 시트도 동일 처리).
-                        .clip(RoundedCornerShape(12.dp))
-                        .clickable(onClick = onSavedListClick),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    // "저장 목록" → "보관함" (디자인 변경 2026-07: 저장 목록 명칭을 보관함으로 통일)
-                    Text(text = "보관함", style = TqType.BodyL.figma(), color = Gray700)
-                    // 바로가기 아이콘 (피그마 바로가기.svg 8x14 전사, Gray500) — 44 터치영역.
-                    // 아이콘·제목행 전체 어디를 눌러도 저장 목록으로 진입(디자인 명시).
-                    Box(
+                val archiveInteractionSource = remember { MutableInteractionSource() }
+                val archiveTextStyle = TqType.BodyL.figma()
+                var archiveContentPos by remember { mutableStateOf(Offset.Zero) }
+                var archiveContentSize by remember { mutableStateOf(IntSize.Zero) }
+                Box {
+                    ContentAnchoredPillRipple(
+                        archiveContentPos,
+                        archiveContentSize,
+                        archiveInteractionSource,
+                        verticalPadding = 0.dp,
+                        trailingLayoutWidthToExclude = 24.dp,
+                    )
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
                         modifier = Modifier
-                            .offset(x = (-6).dp) // margin 0 -6px의 오른쪽 몫
-                            .size(44.dp),
-                        contentAlignment = Alignment.Center,
+                            // CSS Frame 447의 "보관함" 텍스트 margin 0 -6px 중 왼쪽 몫은 적용하지 않는다.
+                            // 그대로 두면 제목만 저장됨/카드(x=16)보다 6 왼쪽으로 튀어나온다.
+                            // 프레임 폭도 선언 80 ↔ 계산 74(42-12+44)로 어긋나 의도치 않은 값 —
+                            // 디자이너 합의로 제거(문장·리포트 시트도 동일 처리).
+                            .onGloballyPositioned {
+                                archiveContentPos = it.positionInParent()
+                                archiveContentSize = it.size
+                            }
+                            .clickable(
+                                interactionSource = archiveInteractionSource,
+                                indication = null,
+                                onClick = onSavedListClick,
+                            ),
                     ) {
-                        Icon(
-                            painter = painterResource(R.drawable.ic_mission_shortcut),
-                            contentDescription = "저장 목록 열기",
-                            tint = Color.Unspecified, // 벡터에 색 포함(Gray500)
+                        // "저장 목록" → "보관함" (디자인 변경 2026-07: 저장 목록 명칭을 보관함으로 통일)
+                        Text(
+                            text = "보관함",
+                            style = archiveTextStyle,
+                            color = Gray700,
                         )
+                        // 바로가기 아이콘 (피그마 바로가기.svg 8x14 전사, Gray500) — 44 터치영역.
+                        // 아이콘·제목행 전체 어디를 눌러도 저장 목록으로 진입(디자인 명시).
+                        Box(
+                            modifier = Modifier
+                                .offset(x = (-6).dp) // margin 0 -6px의 오른쪽 몫
+                                .size(44.dp),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            Icon(
+                                painter = painterResource(R.drawable.ic_mission_shortcut),
+                                contentDescription = "저장 목록 열기",
+                                tint = Color.Unspecified, // 벡터에 색 포함(Gray500)
+                            )
+                        }
                     }
                 }
                 Spacer(Modifier.height(8.dp)) // 제목 ↔ 카드 (CSS gap 8)

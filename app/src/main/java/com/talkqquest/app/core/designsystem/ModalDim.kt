@@ -41,8 +41,8 @@ fun modalCardExit(): ExitTransition = modalDimExit() + scaleOut(targetScale = 0.
 @Composable
 fun ModalDimOverlay(
     visible: Boolean,
-    onDismiss: (() -> Unit)? = null,
     modifier: Modifier = Modifier,
+    onDismiss: (() -> Unit)? = null,
 ) {
     ModalSystemBars(visible)
     AnimatedVisibility(visible = visible, enter = modalDimEnter(), exit = modalDimExit(), modifier = modifier) {
@@ -50,12 +50,10 @@ fun ModalDimOverlay(
             modifier = Modifier
                 .fillMaxSize()
                 .background(ModalDimColor)
-                .then(
-                    if (onDismiss == null) Modifier else Modifier.clickable(
-                        interactionSource = remember { MutableInteractionSource() },
-                        indication = null,
-                        onClick = onDismiss,
-                    ),
+                .clickable(
+                    interactionSource = remember { MutableInteractionSource() },
+                    indication = null,
+                    onClick = { onDismiss?.invoke() },
                 ),
         )
     }

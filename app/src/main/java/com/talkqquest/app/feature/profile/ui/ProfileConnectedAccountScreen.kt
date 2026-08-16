@@ -6,14 +6,19 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.text.style.LineHeightStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -26,6 +31,15 @@ import com.talkqquest.app.core.designsystem.Primary600
 import com.talkqquest.app.core.designsystem.TalkQQuestTheme
 import com.talkqquest.app.core.designsystem.TqType
 import com.talkqquest.app.core.designsystem.White
+
+private val ConnectedAccountFullLeading = LineHeightStyle(
+    alignment = LineHeightStyle.Alignment.Center,
+    trim = LineHeightStyle.Trim.None,
+)
+
+private fun TextStyle.withConnectedAccountFullLeading(): TextStyle = copy(
+    lineHeightStyle = ConnectedAccountFullLeading,
+)
 
 @Composable
 fun ProfileConnectedAccountScreen(
@@ -50,7 +64,7 @@ fun ProfileConnectedAccountScreen(
             Spacer(Modifier.size(width = 16.dp, height = 1.dp))
             Text(
                 text = "연결된 계정",
-                style = TqType.BodyL,
+                style = TqType.BodyL.withConnectedAccountFullLeading(),
                 color = Gray800,
                 modifier = Modifier.size(width = 74.dp, height = 24.dp),
             )
@@ -61,9 +75,14 @@ fun ProfileConnectedAccountScreen(
             ) {
                 Text(
                     text = connectedAccount,
-                    style = TqType.BodyL,
+                    style = TqType.BodyL.withConnectedAccountFullLeading(),
                     color = Gray500,
-                    modifier = Modifier.size(width = 163.dp, height = 24.dp),
+                    modifier = Modifier
+                        .height(24.dp)
+                        .widthIn(max = 231.dp),
+                    maxLines = 1,
+                    softWrap = false,
+                    overflow = TextOverflow.Ellipsis,
                 )
             }
         }
@@ -107,7 +126,6 @@ private fun ProfileConnectedAccountScreenPreview() {
         ProfileConnectedAccountScreen()
     }
 }
-
 
 
 

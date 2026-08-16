@@ -1,7 +1,9 @@
 ﻿package com.talkqquest.app.feature.profile.ui
 
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -28,9 +30,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import com.talkqquest.app.R
 import com.talkqquest.app.core.designsystem.FitDesign
 import com.talkqquest.app.core.designsystem.Gray200
 import com.talkqquest.app.core.designsystem.Gray50
@@ -97,21 +101,25 @@ fun ProfileWithdrawScreen(
             modifier = Modifier
                 .offset(x = 16.dp, y = 415.dp)
                 .size(width = 361.dp, height = 26.dp)
-                .profileItemClick { agreed = !agreed },
+                .clickable(
+                    interactionSource = remember { MutableInteractionSource() },
+                    indication = null,
+                    onClick = { agreed = !agreed },
+                ),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Box(
-                modifier = Modifier
-                    .size(26.dp)
-                    .clip(CircleShape)
-                    .background(if (agreed) Color(0xFFFF4A4A) else Gray200),
-                contentAlignment = Alignment.Center,
-            ) {
-                Icon(
-                    imageVector = Icons.Default.Check,
+            if (agreed) {
+                Image(
+                    painter = painterResource(R.drawable.ic_withdraw_checked),
                     contentDescription = null,
-                    tint = if (agreed) White else Gray500,
-                    modifier = Modifier.size(18.dp),
+                    modifier = Modifier.size(26.dp),
+                )
+            } else {
+                Box(
+                    modifier = Modifier
+                        .size(26.dp)
+                        .clip(CircleShape)
+                        .background(Gray200),
                 )
             }
             Spacer(Modifier.size(width = 8.dp, height = 1.dp))
@@ -248,8 +256,6 @@ private fun ProfileWithdrawScreenPreview() {
         ProfileWithdrawScreen()
     }
 }
-
-
 
 
 

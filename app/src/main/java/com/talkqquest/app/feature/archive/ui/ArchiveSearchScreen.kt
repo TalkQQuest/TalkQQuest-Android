@@ -4,6 +4,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -14,6 +15,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
@@ -69,6 +71,11 @@ import com.talkqquest.app.core.designsystem.TqType
 import com.talkqquest.app.core.designsystem.White
 import com.talkqquest.app.core.designsystem.component.SlidingChipRow
 import com.talkqquest.app.core.designsystem.component.rememberHapticTick
+import com.talkqquest.app.core.designsystem.component.TextAnchoredPillRipple
+import com.talkqquest.app.core.designsystem.component.rememberTextPillRippleBounds
+import com.talkqquest.app.core.designsystem.component.rememberTextPillRippleGlyphBounds
+import com.talkqquest.app.core.designsystem.component.rememberTextPillRippleGlyphBoundsUpdater
+import com.talkqquest.app.core.designsystem.component.textPillRippleAnchor
 
 import com.talkqquest.app.feature.archive.viewmodel.ActivityType
 import com.talkqquest.app.feature.archive.viewmodel.ArchiveSearchUiState
@@ -170,11 +177,13 @@ private fun ArchiveSearchScreenContent(
                 // ==========================================
                 // [상단 헤더 영역]
                 // ==========================================
+                val headerBounds = rememberTextPillRippleBounds()
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(top = 8.dp)
                         .height(44.dp)
+                        .textPillRippleAnchor(headerBounds)
                 ) {
                     Box(
                         modifier = Modifier
@@ -200,17 +209,44 @@ private fun ArchiveSearchScreenContent(
                     )
 
                     if (!uiState.showResults) {
+                        val resetInteractionSource = remember { MutableInteractionSource() }
+                        val resetTextStyle = TqType.BodyL.figma()
+                        val resetTextBounds = rememberTextPillRippleBounds()
+                        val resetGlyphBounds = rememberTextPillRippleGlyphBounds()
+                        val resetOnTextLayout = rememberTextPillRippleGlyphBoundsUpdater(
+                            resetGlyphBounds,
+                            "초기화",
+                            resetTextStyle,
+                        )
                         Box(
                             modifier = Modifier
-                                .padding(end = 10.dp)
-                                .size(width = 44.dp, height = 44.dp)
-                                .align(Alignment.CenterEnd)
+                                .align(Alignment.TopStart)
+                                .offset(x = 332.dp)
+                                .size(width = 42.dp, height = 44.dp)
                                 .clip(CircleShape)
-                                .clickable { onResetClick() },
+                                .clickable(
+                                    interactionSource = resetInteractionSource,
+                                    indication = null,
+                                ) { onResetClick() },
                             contentAlignment = Alignment.Center
                         ) {
-                            Text(text = "초기화", style = TqType.BodyL.figma(), color = Gray600)
+                            Text(
+                                text = "초기화",
+                                style = resetTextStyle,
+                                color = Gray600,
+                                onTextLayout = resetOnTextLayout,
+                                modifier = Modifier.textPillRippleAnchor(resetTextBounds),
+                            )
                         }
+
+                        TextAnchoredPillRipple(
+                            bounds = resetTextBounds.value,
+                            glyphBounds = resetGlyphBounds.value,
+                            parentPositionInRoot = headerBounds.value?.positionInRoot,
+                            interactionSource = resetInteractionSource,
+                            horizontalInset = 12.dp,
+                            verticalInset = 10.dp,
+                        )
                     }
                 }
 

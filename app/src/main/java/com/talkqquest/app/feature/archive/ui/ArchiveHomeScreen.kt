@@ -3,7 +3,6 @@ package com.talkqquest.app.feature.archive.ui
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.indication
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -16,11 +15,11 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
-import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -28,20 +27,25 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
-import androidx.compose.material3.ripple
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.positionInParent
 import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.LineHeightStyle
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.Lifecycle
@@ -56,6 +60,7 @@ import com.talkqquest.app.core.designsystem.Gray700
 import com.talkqquest.app.core.designsystem.Primary600
 import com.talkqquest.app.core.designsystem.TalkQQuestTheme
 import com.talkqquest.app.core.designsystem.TqType
+import com.talkqquest.app.core.designsystem.component.ContentAnchoredPillRipple
 import com.talkqquest.app.feature.archive.viewmodel.ActivityType
 import com.talkqquest.app.feature.archive.viewmodel.ArchiveHomeUiState
 import com.talkqquest.app.feature.archive.viewmodel.ArchiveHomeViewModel
@@ -145,40 +150,44 @@ private fun ArchiveHomeScreen(
                         verticalArrangement = Arrangement.spacedBy(2.dp)
                     ) {
                         val archiveInteractionSource = remember { MutableInteractionSource() }
+                        val archiveTextStyle = TqType.TitleL.figma()
+                        var archiveContentPos by remember { mutableStateOf(Offset.Zero) }
+                        var archiveContentSize by remember { mutableStateOf(IntSize.Zero) }
                         Box(
                             modifier = Modifier
-                                .size(width = 79.dp, height = 32.dp)
-                                .clickable(
-                                    interactionSource = archiveInteractionSource,
-                                    indication = null,
-                                    onClick = onArchiveBoxClick,
-                                )
+                                .wrapContentSize(align = Alignment.TopStart)
                         ) {
-                            Box(
-                                modifier = Modifier
-                                    .offset(x = (-16).dp, y = (-6).dp)
-                                    .size(width = 111.dp, height = 44.dp)
-                                    .clip(RoundedCornerShape(22.dp))
-                                    .indication(archiveInteractionSource, ripple(bounded = true)),
+                            ContentAnchoredPillRipple(
+                                archiveContentPos,
+                                archiveContentSize,
+                                archiveInteractionSource,
+                                trailingLayoutWidthToExclude = 7.5.dp,
                             )
-                            Row(verticalAlignment = Alignment.CenterVertically) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                modifier = Modifier
+                                    .onGloballyPositioned {
+                                        archiveContentPos = it.positionInParent()
+                                        archiveContentSize = it.size
+                                    }
+                                    .clickable(
+                                        interactionSource = archiveInteractionSource,
+                                        indication = null,
+                                        onClick = onArchiveBoxClick,
+                                    ),
+                            ) {
                                 Text(
                                     text = "보관함",
-                                    style = TqType.TitleL.figma(),
+                                    style = archiveTextStyle,
                                     color = Gray700,
-                                    modifier = Modifier.width(47.dp)
                                 )
-                                Box(
-                                    modifier = Modifier
-                                        .size(width = 32.dp, height = 30.dp),
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    Icon(
-                                        painter = painterResource(id = R.drawable.ic_forward_chevron),
-                                        contentDescription = "보관함 전체 보기",
-                                        tint = Gray700,
-                                    )
-                                }
+                                Spacer(Modifier.width(2.dp))
+                                Icon(
+                                    painter = painterResource(id = R.drawable.ic_forward_chevron),
+                                    contentDescription = "보관함 전체 보기",
+                                    tint = Gray700,
+                                    modifier = Modifier.size(24.dp)
+                                )
                             }
                         }
 

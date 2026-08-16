@@ -88,6 +88,7 @@ internal fun AuthScreenFrame(
     }
 }
 
+
 @Composable
 internal fun AuthHeadline(text: String, modifier: Modifier = Modifier) {
     Text(
@@ -106,6 +107,7 @@ internal fun AuthInputCard(
     onValueChange: (String) -> Unit,
     actionText: String? = null,
     onActionClick: (() -> Unit)? = null,
+    actionEnabled: Boolean = true,
     keyboardType: KeyboardType = KeyboardType.Text,
     visualTransformation: VisualTransformation = VisualTransformation.None,
     trailing: (@Composable () -> Unit)? = null,
@@ -146,20 +148,31 @@ internal fun AuthInputCard(
             )
         }
         if (actionText != null && onActionClick != null) {
-            SmallAuthButton(text = actionText, onClick = onActionClick, cornerRadius = actionCornerRadius)
+            SmallAuthButton(
+                text = actionText,
+                enabled = actionEnabled,
+                onClick = onActionClick,
+                cornerRadius = actionCornerRadius,
+            )
         }
         trailing?.invoke()
     }
 }
 
 @Composable
-internal fun SmallAuthButton(text: String, onClick: () -> Unit, modifier: Modifier = Modifier, cornerRadius: Dp = 24.dp) {
+internal fun SmallAuthButton(
+    text: String,
+    enabled: Boolean = true,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    cornerRadius: Dp = 24.dp,
+) {
     Box(
         modifier = modifier
             .size(width = 50.dp, height = 28.dp)
             .clip(RoundedCornerShape(cornerRadius))
             .background(Primary600)
-            .clickable(onClick = onClick),
+            .clickable(enabled = enabled, onClick = onClick),
         contentAlignment = Alignment.Center,
     ) {
         Text(text = text, style = TqType.LabelL, color = Gray50)
@@ -236,5 +249,3 @@ private fun RequirementIcon(satisfied: Boolean) {
         }
     }
 }
-
-

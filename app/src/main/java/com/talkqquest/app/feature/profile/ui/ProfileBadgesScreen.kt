@@ -14,6 +14,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.PagerDefaults
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
@@ -53,6 +54,7 @@ import com.talkqquest.app.core.designsystem.Gray700
 import com.talkqquest.app.core.designsystem.Gray800
 import com.talkqquest.app.core.designsystem.Gray900
 import com.talkqquest.app.core.designsystem.ModalDimOverlay
+import com.talkqquest.app.navigation.NavigationMotion
 import com.talkqquest.app.core.designsystem.PretendardFamily
 import com.talkqquest.app.core.designsystem.Primary100
 import com.talkqquest.app.core.designsystem.Primary600
@@ -162,7 +164,9 @@ fun ProfileBadgesScreen(
             pagePosition = pagerState.currentPage + pagerState.currentPageOffsetFraction,
             onSelectTab = {
                 selectedBadge = null
-                scope.launch { pagerState.animateScrollToPage(it) }
+                scope.launch {
+                    pagerState.animateScrollToPage(it, animationSpec = NavigationMotion.floatSpec)
+                }
             },
         )
         HorizontalPager(
@@ -171,6 +175,10 @@ fun ProfileBadgesScreen(
                 .offset(y = 146.dp)
                 .size(width = 393.dp, height = 706.dp)
                 .clipToBounds(),
+            flingBehavior = PagerDefaults.flingBehavior(
+                state = pagerState,
+                snapAnimationSpec = NavigationMotion.floatSpec,
+            ),
         ) { page ->
             val pageBadges = when (page) {
                 1 -> badges.filterNot { it.isEarned }
@@ -220,6 +228,9 @@ private fun BadgesTopBar(onBack: () -> Unit) {
             text = "\uD68D\uB4DD\uD55C \uBC30\uC9C0",
             style = BadgeTitleStyle,
             color = Gray800,
+            maxLines = 1,
+            softWrap = false,
+            overflow = TextOverflow.Visible,
             modifier = Modifier
                 .offset(x = 160.dp, y = 10.dp)
                 .size(width = 74.dp, height = 24.dp),
@@ -314,12 +325,15 @@ private fun BadgeTab(
             .textPillRippleParentPosition(parentPosition),
         contentAlignment = Alignment.TopCenter,
     ) {
-        TextAnchoredPillRipple(textBounds.value, glyphBounds.value, parentPosition.value, interactionSource)
+        TextAnchoredPillRipple(textBounds.value, glyphBounds.value, parentPosition.value, interactionSource, horizontalInset = 12.dp, verticalInset = 10.dp)
         Text(
             text = label,
             style = BadgeTabStyle,
             color = if (selected) Gray800 else Gray400,
             textAlign = TextAlign.Center,
+            maxLines = 1,
+            softWrap = false,
+            overflow = TextOverflow.Visible,
             onTextLayout = onTextLayout,
             modifier = Modifier
                 .size(width = labelWidth, height = 28.dp)
@@ -362,6 +376,9 @@ private fun BadgeNotice(
                 },
                 style = BadgeBodyLargeMediumStyle,
                 color = Gray700,
+                maxLines = 1,
+                softWrap = false,
+                overflow = TextOverflow.Visible,
             )
         }
     }
@@ -419,6 +436,9 @@ private fun BadgeItem(
             style = BadgeBodyLargeMediumStyle,
             color = if (badge.isEarned) Gray900 else Gray500,
             textAlign = TextAlign.Center,
+            maxLines = 1,
+            softWrap = false,
+            overflow = TextOverflow.Visible,
             modifier = Modifier
                 .offset(x = ((100 - badge.labelWidthDp()) / 2f).dp, y = 100.dp)
                 .size(width = labelWidth, height = 24.dp),
@@ -476,6 +496,9 @@ private fun BadgeDetailDialog(
             style = BadgeHeadingStyle,
             color = Gray900,
             textAlign = TextAlign.Center,
+            maxLines = 1,
+            softWrap = false,
+            overflow = TextOverflow.Visible,
             modifier = Modifier
                 .offset(x = 82.dp, y = 252.dp)
                 .size(width = 120.dp, height = 30.dp),
@@ -519,6 +542,9 @@ private fun BadgeDetailDialog(
                     style = BadgeTabStyle,
                     color = Gray50,
                     textAlign = TextAlign.Center,
+                    maxLines = 1,
+                    softWrap = false,
+                    overflow = TextOverflow.Visible,
                     modifier = Modifier.size(width = 70.dp, height = 28.dp),
                 )
             }

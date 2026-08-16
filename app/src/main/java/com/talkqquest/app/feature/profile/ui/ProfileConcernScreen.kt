@@ -16,6 +16,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.positionInRoot
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
@@ -29,6 +31,7 @@ import com.talkqquest.app.core.designsystem.TalkQQuestTheme
 import com.talkqquest.app.core.designsystem.TqType
 import com.talkqquest.app.core.designsystem.White
 import com.talkqquest.app.core.designsystem.component.MenuRippleGroupState
+import com.talkqquest.app.core.designsystem.component.MenuRippleLayer
 import com.talkqquest.app.core.designsystem.component.TqAnchoredMenuRow
 import com.talkqquest.app.core.designsystem.component.menuRowTextRippleAnchor
 import com.talkqquest.app.core.designsystem.component.rememberMenuRippleGroup
@@ -51,14 +54,19 @@ fun ProfileConcernScreen(
             .background(Gray50),
     ) {
         ProfileSimpleTopBar(title = "대화 고민", onBack = onBack)
+        val concernGroup = rememberMenuRippleGroup()
         Box(
             modifier = Modifier
                 .offset(x = 16.dp, y = 114.dp)
                 .size(width = 361.dp, height = 226.dp)
                 .clip(RoundedCornerShape(20.dp))
-                .background(White),
+                .background(White)
+                .onGloballyPositioned {
+                    val top = it.positionInRoot().y
+                    concernGroup.setEdges(top, top + it.size.height, fillFirst = true, fillLast = true)
+                },
         ) {
-            val concernGroup = rememberMenuRippleGroup()
+            MenuRippleLayer(concernGroup, Modifier.matchParentSize())
             ProfileConcernRow(
                 label = "평소 대화할 때 ${nickname}님의 모습은",
                 value = personalityType.toPersonalityDisplay(),

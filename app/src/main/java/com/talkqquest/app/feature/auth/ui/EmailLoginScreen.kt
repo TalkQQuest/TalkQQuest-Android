@@ -3,6 +3,7 @@ package com.talkqquest.app.feature.auth.ui
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -26,14 +27,18 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.positionInParent
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import com.talkqquest.app.core.designsystem.Error
 import com.talkqquest.app.core.designsystem.FitDesign
@@ -49,6 +54,7 @@ import com.talkqquest.app.core.designsystem.TqType
 import com.talkqquest.app.core.designsystem.White
 import com.talkqquest.app.core.designsystem.component.TqButton
 import com.talkqquest.app.core.designsystem.component.PasswordVisibilityToggle
+import com.talkqquest.app.core.designsystem.component.ContentAnchoredPillRipple
 
 @Composable
 fun EmailLoginScreen(
@@ -62,6 +68,11 @@ fun EmailLoginScreen(
     var email by remember { mutableStateOf(initialEmail) }
     var password by remember { mutableStateOf(initialPassword) }
     var passwordVisible by remember { mutableStateOf(false) }
+
+    val findPasswordInteractionSource = remember { MutableInteractionSource() }
+    val findPasswordTextStyle = TqType.BodyM
+    var findPasswordContentPos by remember { mutableStateOf(Offset.Zero) }
+    var findPasswordContentSize by remember { mutableStateOf(IntSize.Zero) }
 
     Box(
         modifier = Modifier
@@ -149,13 +160,22 @@ fun EmailLoginScreen(
                     .offset(y = 248.dp),
             )
 
+            ContentAnchoredPillRipple(findPasswordContentPos, findPasswordContentSize, findPasswordInteractionSource)
             Text(
                 text = "\uBE44\uBC00\uBC88\uD638 \uCC3E\uAE30",
-                style = TqType.BodyM,
+                style = findPasswordTextStyle,
                 color = Gray500,
                 modifier = Modifier
                     .offset(x = 7.dp, y = 312.dp)
-                    .clickable(onClick = onFindPasswordClick),
+                    .onGloballyPositioned {
+                        findPasswordContentPos = it.positionInParent()
+                        findPasswordContentSize = it.size
+                    }
+                    .clickable(
+                        interactionSource = findPasswordInteractionSource,
+                        indication = null,
+                        onClick = onFindPasswordClick,
+                    ),
             )
         }
     }

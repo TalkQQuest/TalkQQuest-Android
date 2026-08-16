@@ -5,6 +5,13 @@
     <uses-permission android:name="android.permission.INTERNET" />
     <!-- Android 13+ 알림 표시 런타임 권한 (FCM 푸시) -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <!-- 프로필 사진 선택을 위한 MediaStore 읽기 권한. Android 14+에서는 선택한 사진만
+         허용된 경우에도 READ_MEDIA_VISUAL_USER_SELECTED로 목록을 안전하게 조회한다. -->
+    <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />
+    <uses-permission android:name="android.permission.READ_MEDIA_VISUAL_USER_SELECTED" />
+    <uses-permission
+        android:name="android.permission.READ_EXTERNAL_STORAGE"
+        android:maxSdkVersion="32" />
 
     <!-- TODO: 카카오/네이버 SDK 키 확정 후 추가
     카카오 예시:

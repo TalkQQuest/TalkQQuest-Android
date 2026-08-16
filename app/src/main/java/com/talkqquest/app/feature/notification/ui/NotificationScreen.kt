@@ -17,7 +17,6 @@ import androidx.compose.animation.scaleOut
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.core.FastOutSlowInEasing
-import androidx.compose.animation.core.Animatable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -46,7 +45,6 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.material3.ripple
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -57,7 +55,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.zIndex
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
@@ -85,6 +82,8 @@ import com.talkqquest.app.core.designsystem.Gray800
 import com.talkqquest.app.core.designsystem.Gray900
 import com.talkqquest.app.core.designsystem.LocalStatusBarCompensation
 import com.talkqquest.app.core.designsystem.ModalDimOverlay
+import com.talkqquest.app.core.designsystem.modalCardEnter
+import com.talkqquest.app.core.designsystem.modalCardExit
 import com.talkqquest.app.core.designsystem.Error
 import com.talkqquest.app.core.designsystem.Primary600
 import com.talkqquest.app.core.designsystem.TalkQQuestTheme
@@ -271,6 +270,8 @@ private fun NotificationScreen(
                         deleteAllGlyphBounds.value,
                         deleteAllParentPosition.value,
                         deleteAllInteractionSource,
+                        horizontalInset = 12.dp,
+                        verticalInset = 10.dp,
                     )
                     Text(
                         text = "전체 삭제",
@@ -370,23 +371,16 @@ private fun NotificationDeleteAllDialog(
     onDismiss: () -> Unit,
     onConfirm: () -> Unit,
 ) {
-    val scaleProgress = remember { Animatable(0f) }
-    LaunchedEffect(visible) {
-        scaleProgress.animateTo(
-            targetValue = if (visible) 1f else 0f,
-            animationSpec = tween(360, easing = FastOutSlowInEasing),
-        )
-    }
     Box(modifier = Modifier.fillMaxSize()) {
         ModalDimOverlay(
             visible = visible,
-            onDismiss = onDismiss,
             modifier = Modifier.coverStatusBarCompensation(LocalStatusBarCompensation.current),
+            onDismiss = onDismiss,
         )
         AnimatedVisibility(
             visible = visible,
-            enter = fadeIn(tween(360, easing = FastOutSlowInEasing)),
-            exit = fadeOut(tween(360, easing = FastOutSlowInEasing)),
+            enter = modalCardEnter(),
+            exit = modalCardExit(),
         ) {
             Box(
                 modifier = Modifier.fillMaxSize(),
@@ -404,11 +398,6 @@ private fun NotificationDeleteAllDialog(
                             indication = null,
                             onClick = {},
                         )
-                        .graphicsLayer {
-                            val scale = 0.86f + (0.14f * scaleProgress.value)
-                            scaleX = scale
-                            scaleY = scale
-                        }
                         .padding(start = 24.dp, end = 24.dp, top = 24.dp, bottom = 20.dp),
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.spacedBy(16.dp),

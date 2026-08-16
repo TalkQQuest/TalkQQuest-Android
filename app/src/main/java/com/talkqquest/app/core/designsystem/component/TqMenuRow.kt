@@ -23,6 +23,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionInRoot
 import androidx.compose.ui.platform.LocalDensity
@@ -32,10 +33,8 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontSynthesis
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.TextUnitType
-import kotlin.math.roundToInt
 
 /**
  * Collects the visible ink bounds of the text that makes up one menu row.
@@ -164,38 +163,102 @@ private fun TextLayoutResult.menuRowInkBounds(
  */
 @Stable
 class MenuRippleGroupState {
-    private data class RowGeom(val inkCenterRoot: Float, val boxTopRoot: Float, val height: Float)
+    private data class RowGeom(
+        val inkCenterRoot: Float,
+        val boxTopRoot: Float,
+        val height: Float,
+        val interactionSource: MutableInteractionSource,
+    )
     private val rows = mutableStateMapOf<Any, RowGeom>()
+    private var fillTopRoot: Float? by mutableStateOf(null)
+    private var fillBottomRoot: Float? by mutableStateOf(null)
+    private var containerTopRoot: Float? by mutableStateOf(null)
 
-    internal fun update(id: Any, inkCenterRoot: Float, boxTopRoot: Float, height: Float) {
-        val g = RowGeom(inkCenterRoot, boxTopRoot, height)
+    internal fun update(
+        id: Any,
+        inkCenterRoot: Float,
+        boxTopRoot: Float,
+        height: Float,
+        interactionSource: MutableInteractionSource,
+    ) {
+        val g = RowGeom(inkCenterRoot, boxTopRoot, height, interactionSource)
         if (rows[id] != g) rows[id] = g
     }
     internal fun remove(id: Any) { rows.remove(id) }
 
+    /** 카드 컨테이너의 위·아래 루트 좌표. 첫/마지막 행 리플이 카드 모서리까지 닿도록 한다. */
+    internal fun setEdges(containerTop: Float, containerBottom: Float, fillFirst: Boolean, fillLast: Boolean) {
+        if (containerTopRoot != containerTop) containerTopRoot = containerTop
+        val top = if (fillFirst) containerTop else null
+        val bottom = if (fillLast) containerBottom else null
+        if (fillTopRoot != top) fillTopRoot = top
+        if (fillBottomRoot != bottom) fillBottomRoot = bottom
+    }
+
     // 행의 리플 세로 범위 [topRoot, bottomRoot]. 자기 글자 중심을 기준으로 위·아래 대칭.
-    // 이웃이 있으면 이웃 글자 중심과의 중점의 절반(=간격 절반)을 확장량으로, 없으면 반대쪽과 동일(미러).
-    // 위·아래 확장량이 다르면 작은 쪽으로 맞춰 대칭 우선.
+    // 이웃이 있으면 양쪽 중 더 먼 중점까지 확장해, 한쪽의 행 간 여백이 더 넓어도
+    // 글자 중심 기준의 대칭을 유지한다. 잠재적인 이웃 행 겹침은 카드 clip에 맡긴다.
     internal fun rippleRange(id: Any): Pair<Float, Float>? {
         val self = rows[id] ?: return null
-        val centers = rows.values.map { it.inkCenterRoot }.sorted()
-        val c = self.inkCenterRoot
-        val idx = centers.indexOf(c)
+        val orderedRows = rows.entries.sortedBy { it.value.inkCenterRoot }
+        val idx = orderedRows.indexOfFirst { it.key === id }
         if (idx < 0) return null
+        val c = self.inkCenterRoot
+        val centers = orderedRows.map { it.value.inkCenterRoot }
         val up = if (idx > 0) (c - centers[idx - 1]) / 2f else null
         val down = if (idx < centers.size - 1) (centers[idx + 1] - c) / 2f else null
-        val h = when {
-            up != null && down != null -> minOf(up, down)
-            up != null -> up
-            down != null -> down
-            else -> minOf(c - self.boxTopRoot, self.boxTopRoot + self.height - c) // 단독 행: 박스 안 대칭
+        val fallbackHalf = minOf(c - self.boxTopRoot, self.boxTopRoot + self.height - c)
+        val topEdge = when {
+            idx == 0 && fillTopRoot != null -> minOf(fillTopRoot!!, c)          // first row fills to card top
+            up != null -> c - up                                                // meet previous at midpoint
+            else -> c - fallbackHalf                                            // single row, no top fill
         }
-        return (c - h) to (c + h)
+        val bottomEdge = when {
+            idx == centers.lastIndex && fillBottomRoot != null -> maxOf(fillBottomRoot!!, c)  // last row fills to card bottom
+            down != null -> c + down                                            // meet next at midpoint
+            else -> c + fallbackHalf                                            // single row, no bottom fill
+        }
+        return topEdge to bottomEdge
+    }
+
+    /**
+     * Each row's ripple overlay expressed in the card container's local
+     * coordinate space, so a single layer drawn as a child of the card can
+     * render every row's indication without any row-local clipping.
+     */
+    internal fun overlays(): List<Triple<MutableInteractionSource, Float, Float>> {
+        val top = containerTopRoot ?: return emptyList()
+        return rows.entries.mapNotNull { (id, geom) ->
+            val range = rippleRange(id) ?: return@mapNotNull null
+            Triple(geom.interactionSource, range.first - top, range.second - range.first)
+        }
     }
 }
 
 @Composable
 fun rememberMenuRippleGroup(): MenuRippleGroupState = remember { MenuRippleGroupState() }
+
+/**
+ * Draws every row's ripple overlay as a child of the card container instead
+ * of each row's own box. Place this as the first child inside the card's
+ * rounded, clipped Box (e.g. via `Modifier.matchParentSize()`) so ripples
+ * draw behind row content and are trimmed only by the card's own clip.
+ */
+@Composable
+fun MenuRippleLayer(group: MenuRippleGroupState, modifier: Modifier = Modifier) {
+    val density = LocalDensity.current
+    Box(modifier) {
+        group.overlays().forEach { (interactionSource, localTop, localHeight) ->
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .requiredHeight(with(density) { localHeight.coerceAtLeast(0f).toDp() })
+                    .graphicsLayer { translationY = localTop }
+                    .indication(interactionSource = interactionSource, indication = ripple(bounded = true)),
+            )
+        }
+    }
+}
 
 @Composable
 fun TqAnchoredMenuRow(
@@ -226,42 +289,41 @@ fun TqAnchoredMenuRow(
                 onClick = { tick(); onClick() },
             ),
     ) {
+        // Use the union of measured non-whitespace glyph ink as soon as it is
+        // available. The row box center is only the pre-measurement fallback.
         val centerLocal: Float? = if (rowSize.height > 0) rowSize.height / 2f else null
         val rowTopRoot = rowPositionInRoot?.y
 
         LaunchedEffect(group, centerLocal, rowTopRoot) {
             if (group != null && centerLocal != null && rowTopRoot != null) {
-                group.update(rowId, rowTopRoot + centerLocal, rowTopRoot, rowSize.height.toFloat())
+                group.update(rowId, rowTopRoot + centerLocal, rowTopRoot, rowSize.height.toFloat(), interactionSource)
             }
         }
         DisposableEffect(group) { onDispose { group?.remove(rowId) } }
 
-        val range = if (group != null && rowTopRoot != null) group.rippleRange(rowId) else null
-        val overlayTopLocal: Float
-        val overlayHeightPx: Float
-        if (range != null && rowTopRoot != null) {
-            overlayTopLocal = range.first - rowTopRoot
-            overlayHeightPx = range.second - range.first
-        } else {
+        if (group == null) {
             val ic = centerLocal ?: (rowSize.height / 2f)
             val h = minOf(ic, rowSize.height - ic)
-            overlayTopLocal = ic - h
-            overlayHeightPx = 2f * h
-        }
+            val overlayTopLocal = ic - h
+            val overlayHeightPx = 2f * h
 
-        // The interaction hit area remains the Figma row rectangle. Only the
-        // indication layer follows the actual rendered text ink, symmetric about
-        // the midpoint between neighboring rows' text centers when part of a group.
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .requiredHeight(with(density) { overlayHeightPx.coerceAtLeast(0f).toDp() })
-                .offset { IntOffset(0, overlayTopLocal.roundToInt()) }
-                .indication(
-                    interactionSource = interactionSource,
-                    indication = ripple(bounded = true),
-                ),
-        )
+            // The interaction hit area remains the Figma row rectangle. Only the
+            // indication layer follows the actual rendered text ink, symmetric about
+            // the row's own center when it is not part of a shared ripple group.
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    // Keep the final drawing origin in the row's local px space.
+                    // graphicsLayer preserves the fractional translation, avoiding
+                    // an additional px rounding after root-relative range math.
+                    .requiredHeight(with(density) { overlayHeightPx.coerceAtLeast(0f).toDp() })
+                    .graphicsLayer { translationY = overlayTopLocal }
+                    .indication(
+                        interactionSource = interactionSource,
+                        indication = ripple(bounded = true),
+                    ),
+            )
+        }
 
         content(anchor)
     }

@@ -2,8 +2,6 @@
 
 import android.net.Uri
 
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -40,6 +38,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.positionInRoot
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.runtime.mutableStateOf
 import coil3.compose.AsyncImage
@@ -52,6 +51,7 @@ import com.talkqquest.app.core.designsystem.Gray800
 import com.talkqquest.app.core.designsystem.TalkQQuestTheme
 import com.talkqquest.app.core.designsystem.TqType
 import com.talkqquest.app.core.designsystem.component.MenuRippleGroupState
+import com.talkqquest.app.core.designsystem.component.MenuRippleLayer
 import com.talkqquest.app.core.designsystem.component.TqAnchoredMenuRow
 import com.talkqquest.app.core.designsystem.component.menuRowTextRippleAnchor
 import com.talkqquest.app.core.designsystem.component.rememberMenuRippleGroup
@@ -69,14 +69,11 @@ fun ProfileInfoScreen(
     onConnectedAccountClick: () -> Unit = {},
     onConcernClick: () -> Unit = {},
     isEmailMember: Boolean = true,
-) = FitDesign(contentAlignment = Alignment.TopCenter) {
-    val imagePickerLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.GetContent(),
-    ) { uri ->
-        if (uri != null) onAvatarClick(uri)
-    }
-
-    Box(
+) {
+    var showPhotoPicker by remember { mutableStateOf(false) }
+    Box(Modifier.fillMaxSize()) {
+        FitDesign(contentAlignment = Alignment.TopCenter) {
+            Box(
         modifier = Modifier
             .fillMaxSize()
             .background(Gray50),
@@ -91,7 +88,9 @@ fun ProfileInfoScreen(
             Box(
                 modifier = Modifier
                     .size(60.dp)
-                    .profileCircleClick { imagePickerLauncher.launch("image/*") },
+                    .profileCircleClick {
+                        showPhotoPicker = true
+                    },
                 contentAlignment = Alignment.Center,
             ) {
                 if (avatarUrl.isNullOrBlank()) {
@@ -117,12 +116,17 @@ fun ProfileInfoScreen(
             )
         }
 
+        val infoGroup = rememberMenuRippleGroup()
         Box(
             modifier = Modifier
                 .offset(y = 199.dp)
-                .size(width = 393.dp, height = if (isEmailMember) 138.dp else 92.dp),
+                .size(width = 393.dp, height = if (isEmailMember) 138.dp else 92.dp)
+                .onGloballyPositioned {
+                    val top = it.positionInRoot().y
+                    infoGroup.setEdges(top, top + it.size.height, fillFirst = true, fillLast = true)
+                },
         ) {
-            val infoGroup = rememberMenuRippleGroup()
+            MenuRippleLayer(infoGroup, Modifier.matchParentSize())
             ProfileInfoRow(
                 title = "연결된 계정",
                 trailing = connectedAccount,
@@ -161,6 +165,14 @@ fun ProfileInfoScreen(
                 group = infoGroup,
             )
         }
+
+            }
+        }
+        ProfilePhotoPickerSheet(
+            visible = showPhotoPicker,
+            onDismiss = { showPhotoPicker = false },
+            onPhotoConfirmed = onAvatarClick,
+        )
     }
 }
 
@@ -281,9 +293,10 @@ private fun ProfileInfoRow(
                 contentDescription = null,
                 tint = Gray600,
                 modifier = Modifier.size(28.dp),
-            )
+                )
+            }
         }
-        }
+
     }
 }
 

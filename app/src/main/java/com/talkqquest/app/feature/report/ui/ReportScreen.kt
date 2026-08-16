@@ -215,6 +215,7 @@ private fun ReportContent(
     onSaveClick: (String) -> Unit = {},
 ) {
     val tick = rememberHapticTick()
+    val scope = rememberCoroutineScope()
     // info 아이콘 → 티어 승급 안내 바텀시트
     var showTierHelp by remember { mutableStateOf(false) }
     var tierAutoTrigger by remember { mutableStateOf(0) }
@@ -340,12 +341,16 @@ private fun ReportContent(
 
         // 승급 모션 오버레이 — 날아가는 별과 딤·휘장은 카드 위에 그려야 해서 최상단에 둔다.
         if (promotion != null) {
-            val scope = rememberCoroutineScope()
             TierPromotionOverlay(
                 motion = motion,
                 newTierName = promotion.newTierName,
                 newTierEmblemRes = tierEmblemSmallRes(promotion.newTierName),
-                onDismiss = { scope.launch { motion.dismissCelebration(); motion.settle() } },
+                onDismiss = {
+                    scope.launch {
+                        motion.dismissCelebration()
+                        motion.settle()
+                    }
+                },
                 // FitDesign이 위쪽에 넣어 둔 상태바 보정분까지 딤이 덮게 한다(승급 안내 시트와 동일).
                 modifier = Modifier.coverStatusBarCompensation(LocalStatusBarCompensation.current),
             )

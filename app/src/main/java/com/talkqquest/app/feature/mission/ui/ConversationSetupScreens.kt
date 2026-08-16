@@ -656,6 +656,7 @@ fun ConversationSetup3Screen(
     var age by remember(initialAgeGroup) {
         mutableStateOf(initialAgeGroup?.let(SetupAgeGroupByIndex::indexOf)?.takeIf { it >= 0 })
     }
+    val tick = rememberHapticTick()
     SetupStepScaffold(step = 3, onBack = onBack, nextEnabled = gender != null && age != null, onNext = onNext) {
         SetupHeader("어떤 상대와 대화해볼까요?", "대화할 상대의 성별과 나이대를 선택해주세요.")
         Spacer(Modifier.height(36.dp))
@@ -726,7 +727,10 @@ fun ConversationSetup3Screen(
                                 gender == i,
                                 enabled,
                                 {
-                                    if (gender != null && gender != i) genderMoved = true
+                                    if (gender != i) {
+                                        tick()
+                                        if (gender != null) genderMoved = true
+                                    }
                                     gender = i
                                     onSelectGender(SetupGenderByIndex[i])
                                 },
@@ -807,7 +811,10 @@ fun ConversationSetup3Screen(
                                         age == idx,
                                         enabled,
                                         {
-                                            if (age != null && age != idx) ageMoved = true
+                                            if (age != idx) {
+                                                tick()
+                                                if (age != null) ageMoved = true
+                                            }
                                             age = idx
                                             onSelectAgeGroup(SetupAgeGroupByIndex[idx])
                                         },

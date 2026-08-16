@@ -152,7 +152,15 @@ internal fun TierPromotionOverlay(
     Box(modifier = modifier.fillMaxSize()) {
         // 1) 딤 — 승급일 때만. 대화 팝업과 같은 결로 스르륵 올라온다.
         if (motion.dim.value > 0f) {
-            Canvas(modifier = Modifier.fillMaxSize()) {
+            Canvas(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .clickable(
+                        interactionSource = remember { MutableInteractionSource() },
+                        indication = null,
+                        onClick = onDismiss,
+                    ),
+            ) {
                 drawRect(color = ModalDimColor.copy(alpha = ModalDimColor.alpha * motion.dim.value))
             }
         }

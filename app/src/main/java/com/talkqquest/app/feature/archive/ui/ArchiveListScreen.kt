@@ -20,6 +20,7 @@ import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.PagerDefaults
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
@@ -77,6 +78,7 @@ import com.talkqquest.app.feature.archive.viewmodel.ArchiveViewModel
 import com.talkqquest.app.feature.archive.viewmodel.ActivityType
 import com.talkqquest.app.feature.archive.viewmodel.RecentActivity
 import com.talkqquest.app.feature.mission.ui.figma
+import com.talkqquest.app.navigation.NavigationMotion
 
 import kotlinx.coroutines.launch
 import kotlin.math.floor
@@ -233,12 +235,17 @@ private fun ArchiveListScreenContent(
                                         interactionSource = interactionSource,
                                         indication = null,
                                     ) {
-                                        coroutineScope.launch { pagerState.animateScrollToPage(index) }
+                                        coroutineScope.launch {
+                                            pagerState.animateScrollToPage(
+                                                index,
+                                                animationSpec = NavigationMotion.floatSpec,
+                                            )
+                                        }
                                     }
                                     .textPillRippleParentPosition(parentPosition),
                                 contentAlignment = Alignment.TopCenter
                             ) {
-                                TextAnchoredPillRipple(textBounds.value, glyphBounds.value, parentPosition.value, interactionSource)
+                                TextAnchoredPillRipple(textBounds.value, glyphBounds.value, parentPosition.value, interactionSource, horizontalInset = 12.dp, verticalInset = 10.dp)
                                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                                     Text(
                                         tab,
@@ -338,7 +345,14 @@ private fun ArchiveListScreenContent(
                 }
 
                 // [4] Pager 리스트
-                HorizontalPager(state = pagerState, modifier = Modifier.weight(1f)) { page ->
+                HorizontalPager(
+                    state = pagerState,
+                    modifier = Modifier.weight(1f),
+                    flingBehavior = PagerDefaults.flingBehavior(
+                        state = pagerState,
+                        snapAnimationSpec = NavigationMotion.floatSpec,
+                    ),
+                ) { page ->
                     val isListEmpty = when (page) {
                         0 -> uiState.filteredMissions.isEmpty()
                         1 -> uiState.conversations.isEmpty()

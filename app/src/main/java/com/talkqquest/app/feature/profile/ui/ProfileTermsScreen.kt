@@ -23,6 +23,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.positionInRoot
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
@@ -38,6 +40,7 @@ import com.talkqquest.app.core.designsystem.TalkQQuestTheme
 import com.talkqquest.app.core.designsystem.TqType
 import com.talkqquest.app.core.designsystem.White
 import com.talkqquest.app.core.designsystem.component.MenuRippleGroupState
+import com.talkqquest.app.core.designsystem.component.MenuRippleLayer
 import com.talkqquest.app.core.designsystem.component.TqAnchoredMenuRow
 import com.talkqquest.app.core.designsystem.component.menuRowTextRippleAnchor
 import com.talkqquest.app.core.designsystem.component.rememberMenuRippleGroup
@@ -56,6 +59,7 @@ fun ProfileTermsScreen(
             .background(Gray50),
     ) {
         ProfileSimpleTopBar(title = "약관 및 개인정보 처리 방침", onBack = onBack)
+        val termsGroup = rememberMenuRippleGroup()
         Box(
             modifier = Modifier
                 .offset(x = 16.dp, y = 111.dp)
@@ -67,9 +71,13 @@ fun ProfileTermsScreen(
                     cornerRadius = 16.dp,
                 )
                 .clip(RoundedCornerShape(16.dp))
-                .background(White),
+                .background(White)
+                .onGloballyPositioned {
+                    val top = it.positionInRoot().y
+                    termsGroup.setEdges(top, top + it.size.height, fillFirst = false, fillLast = true)
+                },
         ) {
-            val termsGroup = rememberMenuRippleGroup()
+            MenuRippleLayer(termsGroup, Modifier.matchParentSize())
             Text(
                 text = "상세 내용을 확인할 수 있어요",
                 style = TqType.BodyM,

@@ -4,11 +4,16 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.gestures.detectVerticalDragGestures
+import androidx.compose.foundation.gestures.scrollBy
+import androidx.compose.foundation.gestures.snapping.rememberSnapFlingBehavior
+import androidx.compose.foundation.indication
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
@@ -16,27 +21,39 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.activity.compose.BackHandler
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
+import androidx.compose.material3.ripple
+import androidx.compose.animation.animateColorAsState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.positionInRoot
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.semantics.selected
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.em
 import androidx.compose.ui.unit.sp
@@ -58,11 +75,19 @@ import com.talkqquest.app.core.designsystem.White
 import com.talkqquest.app.core.designsystem.modalCardEnter
 import com.talkqquest.app.core.designsystem.modalCardExit
 import com.talkqquest.app.core.designsystem.component.MenuRippleGroupState
+import com.talkqquest.app.core.designsystem.component.MenuRippleLayer
 import com.talkqquest.app.core.designsystem.component.TqAnchoredMenuRow
 import com.talkqquest.app.core.designsystem.component.menuRowTextRippleAnchor
+import com.talkqquest.app.core.designsystem.component.rememberHapticTick
 import com.talkqquest.app.core.designsystem.component.rememberMenuRippleGroup
 import com.talkqquest.app.core.designsystem.component.rememberMenuRowTextLayoutCallback
 import com.talkqquest.app.core.designsystem.softShadow
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.launch
+import kotlin.math.abs
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.animate
+import androidx.compose.animation.core.tween
 
 private val SettingsTitleStyle = TextStyle(
     fontFamily = PretendardFamily,
@@ -105,6 +130,7 @@ fun ProfileSettingsScreen(
     onReminderTimeChange: (String) -> Unit = {},
     onBack: () -> Unit = {},
     onEditProfileClick: () -> Unit = {},
+    onConnectedAccountClick: () -> Unit = {},
     onTermsClick: () -> Unit = {},
     onSupportClick: () -> Unit = {},
     onWithdrawClick: () -> Unit = {},
@@ -130,12 +156,17 @@ fun ProfileSettingsScreen(
                 .size(width = 158.dp, height = 62.dp),
         )
 
+        val notificationGroup = rememberMenuRippleGroup()
         SettingsCard(
             modifier = Modifier
                 .offset(x = 16.dp, y = 190.dp)
-                .size(width = 362.dp, height = 214.dp),
+                .size(width = 362.dp, height = 214.dp)
+                .onGloballyPositioned {
+                    val top = it.positionInRoot().y
+                    notificationGroup.setEdges(top, top + it.size.height, fillFirst = false, fillLast = true)
+                },
         ) {
-            val notificationGroup = rememberMenuRippleGroup()
+            MenuRippleLayer(notificationGroup, Modifier.fillMaxSize())
             SettingsSectionLabel(
                 text = "알림",
                 modifier = Modifier
@@ -180,12 +211,17 @@ fun ProfileSettingsScreen(
             )
         }
 
+        val accountGroup = rememberMenuRippleGroup()
         SettingsCard(
             modifier = Modifier
                 .offset(x = 16.dp, y = 416.dp)
-                .size(width = 362.dp, height = 146.dp),
+                .size(width = 362.dp, height = 146.dp)
+                .onGloballyPositioned {
+                    val top = it.positionInRoot().y
+                    accountGroup.setEdges(top, top + it.size.height, fillFirst = false, fillLast = true)
+                },
         ) {
-            val accountGroup = rememberMenuRippleGroup()
+            MenuRippleLayer(accountGroup, Modifier.fillMaxSize())
             SettingsSectionLabel(
                 text = "계정",
                 modifier = Modifier
@@ -206,6 +242,7 @@ fun ProfileSettingsScreen(
             SettingsArrowRow(
                 title = "연결된 계정",
                 trailing = connectedAccount,
+                onClick = onConnectedAccountClick,
                 modifier = Modifier
                     .offset(y = 90.dp)
                     .size(width = 362.dp, height = 44.dp),
@@ -216,12 +253,17 @@ fun ProfileSettingsScreen(
             )
         }
 
+        val legalGroup = rememberMenuRippleGroup()
         SettingsCard(
             modifier = Modifier
                 .offset(x = 16.dp, y = 574.dp)
-                .size(width = 362.dp, height = 190.dp),
+                .size(width = 362.dp, height = 190.dp)
+                .onGloballyPositioned {
+                    val top = it.positionInRoot().y
+                    legalGroup.setEdges(top, top + it.size.height, fillFirst = false, fillLast = true)
+                },
         ) {
-            val legalGroup = rememberMenuRippleGroup()
+            MenuRippleLayer(legalGroup, Modifier.fillMaxSize())
             SettingsSectionLabel(
                 text = "법적 정보 및 기타",
                 modifier = Modifier
@@ -262,6 +304,8 @@ fun ProfileSettingsScreen(
                 group = legalGroup,
             )
         }
+
+        BackHandler(enabled = showTimePicker) { showTimePicker = false }
 
         ModalDimOverlay(visible = showTimePicker, onDismiss = { showTimePicker = false })
         androidx.compose.animation.AnimatedVisibility(
@@ -541,8 +585,11 @@ private fun ReminderTimeDialog(
 ) {
     var hour by remember(selectedTime) { mutableIntStateOf(selectedTime.toHour()) }
     var minute by remember(selectedTime) { mutableIntStateOf(selectedTime.toMinute()) }
-    val displayHour = if (hour % 12 == 0) 12 else hour % 12
     val isPm = hour >= 12
+    val touchZoneWidth = 326.dp / 3f
+    val dividerInnerWidth = 262.dp
+    val visualColumnWidth = dividerInnerWidth / 3f
+    val firstVisualColumnOffset = 32.dp - (touchZoneWidth - visualColumnWidth) / 2f
 
     Box(
         modifier = modifier
@@ -568,36 +615,41 @@ private fun ReminderTimeDialog(
                 .background(Color(0xFF8B8B8B)),
         )
 
-        TimePickerWheelColumn(
-            previous = displayHour.minusWrapped(1, 12).twoDigits(),
-            current = displayHour.twoDigits(),
-            next = displayHour.plusWrapped(1, 12).twoDigits(),
-            onPrevious = { hour = (hour + 23) % 24 },
-            onNext = { hour = (hour + 1) % 24 },
+        Box(
             modifier = Modifier
-                .offset(x = 80.dp, y = 16.dp)
-                .size(width = 38.dp, height = 168.dp),
-        )
-        TimePickerWheelColumn(
-            previous = ((minute + 59) % 60).twoDigits(),
-            current = minute.twoDigits(),
-            next = ((minute + 1) % 60).twoDigits(),
-            onPrevious = { minute = (minute + 59) % 60 },
-            onNext = { minute = (minute + 1) % 60 },
-            modifier = Modifier
-                .offset(x = 145.dp, y = 16.dp)
-                .size(width = 38.dp, height = 168.dp),
-        )
-        TimePickerWheelColumn(
-            previous = if (isPm) "AM" else "PM",
-            current = if (isPm) "PM" else "AM",
-            next = if (isPm) "AM" else "PM",
-            onPrevious = { hour = (hour + 12) % 24 },
-            onNext = { hour = (hour + 12) % 24 },
-            modifier = Modifier
-                .offset(x = 216.dp, y = 16.dp)
-                .size(width = 60.dp, height = 168.dp),
-        )
+                .offset(y = 16.dp)
+                .size(width = 326.dp, height = 168.dp),
+        ) {
+            Row(modifier = Modifier.fillMaxSize()) {
+                TimePickerWheelColumn(
+                    itemCount = 24,
+                    selectedValue = hour,
+                    label = { value -> (if (value % 12 == 0) 12 else value % 12).twoDigits() },
+                    onValueChange = { hour = it },
+                    visualContentOffsetX = firstVisualColumnOffset,
+                    visualRippleWidth = visualColumnWidth,
+                    modifier = Modifier.weight(1f).fillMaxHeight(),
+                )
+                TimePickerWheelColumn(
+                    itemCount = 60,
+                    selectedValue = minute,
+                    label = Int::twoDigits,
+                    onValueChange = { minute = it },
+                    visualRippleWidth = visualColumnWidth,
+                    modifier = Modifier.weight(1f).fillMaxHeight(),
+                )
+                TimePickerWheelColumn(
+                    itemCount = 2,
+                    selectedValue = if (isPm) 0 else 1,
+                    label = { if (it == 0) "PM" else "AM" },
+                    onValueChange = { amPm -> hour = (hour % 12) + if (amPm == 0) 12 else 0 },
+                    finite = true,
+                    visualContentOffsetX = -firstVisualColumnOffset,
+                    visualRippleWidth = visualColumnWidth,
+                    modifier = Modifier.weight(1f).fillMaxHeight(),
+                )
+            }
+        }
 
         DialogButton(
             text = "취소",
@@ -620,66 +672,141 @@ private fun ReminderTimeDialog(
 
 @Composable
 private fun TimePickerWheelColumn(
-    previous: String,
-    current: String,
-    next: String,
-    onPrevious: () -> Unit,
-    onNext: () -> Unit,
+    itemCount: Int,
+    selectedValue: Int,
+    label: (Int) -> String,
+    onValueChange: (Int) -> Unit,
+    finite: Boolean = false,
+    visualContentOffsetX: Dp = 0.dp,
+    visualRippleWidth: Dp,
     modifier: Modifier = Modifier,
 ) {
-    var dragOffset by remember { mutableStateOf(0f) }
+    val tick = rememberHapticTick()
+    val middleIndex = Int.MAX_VALUE / 2
+    val initialCenterIndex = remember(itemCount, selectedValue, finite) {
+        if (finite) selectedValue else middleIndex - Math.floorMod(middleIndex - selectedValue, itemCount)
+    }
+    val listState = rememberLazyListState(
+        initialFirstVisibleItemIndex = if (finite) initialCenterIndex else initialCenterIndex - 1,
+    )
+    val scope = rememberCoroutineScope()
 
-    Box(
-        modifier = modifier.pointerInput(Unit) {
-            detectVerticalDragGestures(
-                onDragEnd = { dragOffset = 0f },
-                onVerticalDrag = { _, dragAmount ->
-                    dragOffset += dragAmount
-                    when {
-                        dragOffset <= -18f -> {
-                            onNext()
-                            dragOffset = 0f
-                        }
-                        dragOffset >= 18f -> {
-                            onPrevious()
-                            dragOffset = 0f
-                        }
+    LaunchedEffect(listState, itemCount, finite) {
+        var previousCenterIndex: Int? = null
+        snapshotFlow {
+            val layoutInfo = listState.layoutInfo
+            val viewportCenter = (layoutInfo.viewportStartOffset + layoutInfo.viewportEndOffset) / 2
+            layoutInfo.visibleItemsInfo.minByOrNull { item ->
+                abs((item.offset + item.size / 2) - viewportCenter)
+            }?.index
+        }.distinctUntilChanged().collect { centerIndex ->
+            if (centerIndex != null) {
+                val previous = previousCenterIndex
+                previousCenterIndex = centerIndex
+                if (previous != null && previous != centerIndex && listState.isScrollInProgress) {
+                    tick()
+                    onValueChange(if (finite) centerIndex else centerIndex % itemCount)
+                }
+            }
+        }
+    }
+
+    LaunchedEffect(selectedValue, itemCount) {
+        if (!listState.isScrollInProgress) {
+            val layoutInfo = listState.layoutInfo
+            val viewportCenter = (layoutInfo.viewportStartOffset + layoutInfo.viewportEndOffset) / 2
+            val currentCenter = layoutInfo.visibleItemsInfo.minByOrNull { item ->
+                abs((item.offset + item.size / 2) - viewportCenter)
+            }?.index
+            val currentValue = currentCenter?.let { if (finite) it else it % itemCount }
+            if (currentValue == null || currentValue != selectedValue) {
+                val anchor = currentCenter ?: initialCenterIndex
+                val target = if (finite) {
+                    selectedValue
+                } else {
+                    anchor - Math.floorMod(anchor - selectedValue, itemCount)
+                }
+                listState.scrollToItem(if (finite) target else target - 1)
+            }
+        }
+    }
+
+    Box(modifier = modifier) {
+        LazyColumn(
+            state = listState,
+            flingBehavior = rememberSnapFlingBehavior(lazyListState = listState),
+            modifier = Modifier
+                .fillMaxSize(),
+            contentPadding = if (finite) androidx.compose.foundation.layout.PaddingValues(vertical = 56.dp) else androidx.compose.foundation.layout.PaddingValues(),
+        ) {
+            items(count = if (finite) itemCount else Int.MAX_VALUE, key = { index -> index }) { index ->
+                val value = if (finite) index else index % itemCount
+                val interactionSource = remember { MutableInteractionSource() }
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(56.dp)
+                        .semantics { selected = value == selectedValue }
+                        .clickable(
+                            interactionSource = interactionSource,
+                            indication = null,
+                        ) {
+                            if (value != selectedValue) {
+                                val item = listState.layoutInfo.visibleItemsInfo.firstOrNull { it.index == index }
+                                if (item != null) {
+                                    val viewportCenter = (listState.layoutInfo.viewportStartOffset + listState.layoutInfo.viewportEndOffset) / 2
+                                    val distance = item.offset + item.size / 2 - viewportCenter
+                                    scope.launch {
+                                        listState.scroll {
+                                            var previous = 0f
+                                            animate(
+                                                initialValue = 0f,
+                                                targetValue = distance.toFloat(),
+                                                animationSpec = tween(140, easing = FastOutSlowInEasing),
+                                            ) { current, _ ->
+                                                scrollBy(current - previous)
+                                                previous = current
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        },
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .offset(x = visualContentOffsetX)
+                            .size(width = visualRippleWidth, height = 56.dp)
+                            .indication(
+                                interactionSource = interactionSource,
+                                indication = ripple(bounded = true),
+                            ),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        TimePickerValue(
+                            text = label(value),
+                            selected = value == selectedValue,
+                            modifier = Modifier.size(width = 60.dp, height = 24.dp),
+                        )
                     }
-                },
-            )
-        },
-    ) {
-        TimePickerValue(
-            text = previous,
-            selected = false,
-            modifier = Modifier
-                .align(Alignment.TopCenter)
-                .offset(y = 16.dp)
-                .size(width = 60.dp, height = 24.dp),
-        )
-        TimePickerValue(
-            text = current,
-            selected = true,
-            modifier = Modifier
-                .align(Alignment.Center)
-                .size(width = 60.dp, height = 24.dp),
-        )
-        TimePickerValue(
-            text = next,
-            selected = false,
-            modifier = Modifier
-                .align(Alignment.BottomCenter)
-                .offset(y = (-16).dp)
-                .size(width = 60.dp, height = 24.dp),
-        )
+                }
+            }
+        }
     }
 }
+
 @Composable
 private fun TimePickerValue(
     text: String,
     selected: Boolean,
     modifier: Modifier = Modifier,
 ) {
+    val color by animateColorAsState(
+        targetValue = if (selected) Primary600 else Gray300,
+        animationSpec = androidx.compose.animation.core.tween(durationMillis = 160),
+        label = "timePickerValueColor",
+    )
     Text(
         text = text,
         style = TextStyle(
@@ -687,7 +814,7 @@ private fun TimePickerValue(
             fontSize = 20.sp,
             lineHeight = 24.sp,
         ),
-        color = if (selected) Primary600 else Gray300,
+        color = color,
         textAlign = TextAlign.Center,
         maxLines = 1,
         modifier = modifier,
@@ -726,12 +853,6 @@ private fun String.toMinute(): Int =
     substringAfter(":", "00").toIntOrNull()?.coerceIn(0, 59) ?: 0
 
 private fun Int.twoDigits(): String = toString().padStart(2, '0')
-
-private fun Int.plusWrapped(step: Int, max: Int): Int =
-    if (this + step > max) 1 else this + step
-
-private fun Int.minusWrapped(step: Int, max: Int): Int =
-    if (this - step < 1) max else this - step
 
 @Preview(showSystemUi = true, device = "spec:width=393dp,height=852dp")
 @Composable

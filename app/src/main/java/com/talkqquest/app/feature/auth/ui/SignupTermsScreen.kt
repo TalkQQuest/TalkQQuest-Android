@@ -2,6 +2,7 @@ package com.talkqquest.app.feature.auth.ui
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -13,6 +14,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.PagerDefaults
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
@@ -31,12 +33,16 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.positionInParent
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.launch
@@ -51,6 +57,8 @@ import com.talkqquest.app.core.designsystem.Primary500
 import com.talkqquest.app.core.designsystem.Primary600
 import com.talkqquest.app.core.designsystem.TalkQQuestTheme
 import com.talkqquest.app.core.designsystem.White
+import com.talkqquest.app.core.designsystem.component.ContentAnchoredPillRipple
+import com.talkqquest.app.navigation.NavigationMotion
 
 private val SignupTermsTitleStyle = TextStyle(
     fontFamily = PretendardFamily,
@@ -130,6 +138,9 @@ private fun SignupTermsConfirmScreen(
     onCloseClick: () -> Unit,
     onAgreeClick: () -> Unit,
 ) {
+    val titleInteractionSource = remember { MutableInteractionSource() }
+    var titleContentPos by remember { mutableStateOf(Offset.Zero) }
+    var titleContentSize by remember { mutableStateOf(IntSize.Zero) }
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -143,12 +154,21 @@ private fun SignupTermsConfirmScreen(
                 .clip(RoundedCornerShape(16.dp))
                 .background(White),
         ) {
+            ContentAnchoredPillRipple(titleContentPos, titleContentSize, titleInteractionSource)
             Row(
                 modifier = Modifier
                     .align(Alignment.TopCenter)
                     .offset(y = 24.dp)
                     .height(30.dp)
-                    .clickable(onClick = onTitleClick),
+                    .onGloballyPositioned {
+                        titleContentPos = it.positionInParent()
+                        titleContentSize = it.size
+                    }
+                    .clickable(
+                        interactionSource = titleInteractionSource,
+                        indication = null,
+                        onClick = onTitleClick,
+                    ),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Text(
@@ -226,11 +246,19 @@ private fun SignupLegalDetailScreen(
         ) {
             SignupTermsPageDot(
                 selected = pagerState.currentPage == 0,
-                onClick = { scope.launch { pagerState.animateScrollToPage(0) } },
+                onClick = {
+                    scope.launch {
+                        pagerState.animateScrollToPage(0, animationSpec = NavigationMotion.floatSpec)
+                    }
+                },
             )
             SignupTermsPageDot(
                 selected = pagerState.currentPage == 1,
-                onClick = { scope.launch { pagerState.animateScrollToPage(1) } },
+                onClick = {
+                    scope.launch {
+                        pagerState.animateScrollToPage(1, animationSpec = NavigationMotion.floatSpec)
+                    }
+                },
             )
         }
         HorizontalPager(
@@ -239,6 +267,10 @@ private fun SignupLegalDetailScreen(
                 .align(Alignment.TopCenter)
                 .offset(y = 118.dp)
                 .size(width = 360.dp, height = 734.dp),
+            flingBehavior = PagerDefaults.flingBehavior(
+                state = pagerState,
+                snapAnimationSpec = NavigationMotion.floatSpec,
+            ),
         ) { page ->
             val title = if (page == 0) "\uC774\uC6A9\uC57D\uAD00" else "\uAC1C\uC778\uC815\uBCF4 \uCC98\uB9AC \uBC29\uCE68"
             val content = if (page == 0) serviceTermsContent else privacyPolicyContent

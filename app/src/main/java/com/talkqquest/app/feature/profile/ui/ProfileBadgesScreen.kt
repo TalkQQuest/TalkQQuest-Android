@@ -177,7 +177,7 @@ fun ProfileBadgesScreen(
                 .clipToBounds(),
             flingBehavior = PagerDefaults.flingBehavior(
                 state = pagerState,
-                snapAnimationSpec = NavigationMotion.floatSpec,
+                snapAnimationSpec = NavigationMotion.pagerSnapSpec,
             ),
         ) { page ->
             val pageBadges = when (page) {

@@ -335,28 +335,23 @@ class MissionRepository @Inject constructor(
             if (d.status != "pending") break // failed 등 → 목업 폴백
             if (attempt < 5) delay(1500) // 생성 중 → 잠시 후 재시도
         }
+        // 서버는 피드백이 ready가 아니면 overallScore 0 + 빈 metrics(score 0·빈 배열)로 응답한다.
+        // 앱도 이와 완전히 동일하게 맞춘다 — 실제 ready 피드백이 없으면 가짜 점수를 지어내지 않고
+        // 0점·빈 강점/개선으로 둔다(짧은 대화·failed·pending 소진·에러 전부 동일).
         return ApiResult.Success(
             FeedbackResult(
                 // stub은 missionId를 feedbackId로 받으므로 그 미션의 제목을 그대로 씀.
-                // (서버 연동 시엔 피드백 응답에 담겨 오는 미션 제목으로 교체)
                 missionTitle = stubMissions.firstOrNull { it.id == feedbackId }?.title
                     ?: stubMissions.first().title,
                 nickname = "소다123", // TODO(서버 연동): 유저 프로필 닉네임으로 교체
-                kindnessScore = 92,
-                initiativeScore = 88,
-                empathyScore = 85,
-                questionLinkScore = 78,
-                strengths = listOf(
-                    "상대를 존중하는 표현을 사용했어요",
-                    "대화를 따뜻하게 시작했어요",
-                    "긍정적인 말투를 유지했어요",
-                ),
-                improvements = listOf(
-                    "조금 더 구체적인 칭찬을 해보세요",
-                    "상대의 감정을 확인하는 표현을 사용해보세요",
-                ),
-                savedPhrase = "그렇군요! 저도 생각보다 편해서 놀랐어요",
-                itemTexts = stubItemTexts,
+                kindnessScore = 0,
+                initiativeScore = 0,
+                empathyScore = 0,
+                questionLinkScore = 0,
+                strengths = emptyList(),
+                improvements = emptyList(),
+                savedPhrase = "",
+                itemTexts = emptyMap(),
             ),
         )
     }

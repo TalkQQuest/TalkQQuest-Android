@@ -350,7 +350,7 @@ private fun ArchiveListScreenContent(
                     modifier = Modifier.weight(1f),
                     flingBehavior = PagerDefaults.flingBehavior(
                         state = pagerState,
-                        snapAnimationSpec = NavigationMotion.floatSpec,
+                        snapAnimationSpec = NavigationMotion.pagerSnapSpec,
                     ),
                 ) { page ->
                     val isListEmpty = when (page) {

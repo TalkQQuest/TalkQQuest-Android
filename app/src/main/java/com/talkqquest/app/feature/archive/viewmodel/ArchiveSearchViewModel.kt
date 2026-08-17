@@ -34,7 +34,10 @@ data class ArchiveSearchUiState(
     val searchResults: List<Any>
         get() {
             val results = mutableListOf<Any>()
-            val query = searchQuery.trim().lowercase()
+
+            // 💡 더 이상 여기서 로컬 텍스트 필터링(contains(query))을 하지 않습니다!
+            // 이미 서버에서 keyword에 맞는 데이터만 정확하게 1차 필터링해서 내려주었기 때문입니다.
+            // 여기서는 탭(카테고리), 날짜(Date), 정렬(Sort)만 UI 상태에 맞게 2차로 처리합니다.
 
             val showMission = selectedCategoryTab == "전체" || selectedCategoryTab == "미션"
             val showConversation = selectedCategoryTab == "전체" || selectedCategoryTab == "대화"
@@ -74,15 +77,10 @@ data class ArchiveSearchUiState(
                 return !itemDate.isBefore(leftDate) && !itemDate.isAfter(rightDate)
             }
 
-            if (showMission) results.addAll(allMissions.filter { (query.isEmpty() || it.title.lowercase().contains(query)) && isDateInRange(it) })
-            if (showConversation) results.addAll(allConversations.filter { (query.isEmpty() || it.title.lowercase().contains(query)) && isDateInRange(it) })
-            if (showSentence) results.addAll(allSentences.filter { sentence ->
-                val matchSentenceTitle = sentence.title.lowercase().contains(query)
-                val relatedConv = allConversations.find { it.id == sentence.relatedConversationId }
-                val matchConvTitle = relatedConv?.title?.lowercase()?.contains(query) == true
-                (query.isEmpty() || matchSentenceTitle || matchConvTitle) && isDateInRange(sentence)
-            }.map { SearchBookmarkWrapper(it, isSentence = true) })
-            if (showReport) results.addAll(allReports.filter { (query.isEmpty() || it.title.lowercase().contains(query)) && isDateInRange(it) }.map { SearchBookmarkWrapper(it, isSentence = false) })
+            if (showMission) results.addAll(allMissions.filter { isDateInRange(it) })
+            if (showConversation) results.addAll(allConversations.filter { isDateInRange(it) })
+            if (showSentence) results.addAll(allSentences.filter { isDateInRange(it) }.map { SearchBookmarkWrapper(it, isSentence = true) })
+            if (showReport) results.addAll(allReports.filter { isDateInRange(it) }.map { SearchBookmarkWrapper(it, isSentence = false) })
 
             fun isItemSaved(item: Any): Boolean = when (item) {
                 is ArchiveMissionItem -> item.isSaved
@@ -107,7 +105,7 @@ class ArchiveSearchViewModel @Inject constructor(
     private val _uiState = MutableStateFlow(ArchiveSearchUiState())
     val uiState: StateFlow<ArchiveSearchUiState> = _uiState.asStateFlow()
 
-    init { refreshData() }
+    init { refreshData() } // 초기 화면 진입 시 전체 데이터 로드용
 
     fun updateSearchQuery(query: String) { _uiState.update { it.copy(searchQuery = query) } }
     fun setSortType(type: ArchiveSortType) { _uiState.update { it.copy(sortType = type) } }
@@ -126,7 +124,25 @@ class ArchiveSearchViewModel @Inject constructor(
     }
     fun selectCategoryTab(tab: String) { _uiState.update { it.copy(selectedCategoryTab = tab) } }
     fun resetFilters() { selectDateTab("전체"); selectCategoryTab("전체"); updateSearchQuery(""); clearSearch(); setSortType(ArchiveSortType.LATEST) }
-    fun performSearch() { _uiState.update { it.copy(showResults = true, isDateChipVisible = true, isCategoryChipVisible = true) } }
+
+    // 💡 검색 버튼을 눌렀을 때 실행되는 함수
+    fun performSearch() {
+        _uiState.update {
+            it.copy(
+                showResults = true,
+                isDateChipVisible = true,
+                isCategoryChipVisible = true,
+                // 검색 서버 통신 전, 기존 리스트를 비워주어 이전 결과가 깜빡이는 것을 방지합니다.
+                allMissions = emptyList(),
+                allConversations = emptyList(),
+                allSentences = emptyList(),
+                allReports = emptyList()
+            )
+        }
+        // 💡 돋보기를 누르면 현재 입력된 검색어(searchQuery)를 서버에 보내 백엔드 로직을 태웁니다!
+        refreshData(_uiState.value.searchQuery)
+    }
+
     fun clearSearch() { _uiState.update { it.copy(showResults = false) } }
     fun clearDateFilter() {
         val right = LocalDate.now()
@@ -139,20 +155,20 @@ class ArchiveSearchViewModel @Inject constructor(
         val target = _uiState.value.allMissions.find { it.id == missionId } ?: return
         val isCurrentlySaved = target.isSaved
         _uiState.update { state -> state.copy(allMissions = state.allMissions.map { if (it.id == missionId) it.copy(isSaved = !isCurrentlySaved) else it }) }
-        viewModelScope.launch { repository.toggleMissionBookmark(missionId, isCurrentlySaved).also { refreshData() } }
+        viewModelScope.launch { repository.toggleMissionBookmark(missionId, isCurrentlySaved).also { refreshData(_uiState.value.searchQuery) } }
     }
 
     fun toggleSentenceBookmark(sentenceId: String) {
         val target = _uiState.value.allSentences.find { it.id == sentenceId } ?: return
         val isCurrentlySaved = target.isSaved
-        viewModelScope.launch { repository.toggleSentenceBookmark(id = sentenceId, isCurrentlySaved = isCurrentlySaved, conversationId = target.relatedConversationId, content = target.title, memo = target.memoText).also { refreshData() } }
+        viewModelScope.launch { repository.toggleSentenceBookmark(id = sentenceId, isCurrentlySaved = isCurrentlySaved, conversationId = target.relatedConversationId, content = target.title, memo = target.memoText).also { refreshData(_uiState.value.searchQuery) } }
     }
 
     fun toggleReportBookmark(reportId: String) {
         val target = _uiState.value.allReports.find { it.id == reportId } ?: return
         if (target.isSaved) {
             _uiState.update { state -> state.copy(allReports = state.allReports.filter { it.id != reportId }) }
-            viewModelScope.launch { repository.toggleReportBookmark(reportId, true).also { refreshData() } }
+            viewModelScope.launch { repository.toggleReportBookmark(reportId, true).also { refreshData(_uiState.value.searchQuery) } }
         }
     }
 
@@ -163,16 +179,20 @@ class ArchiveSearchViewModel @Inject constructor(
         } catch (e: Exception) { isoString.substringBefore("T").replace("-", ".") }
     }
 
-    fun refreshData() {
+    // 💡 검색어 파라미터를 추가로 받을 수 있도록 개선되었습니다.
+    fun refreshData(searchKeyword: String? = null) {
         viewModelScope.launch {
             val allFetchedItems = mutableListOf<ArchiveSearchItem>()
             var currentPage = 1
             var totalPages = 1
             var hasErrorOnFirstPage = false
 
-            // 💡 서버 에러가 나지 않도록 50개 단위의 안전한 사이즈로 모든 페이지를 순회하며 긁어옵니다.
+            // 검색어가 비어있지 않으면 param으로 세팅
+            val keywordParam = if (searchKeyword.isNullOrBlank()) null else searchKeyword.trim()
+
             while (currentPage <= totalPages) {
-                when (val result = repository.searchArchives(page = currentPage, size = 50)) {
+                // 💡 repository에 keyword 파라미터를 정상적으로 넘겨줍니다.
+                when (val result = repository.searchArchives(keyword = keywordParam, page = currentPage, size = 50)) {
                     is ApiResult.Success -> {
                         allFetchedItems.addAll(result.data.items)
                         totalPages = result.data.pageInfo?.totalPages ?: 1
@@ -185,7 +205,6 @@ class ArchiveSearchViewModel @Inject constructor(
                 }
             }
 
-            // 💡 데이터를 성공적으로 불러왔다면 매핑하여 UI를 업데이트합니다.
             if (!hasErrorOnFirstPage) {
                 val allMissions = allFetchedItems.filter { it.type.lowercase() == "mission" }.map {
                     ArchiveMissionItem(id = it.missionId ?: it.id, title = it.title, category = it.category ?: "", difficulty = it.difficulty ?: "", duration = it.estimatedMinutes ?: 0, xp = it.rewardXp ?: 0, isCompleted = it.missionStatus == "completed", isSaved = it.isBookmarked, completedDate = formatIsoDate(it.createdAt))

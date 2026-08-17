@@ -31,8 +31,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.LineHeightStyle
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.talkqquest.app.R
 import com.talkqquest.app.core.designsystem.FitDesign
@@ -48,6 +53,13 @@ import com.talkqquest.app.core.designsystem.TqType
 import com.talkqquest.app.core.designsystem.White
 import com.talkqquest.app.core.designsystem.modalCardEnter
 import com.talkqquest.app.core.designsystem.modalCardExit
+
+private fun TextStyle.withFigmaFullLeading(): TextStyle = copy(
+    lineHeightStyle = LineHeightStyle(
+        alignment = LineHeightStyle.Alignment.Center,
+        trim = LineHeightStyle.Trim.None,
+    ),
+)
 
 @Composable
 fun ProfileWithdrawScreen(
@@ -194,16 +206,24 @@ private fun WithdrawConfirmDialog(
         ) {
             Text(
                 text = "정말 탈퇴하시겠어요?",
-                style = TqType.HeadingM.copy(fontWeight = FontWeight.SemiBold),
+                style = TqType.HeadingM
+                    .copy(fontWeight = FontWeight.SemiBold)
+                    .withFigmaFullLeading(),
                 color = Color(0xFF1E293B),
                 modifier = Modifier.size(width = 169.dp, height = 30.dp),
+                textAlign = TextAlign.Center,
+                maxLines = 1,
+                softWrap = false,
+                overflow = TextOverflow.Visible,
             )
             Spacer(Modifier.height(4.dp))
             Text(
                 text = "탈퇴 후에는 활동 기록과 저장된 정보를\n다시 복구할 수 없어요.",
-                style = TqType.BodyL,
+                style = TqType.BodyL.withFigmaFullLeading(),
                 color = Gray500,
                 modifier = Modifier.size(width = 288.dp, height = 48.dp),
+                textAlign = TextAlign.Center,
+                maxLines = 2,
             )
         }
         Spacer(Modifier.height(16.dp))
@@ -217,6 +237,7 @@ private fun WithdrawConfirmDialog(
                 textColor = Gray500,
                 onClick = onCancel,
                 modifier = Modifier.size(width = 138.dp, height = 48.dp),
+                textFrameWidth = 47.dp,
             )
             WithdrawDialogButton(
                 text = "탈퇴할래요",
@@ -224,6 +245,7 @@ private fun WithdrawConfirmDialog(
                 textColor = Gray50,
                 onClick = onConfirm,
                 modifier = Modifier.size(width = 138.dp, height = 48.dp),
+                textFrameWidth = 78.dp,
             )
         }
     }
@@ -234,6 +256,7 @@ private fun WithdrawDialogButton(
     background: Color,
     textColor: Color,
     onClick: () -> Unit,
+    textFrameWidth: Dp,
     modifier: Modifier = Modifier,
 ) {
     Box(
@@ -245,7 +268,18 @@ private fun WithdrawDialogButton(
             .profileItemClick(onClick = onClick),
         contentAlignment = Alignment.Center,
     ) {
-        Text(text = text, style = TqType.TitleL.copy(fontWeight = FontWeight.SemiBold), color = textColor)
+        Text(
+            text = text,
+            style = TqType.TitleL
+                .copy(fontWeight = FontWeight.SemiBold)
+                .withFigmaFullLeading(),
+            color = textColor,
+            modifier = Modifier.size(width = textFrameWidth, height = 28.dp),
+            textAlign = TextAlign.Center,
+            maxLines = 1,
+            softWrap = false,
+            overflow = TextOverflow.Visible,
+        )
     }
 }
 
@@ -256,7 +290,6 @@ private fun ProfileWithdrawScreenPreview() {
         ProfileWithdrawScreen()
     }
 }
-
 
 
 

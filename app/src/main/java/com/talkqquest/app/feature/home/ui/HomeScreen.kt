@@ -11,7 +11,6 @@ import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.PaddingValues
@@ -21,6 +20,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.requiredSize
@@ -37,6 +37,10 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.ripple
 import androidx.compose.material3.Text
 import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.togetherWith
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.FastOutSlowInEasing
@@ -48,6 +52,7 @@ import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -63,16 +68,18 @@ import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
+import androidx.compose.ui.graphics.CompositingStrategy
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.Paint
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.graphics.drawscope.clipPath
+import androidx.compose.ui.graphics.drawscope.clipRect
 import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.AnnotatedString
@@ -82,6 +89,7 @@ import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.text.style.LineBreak
 import androidx.compose.ui.text.style.LineHeightStyle
@@ -92,8 +100,13 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import kotlin.math.abs
+import kotlin.math.ceil
 import kotlin.math.roundToInt
 import com.talkqquest.app.R
 import com.talkqquest.app.core.designsystem.Error
@@ -101,6 +114,8 @@ import com.talkqquest.app.core.designsystem.FitDesign
 import androidx.compose.foundation.border
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.layout.layout
+import androidx.compose.ui.layout.onSizeChanged
 import com.talkqquest.app.core.designsystem.Gray100
 import com.talkqquest.app.core.designsystem.Gray1000
 import com.talkqquest.app.core.designsystem.Gray200
@@ -280,7 +295,6 @@ private fun HomeContent(
     LaunchedEffect(newWeekly) {
         if (newWeekly?.available == true) onShowWeeklyReportModal(newWeekly.reportId)
     }
-    var missionHasLongText by remember { mutableStateOf(false) }
     val scrollState = rememberScrollState()
     // 홈이 화면에서 벗어나는 순간 받은 reset 신호로 스크롤 위치도 항상 맨 위로 되돌린다.
     LaunchedEffect(xpResetToken) {
@@ -288,16 +302,7 @@ private fun HomeContent(
     }
     // 실전 티어 ⓘ 탭 → 티어 승급 안내 시트(성장 리포트와 동일 공용 시트).
     var showTierHelp by remember { mutableStateOf(false) }
-    // 콘텐츠가 떠 있는 하단 네비(118 몫) 위로 다 들어가게 "필요한 만큼만" 균등 축소.
-    // 짧은 미션이면 자연 높이가 여유에 들어가 축소 0 = 피그마 그대로. 넘치면 넘치는 만큼만.
-    // 축소는 그리기 단계(graphicsLayer)만 → 레이아웃 크기 불변 → 측정 안정(진동/깜빡임 없음).
-    // scale을 여기서 val로 계산 → 홈·팝업이 같은 값을 써서 팝업도 같은 비율로 줄어듦(뒤 화면과 한 세트).
-    BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
-        val availPx = constraints.maxHeight - with(LocalDensity.current) { 118.dp.roundToPx() }
-        var naturalPx by remember { mutableIntStateOf(0) }
-        val scale = if (!missionHasLongText && naturalPx > 0 && naturalPx > availPx) {
-            (availPx.toFloat() / naturalPx).coerceIn(0.8f, 1f) // 하한 0.8 (과축소 방지)
-        } else 1f
+    Box(modifier = Modifier.fillMaxSize()) {
         Box(
             modifier = Modifier
                 .fillMaxSize()
@@ -308,12 +313,6 @@ private fun HomeContent(
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .graphicsLayer {
-                            scaleX = scale
-                            scaleY = scale
-                            transformOrigin = TransformOrigin(0.5f, 0f) // 위쪽 기준(상단 고정, 아래로만 당겨 올림)
-                        }
-                        .onGloballyPositioned { naturalPx = it.size.height } // graphicsLayer는 레이아웃 크기 불변 → 안정
                         .statusBarsPadding()
                         // CSS: 카드 묶음 Frame 430 left 16, 폭 362 → 우측 여백 15 (좌우 비대칭)
                         .padding(start = 16.dp, end = 15.dp),
@@ -343,9 +342,6 @@ private fun HomeContent(
                         isRefreshing = isRefreshingMission,
                         onRefreshClick = onRefreshTodayMission,
                         onStartClick = { onStartMissionClick(mission.id) },
-                        onTextLineCountChanged = { titleLines, descriptionLines ->
-                            missionHasLongText = titleLines >= 3 || descriptionLines >= 3
-                        },
                     )
                 }
                 Spacer(Modifier.height(12.dp)) // CSS 카드 스택 gap 12
@@ -358,7 +354,7 @@ private fun HomeContent(
             }
         }
 
-        // 티어 승급 안내 시트(공용) — 홈 축소(scale)와 무관하게 전체 화면에 오버레이.
+        // 티어 승급 안내 시트(공용) — 전체 화면에 오버레이.
         // onSheetTopChange로 시트가 덮는 동안 하단 네비를 가림(저장 시트와 동일).
         // onModalChange는 시트가 떠 있는 동안 탭 스와이프를 끄는 신호 — 딤이 깔린 모달이라 뒤로 못 넘어가야 한다.
         TierPromotionSheet(
@@ -397,7 +393,7 @@ private const val TITLE_MAX_WIDTH_DP = 256 // 디자인 Frame313 제목 영역 �
 private fun MissionTitleText(
     title: String,
     modifier: Modifier = Modifier,
-    onLineCountChanged: (Int) -> Unit = {},
+    onTextLayout: (displayText: String, layout: TextLayoutResult) -> Unit = { _, _ -> },
 ) {
     val style = TqType.TitleL.figma().copy(lineBreak = LineBreak.Heading)
     val measurer = rememberTextMeasurer()
@@ -479,7 +475,7 @@ private fun MissionTitleText(
         style = style,
         color = Gray900,
         modifier = modifier.widthIn(max = TITLE_MAX_WIDTH_DP.dp),
-        onTextLayout = { onLineCountChanged(it.lineCount) },
+        onTextLayout = { layout -> onTextLayout(displayTitle, layout) },
     )
 }
 
@@ -1127,7 +1123,7 @@ private fun HomeTierRow(
                                 }
                                 val adjustedProgress = lead + (progress * (1f - lead))
                                 val centerX = size.width * adjustedProgress
-                                val shineWidth = size.width * 0.24f
+                                val shineWidth = size.width * 0.32f
                                 val shine = Brush.linearGradient(
                                     colors = listOf(
                                         Color.Transparent,
@@ -1530,33 +1526,422 @@ private val StarYellow = Color(0xFFF9AC17)
 private val StarHighlight = Color(0xFFFFE7A3)
 
 // 오늘의 미션 카드.
+private enum class MissionTransition { Visible, Exiting, Waiting, Reverting, Entering }
+
+// 고정 레이아웃 위에서만 알파를 훑어 문자열 교체에 따른 재배치를 만들지 않는다.
+private fun Modifier.missionGlyphWipe(
+    progress: Float,
+    exiting: Boolean,
+    start: Int,
+    total: Int,
+    layoutResult: TextLayoutResult?,
+    hideUntilLayout: Boolean = false,
+    expectedText: String? = null,
+    entering: Boolean = false,
+    enterStartHeightPx: Int = 0,
+    enterEndHeightPx: Int = 0,
+    contentTopPx: Int = 0,
+): Modifier = graphicsLayer { compositingStrategy = CompositingStrategy.Offscreen }
+    .drawWithContent {
+        val layout = layoutResult?.takeIf { expectedText == null || it.layoutInput.text.text == expectedText } ?: run {
+            // 최초 표시 때는 정상 렌더한다. 새 미션 Entering 중에는 새 layout이
+            // 준비되기 전까지 이전 layout으로 새 문자열을 그리지 않는다.
+            if (!hideUntilLayout) drawContent()
+            return@drawWithContent
+        }
+        val text = layout.layoutInput.text.text
+        val glyphOffsets = visibleGlyphOffsetsInVisualOrder(text, layout)
+        val timings = if (entering && !exiting) {
+            enterGlyphTimings(
+                glyphOffsets = glyphOffsets,
+                layout = layout,
+                start = start,
+                total = total,
+                startHeightPx = enterStartHeightPx,
+                endHeightPx = enterEndHeightPx,
+                contentTopPx = contentTopPx,
+            )
+        } else {
+            glyphOffsets.mapIndexed { order, _ ->
+                GlyphTiming(
+                    onset = (start + order) / total.toFloat(),
+                    completion = (start + order + timelineFadeWindow(total)) / total.toFloat(),
+                )
+            }
+        }
+        glyphOffsets.forEachIndexed { order, offset ->
+            val (onset, completion) = timings[order]
+            val amount = ((progress - onset) / (completion - onset)).coerceIn(0f, 1f)
+            val alpha = if (exiting) 1f - amount else amount
+            val glyphBounds = layout.getBoundingBox(offset)
+            // 매 글리프 영역을 먼저 clip하고, 그 영역에서만 alpha layer에 원본을 다시 그린다.
+            // 따라서 DstIn rect를 연속 적용해 이전 글자를 지우는 교집합 합성이 발생하지 않는다.
+            clipRect(glyphBounds.left, glyphBounds.top, glyphBounds.right, glyphBounds.bottom) {
+                drawContext.canvas.saveLayer(glyphBounds, Paint().apply { this.alpha = alpha })
+                this@drawWithContent.drawContent()
+                drawContext.canvas.restore()
+            }
+        }
+    }
+
+private data class GlyphTiming(val onset: Float, val completion: Float)
+
+// 높이가 아직 없는 줄에 global alpha를 누적시키지 않는다. 최초로 global onset보다
+// 늦게 준비되는 줄부터는 남은 440ms 구간을 line-major 순서로 다시 나눠, 각 줄이
+// 준비된 뒤 첫 glyph부터 x 순서로 시작하고 마지막 glyph는 p=1에 완전히 끝나게 한다.
+private fun enterGlyphTimings(
+    glyphOffsets: List<Int>,
+    layout: TextLayoutResult,
+    start: Int,
+    total: Int,
+    startHeightPx: Int,
+    endHeightPx: Int,
+    contentTopPx: Int,
+): List<GlyphTiming> {
+    if (glyphOffsets.isEmpty()) return emptyList()
+    val lineGroups = glyphOffsets.groupBy { layout.getLineForOffset(it) }.values.toList()
+    val firstDelayedLine = lineGroups.indexOfFirst { offsets ->
+        val globalOnset = (start + glyphOffsets.indexOf(offsets.first())) / total.toFloat()
+        lineReadyProgress(offsets, layout, startHeightPx, endHeightPx, contentTopPx) > globalOnset
+    }
+    if (firstDelayedLine == -1) {
+        return glyphOffsets.indices.map { order ->
+            GlyphTiming(
+                onset = (start + order) / total.toFloat(),
+                completion = (start + order + timelineFadeWindow(total)) / total.toFloat(),
+            )
+        }
+    }
+
+    val timings = MutableList<GlyphTiming?>(glyphOffsets.size) { null }
+    var cursor = 0f
+    for (lineIndex in lineGroups.indices) {
+        val offsets = lineGroups[lineIndex]
+        val firstOrder = glyphOffsets.indexOf(offsets.first())
+        if (lineIndex < firstDelayedLine) {
+            offsets.forEachIndexed { index, _ ->
+                val order = firstOrder + index
+                timings[order] = GlyphTiming(
+                    onset = (start + order) / total.toFloat(),
+                    completion = (start + order + timelineFadeWindow(total)) / total.toFloat(),
+                )
+            }
+            cursor = timings[firstOrder + offsets.lastIndex]!!.completion
+            continue
+        }
+
+        val ready = lineReadyProgress(offsets, layout, startHeightPx, endHeightPx, contentTopPx)
+        val lineStart = maxOf(cursor, ready)
+        val remainingGlyphs = glyphOffsets.size - firstOrder
+        val glyphInterval = (1f - lineStart) / remainingGlyphs
+        offsets.forEachIndexed { index, _ ->
+            val onset = lineStart + (index * glyphInterval)
+            timings[firstOrder + index] = GlyphTiming(onset = onset, completion = onset + glyphInterval)
+        }
+        cursor = lineStart + (offsets.size * glyphInterval)
+    }
+    return timings.map { it!! }
+}
+
+private fun lineReadyProgress(
+    offsets: List<Int>,
+    layout: TextLayoutResult,
+    startHeightPx: Int,
+    endHeightPx: Int,
+    contentTopPx: Int,
+): Float {
+    // 실제 glyph bounds의 가장 낮은 지점으로 판정한다. layout leading까지 기다리면
+    // 최종 Row 높이와 같은 마지막 line이 p=1에서야 시작하는 문제가 생긴다.
+    val lineBottom = offsets.maxOf { layout.getBoundingBox(it).bottom } + contentTopPx
+    if (endHeightPx <= startHeightPx || lineBottom <= startHeightPx) return 0f
+    return ((lineBottom - startHeightPx).toFloat() / (endHeightPx - startHeightPx))
+        .coerceIn(0f, 1f)
+}
+
+// 모든 글리프 수에 비례하게 440ms의 약 16%를 feather로 쓴다. 일반 미션 길이에서
+// 60~80ms(대개 약 70ms)의 alpha 전이로, 60Hz의 4프레임 이상을 확보한다.
+private fun timelineFadeWindow(total: Int): Float = (total * 0.16f).coerceAtLeast(4f)
+
+// 공백·NBSP·개행·WORD JOINER·combining mark는 순번을 차지하지 않는다. UTF-16
+// surrogate는 code point 하나의 선행 offset만 남겨 TextLayoutResult와도 맞춘다.
+private fun visibleGlyphOffsets(text: String): List<Int> = buildList {
+    var offset = 0
+    while (offset < text.length) {
+        val codePoint = text.codePointAt(offset)
+        val type = Character.getType(codePoint)
+        val invisible = Character.isWhitespace(codePoint) ||
+            Character.isSpaceChar(codePoint) ||
+            type == Character.FORMAT.toInt() ||
+            type == Character.CONTROL.toInt() ||
+            type == Character.NON_SPACING_MARK.toInt() ||
+            type == Character.COMBINING_SPACING_MARK.toInt() ||
+            type == Character.ENCLOSING_MARK.toInt()
+        if (!invisible) add(offset)
+        offset += Character.charCount(codePoint)
+    }
+}
+
+// logical text order는 phrase/균형 줄바꿈 결과와 항상 같지 않다. 실제 line, x 순서로
+// 정렬해 모든 줄이 위→아래, 각 줄은 왼쪽→오른쪽으로 같은 wipe 타임라인을 사용하게 한다.
+private fun visibleGlyphOffsetsInVisualOrder(text: String, layout: TextLayoutResult): List<Int> =
+    visibleGlyphOffsets(text).sortedWith(
+        compareBy<Int> { layout.getLineForOffset(it) }
+            .thenBy { layout.getBoundingBox(it).left },
+    )
+
+// animateContentSize는 내부 clipToBounds 때문에 새 마지막 줄을 세로로 잘라낸다.
+// 이 Layout은 자식을 언제나 최종 높이로 배치하면서 부모에게만 보간 높이를 보고한다.
+// 글리프 노출은 missionGlyphWipe의 line readiness gate가 맡으므로 overflow가 아래 UI와
+// 겹치지 않는다.
+private fun Modifier.reportMissionHeaderHeight(reportedHeightPx: Int): Modifier = layout { measurable, constraints ->
+    val placeable = measurable.measure(constraints)
+    layout(
+        width = placeable.width,
+        height = reportedHeightPx.coerceIn(constraints.minHeight, constraints.maxHeight),
+    ) {
+        placeable.placeRelative(0, 0)
+    }
+}
+
+private fun visibleGlyphCount(text: String): Int = visibleGlyphOffsets(text).size
+
+private fun timelineAlpha(progress: Float, exiting: Boolean, start: Int, length: Int, total: Int): Float {
+    val onset = start / total.toFloat()
+    val completion = (start + length - 1 + timelineFadeWindow(total)) / total.toFloat()
+    val amount = ((progress - onset) / (completion - onset)).coerceIn(0f, 1f)
+    return if (exiting) 1f - amount else amount
+}
+
 @Composable
 private fun HomeMissionCard(
     mission: TodayMission,
     isRefreshing: Boolean = false,
     onRefreshClick: () -> Unit = {},
     onStartClick: () -> Unit = {},
-    onTextLineCountChanged: (titleLines: Int, descriptionLines: Int) -> Unit = { _, _ -> },
 ) {
-    var titleLineCount by remember(mission.title) { mutableIntStateOf(1) }
-    var descriptionLineCount by remember(mission.description) { mutableIntStateOf(0) }
+    var displayedMission by remember { mutableStateOf(mission) }
+    var transition by remember { mutableStateOf(MissionTransition.Visible) }
+    var exitFinished by remember { mutableStateOf(true) }
+    var refreshGeneration by remember { mutableIntStateOf(0) }
+    var exitJob by remember { mutableStateOf<Job?>(null) }
+    var titleLayout by remember { mutableStateOf<TextLayoutResult?>(null) }
+    var titleLayoutText by remember { mutableStateOf<String?>(null) }
+    var descriptionLayout by remember { mutableStateOf<TextLayoutResult?>(null) }
+    var difficultyMetricReady by remember { mutableStateOf(true) }
+    var timeMetricReady by remember { mutableStateOf(true) }
+    var rewardMetricReady by remember { mutableStateOf(true) }
+    // 교체 직전의 실제 헤더 높이를 기억해 새 텍스트의 최종 높이까지 440ms 동안
+    // 부모 레이아웃만 이동시킨다. 자식 Text 자체는 언제나 최종 측정 크기를 유지한다.
+    var previousHeaderHeightPx by remember { mutableIntStateOf(0) }
+    var measuredHeaderHeightPx by remember { mutableIntStateOf(0) }
+    val exitProgress = remember { Animatable(0f) }
+    val enterProgress = remember { Animatable(1f) }
+    val dartEnterRestoreProgress = remember { Animatable(1f) }
     val targetImpactProgress = remember { Animatable(0f) }
+    val dartShineProgress = remember { Animatable(0f) }
     var targetImpactRunning by remember { mutableStateOf(false) }
+    var dartShineRunning by remember { mutableStateOf(false) }
     val targetImpactScope = rememberCoroutineScope()
+    val transitionScope = rememberCoroutineScope()
     val targetImpactOffsetPx = with(LocalDensity.current) { 3.dp.toPx() }
     val recommendationInteraction = remember { MutableInteractionSource() }
     val recommendationPressed by recommendationInteraction.collectIsPressedAsState()
-    var recommendationClickAnimating by remember { mutableStateOf(false) }
-    val recommendationScope = rememberCoroutineScope()
-    val recommendationVisuallyPressed = recommendationPressed || recommendationClickAnimating
-    val recommendationScale by animateFloatAsState(
-        targetValue = if (recommendationVisuallyPressed) 0.88f else 1f,
+    var recommendationPending by remember { mutableStateOf(false) }
+    // 추천 다트 축소는 문구 소멸·추천 광선과 exitProgress 하나를 공유한다.
+    // 새 미션에서는 0.88에서 140ms 동안만 원래 크기로 복귀한다.
+    val recommendationDartScaleProgress = when (transition) {
+        MissionTransition.Exiting -> exitProgress.value
+        MissionTransition.Waiting -> 1f
+        MissionTransition.Reverting -> exitProgress.value
+        MissionTransition.Entering -> 1f - dartEnterRestoreProgress.value
+        MissionTransition.Visible -> 0f
+    }
+    val recommendationDartScale = 1f - (0.12f * recommendationDartScaleProgress)
+    // 추천 배지는 비동기 pending 상태와 무관한 짧은 터치 피드백만 유지한다.
+    val recommendationBadgeScale by animateFloatAsState(
+        targetValue = if (recommendationPressed) 0.94f else 1f,
         animationSpec = tween(
-            durationMillis = if (recommendationVisuallyPressed) 90 else 140,
+            durationMillis = if (recommendationPressed) 90 else 140,
             easing = FastOutSlowInEasing,
         ),
-        label = "recommendationPressScale",
+        label = "recommendationBadgePressScale",
     )
+    suspend fun playDartShine() {
+        if (dartShineRunning) return
+        dartShineRunning = true
+        try {
+            dartShineProgress.snapTo(0f)
+            dartShineProgress.animateTo(1f, tween(durationMillis = 450, easing = LinearEasing))
+            dartShineProgress.snapTo(0f)
+        } finally {
+            withContext(NonCancellable) {
+                dartShineProgress.snapTo(0f)
+                dartShineRunning = false
+            }
+        }
+    }
+    suspend fun playTargetImpact() {
+        if (targetImpactRunning) return
+        targetImpactRunning = true
+        try {
+            // 실전 티어 뱃지와 같은 450ms 선형 광선을 눌림 반동과 동시에 시작한다.
+            coroutineScope {
+                launch {
+                    playDartShine()
+                }
+                launch {
+                    targetImpactProgress.snapTo(0f)
+                    targetImpactProgress.animateTo(
+                        targetValue = 1f,
+                        animationSpec = tween(durationMillis = 100, easing = FastOutSlowInEasing),
+                    )
+                    delay(50)
+                    targetImpactProgress.animateTo(
+                        targetValue = 0f,
+                        animationSpec = tween(durationMillis = 150, easing = LinearOutSlowInEasing),
+                    )
+                }
+            }
+        } finally {
+            // drawWithContent는 진행값 0일 때 광선을 전혀 그리지 않아 잔상이 남지 않는다.
+            withContext(NonCancellable) {
+                targetImpactProgress.snapTo(0f)
+                targetImpactRunning = false
+            }
+        }
+    }
+    // 서버가 빠르게 응답해도 지우기가 끝나기 전에는 새 텍스트를 교체하지 않는다.
+    LaunchedEffect(isRefreshing) {
+        if (isRefreshing && transition == MissionTransition.Visible) {
+            val generation = ++refreshGeneration
+            exitFinished = false
+            transition = MissionTransition.Exiting
+            enterProgress.snapTo(1f)
+            exitJob?.cancel()
+            exitJob = transitionScope.launch {
+                exitProgress.snapTo(0f)
+                exitProgress.animateTo(1f, tween(1_200, easing = LinearEasing))
+                if (generation == refreshGeneration) {
+                    // p=1에서는 광선 중심이 다트의 우하단 밖에 있지만, 새 미션을
+                    // 같은 composition에서 올리면 beam-free 상태가 실제로 그려지지
+                    // 않을 수 있다. Waiting을 먼저 compose하고 frame gate가 연다.
+                    transition = MissionTransition.Waiting
+                }
+            }
+        }
+    }
+    LaunchedEffect(transition, refreshGeneration) {
+        if (transition != MissionTransition.Waiting) return@LaunchedEffect
+
+        // Waiting composition 뒤 두 frame boundary를 지난 뒤에만 새 미션 교체를 허용한다.
+        // 첫 boundary는 beam-free Waiting frame을 제출하고, 두 번째 boundary는 그 frame이
+        // 새 Entering state로 합쳐지지 않도록 보장한다.
+        val waitingGeneration = refreshGeneration
+        withFrameNanos { }
+        withFrameNanos { }
+        if (transition == MissionTransition.Waiting && waitingGeneration == refreshGeneration) {
+            exitFinished = true
+        }
+    }
+    LaunchedEffect(isRefreshing, exitFinished, mission.id, refreshGeneration) {
+        if (!isRefreshing && transition != MissionTransition.Visible) {
+            // 같은 id가 돌아오면 갱신 실패다. 현재 텍스트를 부드럽게 되돌리고 새 미션으로 바꾸지 않는다.
+            if (mission.id == displayedMission.id) {
+                exitJob?.cancel()
+                // Waiting에서는 content/다트가 p=1 hold 중이므로, Visible로 바로
+                // 바꾸지 않고 현재 exitProgress를 역재생해 자연스럽게 복귀한다.
+                transition = MissionTransition.Reverting
+                exitProgress.animateTo(0f, tween(440, easing = LinearEasing))
+                transition = MissionTransition.Visible
+                recommendationPending = false
+            } else if (exitFinished) {
+                // 새 Text와 이전 TextLayoutResult를 같은 프레임에 분리한다. layout이
+                // 준비됐다는 사실까지 확인하기 전에는 enter time을 시작하지 않는다.
+                titleLayout = null
+                titleLayoutText = null
+                descriptionLayout = null
+                difficultyMetricReady = false
+                timeMetricReady = false
+                rewardMetricReady = false
+                previousHeaderHeightPx = measuredHeaderHeightPx
+                displayedMission = mission
+                enterProgress.snapTo(0f)
+                dartEnterRestoreProgress.snapTo(0f)
+                transition = MissionTransition.Entering
+            }
+        }
+    }
+    LaunchedEffect(
+        transition,
+        titleLayout,
+        descriptionLayout,
+        difficultyMetricReady,
+        timeMetricReady,
+        rewardMetricReady,
+        displayedMission.id,
+    ) {
+        if (transition != MissionTransition.Entering) return@LaunchedEffect
+        val titleReady = titleLayoutText != null &&
+            titleLayout?.layoutInput?.text?.text == titleLayoutText
+        val currentDescription = displayedMission.description
+        val descriptionReady = currentDescription == null ||
+            descriptionLayout?.layoutInput?.text?.text == currentDescription.glueShortWords()
+        if (!titleReady || !descriptionReady || !difficultyMetricReady || !timeMetricReady || !rewardMetricReady) {
+            return@LaunchedEffect
+        }
+
+        // 새 콘텐츠가 실제 layout된 뒤 첫 enter 프레임에서만 배지를 복귀시킨다.
+        recommendationPending = false
+        coroutineScope {
+            launch {
+                dartEnterRestoreProgress.animateTo(1f, tween(140, easing = FastOutSlowInEasing))
+            }
+            launch {
+                enterProgress.animateTo(1f, tween(440, easing = LinearEasing))
+            }
+        }
+        transition = MissionTransition.Visible
+    }
+    val isMissionExiting = transition == MissionTransition.Exiting ||
+        transition == MissionTransition.Waiting ||
+        transition == MissionTransition.Reverting
+    val missionContentProgress = when (transition) {
+        MissionTransition.Exiting -> exitProgress.value
+        MissionTransition.Waiting -> 1f
+        MissionTransition.Reverting -> exitProgress.value
+        MissionTransition.Entering -> enterProgress.value
+        MissionTransition.Visible -> 1f
+    }
+    val reportedHeaderHeightPx = if (
+        transition == MissionTransition.Entering &&
+        previousHeaderHeightPx > 0 &&
+        measuredHeaderHeightPx > 0
+    ) {
+        (
+            previousHeaderHeightPx +
+                ((measuredHeaderHeightPx - previousHeaderHeightPx) * enterProgress.value)
+            ).roundToInt()
+    } else {
+        measuredHeaderHeightPx
+    }
+    // 제목부터 보상까지 한 타임라인을 공유한다. 구분선은 한 글자 폭으로 취급한다.
+    // MissionTitleText가 균형 줄바꿈한 실제 TextLayout input을 timeline identity로 쓴다.
+    val titleText = titleLayoutText ?: displayedMission.title
+    val descriptionText = displayedMission.description?.glueShortWords().orEmpty()
+    val titleStart = 0
+    val descriptionStart = titleStart + visibleGlyphCount(titleText)
+    val difficultyStart = descriptionStart + visibleGlyphCount(descriptionText)
+    val difficultyLength = visibleGlyphCount("난이도") + visibleGlyphCount(displayedMission.difficulty)
+    val firstDividerStart = difficultyStart + difficultyLength
+    val timeText = "${displayedMission.estimatedMinutes}분"
+    val timeStart = firstDividerStart + 1
+    val timeLength = visibleGlyphCount("예상 시간") + visibleGlyphCount(timeText)
+    val secondDividerStart = timeStart + timeLength
+    val rewardText = "+${displayedMission.rewardXp} XP"
+    val rewardStart = secondDividerStart + 1
+    val visibleSlotCount = rewardStart + visibleGlyphCount("보상") + visibleGlyphCount(rewardText)
+    // 마지막 glyph의 feather가 p=1에 끝나도록 total을 올림 정규화한다.
+    val timelineTotal = ceil((visibleSlotCount - 1).coerceAtLeast(1) / 0.84f).toInt().coerceAtLeast(1)
     val missionHeaderInteraction = remember { MutableInteractionSource() }
     val missionHeaderPressed by missionHeaderInteraction.collectIsPressedAsState()
     var missionHeaderClickAnimating by remember { mutableStateOf(false) }
@@ -1629,65 +2014,72 @@ private fun HomeMissionCard(
             // 추천 뱃지: 컴포넌트.css 그대로 (고정 40x22, Primary100, radius 4, 텍스트 중앙)
             // 횟수 정보가 없는 폴백 미션은 활성 상태로 유지하고,
             // 서버가 명시적으로 0회를 내려준 경우에만 비활성화한다.
-            val canRefresh = mission.remainingRefreshes != 0 && !isRefreshing
+            val hasQuota = mission.remainingRefreshes != 0
+            val canRefresh = hasQuota && !isRefreshing
             Box(
                 modifier = Modifier
                     .height(22.dp)
                     .widthIn(min = 40.dp)
                     .graphicsLayer {
-                        scaleX = recommendationScale
-                        scaleY = recommendationScale
-                        // 작은 배지는 아래 이동을 더하면 축소된 하단 여백이 상쇄되어
-                        // 위쪽만 줄어드는 것처럼 보이므로, 중심 기준 축소만 적용한다.
-                        translationY = 0f
+                        scaleX = recommendationBadgeScale
+                        scaleY = recommendationBadgeScale
                     }
                     .clip(RoundedCornerShape(4.dp))
-                    .background(if (canRefresh) Primary100 else Gray100)
+                    .background(if (hasQuota) Primary100 else Gray100)
                     .padding(horizontal = 7.dp)
                     .clickable(
                         enabled = canRefresh,
                         interactionSource = recommendationInteraction,
                         indication = null,
                         onClick = {
-                            if (!recommendationClickAnimating) {
+                            if (!recommendationPending) {
+                                recommendationPending = true
                                 onRefreshClick()
-                                recommendationClickAnimating = true
-                                recommendationScope.launch {
-                                    delay(100)
-                                    recommendationClickAnimating = false
-                                }
                             }
                         },
                     ),
                 contentAlignment = Alignment.Center,
             ) {
-                Text(
-                    text = if (mission.refreshLimit != null && mission.remainingRefreshes != null && mission.remainingRefreshes > 0) {
-                        "추천 ${mission.remainingRefreshes}"
-                    } else {
-                        "추천"
-                    },
-                    style = TqType.LabelM.figma(),
-                    color = if (canRefresh) Primary600 else Gray400,
-                )
+                val displayedRefreshes = mission.remainingRefreshes?.let { remaining ->
+                    if (isRefreshing && remaining > 0) remaining - 1 else remaining
+                }
+                AnimatedContent(
+                    targetState = displayedRefreshes,
+                    transitionSpec = { fadeIn(tween(120)) togetherWith fadeOut(tween(90)) },
+                    label = "recommendationCount",
+                ) { remaining ->
+                    Text(
+                        text = if (mission.refreshLimit != null && remaining != null && remaining > 0) "추천 $remaining" else "추천",
+                        style = TqType.LabelM.figma(),
+                        color = if (hasQuota) Primary600 else Gray400,
+                    )
+                }
             }
         }
         Spacer(Modifier.height(16.dp))
         // 일러스트(다트 60x63) + 제목/설명
         Row(
-            modifier = Modifier.fillMaxWidth(),
+            // 이 가변 Row만 440ms 동안 부모에게 보간 높이를 보고한다. 따라서 아래
+            // 지표·버튼·카드 바닥·다음 카드가 같은 곡선으로 함께 이동한다.
+            modifier = Modifier
+                .fillMaxWidth()
+                .heightIn(min = 63.dp)
+                .reportMissionHeaderHeight(reportedHeaderHeightPx)
+                // reportMissionHeaderHeight 안쪽에서 최종 자식 크기를 읽어야 다음
+                // 프레임의 보간 목표가 중간 보고 높이로 되먹임되지 않는다.
+                .onSizeChanged { measuredHeaderHeightPx = it.height },
             horizontalArrangement = Arrangement.spacedBy(8.dp),
         ) {
-            Image(
-                painter = painterResource(R.drawable.img_home_target),
-                contentDescription = "오늘의 미션 과녁",
+            Box(
                 modifier = Modifier
                     .size(width = 60.dp, height = 63.dp)
                     .graphicsLayer {
+                        // 기존 다트 꽂힘 반동(100ms → 50ms 유지 → 150ms 복귀).
                         val progress = targetImpactProgress.value
                         val impactScale = 1f - (0.07f * progress)
-                        scaleX = impactScale
-                        scaleY = impactScale
+                        // 추천 전환의 0.88 축소와 직접 탭 반동을 곱해 한 layer에서 합성한다.
+                        scaleX = impactScale * recommendationDartScale
+                        scaleY = impactScale * recommendationDartScale
                         translationX = targetImpactOffsetPx * progress
                         translationY = targetImpactOffsetPx * progress
                         transformOrigin = TransformOrigin(0.54f, 0.58f)
@@ -1696,40 +2088,76 @@ private fun HomeMissionCard(
                         interactionSource = remember { MutableInteractionSource() },
                         indication = null,
                         onClick = {
-                            if (!targetImpactRunning) {
-                                targetImpactRunning = true
-                                targetImpactScope.launch {
-                                    targetImpactProgress.snapTo(0f)
-                                    targetImpactProgress.animateTo(
-                                        targetValue = 1f,
-                                        animationSpec = tween(
-                                            durationMillis = 100,
-                                            easing = FastOutSlowInEasing,
-                                        ),
-                                    )
-                                    delay(50)
-                                    targetImpactProgress.animateTo(
-                                        targetValue = 0f,
-                                        animationSpec = tween(
-                                            durationMillis = 150,
-                                            easing = LinearOutSlowInEasing,
-                                        ),
-                                    )
-                                    targetImpactRunning = false
-                                }
-                            }
+                            targetImpactScope.launch { playTargetImpact() }
                         },
                     ),
-            )
+            ) {
+                Image(
+                    painter = painterResource(R.drawable.img_home_target),
+                    contentDescription = "오늘의 미션 과녁",
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .graphicsLayer { compositingStrategy = CompositingStrategy.Offscreen }
+                    // 추천 전환은 문구 exit의 1.2초 progress를 그대로 공유하고,
+                    // 직접 탭만 독립 450ms 광선을 쓴다.
+                    .drawWithContent {
+                        drawContent()
+                        val directShineProgress = dartShineProgress.value
+                        val recommendationShineProgress = if (transition == MissionTransition.Exiting) {
+                            exitProgress.value
+                        } else {
+                            0f
+                        }
+                        val shineProgress = maxOf(directShineProgress, recommendationShineProgress)
+                        if (shineProgress > 0f) {
+                            val shineWidth = size.width * 0.34f
+                            // p=0: center=-width (좌상단 바깥), p=1: center=size.width+width
+                            // (우하단 바깥). 따라서 exit 마지막에도 광선이 다트 안에 남지 않는다.
+                            val centerX = -shineWidth +
+                                ((size.width + shineWidth * 2f) * shineProgress)
+                            drawRect(
+                                brush = Brush.linearGradient(
+                                    colorStops = arrayOf(
+                                        0.00f to Color.Transparent,
+                                        0.16f to White.copy(alpha = 0.08f),
+                                        0.32f to White.copy(alpha = 0.32f),
+                                        0.43f to White.copy(alpha = 0.66f),
+                                        0.57f to White.copy(alpha = 0.66f),
+                                        0.68f to White.copy(alpha = 0.32f),
+                                        0.84f to White.copy(alpha = 0.08f),
+                                        1.00f to Color.Transparent,
+                                    ),
+                                    start = Offset(centerX - shineWidth, 0f),
+                                    end = Offset(centerX + shineWidth, size.height),
+                                ),
+                                blendMode = BlendMode.SrcAtop,
+                            )
+                        }
+                    }
+                )
+            }
             Column(
-                modifier = Modifier.weight(1f),
+                modifier = Modifier
+                    .weight(1f),
                 verticalArrangement = Arrangement.spacedBy(4.dp),
             ) {
                 // 제목·설명 영역 256(디자인 Frame313) 상한. 제목은 필요한 최소 줄 수 안에서
                 // 어절 경계를 균등하게 나누고, 설명은 AI 피드백 상세와 같은 Phrase 줄바꿈을 쓴다.
                 MissionTitleText(
-                    title = mission.title,
+                    title = displayedMission.title,
                     modifier = Modifier
+                        .missionGlyphWipe(
+                            missionContentProgress,
+                            isMissionExiting,
+                            titleStart,
+                            timelineTotal,
+                            titleLayout,
+                            hideUntilLayout = transition == MissionTransition.Entering,
+                            expectedText = titleLayoutText,
+                            entering = transition == MissionTransition.Entering,
+                            enterStartHeightPx = previousHeaderHeightPx,
+                            enterEndHeightPx = measuredHeaderHeightPx,
+                        )
                         .graphicsLayer {
                             scaleX = titleScale
                             scaleY = titleScale
@@ -1747,14 +2175,14 @@ private fun HomeMissionCard(
                                 }
                             },
                         ),
-                    onLineCountChanged = { lines ->
-                        titleLineCount = lines
-                        onTextLineCountChanged(lines, descriptionLineCount)
+                    onTextLayout = { displayText, layout ->
+                        titleLayoutText = displayText
+                        titleLayout = layout
                     },
                 )
-                mission.description?.let {
+                displayedMission.description?.let { description ->
                     Text(
-                        text = it.glueShortWords(),
+                        text = description.glueShortWords(),
                         style = TqType.BodyS.figma().copy(
                             lineBreak = LineBreak(
                                 strategy = LineBreak.Strategy.HighQuality,
@@ -1765,6 +2193,20 @@ private fun HomeMissionCard(
                         color = Gray600,
                         modifier = Modifier
                             .widthIn(max = 256.dp)
+                            .missionGlyphWipe(
+                                missionContentProgress,
+                                isMissionExiting,
+                                descriptionStart,
+                                timelineTotal,
+                                descriptionLayout,
+                                hideUntilLayout = transition == MissionTransition.Entering,
+                                expectedText = description.glueShortWords(),
+                                entering = transition == MissionTransition.Entering,
+                                enterStartHeightPx = previousHeaderHeightPx,
+                                enterEndHeightPx = measuredHeaderHeightPx,
+                                contentTopPx = (titleLayout?.size?.height ?: 0) +
+                                    with(LocalDensity.current) { 4.dp.roundToPx() },
+                            )
                             .graphicsLayer {
                                 scaleX = descriptionScale
                                 scaleY = descriptionScale
@@ -1782,10 +2224,7 @@ private fun HomeMissionCard(
                                     }
                                 },
                             ),
-                        onTextLayout = { result ->
-                            descriptionLineCount = result.lineCount
-                            onTextLineCountChanged(titleLineCount, result.lineCount)
-                        },
+                        onTextLayout = { descriptionLayout = it },
                     )
                 }
             }
@@ -1794,18 +2233,51 @@ private fun HomeMissionCard(
         // 난이도 / 예상 시간 / 보상 (세로 구분선으로 3분할)
         // CSS Frame 321: 행 54 = 상하 패딩 8 + 칸 38. (좌우 29는 칸 고정폭 합이 330을 넘는 과제약 → weight 유지)
         Row(
-            modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = 8.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             MissionInfo(
                 label = "난이도",
-                value = mission.difficulty,
-                valueColor = if (mission.difficulty == "쉬움") Success else Gray700,
+                value = displayedMission.difficulty,
+                valueColor = when (displayedMission.difficulty) {
+                    "쉬움" -> Success
+                    "보통" -> Color(0xFFEF8F22)
+                    "어려움" -> Color(0xFFF14444)
+                    else -> Gray700
+                },
+                progress = missionContentProgress,
+                exiting = isMissionExiting,
+                entering = transition == MissionTransition.Entering,
+                start = difficultyStart,
+                total = timelineTotal,
+                onLayoutReady = { difficultyMetricReady = it },
             )
-            InfoDivider()
-            MissionInfo(label = "예상 시간", value = "${mission.estimatedMinutes}분", valueColor = Gray700)
-            InfoDivider()
-            MissionInfo(label = "보상", value = "+${mission.rewardXp} XP", valueColor = Gray700)
+            InfoDivider(alpha = timelineAlpha(missionContentProgress, isMissionExiting, firstDividerStart, 1, timelineTotal))
+            MissionInfo(
+                label = "예상 시간",
+                value = "${displayedMission.estimatedMinutes}분",
+                valueColor = Gray700,
+                progress = missionContentProgress,
+                exiting = isMissionExiting,
+                entering = transition == MissionTransition.Entering,
+                start = timeStart,
+                total = timelineTotal,
+                onLayoutReady = { timeMetricReady = it },
+            )
+            InfoDivider(alpha = timelineAlpha(missionContentProgress, isMissionExiting, secondDividerStart, 1, timelineTotal))
+            MissionInfo(
+                label = "보상",
+                value = "+${displayedMission.rewardXp} XP",
+                valueColor = Gray700,
+                progress = missionContentProgress,
+                exiting = isMissionExiting,
+                entering = transition == MissionTransition.Entering,
+                start = rewardStart,
+                total = timelineTotal,
+                onLayoutReady = { rewardMetricReady = it },
+            )
         }
         Spacer(Modifier.height(14.dp)) // CSS Frame324 gap 14 (info행→버튼)
         // 미션 시작하기 (버튼M = 높이 44 / radius 12 / Primary600)
@@ -1819,7 +2291,17 @@ private fun HomeMissionCard(
 }
 
 @Composable
-private fun RowScope.MissionInfo(label: String, value: String, valueColor: Color) {
+private fun RowScope.MissionInfo(
+    label: String,
+    value: String,
+    valueColor: Color,
+    progress: Float,
+    exiting: Boolean,
+    entering: Boolean,
+    start: Int,
+    total: Int,
+    onLayoutReady: (Boolean) -> Unit,
+) {
     val interaction = remember { MutableInteractionSource() }
     val pressed by interaction.collectIsPressedAsState()
     var clickAnimating by remember { mutableStateOf(false) }
@@ -1841,6 +2323,12 @@ private fun RowScope.MissionInfo(label: String, value: String, valueColor: Color
         ),
         label = "missionInfoPressLabelColor",
     )
+    // key를 현재 문자열에 묶어 새 미션의 이전 bbox 재사용을 차단한다.
+    var labelLayout by remember(label) { mutableStateOf<TextLayoutResult?>(null) }
+    var valueLayout by remember(value) { mutableStateOf<TextLayoutResult?>(null) }
+    val layoutReady = labelLayout?.layoutInput?.text?.text == label &&
+        valueLayout?.layoutInput?.text?.text == value
+    SideEffect { onLayoutReady(layoutReady) }
     Column(
         modifier = Modifier
             .weight(1f)
@@ -1864,17 +2352,47 @@ private fun RowScope.MissionInfo(label: String, value: String, valueColor: Color
         horizontalAlignment = Alignment.CenterHorizontally,
         // CSS Frame 316: 칸 38 = 라벨 18 + 값 20, 사이 gap 0
     ) {
-        Text(text = label, style = TqType.Caption.figma(), color = labelColor)
-        Text(text = value, style = TqType.LabelL.figma(), color = valueColor, textAlign = TextAlign.Center)
+        Text(
+            text = label,
+            style = TqType.Caption.figma(),
+            color = labelColor,
+            modifier = Modifier.missionGlyphWipe(
+                progress,
+                exiting,
+                start,
+                total,
+                labelLayout,
+                hideUntilLayout = entering,
+                expectedText = label,
+            ),
+            onTextLayout = { labelLayout = it },
+        )
+        Text(
+            text = value,
+            style = TqType.LabelL.figma(),
+            color = valueColor,
+            textAlign = TextAlign.Center,
+            modifier = Modifier.missionGlyphWipe(
+                progress,
+                exiting,
+                start + visibleGlyphCount(label),
+                total,
+                valueLayout,
+                hideUntilLayout = entering,
+                expectedText = value,
+            ),
+            onTextLayout = { valueLayout = it },
+        )
     }
 }
 
 @Composable
-private fun InfoDivider() {
+private fun InfoDivider(alpha: Float = 1f) {
     Box(
         modifier = Modifier
             .width(1.dp)
             .height(30.dp) // 길이 26 → 30 (디자인 변경 2026-07)
+            .graphicsLayer { this.alpha = alpha }
             .background(Gray200), // Gray300 → Gray200 (디자인 변경 2026-07)
     )
 }

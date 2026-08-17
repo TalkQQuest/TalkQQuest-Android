@@ -269,7 +269,7 @@ private fun SignupLegalDetailScreen(
                 .size(width = 360.dp, height = 734.dp),
             flingBehavior = PagerDefaults.flingBehavior(
                 state = pagerState,
-                snapAnimationSpec = NavigationMotion.floatSpec,
+                snapAnimationSpec = NavigationMotion.pagerSnapSpec,
             ),
         ) { page ->
             val title = if (page == 0) "\uC774\uC6A9\uC57D\uAD00" else "\uAC1C\uC778\uC815\uBCF4 \uCC98\uB9AC \uBC29\uCE68"

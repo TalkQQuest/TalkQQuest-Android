@@ -78,7 +78,10 @@ import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.CompositingStrategy
 import androidx.compose.ui.graphics.Paint
 import androidx.compose.ui.graphics.drawscope.clipRect
 import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
@@ -93,6 +96,7 @@ import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.layout.positionInRoot
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.text.style.LineBreak
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -1106,7 +1110,12 @@ private fun RecommendationChip(
     transitionProgress: () -> Float,
     onSelect: (String) -> Unit,
 ) {
-    val entranceOffset = with(LocalDensity.current) { 4.dp.toPx() }
+    val density = LocalDensity.current
+    val entranceOffset = with(density) { 4.dp.toPx() }
+    // 줄바꿈된 Text는 두 번째 줄이 짧아도 항상 가용 폭 전체로 측정돼, 칩이 실제
+    // 글자보다 넓게 늘어난다. 실제 렌더된 줄 중 가장 넓은 폭으로 Text 자체를 좁혀
+    // 칩(Box)이 그 폭 + 좌우 padding만큼만 감싸게 한다. 줄바꿈 여부는 바뀌지 않는다.
+    var chipTextWidthPx by remember(text) { mutableStateOf<Int?>(null) }
     Box(
         modifier = Modifier
             .graphicsLayer {
@@ -1121,7 +1130,17 @@ private fun RecommendationChip(
             .clickable { onSelect(text) }
             .padding(horizontal = 12.dp, vertical = 4.dp),
     ) {
-        Text(text = text, style = TqType.BodyM.figma(), color = Gray600)
+        Text(
+            text = text,
+            style = TqType.BodyM.figma(),
+            color = Gray600,
+            onTextLayout = { r ->
+                var mx = 0f
+                for (line in 0 until r.lineCount) mx = kotlin.math.max(mx, r.getLineRight(line) - r.getLineLeft(line))
+                chipTextWidthPx = kotlin.math.ceil(mx).toInt()
+            },
+            modifier = chipTextWidthPx?.let { Modifier.width(with(density) { it.toDp() }) } ?: Modifier,
+        )
     }
 }
 
@@ -1281,23 +1300,35 @@ private fun AnimatedRecommendationHeaderLabel(
     Spacer(Modifier.width(6.dp))
     Box {
         // 두 제목을 항상 같은 컴포지션에 둔다. 진행값은 draw 단계에서만 읽고,
-        // 28~72% 구간을 겹쳐 기존 문구가 사라진 뒤 새 문구가 탁 생기는 틈을 없앤다.
+        // 홈 화면 미션 카드와 같은 글자 단위 스태거 페이드로 훑는다(솔리드 밴드 와이프 대체).
+        var expandedTitleLayout by remember { mutableStateOf<TextLayoutResult?>(null) }
+        var collapsedTitleLayout by remember { mutableStateOf<TextLayoutResult?>(null) }
+        val prevGlyphCount = remember { visibleGlyphOffsets("톡깨의 추천 답변").size }
+        val targetGlyphCount = remember { visibleGlyphOffsets("답장이 고민되시나요?").size }
         Text(
             text = "톡깨의 추천 답변",
             style = TqType.BodyM.figma(),
             color = Primary600,
-            modifier = Modifier.recommendationTitleTransitionLayer(
+            onTextLayout = { expandedTitleLayout = it },
+            modifier = Modifier.recommendationTitleGlyphFade(
                 transitionProgress = transitionProgress,
-                expandedTitle = true,
+                layoutResult = { expandedTitleLayout },
+                exiting = true,
+                prevGlyphCount = prevGlyphCount,
+                targetGlyphCount = targetGlyphCount,
             ),
         )
         Text(
             text = "답장이 고민되시나요?",
             style = TqType.BodyM.figma(),
             color = Primary600,
-            modifier = Modifier.recommendationTitleTransitionLayer(
+            onTextLayout = { collapsedTitleLayout = it },
+            modifier = Modifier.recommendationTitleGlyphFade(
                 transitionProgress = transitionProgress,
-                expandedTitle = false,
+                layoutResult = { collapsedTitleLayout },
+                exiting = false,
+                prevGlyphCount = prevGlyphCount,
+                targetGlyphCount = targetGlyphCount,
             ),
         )
         AnimatedRecommendationShineOverlay(
@@ -1307,34 +1338,87 @@ private fun AnimatedRecommendationHeaderLabel(
     }
 }
 
-private fun Modifier.recommendationTitleTransitionLayer(
+// 홈 화면 missionGlyphWipe와 같은 기법: 글자마다 bounding box를 clip하고 saveLayer로
+// 알파만 바꿔 그린다. exiting(펼친 제목)은 오른쪽 글자부터 지워지고, 등장(접힌 제목)은
+// 왼쪽 글자부터 나타난다. 모든 글자가 같은 progress 하나만 읽으므로 중간에 되감아도
+// snap 없이 이어진다.
+private fun Modifier.recommendationTitleGlyphFade(
     transitionProgress: () -> Float,
-    expandedTitle: Boolean,
-): Modifier = this
-    .graphicsLayer {
-        val progress = transitionProgress().coerceIn(0f, 1f)
-        val visibility = if (expandedTitle) {
-            ((0.72f - progress) / 0.44f).coerceIn(0f, 1f)
-        } else {
-            ((progress - 0.28f) / 0.44f).coerceIn(0f, 1f)
-        }
-        alpha = FastOutSlowInEasing.transform(visibility)
-    }
+    layoutResult: () -> TextLayoutResult?,
+    exiting: Boolean,
+    prevGlyphCount: Int,
+    targetGlyphCount: Int,
+): Modifier = graphicsLayer { compositingStrategy = CompositingStrategy.Offscreen }
     .drawWithContent {
-        val progress = transitionProgress().coerceIn(0f, 1f)
-        val visibility = if (expandedTitle) {
-            ((0.72f - progress) / 0.44f).coerceIn(0f, 1f)
-        } else {
-            ((progress - 0.28f) / 0.44f).coerceIn(0f, 1f)
+        val layout = layoutResult() ?: run {
+            drawContent()
+            return@drawWithContent
         }
-        if (visibility > 0f) {
-            if (expandedTitle) {
-                clipRect(right = size.width * visibility) { this@drawWithContent.drawContent() }
+        val text = layout.layoutInput.text.text
+        val glyphOffsets = visibleGlyphOffsetsInVisualOrder(text, layout)
+        val progress = transitionProgress().coerceIn(0f, 1f)
+        // 글자 단위 시간축: 지우기(prevGlyphCount칸)가 다 끝난 뒤 한 글자만큼 쉬고
+        // 나타내기(targetGlyphCount칸)가 시작해, 마지막 등장 글자가 progress=1에서
+        // 정확히 alpha=1로 끝나게 정규화한다.
+        val fadeWindow = timelineFadeWindow(prevGlyphCount + targetGlyphCount)
+        val gap = 1f
+        val enterStartOrder = (prevGlyphCount - 1) + fadeWindow + gap
+        val normalizer = enterStartOrder + (targetGlyphCount - 1) + fadeWindow
+        glyphOffsets.forEachIndexed { visualIndex, offset ->
+            // 펼친 제목(exiting)은 역순으로 읽어 오른쪽 글자부터 order 0을 받고,
+            // 접힌 제목은 지우기가 다 끝나고 한 글자 간격을 둔 뒤 왼쪽 글자부터 시작한다.
+            val order = if (exiting) {
+                (prevGlyphCount - 1 - visualIndex).toFloat()
             } else {
-                clipRect(left = size.width * (1f - visibility)) { this@drawWithContent.drawContent() }
+                enterStartOrder + visualIndex
+            }
+            val timing = GlyphTiming(
+                onset = order / normalizer,
+                completion = (order + fadeWindow) / normalizer,
+            )
+            val amount = ((progress - timing.onset) / (timing.completion - timing.onset)).coerceIn(0f, 1f)
+            val alpha = if (exiting) 1f - amount else amount
+            val bounds = layout.getBoundingBox(offset)
+            clipRect(bounds.left, bounds.top, bounds.right, bounds.bottom) {
+                drawContext.canvas.saveLayer(bounds, Paint().apply { this.alpha = alpha })
+                this@drawWithContent.drawContent()
+                drawContext.canvas.restore()
             }
         }
     }
+
+private data class GlyphTiming(val onset: Float, val completion: Float)
+
+// 공백·NBSP·개행·WORD JOINER·combining mark는 순번을 차지하지 않는다. UTF-16
+// surrogate는 code point 하나의 선행 offset만 남겨 TextLayoutResult와도 맞춘다.
+private fun visibleGlyphOffsets(text: String): List<Int> = buildList {
+    var offset = 0
+    while (offset < text.length) {
+        val codePoint = text.codePointAt(offset)
+        val type = Character.getType(codePoint)
+        val invisible = Character.isWhitespace(codePoint) ||
+            Character.isSpaceChar(codePoint) ||
+            type == Character.FORMAT.toInt() ||
+            type == Character.CONTROL.toInt() ||
+            type == Character.NON_SPACING_MARK.toInt() ||
+            type == Character.COMBINING_SPACING_MARK.toInt() ||
+            type == Character.ENCLOSING_MARK.toInt()
+        if (!invisible) add(offset)
+        offset += Character.charCount(codePoint)
+    }
+}
+
+// logical text order는 phrase/균형 줄바꿈 결과와 항상 같지 않다. 실제 line, x 순서로
+// 정렬해 모든 줄이 위→아래, 각 줄은 왼쪽→오른쪽으로 같은 wipe 타임라인을 사용하게 한다.
+private fun visibleGlyphOffsetsInVisualOrder(text: String, layout: TextLayoutResult): List<Int> =
+    visibleGlyphOffsets(text).sortedWith(
+        compareBy<Int> { layout.getLineForOffset(it) }
+            .thenBy { layout.getBoundingBox(it).left },
+    )
+
+// 모든 글리프 수에 비례하게 440ms의 약 16%를 feather로 쓴다. 일반 미션 길이에서
+// 60~80ms(대개 약 70ms)의 alpha 전이로, 60Hz의 4프레임 이상을 확보한다.
+private fun timelineFadeWindow(total: Int): Float = (total * 0.16f).coerceAtLeast(4f)
 
 @Composable
 private fun AnimatedRecommendationShineOverlay(
@@ -1445,23 +1529,50 @@ private fun RecommendationTitle(text: String, shineProgress: Float) {
     }
 }
 
+// 티어 다이아(뱃지) 광택과 같은 흰색 대각선 빛 띠를 제목 글자 모양 안쪽에서만 한 번
+// 훑고 지나가게 한다. 다이아 기준 두께(0.32)의 2배 이상(0.72)으로 두껍게 잡았다.
 @Composable
 private fun RecommendationShineOverlay(text: String, shineProgress: Float) {
-    var titleWidthPx by remember(text) { mutableStateOf(0) }
-    val sweepDistance = titleWidthPx.coerceAtLeast(1).toFloat() * 3f
-    val brush = Brush.linearGradient(
-        // 기본 글자는 아래 레이어가 계속 그린다. 이 레이어는 흰 광택만 투명하게
-        // 지나가므로 진행값을 1→0으로 되돌려도 화면 모양이 바뀌지 않는다.
-        colors = listOf(Color.Transparent, Color.Transparent, Color.White, Color.Transparent, Color.Transparent),
-        // 광택 중심이 글자 시작 바깥(-0.5폭)에서 끝 바깥(1.5폭)까지 지나간다.
-        start = Offset((shineProgress * sweepDistance) - (titleWidthPx * 1.5f), 0f),
-        end = Offset((shineProgress * sweepDistance) - (titleWidthPx * 0.5f), 0f),
-    )
+    if (shineProgress <= 0f) return
+    var widthPx by remember(text) { mutableIntStateOf(0) }
+    var heightPx by remember(text) { mutableIntStateOf(0) }
     Text(
         text = text,
-        style = TqType.BodyM.figma().copy(brush = brush),
-        color = Color.Unspecified,
-        modifier = Modifier.onSizeChanged { titleWidthPx = it.width },
+        style = TqType.BodyM.figma(),
+        color = Color.White,
+        modifier = Modifier
+            .onSizeChanged {
+                widthPx = it.width
+                heightPx = it.height
+            }
+            .graphicsLayer { compositingStrategy = CompositingStrategy.Offscreen }
+            .drawWithContent {
+                // 1) 글자 모양을 알파 마스크로 먼저 그린다.
+                this@drawWithContent.drawContent()
+                val w = widthPx.toFloat().coerceAtLeast(1f)
+                val h = heightPx.toFloat().coerceAtLeast(1f)
+                // 두께(사용자 지정). 각도와 분리해 아무리 두꺼워도 기울기가 눕지 않게 한다.
+                val thickness = w * 1f
+                // 다이아 광택과 같은 고정 기울기(좌하→우상, 약간 반시계 비스듬) = normalize(0.64, -1).
+                // 폭·두께와 무관한 단위 방향이라 글자가 넓어도 각도가 유지된다.
+                val ux = 0.539f
+                val uy = -0.842f
+                val cy = h / 2f
+                // 왼쪽 밖에서 오른쪽 밖까지 한 번만 훑고 지나간다.
+                val centerX = -thickness + (w + thickness * 2f) * shineProgress.coerceIn(0f, 1f)
+                val band = Brush.linearGradient(
+                    colors = listOf(Color.Transparent, Color.White.copy(alpha = 0.82f), Color.Transparent),
+                    start = Offset(centerX - thickness * ux, cy - thickness * uy),
+                    end = Offset(centerX + thickness * ux, cy + thickness * uy),
+                )
+                // 2) 흰색 대각선 띠를 SrcIn으로 글자 알파 안쪽에만 합성한다.
+                drawContext.canvas.saveLayer(
+                    Rect(0f, 0f, w, h),
+                    Paint().apply { blendMode = BlendMode.SrcIn },
+                )
+                drawRect(brush = band)
+                drawContext.canvas.restore()
+            },
     )
 }
 

@@ -26,6 +26,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalView
+import androidx.compose.ui.window.DialogWindowProvider
 import androidx.core.view.WindowCompat
 
 const val ModalDimDurationMillis = 360
@@ -60,17 +62,17 @@ fun ModalDimOverlay(
 }
 
 @Composable
-fun ModalSystemBars(visible: Boolean) {
+fun ModalSystemBars(visible: Boolean, navigationBarColor: Color? = null) {
     val progress = androidx.compose.animation.core.animateFloatAsState(
         targetValue = if (visible) 1f else 0f,
         animationSpec = ModalDimAnimation,
         label = "modalSystemBarDim",
     ).value
-    ModalSystemBars(progress)
+    ModalSystemBars(progress, navigationBarColor)
 }
 
 @Composable
-fun ModalSystemBars(progress: Float) {
+fun ModalSystemBars(progress: Float, navigationBarColor: Color? = null) {
     val activity = LocalContext.current.findActivity() ?: return
     val window = activity.window
     val controller = remember(window) { WindowCompat.getInsetsController(window, window.decorView) }
@@ -82,11 +84,16 @@ fun ModalSystemBars(progress: Float) {
     SideEffect {
         if (progress > 0f) {
             ownsSystemBars[0] = true
-            val color = ModalDimColor.copy(alpha = ModalDimColor.alpha * progress.coerceIn(0f, 1f)).compositeOver(Color(0xFFF8FAFC))
-            window.statusBarColor = color.toArgb()
-            window.navigationBarColor = color.toArgb()
+            val statusColor = ModalDimColor.copy(alpha = ModalDimColor.alpha * progress.coerceIn(0f, 1f)).compositeOver(Color(0xFFF8FAFC))
+            window.statusBarColor = statusColor.toArgb()
+            if (navigationBarColor != null) {
+                window.navigationBarColor = navigationBarColor.toArgb()
+                controller.isAppearanceLightNavigationBars = false
+            } else {
+                window.navigationBarColor = statusColor.toArgb()
+                controller.isAppearanceLightNavigationBars = originalLightNavigation
+            }
             controller.isAppearanceLightStatusBars = originalLightStatus
-            controller.isAppearanceLightNavigationBars = originalLightNavigation
         } else if (ownsSystemBars[0]) {
             window.statusBarColor = originalStatusColor
             window.navigationBarColor = originalNavigationColor
@@ -104,6 +111,24 @@ fun ModalSystemBars(progress: Float) {
                 controller.isAppearanceLightNavigationBars = originalLightNavigation
                 ownsSystemBars[0] = false
             }
+        }
+    }
+}
+
+// Material3 ModalBottomSheet draws into its own window (a Dialog), not the activity window,
+// so ModalSystemBars(navigationBarColor = ...) on the activity never reaches its nav buttons.
+// Call this from inside the sheet's content lambda to set the sheet's own window instead.
+@Composable
+fun DialogWindowLightNavigationButtons(light: Boolean) {
+    val dialogWindow = (LocalView.current.parent as? DialogWindowProvider)?.window
+    DisposableEffect(dialogWindow, light) {
+        if (dialogWindow == null) {
+            onDispose { }
+        } else {
+            val controller = WindowCompat.getInsetsController(dialogWindow, dialogWindow.decorView)
+            val original = controller.isAppearanceLightNavigationBars
+            controller.isAppearanceLightNavigationBars = light
+            onDispose { controller.isAppearanceLightNavigationBars = original }
         }
     }
 }

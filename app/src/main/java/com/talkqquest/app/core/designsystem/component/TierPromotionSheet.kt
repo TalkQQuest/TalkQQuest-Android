@@ -199,7 +199,7 @@ fun TierPromotionSheet(
 
         // 배경 스크림 — 시트가 올라온 만큼 어두워짐(peek에서 최대, 내려가며 페이드아웃). 앱 표준 모달 딤과 동일(Gray700 0.23).
         val dimFraction = ((hiddenOffset - offsetY) / (hiddenOffset - peekOffset)).coerceIn(0f, 1f)
-        ModalSystemBars(dimFraction)
+        ModalSystemBars(dimFraction, navigationBarColor = Gray50)
         // ★visible이 켜진 프레임부터 깐다(아직 offsetY가 바닥이라 안 보여도). 올라온 뒤에 깔면
         //   탭하자마자 쓸었을 때 딤이 없는 첫 프레임을 탭 페이저가 낚아채 옆 탭으로 넘어가 버린다.
         if (visible || offsetY < hiddenOffset - 0.5f) {

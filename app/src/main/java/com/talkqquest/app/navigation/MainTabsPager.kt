@@ -6,6 +6,9 @@ import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedContentTransitionScope
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.PagerDefaults
@@ -22,6 +25,8 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.input.pointer.PointerEventPass
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavBackStackEntry
@@ -58,6 +63,10 @@ fun MainTabsPager(
     // 하단 시트처럼 화면 위에 올라오는 모달이 열려 있을 때는 탭 스와이프를 잠근다.
     // 시트가 열린 상태에서 페이지가 움직이면 모달과 배경 화면의 위치가 어긋날 수 있다.
     var modalSheetOpen by remember { mutableStateOf(false) }
+    // 축 잠금(B): 한 제스처의 첫 움직임이 세로 우세면 그 손가락을 놓을 때까지 페이저를 잠가
+    // 세로 스크롤이 가로 페이징으로 새는 것을 막는다. 아무것도 consume하지 않아 자식(세로 리스트)
+    // 스크롤과 정상 가로 스와이프는 그대로 동작한다. 손 떼면 다시 false로 풀린다.
+    var verticalDragLock by remember { mutableStateOf(false) }
     var showHomeBadgeCollection by remember { mutableStateOf(false) }
     var homeResumeAnimationTrigger by remember { mutableIntStateOf(0) }
     var homeExitResetToken by remember { mutableIntStateOf(0) }
@@ -73,12 +82,14 @@ fun MainTabsPager(
     // 이후 상세 화면에서 돌아올 때만 홈 카드 애니메이션을 다시 실행한다.
     var hasConsumedInitialHomeResume by remember { mutableStateOf(false) }
     val pagerScope = rememberCoroutineScope()
-    // 기본 임계값(50%)보다 짧게 스와이프해도 탭 전환이 자연스럽게 반응하도록 조정한다.
-    // 너무 민감해지지 않도록 25% 지점에서 다음 페이지로 스냅한다.
+    // 넘김 임계값은 기본 0.5(페이지 절반)로 둔다. 값이 낮을수록(예: 0.25) 더 예민해져
+    // 세로 스크롤 중 손가락이 살짝 대각선으로 흘러도 페이지가 넘어가는 겹침이 생긴다.
+    // "빠르게 튕기면 바로 넘어가는" 반응성은 임계값을 낮춰서가 아니라 fling 속도
+    // (snapAnimationSpec = 속도 상속 스프링)가 담당하므로, 0.5여도 빠른 스와이프는 그대로 반응한다.
     val tabFlingBehavior = PagerDefaults.flingBehavior(
         state = pagerState,
-        snapPositionalThreshold = 0.25f,
-        snapAnimationSpec = NavigationMotion.floatSpec,
+        snapPositionalThreshold = 0.5f,
+        snapAnimationSpec = NavigationMotion.pagerSnapSpec,
     )
     val homePage = BottomNavItem.entries.indexOf(BottomNavItem.Home)
     val archivePage = BottomNavItem.entries.indexOf(BottomNavItem.Archive)
@@ -125,12 +136,40 @@ fun MainTabsPager(
             }
         }
     }
+    Box(
+        modifier = modifier
+            .fillMaxSize()
+            // Initial 패스에서 제스처의 우세 축을 먼저 판정한다. 페이저의 드래그 처리(Main 패스)보다
+            // 앞서 실행돼, 세로 우세면 페이저가 손가락을 붙잡기 전에 잠근다. consume하지 않는다.
+            .pointerInput(Unit) {
+                awaitEachGesture {
+                    val down = awaitFirstDown(requireUnconsumed = false, pass = PointerEventPass.Initial)
+                    // 페이저 슬롭의 절반 지점에서 미리 판정해, 페이저가 옆으로 움직이기 전에 잠근다.
+                    val decideAt = viewConfiguration.touchSlop * 0.5f
+                    var decided = false
+                    while (true) {
+                        val event = awaitPointerEvent(PointerEventPass.Initial)
+                        val change = event.changes.firstOrNull { it.id == down.id }
+                        if (change == null || !change.pressed) break
+                        if (!decided) {
+                            val dx = kotlin.math.abs(change.position.x - down.position.x)
+                            val dy = kotlin.math.abs(change.position.y - down.position.y)
+                            if (dx > decideAt || dy > decideAt) {
+                                verticalDragLock = dy > dx
+                                decided = true
+                            }
+                        }
+                    }
+                    verticalDragLock = false
+                }
+            },
+    ) {
     HorizontalPager(
         state = pagerState,
-        modifier = modifier.fillMaxSize(),
+        modifier = Modifier.fillMaxSize(),
         // 인접 페이지를 미리 구성해 탭 이동 시 콘텐츠가 늦게 그려지는 일을 줄인다.
         beyondViewportPageCount = 1,
-        userScrollEnabled = !modalSheetOpen,
+        userScrollEnabled = !modalSheetOpen && !verticalDragLock,
         flingBehavior = tabFlingBehavior,
         key = { BottomNavItem.entries[it].route },
     ) { page ->
@@ -168,6 +207,7 @@ fun MainTabsPager(
                 },
             )
         }
+    }
     }
 }
 

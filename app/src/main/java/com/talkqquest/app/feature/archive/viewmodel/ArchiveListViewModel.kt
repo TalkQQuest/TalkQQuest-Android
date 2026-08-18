@@ -189,7 +189,7 @@ class ArchiveViewModel @Inject constructor(
                     } else _uiState.value.sentences
 
                     val reports = if (reportsRes is ApiResult.Success) {
-                        reportsRes.data.items.filter { it.isBookmarked }.map {
+                        val mapped = reportsRes.data.items.filter { it.isBookmarked }.map {
                             BookmarkArchiveItem(
                                 id = it.referenceId ?: it.id,
                                 title = it.title,
@@ -198,9 +198,13 @@ class ArchiveViewModel @Inject constructor(
                                 isSaved = it.isBookmarked,
                                 memoKeywords = it.tags,
                                 memoText = "",
-                                relatedConversationId = ""
+                                relatedConversationId = "",
+                                // 종류는 서버 값을 그대로 싣는다. 필터·라벨·상세 이동이 전부 이 값을 본다.
+                                reportType = it.reportType.orEmpty()
                             )
                         }
+                        // 주간 비교 항목만 제목을 주차 범위로 바꿔 끼운다(상세를 한 번씩 더 부름).
+                        repository.withWeeklyCompareTitles(mapped)
                     } else _uiState.value.reports
 
                     // 💡 3. 조합된 전체 데이터를 UI 상태에 묶어서 업데이트합니다.

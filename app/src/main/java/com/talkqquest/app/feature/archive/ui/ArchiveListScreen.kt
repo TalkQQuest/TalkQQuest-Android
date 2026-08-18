@@ -1,5 +1,7 @@
 package com.talkqquest.app.feature.archive.ui
 
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
@@ -55,6 +57,8 @@ import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 
 import com.talkqquest.app.R
+import com.talkqquest.app.core.designsystem.component.pagerAxisLock
+import com.talkqquest.app.core.designsystem.component.rememberPagerAxisLockState
 import com.talkqquest.app.core.designsystem.FitDesign
 import com.talkqquest.app.core.designsystem.component.rememberHapticTick
 import com.talkqquest.app.core.designsystem.Gray300
@@ -64,8 +68,10 @@ import com.talkqquest.app.core.designsystem.Gray500
 import com.talkqquest.app.core.designsystem.Gray800
 import com.talkqquest.app.core.designsystem.TalkQQuestTheme
 import com.talkqquest.app.core.designsystem.TqType
+import com.talkqquest.app.core.designsystem.component.ChipContentCrossfade
 import com.talkqquest.app.core.designsystem.component.SlidingChipRow
 import com.talkqquest.app.core.designsystem.component.TextAnchoredPillRipple
+import com.talkqquest.app.core.designsystem.component.rememberDebouncedChipSelection
 import com.talkqquest.app.core.designsystem.component.rememberTextPillRippleBounds
 import com.talkqquest.app.core.designsystem.component.rememberTextPillRippleGlyphBounds
 import com.talkqquest.app.core.designsystem.component.rememberTextPillRippleGlyphBoundsUpdater
@@ -82,6 +88,26 @@ import com.talkqquest.app.navigation.NavigationMotion
 
 import kotlinx.coroutines.launch
 import kotlin.math.floor
+
+// 정렬·목록 개수 변화로 카드가 자리를 옮길 때 쓰는 공통 이동 스펙 (5-B).
+private val archiveListItemPlacementSpec = tween<androidx.compose.ui.unit.IntOffset>(300, easing = FastOutSlowInEasing)
+
+// 빈 목록 안내 문구 — 4개 탭이 같은 스타일을 쓴다.
+@Composable
+private fun ArchiveListEmptyMessage(message: String) {
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(bottom = 100.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        Text(
+            text = message,
+            style = TqType.BodyL.copy(fontWeight = FontWeight.Medium).figma(),
+            color = Gray500
+        )
+    }
+}
 
 @Composable
 fun ArchiveListScreen(
@@ -143,6 +169,7 @@ private fun ArchiveListScreenContent(
     val tick = rememberHapticTick()
     val tabs = listOf("미션", "대화", "문장", "리포트")
     val pagerState = rememberPagerState(initialPage = initialTabIndex, pageCount = { tabs.size })
+    val axisLock = rememberPagerAxisLockState()
     val coroutineScope = rememberCoroutineScope()
     val missionFilterScrollState = rememberScrollState()
     val pagePosition = (pagerState.currentPage + pagerState.currentPageOffsetFraction)
@@ -169,6 +196,18 @@ private fun ArchiveListScreenContent(
             onFilterSelect("전체")
         }
     }
+
+    // 칩 강조는 누르는 즉시, 실제 목록 교체(페이드 스루)는 100ms 디바운스 — 연타해도 마지막 선택만 반영.
+    // 미션 탭·리포트 탭이 같은 selectedFilter 필드를 공유하므로(탭 전환 시 "전체"로 리셋) 두 훅 다
+    // 같은 uiState.selectedFilter를 current로 받아 외부 리셋에도 따라간다.
+    val missionFilterSelection = rememberDebouncedChipSelection(
+        current = uiState.selectedFilter,
+        onCommit = onFilterSelect,
+    )
+    val reportFilterSelection = rememberDebouncedChipSelection(
+        current = uiState.selectedFilter,
+        onCommit = onFilterSelect,
+    )
 
     FitDesign {
         Box(modifier = Modifier.fillMaxSize()) {
@@ -297,8 +336,8 @@ private fun ArchiveListScreenContent(
                         val missionFilterOptions = listOf("전체", "완료", "미완료")
                         SlidingChipRow(
                             options = missionFilterOptions,
-                            selectedIndex = missionFilterOptions.indexOf(uiState.selectedFilter).takeIf { it >= 0 },
-                            onSelect = { index -> onFilterSelect(missionFilterOptions[index]) },
+                            selectedIndex = missionFilterOptions.indexOf(missionFilterSelection.displayed).takeIf { it >= 0 },
+                            onSelect = { index -> missionFilterSelection.select(missionFilterOptions[index]) },
                             interactionEnabled = isMissionFilterInteractive,
                         )
                     }
@@ -324,7 +363,7 @@ private fun ArchiveListScreenContent(
                                 .padding(vertical = 4.dp)
                         ) {
                             Text(
-                                text = uiState.selectedFilter,
+                                text = reportFilterSelection.displayed,
                                 style = TqType.BodyL.copy(fontWeight = FontWeight.Medium).figma(),
                                 color = Gray500
                             )
@@ -338,68 +377,59 @@ private fun ArchiveListScreenContent(
                     }
                 }
 
-                val displayReports = when (uiState.selectedFilter) {
-                    "성장 리포트" -> uiState.reports.filter { !it.title.contains("주간 비교") }
-                    "주간 비교 리포트" -> uiState.reports.filter { it.title.contains("주간 비교") }
-                    else -> uiState.reports
-                }
-
                 // [4] Pager 리스트
+                // 축 잠금: 목록을 위아래로 밀 때 손가락이 살짝 대각선으로 흘러도 탭이 넘어가지
+                // 않게 한다. 하단 네비 탭과 같은 장치를 쓴다(core의 pagerAxisLock).
                 HorizontalPager(
                     state = pagerState,
-                    modifier = Modifier.weight(1f),
+                    modifier = Modifier
+                        .weight(1f)
+                        .pagerAxisLock(axisLock),
+                    userScrollEnabled = !axisLock.isVerticalDrag,
                     flingBehavior = PagerDefaults.flingBehavior(
                         state = pagerState,
                         snapAnimationSpec = NavigationMotion.pagerSnapSpec,
                     ),
                 ) { page ->
-                    val isListEmpty = when (page) {
-                        0 -> uiState.filteredMissions.isEmpty()
-                        1 -> uiState.conversations.isEmpty()
-                        2 -> uiState.sentences.isEmpty()
-                        3 -> displayReports.isEmpty()
-                        else -> true
-                    }
-
-                    if (isListEmpty) {
-                        val emptyMessage = when (page) {
-                            0 -> "저장한 미션이 없어요"
-                            1 -> "진행한 대화가 없어요"
-                            2 -> "저장한 문장이 없어요"
-                            3 -> "저장한 리포트가 없어요"
-                            else -> "저장된 항목이 없어요"
-                        }
-
-                        Box(
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .padding(bottom = 100.dp),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Text(
-                                text = emptyMessage,
-                                style = TqType.BodyL.copy(fontWeight = FontWeight.Medium).figma(),
-                                color = Gray500
-                            )
-                        }
-                    } else {
-                        LazyColumn(
-                            modifier = Modifier.fillMaxSize(),
-                            contentPadding = PaddingValues(top = 16.dp, bottom = 100.dp, start = 16.dp, end = 16.dp),
-                            verticalArrangement = Arrangement.spacedBy(16.dp)
-                        ) {
-                            when (page) {
-                                0 -> { // 미션 탭
-                                    items(uiState.filteredMissions, key = { it.id }) { mission ->
-                                        ArchiveMissionCard(
-                                            mission = mission,
-                                            onClick = { onMissionClick(mission.id) },
-                                            onToggleSave = { onToggleMissionSave(mission.id) },
-                                            modifier = Modifier.animateItem()
-                                        )
+                    when (page) {
+                        0 -> { // 미션 탭 — 칩(전체/완료/미완료) 전환은 목록 전체를 페이드 스루로 교체
+                            ChipContentCrossfade(targetState = uiState.selectedFilter) { selectedFilter ->
+                                // 받은 selectedFilter로만 걸러 그린다(리포트 탭과 같은 형태) — 바깥
+                                // uiState.selectedFilter를 읽으면 전환 중 두 화면이 같은 목록을 그린다.
+                                val displayMissions = when (selectedFilter) {
+                                    "완료" -> uiState.missions.filter { it.isCompleted }
+                                    "미완료" -> uiState.missions.filter { !it.isCompleted }
+                                    else -> uiState.missions
+                                }
+                                if (displayMissions.isEmpty()) {
+                                    ArchiveListEmptyMessage("저장한 미션이 없어요")
+                                } else {
+                                    LazyColumn(
+                                        modifier = Modifier.fillMaxSize(),
+                                        contentPadding = PaddingValues(top = 16.dp, bottom = 100.dp, start = 16.dp, end = 16.dp),
+                                        verticalArrangement = Arrangement.spacedBy(16.dp)
+                                    ) {
+                                        items(displayMissions, key = { it.id }) { mission ->
+                                            ArchiveMissionCard(
+                                                mission = mission,
+                                                onClick = { onMissionClick(mission.id) },
+                                                onToggleSave = { onToggleMissionSave(mission.id) },
+                                                modifier = Modifier.animateItem(placementSpec = archiveListItemPlacementSpec)
+                                            )
+                                        }
                                     }
                                 }
-                                1 -> { // 대화 탭
+                            }
+                        }
+                        1 -> { // 대화 탭 (칩·정렬 없음)
+                            if (uiState.conversations.isEmpty()) {
+                                ArchiveListEmptyMessage("진행한 대화가 없어요")
+                            } else {
+                                LazyColumn(
+                                    modifier = Modifier.fillMaxSize(),
+                                    contentPadding = PaddingValues(top = 16.dp, bottom = 100.dp, start = 16.dp, end = 16.dp),
+                                    verticalArrangement = Arrangement.spacedBy(16.dp)
+                                ) {
                                     items(uiState.conversations, key = { it.id }) { conversation ->
                                         ArchiveConversationCard(
                                             title = conversation.title,
@@ -408,35 +438,64 @@ private fun ArchiveListScreenContent(
                                             date = conversation.date,
                                             time = conversation.duration,
                                             onClick = { onConversationClick(conversation.id) },
-                                            modifier = Modifier.animateItem()
+                                            modifier = Modifier.animateItem(placementSpec = archiveListItemPlacementSpec)
                                         )
                                     }
                                 }
-                                2 -> { // 문장 탭
+                            }
+                        }
+                        2 -> { // 문장 탭 (칩·정렬 없음)
+                            if (uiState.sentences.isEmpty()) {
+                                ArchiveListEmptyMessage("저장한 문장이 없어요")
+                            } else {
+                                LazyColumn(
+                                    modifier = Modifier.fillMaxSize(),
+                                    contentPadding = PaddingValues(top = 16.dp, bottom = 100.dp, start = 16.dp, end = 16.dp),
+                                    verticalArrangement = Arrangement.spacedBy(16.dp)
+                                ) {
                                     items(uiState.sentences, key = { it.id }) { sentence ->
                                         BookmarkCard(
                                             item = sentence,
                                             isSentence = true,
                                             onClick = { onSentenceClick(sentence.id) },
                                             onToggleSave = { onToggleSentenceSave(sentence.id) },
-                                            modifier = Modifier.animateItem()
+                                            modifier = Modifier.animateItem(placementSpec = archiveListItemPlacementSpec)
                                         )
                                     }
                                 }
-                                3 -> { // 리포트 탭
-                                    items(displayReports, key = { it.id }) { report ->
-                                        val isWeeklyCompare = report.title.contains("주간 비교")
-                                        val reportTypeLabel = if (isWeeklyCompare) "주간 비교 리포트" else "성장 리포트"
-                                        val displayItem = report.copy(status = reportTypeLabel)
+                            }
+                        }
+                        3 -> { // 리포트 탭 — 필터(전체/성장/주간 비교) 전환은 목록 전체를 페이드 스루로 교체
+                            ChipContentCrossfade(targetState = uiState.selectedFilter) { selectedFilter ->
+                                val displayReports = when (selectedFilter) {
+                                    // 종류는 서버가 준 reportType으로 가른다(제목 문자열 추측 금지 — 서버 제목이
+                                    // "4주차 비교 리포트"라 "주간 비교"로는 안 걸려 주간 비교가 0건으로 나왔다)
+                                    "성장 리포트" -> uiState.reports.filter { !it.isWeeklyCompare }
+                                    "주간 비교 리포트" -> uiState.reports.filter { it.isWeeklyCompare }
+                                    else -> uiState.reports
+                                }
+                                if (displayReports.isEmpty()) {
+                                    ArchiveListEmptyMessage("저장한 리포트가 없어요")
+                                } else {
+                                    LazyColumn(
+                                        modifier = Modifier.fillMaxSize(),
+                                        contentPadding = PaddingValues(top = 16.dp, bottom = 100.dp, start = 16.dp, end = 16.dp),
+                                        verticalArrangement = Arrangement.spacedBy(16.dp)
+                                    ) {
+                                        items(displayReports, key = { it.id }) { report ->
+                                            val isWeeklyCompare = report.isWeeklyCompare
+                                            val reportTypeLabel = if (isWeeklyCompare) "주간 비교 리포트" else "성장 리포트"
+                                            val displayItem = report.copy(status = reportTypeLabel)
 
-                                        BookmarkCard(
-                                            item = displayItem,
-                                            isSentence = false,
-                                            // 💡 수정됨: report.id 와 isWeeklyCompare를 함께 전달
-                                            onClick = { onReportClick(report.id, isWeeklyCompare) },
-                                            onToggleSave = { onToggleReportSave(report.id) },
-                                            modifier = Modifier.animateItem()
-                                        )
+                                            BookmarkCard(
+                                                item = displayItem,
+                                                isSentence = false,
+                                                // 💡 수정됨: report.id 와 isWeeklyCompare를 함께 전달
+                                                onClick = { onReportClick(report.id, isWeeklyCompare) },
+                                                onToggleSave = { onToggleReportSave(report.id) },
+                                                modifier = Modifier.animateItem(placementSpec = archiveListItemPlacementSpec)
+                                            )
+                                        }
                                     }
                                 }
                             }

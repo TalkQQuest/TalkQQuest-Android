@@ -46,6 +46,8 @@ import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.launch
+import com.talkqquest.app.core.designsystem.component.pagerAxisLock
+import com.talkqquest.app.core.designsystem.component.rememberPagerAxisLockState
 import com.talkqquest.app.core.designsystem.FitDesign
 import com.talkqquest.app.core.designsystem.Gray200
 import com.talkqquest.app.core.designsystem.Gray50
@@ -228,6 +230,7 @@ private fun SignupLegalDetailScreen(
     onBack: () -> Unit,
 ) {
     val pagerState = rememberPagerState(pageCount = { 2 })
+    val axisLock = rememberPagerAxisLockState()
     val scope = rememberCoroutineScope()
 
     Box(
@@ -261,12 +264,16 @@ private fun SignupLegalDetailScreen(
                 },
             )
         }
+        // 축 잠금: 약관 본문이 세로로 길어 스크롤 중 손가락이 대각선으로 흘러도 탭이 넘어가지
+        // 않게 한다. 하단 네비 탭·보관함·뱃지와 같은 장치(core의 pagerAxisLock).
         HorizontalPager(
             state = pagerState,
             modifier = Modifier
                 .align(Alignment.TopCenter)
                 .offset(y = 118.dp)
-                .size(width = 360.dp, height = 734.dp),
+                .size(width = 360.dp, height = 734.dp)
+                .pagerAxisLock(axisLock),
+            userScrollEnabled = !axisLock.isVerticalDrag,
             flingBehavior = PagerDefaults.flingBehavior(
                 state = pagerState,
                 snapAnimationSpec = NavigationMotion.pagerSnapSpec,

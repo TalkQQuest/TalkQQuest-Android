@@ -92,16 +92,18 @@ data class ReportWeeklyTrendDto(
     val score: Int
 )
 
+// 성장 리포트와 주간 비교 리포트가 같은 모양으로 받는다. 주간 비교 쪽은 응답에 없을 수도 있어
+// 기본값을 둔다(없으면 주제 칩이 비고 진행률 0 — 화면이 죽지는 않는다).
 @Serializable
 data class ReportTopCategoryDto(
-    val category: String,
-    val count: Int
+    val category: String = "",
+    val count: Int = 0
 )
 
 @Serializable
 data class ReportMissionProgressDto(
-    val completed: Int,
-    val total: Int
+    val completed: Int = 0,
+    val total: Int = 0
 )
 
 // --- 주간 비교 리포트 전용 상세 조회 응답 DTO (신규) ---
@@ -113,7 +115,10 @@ data class WeeklyCompareReportDetailResponse(
     val data: WeeklyCompareDataDto,
     val createdAt: String,
     val previousReportId: String? = null,
-    val nextReportId: String? = null
+    val nextReportId: String? = null,
+    // 완성된 주차 문구 (백엔드 추가 2026-08-13). 실측 "7월 4주차 → 8월 1주차".
+    // weekIndex는 가입일 기준 N번째 주라 달력 주차를 만들 수 없으므로 이 값을 그대로 쓴다.
+    val periodLabel: String? = null
 )
 
 @Serializable
@@ -123,7 +128,11 @@ data class WeeklyCompareDataDto(
     val xpChangeRate: Double,
     val overallScoreChange: ReportScoreChangeDto,
     val metricChanges: List<ReportMetricChangeDto>,
-    val highlights: List<String>
+    val highlights: List<String>,
+    // 자주 연습한 주제 · 미션 진행률 (백엔드 추가 2026-08-13).
+    // 선언이 없어 파싱에서 버려지는 바람에 주제 칩이 비고 진행률이 0으로 나왔다.
+    val topCategories: List<ReportTopCategoryDto> = emptyList(),
+    val missionProgress: ReportMissionProgressDto = ReportMissionProgressDto()
 )
 
 @Serializable
@@ -298,28 +307,6 @@ data class ConversationDetailMock(
     val messages: List<ReviewChatMessage>
 )
 
-// ==========================================
-// 💡 아카이브 전용 리포트 UI 데이터 모델
-// ==========================================
-enum class CompetencyAxis { KINDNESS, INITIATIVE, EMPATHY, QUESTION_LINK }
-
-data class Competency(
-    val axis: CompetencyAxis,
-    val label: String,
-    val legendLabel: String,
-    val maxScore: Int,
-    val score: Int,
-    val gain: Int = score
-)
-
-data class GrowthReport(
-    val tierName: String,
-    val tierStars: Int,
-    val nextStarsNeeded: Int,
-    val nextTierName: String,
-    val competencies: List<Competency>
-)
-
 data class MetricChange(
     val name: String,
     val lastWeek: Int,
@@ -351,5 +338,10 @@ data class WeeklyCompareReportUiModel(
     val isSaved: Boolean,
     val report: WeeklyCompareReport,
     val prevReportId: String?,
-    val nextReportId: String?
+    val nextReportId: String?,
+    // 주차 이동 줄에 그대로 쓰는 좌·우 라벨. 서버 periodLabel("7월 4주차 → 8월 1주차")을 갈라 담는다.
+    // 예전에는 화면이 제목 문자열을 정규식으로 되짚어 뽑았는데, 제목 형식이 달라지면
+    // "이전 주차 / 선택 주차"라는 기본 문구가 그대로 노출됐다.
+    val prevWeekLabel: String = "",
+    val thisWeekLabel: String = ""
 )

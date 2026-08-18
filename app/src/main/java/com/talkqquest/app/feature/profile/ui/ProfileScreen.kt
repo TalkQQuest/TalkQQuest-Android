@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -22,9 +23,11 @@ import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -37,12 +40,16 @@ import androidx.compose.ui.layout.positionInRoot
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.LineHeightStyle
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.em
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LifecycleEventEffect
 import coil3.compose.AsyncImage
+import kotlinx.coroutines.launch
 import com.talkqquest.app.R
 import com.talkqquest.app.core.designsystem.FitDesign
 import com.talkqquest.app.core.designsystem.Gray100
@@ -131,12 +138,27 @@ fun ProfileScreen(
     onBadgesClick: () -> Unit = {},
     onRecentMissionClick: () -> Unit = {},
     onArchiveClick: () -> Unit = {},
+    // 탭 페이저에서 이 화면이 지금 현재 페이지인지. 스와이프로 다른 탭에 가면 false가 되어
+    // 스크롤 위치를 맨 위로 되돌리는 신호로 쓴다(마이페이지 자체 백스택 이동과는 별개 경로).
+    isTabVisible: Boolean = true,
 ) {
     var showPhotoPicker by remember { mutableStateOf(false) }
+    val scrollState = rememberScrollState()
+    val scope = rememberCoroutineScope()
+    // 화면이 보이지 않게 되는 두 경로 모두에서 스크롤을 애니메이션 없이 즉시 맨 위로 되돌린다.
+    // 1) 다른 화면으로 이동: 이 컴포저블의 NavBackStackEntry가 RESUMED 밑으로 내려갈 때(ON_PAUSE).
+    LifecycleEventEffect(Lifecycle.Event.ON_PAUSE) {
+        scope.launch { scrollState.scrollTo(0) }
+    }
+    // 2) 탭 스와이프로 다른 탭이 보일 때.
+    LaunchedEffect(isTabVisible) {
+        if (!isTabVisible) scrollState.scrollTo(0)
+    }
     Box(Modifier.fillMaxSize()) {
         FitDesign(
             compensateStatusBar = false,
             scrollableContentHeight = ProfileScrollableContentHeight,
+            scrollState = scrollState,
         ) {
             Box(
         modifier = Modifier
@@ -368,9 +390,19 @@ private fun WeeklyMissionCard(
             verticalAlignment = Alignment.Bottom,
             horizontalArrangement = Arrangement.spacedBy(2.dp),
         ) {
+            // CSS Frame 427321273: row, align-items: flex-end, gap 2 — 글자(109x24)와 불꽃(25x25)의
+            // 바닥을 맞춘다. 다만 Compose는 line-height 24의 남는 여백을 위쪽에 더 많이 주기 때문에
+            // 글자가 상자 안에서 피그마보다 위로 뜨고, 그만큼 옆의 불꽃이 아래로 내려간 것처럼 보인다
+            // (사용자 신고 "살짝 아래로 내려가 있어 보여"). 다른 화면들이 쓰는 FullLeading과 같은 설정으로
+            // 글자를 line-height 상자 한가운데 놓아 피그마와 같은 위치가 되게 한다.
             Text(
                 text = "이번 주 연속 미션",
-                style = BodyLargeMediumStyle,
+                style = BodyLargeMediumStyle.copy(
+                    lineHeightStyle = LineHeightStyle(
+                        alignment = LineHeightStyle.Alignment.Center,
+                        trim = LineHeightStyle.Trim.None,
+                    ),
+                ),
                 color = Gray800,
                 modifier = Modifier.height(24.dp),
             )

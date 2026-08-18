@@ -94,6 +94,7 @@ import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.text.style.LineBreak
 import androidx.compose.ui.text.style.LineHeightStyle
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -167,11 +168,6 @@ fun HomeScreen(
     onModalSheetChange: (Boolean) -> Unit = {}, // 티어 시트가 떠 있는 동안 탭 스와이프를 끄기 위한 신호
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
-    LaunchedEffect(resumeAnimationTrigger) {
-        if (resumeAnimationTrigger <= 0) return@LaunchedEffect
-        // 별도 화면에서 실제로 돌아온 경우만 들어오는 신호다. 하단 탭·앱 재개에는 호출되지 않는다.
-        viewModel.loadHome(showLoading = false)
-    }
     HomeScreen(
         uiState = uiState,
         xpAnimationTrigger = resumeAnimationTrigger,
@@ -477,6 +473,64 @@ private fun MissionTitleText(
         modifier = modifier.widthIn(max = TITLE_MAX_WIDTH_DP.dp),
         onTextLayout = { layout -> onTextLayout(displayTitle, layout) },
     )
+}
+
+// 오늘의 미션 설명은 서버 문구 길이가 들쭉날쭉해 카드가 한없이 길어질 수 있다.
+// 두 줄을 절대 넘기지 않되, 어절(띄어쓰기 단위) 중간에서는 자르지 않는다 — 두 줄 안에
+// 온전히 못 들어가는 어절은 통째로 버리고 그 앞에서 끊은 뒤 "..."을 붙인다.
+// 글자 수 어림짐작이 아니라 제목과 같은 방식으로 TextMeasurer의 실제 폭을 재서 결정한다.
+private const val DESCRIPTION_MAX_WIDTH_DP = 256 // 디자인 Frame313 설명 영역 폭 (제목과 동일)
+
+@Composable
+private fun rememberTwoLineDescription(text: String, style: TextStyle): String {
+    val measurer = rememberTextMeasurer()
+    val density = LocalDensity.current
+    return remember(text) {
+        if (text.isBlank()) return@remember text
+        val maxWidthPx = with(density) { DESCRIPTION_MAX_WIDTH_DP.dp.toPx() }
+        fun width(s: String): Int =
+            measurer.measure(AnnotatedString(s.keepWordsIntact()), style = style).size.width
+
+        val words = text.split(" ").filter(String::isNotEmpty)
+        if (words.isEmpty()) return@remember text
+
+        // 그리디 줄바꿈으로 원문이 실제로 어느 줄까지 채우는지 그대로 구한다(제목과 같은 방식).
+        val lines = buildList {
+            var current = ""
+            words.forEach { word ->
+                val candidate = if (current.isEmpty()) word else "$current $word"
+                if (current.isNotEmpty() && width(candidate) > maxWidthPx) {
+                    add(current)
+                    current = word
+                } else {
+                    current = candidate
+                }
+            }
+            if (current.isNotEmpty()) add(current)
+        }
+        if (lines.size <= 2) return@remember text // 원문이 두 줄 안에 그대로 들어감
+
+        // 어절을 뒤에서부터 하나씩 버리며 "..."을 붙였을 때 폭 안에 들어오는 가장 긴
+        // 조합을 찾는다. 쉼표·마침표가 아니라 어절 경계만 끊는 지점으로 삼는다(사용자 결정).
+        fun ellipsize(lineWords: List<String>): String? {
+            var keep = lineWords.size
+            while (keep > 0) {
+                val candidate = lineWords.subList(0, keep).joinToString(" ") + "..."
+                if (width(candidate) <= maxWidthPx) return candidate
+                keep--
+            }
+            return null
+        }
+
+        val secondLineWords = lines[1].split(" ").filter(String::isNotEmpty)
+        val truncated = ellipsize(secondLineWords)?.let { "${lines[0]}\n$it" }
+            ?: ellipsize(lines[0].split(" ").filter(String::isNotEmpty)) // 둘째 줄에 한 어절도 못 들어가는 극단적 예외
+            ?: "..."
+
+        // "..."을 붙인 뒤에도 두 줄을 넘지 않는지 각 줄 폭을 다시 재서 확인한다.
+        val verifiedLines = truncated.split("\n")
+        if (verifiedLines.size <= 2 && verifiedLines.all { width(it) <= maxWidthPx }) truncated else "..."
+    }
 }
 
 // 인사 영역 + 알림 벨.
@@ -1744,9 +1798,9 @@ private fun HomeMissionCard(
     val targetImpactScope = rememberCoroutineScope()
     val transitionScope = rememberCoroutineScope()
     val targetImpactOffsetPx = with(LocalDensity.current) { 3.dp.toPx() }
-    val recommendationInteraction = remember { MutableInteractionSource() }
-    val recommendationPressed by recommendationInteraction.collectIsPressedAsState()
-    var recommendationPending by remember { mutableStateOf(false) }
+    val refreshButtonInteraction = remember { MutableInteractionSource() }
+    val refreshButtonPressed by refreshButtonInteraction.collectIsPressedAsState()
+    var refreshButtonPending by remember { mutableStateOf(false) }
     // 추천 다트 축소는 문구 소멸·추천 광선과 exitProgress 하나를 공유한다.
     // 새 미션에서는 0.88에서 140ms 동안만 원래 크기로 복귀한다.
     val recommendationDartScaleProgress = when (transition) {
@@ -1757,14 +1811,27 @@ private fun HomeMissionCard(
         MissionTransition.Visible -> 0f
     }
     val recommendationDartScale = 1f - (0.12f * recommendationDartScaleProgress)
-    // 추천 배지는 비동기 pending 상태와 무관한 짧은 터치 피드백만 유지한다.
-    val recommendationBadgeScale by animateFloatAsState(
-        targetValue = if (recommendationPressed) 0.94f else 1f,
+    // 새로고침 버튼은 비동기 pending 상태와 무관한 짧은 터치 피드백만 유지한다.
+    val refreshButtonScale by animateFloatAsState(
+        targetValue = if (refreshButtonPressed) 0.94f else 1f,
         animationSpec = tween(
-            durationMillis = if (recommendationPressed) 90 else 140,
+            durationMillis = if (refreshButtonPressed) 90 else 140,
             easing = FastOutSlowInEasing,
         ),
-        label = "recommendationBadgePressScale",
+        label = "refreshButtonPressScale",
+    )
+    // 오늘의 미션 설명 — 두 줄을 넘지 않게 어절 경계에서 자르고 "..."을 붙인 표시용 문자열.
+    // 실제 렌더 스타일(BodyS + Phrase 줄바꿈)과 같은 스타일로 폭을 재야 결과가 어긋나지 않는다.
+    val descriptionStyle = TqType.BodyS.figma().copy(
+        lineBreak = LineBreak(
+            strategy = LineBreak.Strategy.HighQuality,
+            strictness = LineBreak.Strictness.Strict,
+            wordBreak = LineBreak.WordBreak.Phrase,
+        ),
+    )
+    val displayDescription = rememberTwoLineDescription(
+        text = displayedMission.description?.glueShortWords().orEmpty(),
+        style = descriptionStyle,
     )
     suspend fun playDartShine() {
         if (dartShineRunning) return
@@ -1853,7 +1920,7 @@ private fun HomeMissionCard(
                 transition = MissionTransition.Reverting
                 exitProgress.animateTo(0f, tween(440, easing = LinearEasing))
                 transition = MissionTransition.Visible
-                recommendationPending = false
+                refreshButtonPending = false
             } else if (exitFinished) {
                 // 새 Text와 이전 TextLayoutResult를 같은 프레임에 분리한다. layout이
                 // 준비됐다는 사실까지 확인하기 전에는 enter time을 시작하지 않는다.
@@ -1883,15 +1950,14 @@ private fun HomeMissionCard(
         if (transition != MissionTransition.Entering) return@LaunchedEffect
         val titleReady = titleLayoutText != null &&
             titleLayout?.layoutInput?.text?.text == titleLayoutText
-        val currentDescription = displayedMission.description
-        val descriptionReady = currentDescription == null ||
-            descriptionLayout?.layoutInput?.text?.text == currentDescription.glueShortWords()
+        val descriptionReady = displayedMission.description == null ||
+            descriptionLayout?.layoutInput?.text?.text == displayDescription
         if (!titleReady || !descriptionReady || !difficultyMetricReady || !timeMetricReady || !rewardMetricReady) {
             return@LaunchedEffect
         }
 
-        // 새 콘텐츠가 실제 layout된 뒤 첫 enter 프레임에서만 배지를 복귀시킨다.
-        recommendationPending = false
+        // 새 콘텐츠가 실제 layout된 뒤 첫 enter 프레임에서만 버튼을 복귀시킨다.
+        refreshButtonPending = false
         coroutineScope {
             launch {
                 dartEnterRestoreProgress.animateTo(1f, tween(140, easing = FastOutSlowInEasing))
@@ -1927,7 +1993,7 @@ private fun HomeMissionCard(
     // 제목부터 보상까지 한 타임라인을 공유한다. 구분선은 한 글자 폭으로 취급한다.
     // MissionTitleText가 균형 줄바꿈한 실제 TextLayout input을 timeline identity로 쓴다.
     val titleText = titleLayoutText ?: displayedMission.title
-    val descriptionText = displayedMission.description?.glueShortWords().orEmpty()
+    val descriptionText = displayDescription
     val titleStart = 0
     val descriptionStart = titleStart + visibleGlyphCount(titleText)
     val difficultyStart = descriptionStart + visibleGlyphCount(descriptionText)
@@ -1982,7 +2048,7 @@ private fun HomeMissionCard(
         modifier = Modifier.fillMaxWidth(),
         contentPadding = PaddingValues(horizontal = 16.dp, vertical = 20.dp),
     ) {
-        // 헤더: 오늘의 미션 + 추천 뱃지
+        // 헤더: 오늘의 미션 + 새로고침 버튼
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
@@ -2011,29 +2077,29 @@ private fun HomeMissionCard(
                         },
                     ),
             )
-            // 추천 뱃지: 컴포넌트.css 그대로 (고정 40x22, Primary100, radius 4, 텍스트 중앙)
+            // 새로고침 버튼 (UI_Z.css 홈(메인) Frame 312 그대로: 고정 80x26, padding 0 5 0 6,
+            // Gray/100 #F1F5F9, radius 8, 문구 Body/S 13px/400 Gray/600 #475569).
             // 횟수 정보가 없는 폴백 미션은 활성 상태로 유지하고,
             // 서버가 명시적으로 0회를 내려준 경우에만 비활성화한다.
             val hasQuota = mission.remainingRefreshes != 0
             val canRefresh = hasQuota && !isRefreshing
             Box(
                 modifier = Modifier
-                    .height(22.dp)
-                    .widthIn(min = 40.dp)
+                    .size(width = 80.dp, height = 26.dp)
                     .graphicsLayer {
-                        scaleX = recommendationBadgeScale
-                        scaleY = recommendationBadgeScale
+                        scaleX = refreshButtonScale
+                        scaleY = refreshButtonScale
                     }
-                    .clip(RoundedCornerShape(4.dp))
-                    .background(if (hasQuota) Primary100 else Gray100)
-                    .padding(horizontal = 7.dp)
+                    .clip(RoundedCornerShape(8.dp))
+                    .background(Gray100)
+                    .padding(start = 6.dp, end = 5.dp)
                     .clickable(
                         enabled = canRefresh,
-                        interactionSource = recommendationInteraction,
+                        interactionSource = refreshButtonInteraction,
                         indication = null,
                         onClick = {
-                            if (!recommendationPending) {
-                                recommendationPending = true
+                            if (!refreshButtonPending) {
+                                refreshButtonPending = true
                                 onRefreshClick()
                             }
                         },
@@ -2046,12 +2112,12 @@ private fun HomeMissionCard(
                 AnimatedContent(
                     targetState = displayedRefreshes,
                     transitionSpec = { fadeIn(tween(120)) togetherWith fadeOut(tween(90)) },
-                    label = "recommendationCount",
+                    label = "refreshButtonCount",
                 ) { remaining ->
                     Text(
-                        text = if (mission.refreshLimit != null && remaining != null && remaining > 0) "추천 $remaining" else "추천",
-                        style = TqType.LabelM.figma(),
-                        color = if (hasQuota) Primary600 else Gray400,
+                        text = if (remaining != null) "새로고침 ($remaining)" else "새로고침",
+                        style = TqType.BodyS.figma(),
+                        color = if (hasQuota) Gray600 else Gray400,
                     )
                 }
             }
@@ -2146,6 +2212,14 @@ private fun HomeMissionCard(
                 MissionTitleText(
                     title = displayedMission.title,
                     modifier = Modifier
+                        // ★누름 축소는 와이프보다 바깥에 둔다. 와이프는 글자마다 clipRect로 칸을
+                        // 잘라 그리는데 그 칸은 축소 전 좌표라, 축소를 와이프 안쪽에 두면 칸은
+                        // 그대로인데 글자만 작아져 글자 사이에 안 칠해진 세로 틈이 생긴다
+                        // (꾹 누르면 흰 줄이 여러 개 그어져 보이던 원인).
+                        .graphicsLayer {
+                            scaleX = titleScale
+                            scaleY = titleScale
+                        }
                         .missionGlyphWipe(
                             missionContentProgress,
                             isMissionExiting,
@@ -2158,10 +2232,6 @@ private fun HomeMissionCard(
                             enterStartHeightPx = previousHeaderHeightPx,
                             enterEndHeightPx = measuredHeaderHeightPx,
                         )
-                        .graphicsLayer {
-                            scaleX = titleScale
-                            scaleY = titleScale
-                        }
                         .clickable(
                             interactionSource = titleInteraction,
                             indication = null,
@@ -2180,19 +2250,20 @@ private fun HomeMissionCard(
                         titleLayout = layout
                     },
                 )
-                displayedMission.description?.let { description ->
+                displayedMission.description?.let {
                     Text(
-                        text = description.glueShortWords(),
-                        style = TqType.BodyS.figma().copy(
-                            lineBreak = LineBreak(
-                                strategy = LineBreak.Strategy.HighQuality,
-                                strictness = LineBreak.Strictness.Strict,
-                                wordBreak = LineBreak.WordBreak.Phrase,
-                            ),
-                        ),
+                        text = displayDescription,
+                        style = descriptionStyle,
                         color = Gray600,
+                        maxLines = 2, // 어절 경계 말줄임은 위에서 이미 끝냈다 — 넘치면 자르기만 하는 안전장치
+                        overflow = TextOverflow.Clip,
                         modifier = Modifier
                             .widthIn(max = 256.dp)
+                            // 제목과 같은 이유로 누름 축소를 와이프 바깥에 둔다(글자 사이 세로 틈 방지)
+                            .graphicsLayer {
+                                scaleX = descriptionScale
+                                scaleY = descriptionScale
+                            }
                             .missionGlyphWipe(
                                 missionContentProgress,
                                 isMissionExiting,
@@ -2200,17 +2271,13 @@ private fun HomeMissionCard(
                                 timelineTotal,
                                 descriptionLayout,
                                 hideUntilLayout = transition == MissionTransition.Entering,
-                                expectedText = description.glueShortWords(),
+                                expectedText = displayDescription,
                                 entering = transition == MissionTransition.Entering,
                                 enterStartHeightPx = previousHeaderHeightPx,
                                 enterEndHeightPx = measuredHeaderHeightPx,
                                 contentTopPx = (titleLayout?.size?.height ?: 0) +
                                     with(LocalDensity.current) { 4.dp.roundToPx() },
                             )
-                            .graphicsLayer {
-                                scaleX = descriptionScale
-                                scaleY = descriptionScale
-                            }
                             .clickable(
                                 interactionSource = descriptionInteraction,
                                 indication = null,

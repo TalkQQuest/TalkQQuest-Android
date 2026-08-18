@@ -81,6 +81,9 @@ import kotlinx.coroutines.launch
 
 @Composable
 fun FeedbackScreen(
+    // 대화 진행 화면이 헤더에 이미 들고 있던 미션 제목. 서버 피드백 응답엔 제목이 없어(topic null)
+    // 라우트를 타고 여기까지 전달된 값이다.
+    missionTitle: String = "",
     onBack: () -> Unit = {},
     onItemClick: (Int) -> Unit = {},
     // 미션 제목(저장 카드 제목) + 대화 id(POST /reports 바디) + 4항목 점수(성장 리포트 마름모의 "+N").
@@ -94,7 +97,11 @@ fun FeedbackScreen(
         uiState = uiState,
         onBack = onBack,
         onItemClick = onItemClick,
-        onDetailReport = onDetailReport,
+        // 넘겨받은 제목을 우선 쓰고, 비어 있을 때만 서버 값(result.missionTitle)으로 떨어진다.
+        // 나중에 서버가 topic을 채워도 화면이 들고 있던 제목과 충돌하지 않게 하기 위함.
+        onDetailReport = { title, conversationId, scores ->
+            onDetailReport(missionTitle.ifBlank { title }, conversationId, scores)
+        },
         onHome = onHome,
         // 재시도는 서버에 피드백 재생성을 요청한 뒤 다시 조회한다(regenerate = true).
         // 조회만 다시 하면 서버 생성이 깨진 경우엔 같은 실패가 반복된다.

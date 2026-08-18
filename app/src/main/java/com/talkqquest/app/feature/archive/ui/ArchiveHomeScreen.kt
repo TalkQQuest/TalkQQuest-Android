@@ -259,7 +259,9 @@ private fun ArchiveHomeScreen(
                 item { Spacer(modifier = Modifier.height(16.dp)) }
 
                 items(uiState.recentActivities) { activity ->
-                    val isWeeklyCompare = activity.title.contains("주간 비교")
+                    // 종류는 서버가 준 reportType으로 가른다. 제목 문자열로 추측하면 서버 제목이
+                    // "4주차 비교 리포트"라 안 걸려서, 주간 비교인데 성장 리포트 상세로 갔다(그 화면은 404).
+                    val isWeeklyCompare = activity.reportType == "weekly_compare"
 
                     if (activity.type == ActivityType.CONVERSATION) {
                         ArchiveConversationCard(

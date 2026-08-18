@@ -25,11 +25,11 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -103,7 +103,14 @@ fun <T : Any> TqSaveSheetScaffold(
         val expandedOffset =
             WindowInsets.statusBars.getTop(density) + with(density) { ExpandedTopGap.toPx() }
 
-        var offsetY by remember { mutableFloatStateOf(hiddenOffset) }
+        // 시트 위치는 rememberSaveable에 둔다 — 끌어올린 시트에서 예전 리포트로 들어갔다 뒤로 나와도
+        // 올려둔 자리가 그대로 유지되게 하기 위함(사용자 요청 2026-08-18). NavHost가 목적지마다
+        // saveable 상태를 보관해 주므로 화면 이동엔 살아남고, 앱을 껐다 켜면 초기 상태로 돌아간다.
+        // (Float은 mutableFloatStateOf 대신 mutableStateOf로 — rememberSaveable 기본 Saver가 받는 형태)
+        var offsetY by rememberSaveable { mutableStateOf(hiddenOffset) }
+        // 지금 화면에 떠 있는 항목의 식별자. 이 값이 살아 돌아왔다는 건 "다른 화면 갔다 온 것"이라는 뜻이라
+        // 아래 LaunchedEffect가 시트를 살짝 올림(peek) 자리로 되돌리지 않게 하는 표식이 된다.
+        var presentedKey by rememberSaveable { mutableStateOf<String?>(null) }
         // 자동 닫힘 판단용: 지금 손을 대고 있는지 + 마지막으로 만진 시각 (만질 때마다 2초 타이머 리셋)
         var sheetPressed by remember(itemKey) { mutableStateOf(false) }
         var lastTouchAt by remember(itemKey) { mutableLongStateOf(System.currentTimeMillis()) }
@@ -114,6 +121,9 @@ fun <T : Any> TqSaveSheetScaffold(
         // 정착점으로 이동. 위로 갈 땐 빠르게, 아래로 갈 땐 2배 느리게.
         fun animateSheetTo(target: Float, onArrived: () -> Unit = {}) {
             animJob?.cancel()
+            // 완전히 내려가는 순간 표식을 지운다. 안 지우면 같은 항목을 다시 저장했을 때
+            // "이미 떠 있던 것"으로 오인해 시트가 안 올라온다.
+            if (target == hiddenOffset) presentedKey = null
             animJob = scope.launch {
                 val spec = if (target > offsetY) DescentSpec else AscentSpec
                 animate(offsetY, target, animationSpec = spec) { value, _ -> offsetY = value }
@@ -149,7 +159,14 @@ fun <T : Any> TqSaveSheetScaffold(
         LaunchedEffect(itemKey, itemIsSaved) {
             when {
                 savedItem == null -> animateSheetTo(hiddenOffset)
-                itemIsSaved -> animateSheetTo(peekOffset)
+                itemIsSaved -> {
+                    // 표식이 그대로 살아 돌아왔다 = 다른 화면 갔다가 뒤로 온 것. 이때는 위치를 건드리지 않아
+                    // 끝까지 끌어올려 둔 시트가 그 상태로 다시 보인다. 처음 뜨는 경우에만 살짝 올림 자리로.
+                    if (presentedKey != itemKey?.toString()) {
+                        presentedKey = itemKey?.toString()
+                        animateSheetTo(peekOffset)
+                    }
+                }
                 else -> {
                     // 시트에 뜬 항목이 해제됨: 회색으로 바뀐 아이콘을 잠깐 보여준 뒤 내려감
                     delay(300)

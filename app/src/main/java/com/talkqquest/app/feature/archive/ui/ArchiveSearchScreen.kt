@@ -1,5 +1,7 @@
 package com.talkqquest.app.feature.archive.ui
 
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -69,6 +71,7 @@ import com.talkqquest.app.core.designsystem.Primary600
 import com.talkqquest.app.core.designsystem.TalkQQuestTheme
 import com.talkqquest.app.core.designsystem.TqType
 import com.talkqquest.app.core.designsystem.White
+import com.talkqquest.app.core.designsystem.component.ChipContentCrossfade
 import com.talkqquest.app.core.designsystem.component.SlidingChipRow
 import com.talkqquest.app.core.designsystem.component.rememberHapticTick
 import com.talkqquest.app.core.designsystem.component.TextAnchoredPillRipple
@@ -85,6 +88,18 @@ import com.talkqquest.app.feature.archive.viewmodel.RecentActivity
 import com.talkqquest.app.feature.archive.viewmodel.SearchBookmarkWrapper
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
+
+// 검색 결과 목록의 "칩 전환" 여부를 판단하는 키(정렬은 제외). 카테고리·기간 중 하나라도 바뀌면
+// 새 키가 되어 ChipContentCrossfade가 페이드 스루를 재생한다.
+private data class SearchResultFilterKey(
+    val category: String?,
+    val dateTab: String?,
+    val leftDate: LocalDate,
+    val rightDate: LocalDate,
+)
+
+// 정렬 전환(5-B)으로 카드가 자리를 옮길 때 쓰는 공통 이동 스펙.
+private val searchResultItemPlacementSpec = tween<androidx.compose.ui.unit.IntOffset>(300, easing = FastOutSlowInEasing)
 
 @Composable
 fun ArchiveSearchScreen(
@@ -165,6 +180,16 @@ private fun ArchiveSearchScreenContent(
 
     val dateTabs = listOf("전체", "7일", "30일", "3개월")
     val categoryTabs = listOf("전체", "미션", "대화", "문장", "리포트")
+
+    // 결과 화면에서 활성 필터 칩(x)을 지워 카테고리·기간이 바뀌면 목록 전체를 페이드 스루로
+    // 교체한다(5-A). 정렬만 바뀌면 이 키가 그대로라 같은 목록이 유지되고, 카드는 animateItem으로
+    // 자리만 옮긴다(5-B) — "정렬 오래된 순에서 이상함" 신고가 여기 해당.
+    val searchFilterKey = SearchResultFilterKey(
+        category = uiState.selectedCategoryTab,
+        dateTab = uiState.selectedDateTab,
+        leftDate = uiState.leftDate,
+        rightDate = uiState.rightDate,
+    )
 
     FitDesign {
         BoxWithConstraints(
@@ -384,69 +409,82 @@ private fun ArchiveSearchScreenContent(
                         Spacer(modifier = Modifier.height(16.dp))
 
                         // 3. 필터링된 카드 리스트
-                        LazyColumn(
-                            contentPadding = PaddingValues(bottom = 100.dp),
-                            verticalArrangement = Arrangement.spacedBy(16.dp),
-                            modifier = Modifier.weight(1f)
-                        ) {
-                            items(
-                                items = uiState.searchResults,
-                                key = { item ->
-                                    when (item) {
-                                        is ArchiveMissionItem -> "mission_${item.id}"
-                                        is RecentActivity -> "activity_${item.id}"
-                                        is SearchBookmarkWrapper -> "bookmark_${item.isSentence}_${item.item.id}"
-                                        else -> item.hashCode()
-                                    }
-                                }
-                            ) { item ->
-                                when (item) {
-                                    is ArchiveMissionItem -> ArchiveMissionCard(
-                                        mission = item,
-                                        onClick = { onNavigateToDetail(item.id.toString(), ActivityType.MISSION, false) }, // 미션은 항상 false
-                                        onToggleSave = { onToggleMissionBookmark(item.id) },
-                                        modifier = Modifier.animateItem()
-                                    )
-                                    is RecentActivity -> {
-                                        // 💡 [수정됨] 제목으로 주간 비교 판단 후 넘김
-                                        val isWeeklyCompare = item.title.contains("주간 비교")
-                                        if (item.type == ActivityType.CONVERSATION) {
-                                            ArchiveConversationCard(
-                                                title = item.title,
-                                                tags = item.tags,
-                                                summary = item.summary ?: "",
-                                                date = item.date,
-                                                time = item.duration,
-                                                onClick = { onNavigateToDetail(item.id, item.type, false) },
-                                                modifier = Modifier.animateItem()
-                                            )
-                                        } else {
-                                            RecentActivityCard(
-                                                activity = item,
-                                                onClick = { onNavigateToDetail(item.id, item.type, isWeeklyCompare) },
-                                                modifier = Modifier.animateItem()
-                                            )
+                        // 카테고리·기간(칩) 조합이 바뀔 때만 페이드 스루(5-A). 정렬만 바뀌면 같은
+                        // 목록이 유지되고 카드는 key 기반으로 animateItem이 자리만 옮긴다(5-B).
+                        ChipContentCrossfade(
+                            targetState = searchFilterKey,
+                            modifier = Modifier.weight(1f),
+                        ) { key ->
+                            // 받은 key(카테고리·기간)로만 목록을 계산한다 — 바깥 uiState의 "지금"
+                            // 필터를 읽으면 전환 중 겹쳐 있는 두 화면이 같은 목록을 그리게 된다.
+                            // 정렬은 키에 없으므로 uiState.sortType(현재 값)을 그대로 적용해도 된다.
+                            val displayResults = uiState.sortedResults(
+                                uiState.filteredResults(key.category, key.leftDate, key.rightDate)
+                            )
+                            LazyColumn(
+                                modifier = Modifier.fillMaxSize(),
+                                contentPadding = PaddingValues(bottom = 100.dp),
+                                verticalArrangement = Arrangement.spacedBy(16.dp),
+                            ) {
+                                items(
+                                    items = displayResults,
+                                    key = { item ->
+                                        when (item) {
+                                            is ArchiveMissionItem -> "mission_${item.id}"
+                                            is RecentActivity -> "activity_${item.id}"
+                                            is SearchBookmarkWrapper -> "bookmark_${item.isSentence}_${item.item.id}"
+                                            else -> item.hashCode()
                                         }
                                     }
-                                    is SearchBookmarkWrapper -> {
-                                        // 💡 [수정됨] 제목으로 주간 비교 판단 후 넘김
-                                        val isWeeklyCompare = item.item.title.contains("주간 비교")
-                                        BookmarkCard(
-                                            item = item.item,
-                                            isSentence = item.isSentence,
-                                            onClick = {
-                                                val type = if (item.isSentence) ActivityType.SENTENCE else ActivityType.REPORT
-                                                onNavigateToDetail(item.item.id, type, isWeeklyCompare)
-                                            },
-                                            onToggleSave = {
-                                                if (item.isSentence) {
-                                                    onToggleSentenceBookmark(item.item.id)
-                                                } else {
-                                                    onToggleReportBookmark(item.item.id)
-                                                }
-                                            },
-                                            modifier = Modifier.animateItem()
+                                ) { item ->
+                                    when (item) {
+                                        is ArchiveMissionItem -> ArchiveMissionCard(
+                                            mission = item,
+                                            onClick = { onNavigateToDetail(item.id.toString(), ActivityType.MISSION, false) }, // 미션은 항상 false
+                                            onToggleSave = { onToggleMissionBookmark(item.id) },
+                                            modifier = Modifier.animateItem(placementSpec = searchResultItemPlacementSpec)
                                         )
+                                        is RecentActivity -> {
+                                            // 종류는 서버가 준 reportType으로 가른다(제목 문자열 추측 금지)
+                                            val isWeeklyCompare = item.reportType == "weekly_compare"
+                                            if (item.type == ActivityType.CONVERSATION) {
+                                                ArchiveConversationCard(
+                                                    title = item.title,
+                                                    tags = item.tags,
+                                                    summary = item.summary ?: "",
+                                                    date = item.date,
+                                                    time = item.duration,
+                                                    onClick = { onNavigateToDetail(item.id, item.type, false) },
+                                                    modifier = Modifier.animateItem(placementSpec = searchResultItemPlacementSpec)
+                                                )
+                                            } else {
+                                                RecentActivityCard(
+                                                    activity = item,
+                                                    onClick = { onNavigateToDetail(item.id, item.type, isWeeklyCompare) },
+                                                    modifier = Modifier.animateItem(placementSpec = searchResultItemPlacementSpec)
+                                                )
+                                            }
+                                        }
+                                        is SearchBookmarkWrapper -> {
+                                            // 종류는 서버가 준 reportType으로 가른다(제목 문자열 추측 금지)
+                                            val isWeeklyCompare = item.item.isWeeklyCompare
+                                            BookmarkCard(
+                                                item = item.item,
+                                                isSentence = item.isSentence,
+                                                onClick = {
+                                                    val type = if (item.isSentence) ActivityType.SENTENCE else ActivityType.REPORT
+                                                    onNavigateToDetail(item.item.id, type, isWeeklyCompare)
+                                                },
+                                                onToggleSave = {
+                                                    if (item.isSentence) {
+                                                        onToggleSentenceBookmark(item.item.id)
+                                                    } else {
+                                                        onToggleReportBookmark(item.item.id)
+                                                    }
+                                                },
+                                                modifier = Modifier.animateItem(placementSpec = searchResultItemPlacementSpec)
+                                            )
+                                        }
                                     }
                                 }
                             }

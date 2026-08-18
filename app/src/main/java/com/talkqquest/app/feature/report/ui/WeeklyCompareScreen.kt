@@ -96,6 +96,9 @@ fun WeeklyCompareScreen(
     onClose: () -> Unit = {},
     // 진행률 카드의 "완료한 미션 >" — 보관함 미션 목록(C 담당)으로 가는 자리.
     onCompletedMissionsClick: () -> Unit = {},
+    // 저장 시트의 "보관함 >" / 저장된 리포트 카드 — 보관함으로 가는 자리(NavGraph에서 주입).
+    onArchiveClick: () -> Unit = {},
+    onReportClick: (reportId: String, isWeeklyCompare: Boolean) -> Unit = { _, _ -> },
     viewModel: WeeklyCompareViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -105,8 +108,12 @@ fun WeeklyCompareScreen(
         onPrevWeek = viewModel::showPrevWeek,
         onNextWeek = viewModel::showNextWeek,
         onRetry = viewModel::load,
-        onSaveClick = viewModel::toggleSaved,
+        onSaveClick = viewModel::saveReport,
+        onToggleSaveInSheet = viewModel::toggleReportSave,
+        onDismissSaveSheet = viewModel::dismissSaveSheet,
         onCompletedMissionsClick = onCompletedMissionsClick,
+        onArchiveClick = onArchiveClick,
+        onReportClick = onReportClick,
     )
 }
 
@@ -118,7 +125,11 @@ fun WeeklyCompareScreen(
     onNextWeek: () -> Unit = {},
     onRetry: () -> Unit = {},
     onSaveClick: () -> Unit = {},
+    onToggleSaveInSheet: (String) -> Unit = {},
+    onDismissSaveSheet: () -> Unit = {},
     onCompletedMissionsClick: () -> Unit = {},
+    onArchiveClick: () -> Unit = {},
+    onReportClick: (reportId: String, isWeeklyCompare: Boolean) -> Unit = { _, _ -> },
 ) = FitDesign { // 작은 화면에선 디자인(393x852) 통째 축소 — 다른 화면들과 동일
     Box(
         modifier = Modifier
@@ -142,7 +153,22 @@ fun WeeklyCompareScreen(
                 }
             }
 
-            else -> Column(
+            // "리포트 저장하기"를 누르면 화면 위로 "저장됨" 시트가 올라온다. 성장 리포트와 같은
+            // 공용 시트(ReportSaveSheetScaffold)이고, 카드 제목만 주차 범위로 채워진다.
+            else -> ReportSaveSheetScaffold(
+                savedReport = uiState.saveSheetReport,
+                recentSavedReports = uiState.savedReports,
+                onDismiss = onDismissSaveSheet,
+                onToggleSave = onToggleSaveInSheet,
+                onArchiveClick = onArchiveClick,
+                onReportClick = { reportId ->
+                    // 카드 종류에 따라 갈 상세 화면이 다르다. 시트 위 카드는 언제나 주간 비교.
+                    val isWeekly = uiState.saveSheetReport?.id == reportId ||
+                        uiState.savedReports.firstOrNull { it.id == reportId }?.type == "weekly_compare"
+                    onReportClick(reportId, isWeekly)
+                },
+            ) {
+            Column(
                 modifier = Modifier
                     .fillMaxSize()
                     .statusBarsPadding()
@@ -150,53 +176,64 @@ fun WeeklyCompareScreen(
             ) {
                 WeeklyCompareHeader(onClose = onClose)
 
-                Column(
-                    modifier = Modifier
-                        .weight(1f)
-                        .verticalScroll(rememberScrollState()),
-                ) {
-                    WeekSwitcher(
-                        prevWeekLabel = report.prevWeekLabel,
-                        thisWeekLabel = report.thisWeekLabel,
-                        canGoPrev = uiState.canGoPrev,
-                        canGoNext = uiState.canGoNext,
-                        dimPrev = uiState.dimPrev,
-                        dimNext = uiState.dimNext,
-                        onPrevWeek = onPrevWeek,
-                        onNextWeek = onNextWeek,
-                    )
+                // 버튼은 화면 하단에 고정해 띄우고 본문만 스크롤되게 한다(사용자 결정).
+                // 가림 마스크 없이 버튼 뒤로 본문 글자가 지나가는 걸 그대로 둔다.
+                Box(modifier = Modifier.weight(1f)) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .verticalScroll(rememberScrollState()),
+                    ) {
+                        WeekSwitcher(
+                            prevWeekLabel = report.prevWeekLabel,
+                            thisWeekLabel = report.thisWeekLabel,
+                            canGoPrev = uiState.canGoPrev,
+                            canGoNext = uiState.canGoNext,
+                            dimPrev = uiState.dimPrev,
+                            dimNext = uiState.dimNext,
+                            onPrevWeek = onPrevWeek,
+                            onNextWeek = onNextWeek,
+                        )
 
-                    Spacer(Modifier.height(16.dp)) // 427321812 gap
+                        Spacer(Modifier.height(16.dp)) // 427321812 gap
 
-                    SectionTitle("지난 주보다 이만큼 달라졌어요", color = Gray800)
-                    Spacer(Modifier.height(12.dp))
-                    MetricGrid(report.metrics)
+                        SectionTitle("지난 주보다 이만큼 달라졌어요", color = Gray800)
+                        Spacer(Modifier.height(12.dp))
+                        MetricGrid(report.metrics)
 
-                    Spacer(Modifier.height(12.dp)) // 427321809 gap
-                    HighlightCard(report.highlights)
+                        Spacer(Modifier.height(12.dp)) // 427321809 gap
+                        HighlightCard(report.highlights)
 
-                    Spacer(Modifier.height(18.dp)) // 427321810 gap
-                    SectionTitle("자주 연습한 주제", color = Gray900)
-                    Spacer(Modifier.height(12.dp))
-                    TopicRow(report.topics)
+                        Spacer(Modifier.height(18.dp)) // 427321810 gap
+                        SectionTitle("자주 연습한 주제", color = Gray900)
+                        Spacer(Modifier.height(12.dp))
+                        TopicRow(report.topics)
 
-                    Spacer(Modifier.height(18.dp)) // 427321811 gap
-                    SectionTitle("지금까지 얼마나 달려왔을까요?", color = Gray900)
-                    Spacer(Modifier.height(12.dp))
-                    MissionProgressCard(
-                        report = report,
-                        onCompletedMissionsClick = onCompletedMissionsClick,
+                        Spacer(Modifier.height(18.dp)) // 427321811 gap
+                        SectionTitle("지금까지 얼마나 달려왔을까요?", color = Gray900)
+                        Spacer(Modifier.height(12.dp))
+                        MissionProgressCard(
+                            report = report,
+                            onCompletedMissionsClick = onCompletedMissionsClick,
+                        )
+
+                        // 버튼이 스크롤 위에 고정으로 겹쳐 있어 이 여백이 없으면 마지막 카드가
+                        // 버튼에 영구히 가려진다. 82 = 6(본문 끝→버튼 기존 간격) + 52(버튼 높이)
+                        // + 24(버튼 하단 여백) — 끝까지 내렸을 때 원래 레이아웃과 같은 간격이 남는다.
+                        Spacer(Modifier.height(82.dp))
+                    }
+
+                    TqButton(
+                        text = "리포트 저장하기",
+                        onClick = onSaveClick,
+                        // 362 @ x16 → 좌 16 / 우 15 (CSS 값 그대로), 하단 24는 기존 Spacer 값 그대로
+                        modifier = Modifier
+                            .align(Alignment.BottomCenter)
+                            .fillMaxWidth()
+                            .padding(start = 16.dp, end = 15.dp, bottom = 24.dp),
                     )
                 }
-
-                Spacer(Modifier.height(6.dp)) // 본문 끝(722) → 버튼(728)
-                TqButton(
-                    text = "리포트 저장하기",
-                    onClick = onSaveClick,
-                    // 362 @ x16 → 좌 16 / 우 15 (CSS 값 그대로)
-                    modifier = Modifier.fillMaxWidth().padding(start = 16.dp, end = 15.dp),
-                )
-                Spacer(Modifier.height(24.dp)) // 버튼 하단(780) → 시스템 네비(804)
+            }
             }
         }
     }

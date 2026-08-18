@@ -16,13 +16,17 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.requiredSize
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.text.InlineTextContent
+import androidx.compose.foundation.text.appendInlineContent
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -42,11 +46,15 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionInParent
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.Placeholder
+import androidx.compose.ui.text.PlaceholderVerticalAlign
+import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.talkqquest.app.R
 import com.talkqquest.app.core.designsystem.Gray300
 import com.talkqquest.app.core.designsystem.Gray500
@@ -63,6 +71,9 @@ import com.talkqquest.app.feature.report.data.model.SavedReportItem
 // ── 리포트 저장 시트 (CSS "리포트 저장"/"주간 비교 리포트"(시트) 프레임 전사) ──
 // "리포트 저장하기" 버튼을 누르면 올라옴. 시트 컨테이너(Frame 455)는 미션 저장 시트와
 // 완전히 동일해 core의 TqSaveSheetScaffold 재사용 — 카드만 리포트 카드(Frame 427321183).
+
+// 카드 제목 안에 끼워 넣는 주차 화살표 그림의 자리 이름 (InlineTextContent 식별자)
+private const val WEEK_ARROW_ID = "weekRangeArrow"
 
 // 화면 내용을 감싸서 저장 시트를 위에 겹쳐 그리는 틀.
 // savedReport가 생기면 시트가 올라오고, null이 되면 내려감.
@@ -238,13 +249,56 @@ private fun SavedReportCard(
         Spacer(Modifier.width(12.dp)) // 그림 ↔ 텍스트 (CSS Frame 427321179 gap 12)
         Column(modifier = Modifier.weight(1f)) {
             // 제목 = 미션명 (서버 가변 — CSS 폭 210 고정이라 1줄 말줄임, 사용자 결정)
-            Text(
-                text = report.title,
-                style = TqType.BodyL.figma().copy(fontWeight = FontWeight.Medium), // Body/L Medium (CSS)
-                color = Gray900,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-            )
+            // 주간 비교 리포트만 예외로 "7월 4주차 →(그림) 8월 1주차 주간 비교 리포트"가 들어간다.
+            // 화살표는 텍스트 기호가 아니라 주간 비교 화면 주차 줄과 같은 그림이라, 글자 흐름 안에
+            // 그림을 끼워 넣는 InlineTextContent로 그린다(따로 Row로 쪼개면 1줄 말줄임이 깨진다).
+            // 폭 210에 다 안 들어가 뒤가 잘리는 건 사용자가 감수하기로 한 부분이다.
+            val titleStyle = TqType.BodyL.figma().copy(fontWeight = FontWeight.Medium) // Body/L Medium (CSS)
+            val hasWeekRange = report.prevWeekLabel.isNotBlank() && report.thisWeekLabel.isNotBlank()
+            if (hasWeekRange) {
+                Text(
+                    text = buildAnnotatedString {
+                        append(report.prevWeekLabel)
+                        append(" ")
+                        // 그림이 안 그려지는 환경(접근성 읽기 등)에서 대신 읽힐 글자
+                        appendInlineContent(WEEK_ARROW_ID, "→")
+                        append(" ")
+                        append(report.thisWeekLabel)
+                        append(" 주간 비교 리포트")
+                    },
+                    inlineContent = mapOf(
+                        WEEK_ARROW_ID to InlineTextContent(
+                            // 주간 비교 화면과 같은 비율 — 18 자리 안에 14x11 글리프.
+                            // 자리는 글자 크기를 따라가야 해서 sp, 그림 자체는 원본 비율 유지라 dp.
+                            Placeholder(
+                                width = 18.sp,
+                                height = 11.sp,
+                                placeholderVerticalAlign = PlaceholderVerticalAlign.TextCenter,
+                            ),
+                        ) {
+                            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                                Image(
+                                    painter = painterResource(R.drawable.ic_weekly_range_arrow),
+                                    contentDescription = null, // 위 대체 글자가 이미 읽힘
+                                    modifier = Modifier.requiredSize(width = 14.dp, height = 11.dp),
+                                )
+                            }
+                        },
+                    ),
+                    style = titleStyle,
+                    color = Gray900,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            } else {
+                Text(
+                    text = report.title,
+                    style = titleStyle,
+                    color = Gray900,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
             // 메타줄: "리포트 열람(고정 문구) | 저장 날짜" (CSS Frame 347 — 구분선 양옆 10)
             Row(
                 modifier = Modifier.padding(horizontal = 2.dp), // CSS Frame 347 padding 0 2

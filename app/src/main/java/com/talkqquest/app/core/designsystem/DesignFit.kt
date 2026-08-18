@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.ime
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.statusBars
@@ -75,6 +76,9 @@ fun FitDesign(
     compensateStatusBar: Boolean = true, // false = 중첩 사용(팝업 등)에서 상태바 보정 이중 적용 방지
     contentAlignment: Alignment? = null,
     scrollableContentHeight: Dp? = null,
+    // null이면 지금처럼 내부에서 새로 만든다. 호출부가 스크롤 위치를 직접 제어해야 할 때만
+    // (예: 화면이 안 보이게 될 때 맨 위로 되돌리기) 밖에서 만든 상태를 넘긴다.
+    scrollState: ScrollState? = null,
     content: @Composable () -> Unit,
 ) {
     BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
@@ -118,7 +122,7 @@ fun FitDesign(
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
-                        .verticalScroll(rememberScrollState()),
+                        .verticalScroll(scrollState ?: rememberScrollState()),
                     contentAlignment = Alignment.TopCenter,
                 ) {
                     Box(

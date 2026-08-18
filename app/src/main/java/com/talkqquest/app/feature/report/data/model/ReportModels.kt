@@ -36,6 +36,10 @@ data class GrowthTierReport(
     val completedDiamondThisReport: Boolean = false,
     // 마름모를 완성한 회차의 "그 다음 상태". 승급 모션이 이 값으로 화면을 갈아 끼운다.
     val promotion: TierPromotion? = null,
+    // 마스터 별 3개(최종)에 도달했거나 이미 도달해 있는 회차.
+    // 더 받을 별도 올라갈 티어도 없으므로 별이 켜지는 연출과 승급 연출을 재생하지 않고,
+    // 꼭짓점 증가분은 +0으로 표시한다. 마름모를 마지막으로 채우는 회차만 마름모 차오름은 보여준다.
+    val masterMaxed: Boolean = false,
 )
 
 // 4축이 전부 300을 채우는 순간이 마름모 완성이고, 그 즉시 축 점수는 이월분만 남기고 리셋된다.
@@ -63,6 +67,9 @@ data class Competency(
     // 마름모·범례 숫자가 어디서 출발할지. 보통은 score - gain이지만, 마름모가 완성되는 회차는
     // score가 300(만점)으로 고정돼 그 뺄셈이 직전 값과 맞지 않아 따로 받는다.
     val startScore: Int = (score - gain).coerceAtLeast(0),
+    // 이번 마름모에 필요한 300을 넘겨 벌어 둔 몫(만렙까지 남은 만큼으로 상한 적용, TierProgress 참고).
+    // 0보다 크면 그 축의 범례 줄 아래에 "남은 +N점은 다음 목표에 반영돼요!"가 잠깐 펼쳐졌다 사라진다.
+    val surplus: Int = 0,
 )
 
 // 주간 비교 리포트 탭
@@ -214,7 +221,12 @@ fun GrowthReportResponse.toGrowthTierReport(gains: List<Int> = emptyList()): Gro
         questionLink = (growthTotals.questionLinkTotal - gains.getOrElse(3) { 0 }).coerceAtLeast(0),
     )
     // 완성 마름모 개수는 TierProgress가 직접 준다(티어·별에서 되계산할 필요 없음).
-    val completedDiamondThisReport = gains.size >= 4 && progress.diamonds > beforeProgress.diamonds
+    // 단 이미 마스터 만렙이면 마름모가 더 쌓여도 완성으로 치지 않는다 — 그러면 별이 다시 켜지는
+    // 연출이 매 회차 반복된다(마름모는 계속 늘지만 별은 3개에서 멈추기 때문).
+    val masterMaxed = progress.isMasterMaxed
+    val completedDiamondThisReport = gains.size >= 4 &&
+        progress.diamonds > beforeProgress.diamonds &&
+        !beforeProgress.isMasterMaxed
     val axes = listOf(
         Triple(CompetencyAxis.KINDNESS, "친절한 태도", "친절한 태도"),
         Triple(CompetencyAxis.INITIATIVE, "대화 주도", "대화 주도"),
@@ -236,12 +248,18 @@ fun GrowthReportResponse.toGrowthTierReport(gains: List<Int> = emptyList()): Gro
                 legendLabel = legendLabel,
                 // 완성 회차면 4축이 만점까지 차오르는 것을 보여 준 뒤 모션이 리셋 값으로 갈아 끼운다.
                 score = if (completedDiamondThisReport) TierProgress.AXIS_MAX else progress.axisScores[i],
-                gain = gains.getOrElse(i) { 0 },
+                // 만렙에서는 올릴 점수가 없으므로 꼭짓점을 +0으로 표시한다(사용자 결정).
+                gain = if (masterMaxed) 0 else gains.getOrElse(i) { 0 },
                 maxScore = TierProgress.AXIS_MAX,
                 startScore = beforeProgress.axisScores[i],
+                // 만렙에서는 넘길 곳이 없어 문장을 띄우지 않는다(사용자 결정).
+                surplus = if (masterMaxed) 0 else progress.axisSurplus[i],
             )
         },
-        promotion = if (!completedDiamondThisReport) null else TierPromotion(
+        masterMaxed = masterMaxed,
+        // 만렙에 도달하는 회차는 마름모 차오름까지만 보여주고 승급 연출은 재생하지 않는다.
+        // 더 켤 별도 올라갈 티어도 없어서 연출이 가리킬 대상이 없다(사용자 결정).
+        promotion = if (!completedDiamondThisReport || masterMaxed) null else TierPromotion(
             slotIndex = beforeProgress.tierStars.coerceIn(0, TierProgress.STARS_PER_TIER - 1),
             isTierUp = progress.tierName != beforeProgress.tierName,
             newTierName = progress.tierName,

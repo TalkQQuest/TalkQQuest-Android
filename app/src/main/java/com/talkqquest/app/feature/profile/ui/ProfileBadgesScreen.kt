@@ -1,5 +1,8 @@
 ﻿package com.talkqquest.app.feature.profile.ui
 
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -30,6 +33,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.TransformOrigin
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.TextStyle
@@ -45,6 +50,8 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.zIndex
 import kotlinx.coroutines.launch
 import com.talkqquest.app.R
+import com.talkqquest.app.core.designsystem.component.pagerAxisLock
+import com.talkqquest.app.core.designsystem.component.rememberPagerAxisLockState
 import com.talkqquest.app.core.designsystem.FitDesign
 import com.talkqquest.app.core.designsystem.Gray300
 import com.talkqquest.app.core.designsystem.Gray400
@@ -53,6 +60,7 @@ import com.talkqquest.app.core.designsystem.Gray500
 import com.talkqquest.app.core.designsystem.Gray700
 import com.talkqquest.app.core.designsystem.Gray800
 import com.talkqquest.app.core.designsystem.Gray900
+import com.talkqquest.app.core.designsystem.ModalDimDurationMillis
 import com.talkqquest.app.core.designsystem.ModalDimOverlay
 import com.talkqquest.app.navigation.NavigationMotion
 import com.talkqquest.app.core.designsystem.PretendardFamily
@@ -60,8 +68,6 @@ import com.talkqquest.app.core.designsystem.Primary100
 import com.talkqquest.app.core.designsystem.Primary600
 import com.talkqquest.app.core.designsystem.TalkQQuestTheme
 import com.talkqquest.app.core.designsystem.White
-import com.talkqquest.app.core.designsystem.modalCardEnter
-import com.talkqquest.app.core.designsystem.modalCardExit
 import com.talkqquest.app.core.designsystem.component.TextAnchoredPillRipple
 import com.talkqquest.app.core.designsystem.component.rememberHapticTick
 import com.talkqquest.app.core.designsystem.component.rememberTextPillRippleBounds
@@ -146,6 +152,7 @@ fun ProfileBadgesScreen(
     onBack: () -> Unit = {},
 ) = FitDesign(compensateStatusBar = false, contentAlignment = Alignment.TopCenter) {
     val pagerState = rememberPagerState(pageCount = { 3 })
+    val axisLock = rememberPagerAxisLockState()
     val scope = rememberCoroutineScope()
     var selectedBadge by remember { mutableStateOf<ProfileBadgeUi?>(null) }
 
@@ -169,12 +176,16 @@ fun ProfileBadgesScreen(
                 }
             },
         )
+        // 축 잠금: 뱃지 목록을 위아래로 밀 때 손가락이 대각선으로 흘러도 탭이 넘어가지 않게 한다.
+        // 하단 네비 탭·보관함 탭과 같은 장치(core의 pagerAxisLock).
         HorizontalPager(
             state = pagerState,
             modifier = Modifier
                 .offset(y = 146.dp)
                 .size(width = 393.dp, height = 706.dp)
-                .clipToBounds(),
+                .clipToBounds()
+                .pagerAxisLock(axisLock),
+            userScrollEnabled = !axisLock.isVerticalDrag,
             flingBehavior = PagerDefaults.flingBehavior(
                 state = pagerState,
                 snapAnimationSpec = NavigationMotion.pagerSnapSpec,
@@ -204,14 +215,30 @@ fun ProfileBadgesScreen(
 
         val badge = selectedBadge
         ModalDimOverlay(visible = badge != null, onDismiss = { selectedBadge = null })
-        androidx.compose.animation.AnimatedVisibility(
-            visible = badge != null,
-            enter = modalCardEnter(),
-            exit = modalCardExit(),
-        ) {
-            badge?.let {
-                BadgeDetailDialog(badge = it, onClose = { selectedBadge = null })
-            }
+        // 퇴장 중에도 마지막으로 고른 배지 내용을 그대로 그리도록 별도로 기억해 둔다.
+        // (selectedBadge가 바로 null이 되면 exit 애니메이션 도중 내용이 사라진다.)
+        var lastBadge by remember { mutableStateOf<ProfileBadgeUi?>(null) }
+        if (badge != null) lastBadge = badge
+        val cardProgress by animateFloatAsState(
+            targetValue = if (badge != null) 1f else 0f,
+            animationSpec = tween(ModalDimDurationMillis, easing = FastOutSlowInEasing),
+            label = "badgeDetailCard",
+            finishedListener = { value -> if (value <= 0f && badge == null) lastBadge = null },
+        )
+        // 레이아웃 크기는 항상 고정하고 등장/퇴장은 그리기 단계(alpha·scale)에서만 표현한다.
+        // AnimatedVisibility로 감싸면 그 노드 경계와 offset(55, 240)로 위치 잡는 실제 카드 위치가
+        // 어긋나 확대 기준점이 카드 바깥으로 밀려나 엉뚱한 곳에서 커지는 문제가 있었다.
+        lastBadge?.let {
+            BadgeDetailDialog(
+                badge = it,
+                onClose = { selectedBadge = null },
+                modifier = Modifier.graphicsLayer {
+                    alpha = cardProgress
+                    scaleX = 0.86f + 0.14f * cardProgress
+                    scaleY = 0.86f + 0.14f * cardProgress
+                    transformOrigin = TransformOrigin.Center
+                },
+            )
         }
     }
 }
@@ -422,7 +449,13 @@ private fun BadgeItem(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    Box(modifier = modifier.profileItemClick(onClick = onClick)) {
+    // 클릭 영역(배지 그림 + 이름 라벨 100x124 전체)을 앱 공용 모서리 반경으로 잘라
+    // 리플이 사각형 각으로 퍼지지 않고 카드처럼 둥글게 퍼지게 한다.
+    Box(
+        modifier = modifier
+            .clip(RoundedCornerShape(16.dp))
+            .profileItemClick(onClick = onClick),
+    ) {
         Image(
             painter = painterResource(
                 if (badge.isEarned) R.drawable.img_profile_badge_unlocked else R.drawable.img_profile_badge_locked,
@@ -450,6 +483,7 @@ private fun BadgeItem(
 private fun BadgeDetailDialog(
     badge: ProfileBadgeUi,
     onClose: () -> Unit,
+    modifier: Modifier = Modifier,
 ) {
     val dialogHeight = if (badge.isEarned) 446.dp else 401.dp
     val descriptionText = badge.description ?: if (badge.isEarned) {
@@ -464,6 +498,7 @@ private fun BadgeDetailDialog(
     Box(
         modifier = Modifier
             .offset(x = 55.dp, y = 240.dp)
+            .then(modifier)
             .size(width = 284.dp, height = dialogHeight)
             .clip(RoundedCornerShape(16.dp))
             .background(White)

@@ -35,6 +35,12 @@ data class ReportUiState(
         SavedReportItem(id = "3", title = "주말 계획 이야기하기", savedDate = "2026.08.18"),
         SavedReportItem(id = "4", title = "나의 취미를 소개해보기", savedDate = "2026.08.17"),
     ),
+    // 보관함·저장 시트로 특정 리포트 id를 열고 들어온 경로인가 — 헤더 북마크 아이콘 표시 여부.
+    val isArchiveEntry: Boolean = false,
+    val isBookmarked: Boolean = false,
+    // 아직 서버 번호가 없는 카드를 눌러 뒀다가, 번호가 도착해 이동해도 되는 리포트 id.
+    // 화면이 이 값을 관측해 onReportClick을 태운 뒤 consumeReportNavigation()으로 지운다.
+    val navigateToReportId: String? = null,
 )
 
 @HiltViewModel
@@ -58,7 +64,14 @@ class ReportViewModel @Inject constructor(
         .split(",")
         .mapNotNull { it.trim().toIntOrNull() }
 
-    private val _uiState = MutableStateFlow(ReportUiState(missionTitle = missionTitle))
+    // 보관함·저장 시트에서 특정 리포트 id로 들어온 경로(archive_report/{reportId}) — 12-A 경로 통합.
+    // 비어 있으면 지금처럼 최신 리포트를 연다(홈 경로 동작 그대로 유지).
+    private val reportId: String = savedStateHandle["reportId"] ?: ""
+    private val isArchiveEntry: Boolean = reportId.isNotBlank()
+
+    private val _uiState = MutableStateFlow(
+        ReportUiState(missionTitle = missionTitle, isArchiveEntry = isArchiveEntry, isBookmarked = isArchiveEntry),
+    )
     val uiState: StateFlow<ReportUiState> = _uiState.asStateFlow()
 
     // 목업 저장 id: 초기 샘플(1,2)과 안 겹치게 100부터 (서버 오면 서버 id 사용)
@@ -68,15 +81,45 @@ class ReportViewModel @Inject constructor(
     private val savedReportTypes = mutableMapOf<String, String>()
     private var lastSavedType = "growth"
 
+    // 아직 서버 번호가 없는 카드(hasServerId = false)를 눌렀을 때 "누른 것"을 기억해 두는 자리.
+    // 하나만 유지 — 다른 카드를 또 누르면 마지막 클릭으로 갱신된다. 시트가 닫히거나 저장이
+    // 실패하면 지운다(이동하지 않는다).
+    private var pendingClickId: String? = null
+
     // 서버 저장 후 받은 실제 id로 카드 id를 갈아끼움 (해제 시 DELETE 대상이 되게).
+    // 이 카드가 방금 "번호 없이" 눌린 카드였다면(pendingClickId) 번호가 온 이 시점에 이동 신호를 켠다.
     private fun swapReportId(oldId: String, newId: String) {
+        val shouldNavigate = pendingClickId == oldId
+        if (shouldNavigate) pendingClickId = null
         _uiState.update { s ->
             s.copy(
-                saveSheetReport = s.saveSheetReport?.takeIf { it.id == oldId }?.copy(id = newId)
-                    ?: s.saveSheetReport,
-                savedReports = s.savedReports.map { if (it.id == oldId) it.copy(id = newId) else it },
+                saveSheetReport = s.saveSheetReport?.takeIf { it.id == oldId }
+                    ?.copy(id = newId, hasServerId = true) ?: s.saveSheetReport,
+                savedReports = s.savedReports.map {
+                    if (it.id == oldId) it.copy(id = newId, hasServerId = true) else it
+                },
+                navigateToReportId = if (shouldNavigate) newId else s.navigateToReportId,
             )
         }
+    }
+
+    // 저장 시트의 카드를 눌렀을 때(D) — 아직 서버 번호가 없으면 이동을 미루고 기억만 해 둔다.
+    // 이미 번호가 있으면(hasServerId) 지금처럼 바로 이동 신호를 켠다.
+    fun onSavedReportCardClick(id: String) {
+        val hasServerId = _uiState.value.saveSheetReport?.takeIf { it.id == id }?.hasServerId
+            ?: _uiState.value.savedReports.firstOrNull { it.id == id }?.hasServerId
+            ?: true
+        if (hasServerId) {
+            pendingClickId = null
+            _uiState.update { it.copy(navigateToReportId = id) }
+        } else {
+            pendingClickId = id
+        }
+    }
+
+    // 화면이 navigateToReportId를 소비(onReportClick 호출)한 뒤 불러 값을 지운다 — 재구성 때 재이동 방지.
+    fun consumeReportNavigation() {
+        _uiState.update { it.copy(navigateToReportId = null) }
     }
 
     init {
@@ -95,7 +138,15 @@ class ReportViewModel @Inject constructor(
         // 저장 응답의 서버 reportId를 받아 카드 id를 교체 — 이후 북마크 해제(DELETE)가 가능해짐.
         viewModelScope.launch {
             val saved = reportRepository.saveReport(conversationId)
-            val serverId = (saved as? ApiResult.Success)?.data?.reportId?.takeIf { it.isNotBlank() } ?: return@launch
+            val serverId = (saved as? ApiResult.Success)?.data?.reportId?.takeIf { it.isNotBlank() }
+            if (serverId == null) {
+                // 번호가 영영 안 온다 — 이 카드를 기다리던 클릭이 있었다면 이동을 접고 기존 오류로 알린다(D).
+                if (pendingClickId == localId) {
+                    pendingClickId = null
+                    _uiState.update { it.copy(errorMessage = "리포트를 불러오지 못했어요.") }
+                }
+                return@launch
+            }
             savedReportTypes[serverId] = reportType
             swapReportId(localId, serverId)
         }
@@ -109,6 +160,7 @@ class ReportViewModel @Inject constructor(
                     title = state.missionTitle.ifBlank { "성장 리포트" },
                     savedDate = LocalDate.now().format(DateTimeFormatter.ofPattern("yyyy.MM.dd")),
                     type = reportType,
+                    hasServerId = false, // 서버 번호가 오기 전까지는 눌러도 바로 이동하지 않는다(D)
                 ),
                 savedReports = (kept?.let { listOf(it) } ?: emptyList()) + state.savedReports,
             )
@@ -154,21 +206,41 @@ class ReportViewModel @Inject constructor(
 
     // 시트가 다 내려간 뒤: 저장 상태로 닫혔으면 보관함으로 옮기고, 해제된 카드는 정리.
     fun dismissSaveSheet() {
+        pendingClickId = null // 시트가 닫히면 눌러 뒀던 기억은 지운다 — 이동하지 않는다(D).
         _uiState.update { state ->
             val kept = state.saveSheetReport?.takeIf { it.isSaved }
             state.copy(
                 saveSheetReport = null,
                 savedReports = ((kept?.let { listOf(it) } ?: emptyList()) + state.savedReports)
                     .filter { it.isSaved },
+                navigateToReportId = null,
             )
         }
     }
 
+    // 보관함 경로 헤더의 북마크 — 이미 저장된 리포트를 보는 화면이라 해제만 지원한다
+    // (아카이브 성장 리포트의 기존 정책과 동일). 저장 시트 북마크(toggleReportSave)와는 별개 자리.
+    fun toggleArchiveBookmark() {
+        if (!isArchiveEntry || !_uiState.value.isBookmarked) return
+        _uiState.update { it.copy(isBookmarked = false) }
+        viewModelScope.launch {
+            val result = reportRepository.deleteReport(reportId)
+            if (result !is ApiResult.Success) {
+                _uiState.update { it.copy(isBookmarked = true) } // 실패 시 롤백
+            }
+        }
+    }
+
     // 성장 리포트 데이터 로드. 주간 비교는 별도 화면·ViewModel에서 목록→상세로 조회한다.
+    // reportId가 있으면(보관함·저장 시트 경로) 그 리포트를, 없으면(홈 경로) 최신 리포트를 부른다.
     fun loadReports() {
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true, errorMessage = null) }
-            val growth = reportRepository.getGrowthReport(gains)
+            val growth = if (isArchiveEntry) {
+                reportRepository.getGrowthReportById(reportId)
+            } else {
+                reportRepository.getGrowthReport(gains)
+            }
             if (growth is ApiResult.Success) {
                 _uiState.update {
                     it.copy(isLoading = false, growth = growth.data)

@@ -5,14 +5,20 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
@@ -61,6 +67,14 @@ private enum class ProfileActivityType {
     Report,
 }
 
+// 화면 밖(NavGraph)으로 넘길 때 쓰는 서버 표기. 보관함이 쓰는 값과 같게 맞춘다.
+private fun ProfileActivityType.apiType(): String = when (this) {
+    ProfileActivityType.Mission -> "mission"
+    ProfileActivityType.Conversation -> "conversation"
+    ProfileActivityType.Sentence -> "phrase"
+    ProfileActivityType.Report -> "report"
+}
+
 private data class ProfileActivityItem(
     val type: ProfileActivityType,
     val title: String,
@@ -70,6 +84,11 @@ private data class ProfileActivityItem(
     val category: String? = null,
     val minutes: Int? = null,
     val xp: Int? = null,
+    // 카드를 눌렀을 때 열 상세의 대상 id. 보관함과 같은 규칙으로 referenceId를 쓴다
+    // (목록 응답의 id는 보관함 항목 id라 상세 조회에 못 쓴다).
+    val referenceId: String = "",
+    // 리포트일 때만 채워진다 — growth | weekly_compare. 상세 화면이 갈려서 필요하다.
+    val reportType: String = "",
 )
 
 private val RecentTitleStyle = TextStyle(
@@ -142,6 +161,9 @@ fun ProfileRecentMissionScreen(
     onBack: () -> Unit = {},
     recentItems: List<ArchiveRecentItem> = emptyList(),
     usePreviewData: Boolean = false,
+    // 활동 카드 탭 → 해당 상세로. 보관함의 최근 활동과 같은 목적지를 쓴다(NavGraph에서 주입).
+    // type은 mission | conversation | phrase | report, reportType은 리포트일 때만 채워진다.
+    onActivityClick: (type: String, referenceId: String, reportType: String) -> Unit = { _, _, _ -> },
 ) = FitDesign(contentAlignment = Alignment.TopCenter) {
     val activities = remember(recentItems, usePreviewData) {
         recentItems.mapNotNull { it.toProfileActivityItem() }
@@ -181,14 +203,33 @@ fun ProfileRecentMissionScreen(
                 .size(width = 361.dp, height = 24.dp),
         )
 
-        Column(
+        // 카드 높이가 목업 4장 합(349dp)에 고정돼 있으면 Column이 남은 공간을 마지막 카드에
+        // 몰아줘 목록 구성이 다를 때 카드가 찌그러진다. 화면 아래(852dp)까지 닿는 스크롤 목록으로
+        // 바꿔 각 카드가 항상 자기 높이(85dp/72dp)를 그대로 받게 한다.
+        LazyColumn(
             modifier = Modifier
                 .offset(x = 16.dp, y = 248.dp)
-                .size(width = 361.dp, height = 349.dp),
+                .size(width = 361.dp, height = 604.dp), // 852 - 248
             verticalArrangement = Arrangement.spacedBy(16.dp),
+            contentPadding = PaddingValues(
+                bottom = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding(),
+            ),
         ) {
-            activities.forEach { activity ->
-                RecentActivitySummaryCard(activity = activity)
+            items(activities) { activity ->
+                RecentActivitySummaryCard(
+                    activity = activity,
+                    // referenceId가 비어 있으면(목업 미리보기 등) 이동시키지 않는다 —
+                    // 빈 id로 상세를 열면 화면이 오류 상태로 뜬다.
+                    onClick = {
+                        if (activity.referenceId.isNotBlank()) {
+                            onActivityClick(
+                                activity.type.apiType(),
+                                activity.referenceId,
+                                activity.reportType,
+                            )
+                        }
+                    },
+                )
             }
         }
     }
@@ -206,24 +247,30 @@ private fun ArchiveRecentItem.toProfileActivityItem(): ProfileActivityItem? {
             category = category ?: tags.firstOrNull().orEmpty(),
             minutes = estimatedMinutes,
             xp = rewardXp,
+            // 미션 상세는 미션 id로 연다. 최근 활동의 미션 항목은 referenceId가 곧 missionId다.
+            referenceId = missionId?.takeIf { it.isNotBlank() } ?: referenceId,
         )
         "conversation" -> ProfileActivityItem(
             type = ProfileActivityType.Conversation,
             title = title,
             status = "대화 완료",
             date = createdAt.toProfileDate(),
+            referenceId = referenceId,
         )
         "phrase" -> ProfileActivityItem(
             type = ProfileActivityType.Sentence,
             title = title,
             status = "문장 저장",
             date = createdAt.toProfileDate(),
+            referenceId = referenceId,
         )
         "report" -> ProfileActivityItem(
             type = ProfileActivityType.Report,
             title = title,
             status = "리포트 열람",
             date = createdAt.toProfileDate(),
+            referenceId = referenceId,
+            reportType = reportType.orEmpty(),
         )
         else -> null
     }
@@ -329,6 +376,7 @@ private fun SummaryMetric(
 private fun RecentActivitySummaryCard(
     activity: ProfileActivityItem,
     modifier: Modifier = Modifier,
+    onClick: () -> Unit = {},
 ) {
     val isMission = activity.type == ProfileActivityType.Mission
     Row(
@@ -336,7 +384,7 @@ private fun RecentActivitySummaryCard(
             .size(width = 361.dp, height = if (isMission) 85.dp else 72.dp)
             .clip(RoundedCornerShape(20.dp))
             .background(White)
-            .profileItemClick { },
+            .profileItemClick(onClick = onClick),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         ActivityIcon(

@@ -56,7 +56,11 @@ data class ArchiveMissionItem(
     val xp: Int,
     val isCompleted: Boolean,
     val isSaved: Boolean,
-    val completedDate: String = "" // 💡 UI에는 안 보이지만 정렬을 위해 추가된 날짜!
+    val completedDate: String = "", // 💡 UI에는 안 보이지만 정렬을 위해 추가된 날짜!
+    // 정렬 전용 원본 시각(서버 createdAt, 시각 포함 ISO 문자열). completedDate는 yyyy.MM.dd로
+    // 시각이 잘려 있어 같은 날 항목이 전부 동률로 묶이는 문제가 있었다. 화면 표시는 completedDate
+    // 그대로 쓰고, 정렬만 이 값으로 한다. 기본값 ""이라 다른 화면의 기존 생성 호출은 안 깨진다.
+    val createdAtRaw: String = ""
 )
 
 // 로컬 색상 (이 파일 안에서만 안전하게 사용)

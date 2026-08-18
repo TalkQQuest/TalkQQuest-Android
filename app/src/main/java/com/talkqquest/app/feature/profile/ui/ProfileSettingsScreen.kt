@@ -1,5 +1,6 @@
 ﻿package com.talkqquest.app.feature.profile.ui
 
+import android.net.Uri
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -47,6 +48,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionInRoot
 import androidx.compose.ui.res.painterResource
+import coil3.compose.AsyncImage
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -121,6 +123,7 @@ private val SettingsBodySmallStyle = TextStyle(
 @Composable
 fun ProfileSettingsScreen(
     nickname: String = "다민",
+    avatarUrl: String? = null,
     connectedAccount: String = "이메일 정보 없음",
     initialPushEnabled: Boolean = true,
     initialReminderEnabled: Boolean = false,
@@ -130,12 +133,14 @@ fun ProfileSettingsScreen(
     onReminderTimeChange: (String) -> Unit = {},
     onBack: () -> Unit = {},
     onEditProfileClick: () -> Unit = {},
+    onAvatarClick: (Uri) -> Unit = {},
     onConnectedAccountClick: () -> Unit = {},
     onTermsClick: () -> Unit = {},
     onSupportClick: () -> Unit = {},
     onWithdrawClick: () -> Unit = {},
 ) = FitDesign(contentAlignment = Alignment.TopCenter) {
     var showTimePicker by remember { mutableStateOf(false) }
+    var showPhotoPicker by remember { mutableStateOf(false) }
     var reminderTime by remember(initialReminderTime) { mutableStateOf(initialReminderTime.toReminderTime()) }
 
     Box(
@@ -150,7 +155,9 @@ fun ProfileSettingsScreen(
 
         SettingsProfileHeader(
             nickname = nickname,
+            avatarUrl = avatarUrl,
             onEditProfileClick = onEditProfileClick,
+            onAvatarClick = { showPhotoPicker = true },
             modifier = Modifier
                 .offset(x = 16.dp, y = 104.dp)
                 .size(width = 158.dp, height = 62.dp),
@@ -326,22 +333,30 @@ fun ProfileSettingsScreen(
                     .size(width = 326.dp, height = 258.dp),
             )
         }
+
+        ProfilePhotoPickerSheet(
+            visible = showPhotoPicker,
+            onDismiss = { showPhotoPicker = false },
+            onPhotoConfirmed = onAvatarClick,
+        )
     }
 }
 
 @Composable
 private fun SettingsProfileHeader(
     nickname: String,
+    avatarUrl: String?,
     onEditProfileClick: () -> Unit,
+    onAvatarClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Box(modifier = modifier) {
-        Image(
-            painter = painterResource(R.drawable.img_profile_avatar),
-            contentDescription = null,
+        SettingsAvatarImage(
+            avatarUrl = avatarUrl,
             modifier = Modifier
                 .offset(y = 1.dp)
-                .size(60.dp),
+                .size(60.dp)
+                .profileCircleClick(onClick = onAvatarClick),
         )
         Text(
             text = "$nickname 님",
@@ -367,6 +382,29 @@ private fun SettingsProfileHeader(
                 maxLines = 1,
             )
         }
+    }
+}
+
+// ProfileScreen.kt의 AvatarImage와 동일한 fallback/placeholder/error 처리.
+@Composable
+private fun SettingsAvatarImage(
+    avatarUrl: String?,
+    modifier: Modifier = Modifier,
+) {
+    if (avatarUrl.isNullOrBlank()) {
+        Image(
+            painter = painterResource(R.drawable.img_profile_avatar),
+            contentDescription = null,
+            modifier = modifier,
+        )
+    } else {
+        AsyncImage(
+            model = avatarUrl,
+            contentDescription = null,
+            modifier = modifier,
+            error = painterResource(R.drawable.img_profile_avatar),
+            placeholder = painterResource(R.drawable.img_profile_avatar),
+        )
     }
 }
 

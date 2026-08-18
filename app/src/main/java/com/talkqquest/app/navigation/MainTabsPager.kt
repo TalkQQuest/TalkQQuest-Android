@@ -6,8 +6,6 @@ import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedContentTransitionScope
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
-import androidx.compose.foundation.gestures.awaitEachGesture
-import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.pager.HorizontalPager
@@ -25,8 +23,6 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.input.pointer.PointerEventPass
-import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavBackStackEntry
@@ -40,6 +36,8 @@ import com.talkqquest.app.feature.archive.viewmodel.ActivityType
 import com.talkqquest.app.feature.home.ui.HomeScreen
 import com.talkqquest.app.feature.mission.ui.MissionListScreen
 import com.talkqquest.app.feature.profile.ui.ProfileScreen
+import com.talkqquest.app.core.designsystem.component.pagerAxisLock
+import com.talkqquest.app.core.designsystem.component.rememberPagerAxisLockState
 import com.talkqquest.app.feature.profile.ui.ProfileBadgesScreen
 import com.talkqquest.app.feature.profile.ui.ProfileBadgeUi
 import com.talkqquest.app.feature.profile.viewmodel.ProfileViewModel
@@ -63,10 +61,8 @@ fun MainTabsPager(
     // 하단 시트처럼 화면 위에 올라오는 모달이 열려 있을 때는 탭 스와이프를 잠근다.
     // 시트가 열린 상태에서 페이지가 움직이면 모달과 배경 화면의 위치가 어긋날 수 있다.
     var modalSheetOpen by remember { mutableStateOf(false) }
-    // 축 잠금(B): 한 제스처의 첫 움직임이 세로 우세면 그 손가락을 놓을 때까지 페이저를 잠가
-    // 세로 스크롤이 가로 페이징으로 새는 것을 막는다. 아무것도 consume하지 않아 자식(세로 리스트)
-    // 스크롤과 정상 가로 스와이프는 그대로 동작한다. 손 떼면 다시 false로 풀린다.
-    var verticalDragLock by remember { mutableStateOf(false) }
+    // 축 잠금 — 세로 스크롤이 가로 페이징으로 새는 것을 막는다. 보관함·뱃지·약관 탭도 같은 것을 쓴다.
+    val axisLock = rememberPagerAxisLockState()
     var showHomeBadgeCollection by remember { mutableStateOf(false) }
     var homeResumeAnimationTrigger by remember { mutableIntStateOf(0) }
     var homeExitResetToken by remember { mutableIntStateOf(0) }
@@ -139,37 +135,18 @@ fun MainTabsPager(
     Box(
         modifier = modifier
             .fillMaxSize()
-            // Initial 패스에서 제스처의 우세 축을 먼저 판정한다. 페이저의 드래그 처리(Main 패스)보다
-            // 앞서 실행돼, 세로 우세면 페이저가 손가락을 붙잡기 전에 잠근다. consume하지 않는다.
-            .pointerInput(Unit) {
-                awaitEachGesture {
-                    val down = awaitFirstDown(requireUnconsumed = false, pass = PointerEventPass.Initial)
-                    // 페이저 슬롭의 절반 지점에서 미리 판정해, 페이저가 옆으로 움직이기 전에 잠근다.
-                    val decideAt = viewConfiguration.touchSlop * 0.5f
-                    var decided = false
-                    while (true) {
-                        val event = awaitPointerEvent(PointerEventPass.Initial)
-                        val change = event.changes.firstOrNull { it.id == down.id }
-                        if (change == null || !change.pressed) break
-                        if (!decided) {
-                            val dx = kotlin.math.abs(change.position.x - down.position.x)
-                            val dy = kotlin.math.abs(change.position.y - down.position.y)
-                            if (dx > decideAt || dy > decideAt) {
-                                verticalDragLock = dy > dx
-                                decided = true
-                            }
-                        }
-                    }
-                    verticalDragLock = false
-                }
-            },
+            .pagerAxisLock(axisLock),
     ) {
     HorizontalPager(
         state = pagerState,
         modifier = Modifier.fillMaxSize(),
         // 인접 페이지를 미리 구성해 탭 이동 시 콘텐츠가 늦게 그려지는 일을 줄인다.
         beyondViewportPageCount = 1,
-        userScrollEnabled = !modalSheetOpen && !verticalDragLock,
+        // 배지 컬렉션은 프로필 탭 자리를 빌려 그려지는 오버레이라, 켜져 있는 동안 탭 스와이프를 잠근다.
+        // 잠그지 않으면 (1) 헤더·탭바 영역의 가로 스와이프를 바깥 페이저가 바로 먹고,
+        // (2) 배지 화면 안쪽 페이저(전체/획득/미획득)가 끝 페이지에 닿는 순간 스와이프가 바깥으로 새어
+        // 보관함 탭으로 넘어가 버린다. 복귀는 프로그래매틱 스크롤이라 이 잠금과 무관하게 동작한다.
+        userScrollEnabled = !modalSheetOpen && !axisLock.isVerticalDrag && !showHomeBadgeCollection,
         flingBehavior = tabFlingBehavior,
         key = { BottomNavItem.entries[it].route },
     ) { page ->
@@ -200,6 +177,9 @@ fun MainTabsPager(
                 navController = navController,
                 showHomeBadgeCollection = showHomeBadgeCollection,
                 onHomeBadgeCollectionBack = returnFromHomeBadgeCollection,
+                // 이 페이지가 지금 현재 페이지인지 — 마이페이지가 스와이프로 화면 밖에 나가면
+                // 스크롤 위치를 맨 위로 되돌리는 신호로 쓰인다.
+                isVisible = pagerState.currentPage == page,
                 onArchiveClick = {
                     pagerScope.launch {
                         pagerState.animateScrollToPage(archivePage, animationSpec = NavigationMotion.floatSpec)
@@ -298,6 +278,7 @@ private fun ProfileTab(
     navController: NavHostController,
     showHomeBadgeCollection: Boolean = false,
     onHomeBadgeCollectionBack: () -> Unit = {},
+    isVisible: Boolean = true,
     onArchiveClick: () -> Unit,
 ) {
     val context = LocalContext.current
@@ -365,5 +346,6 @@ private fun ProfileTab(
         onBadgesClick = { navController.navigate(Screen.PROFILE_BADGES) },
         onRecentMissionClick = { navController.navigate(Screen.PROFILE_RECENT_MISSION) },
         onArchiveClick = onArchiveClick,
+        isTabVisible = isVisible,
     )
 }

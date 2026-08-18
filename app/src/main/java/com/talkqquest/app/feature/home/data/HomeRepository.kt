@@ -1,5 +1,6 @@
 package com.talkqquest.app.feature.home.data
 
+import com.talkqquest.app.core.datastore.TierStore
 import com.talkqquest.app.core.datastore.UserXpStore
 import com.talkqquest.app.core.network.ApiResult
 import com.talkqquest.app.core.network.serverCall
@@ -21,6 +22,7 @@ class HomeRepository @Inject constructor(
     private val notificationRepository: NotificationRepository, // 알림창과 홈 종이 같은 읽음 상태를 공유
     private val userXpStore: UserXpStore, // 미션 완료 XP가 홈에도 보이게 공유 (서버 완료 후 sync됨)
     private val homeSummaryCache: HomeSummaryCache, // 스플래시 프리페치 결과를 담아 홈 진입 시 즉시 표시
+    private val tierStore: TierStore, // 티어를 아는 즉시 공유 저장소에 써서 홈 복귀 첫 프레임부터 반영되게 함
 ) {
     // 홈 요약 — GET /api/v1/home/summary (dev 배포 기준 구현됨): 닉네임·레벨·XP·카운트·오늘의 질문을 한 번에.
     // 오늘의 미션이 응답에 없거나 null이면 /missions/today로 폴백. XP는 완료 가산 보존 위해 1회만 seed하고 이후 로컬 유지.
@@ -40,6 +42,9 @@ class HomeRepository @Inject constructor(
                     empathy = d.growthTotals.empathyTotal,
                     questionLink = d.growthTotals.questionLinkTotal,
                 )
+                // 홈 요약 조회도 티어를 아는 경로이므로 공유 저장소에 갱신해 둔다.
+                // (성장 리포트를 보지 않고 곧장 홈만 다시 열어도 최신 티어가 첫 프레임부터 보이게)
+                tierStore.update(tier.tierName, tier.tierStars)
                 val summary = d.copy(
                     tierName = tier.tierName,
                     tierStars = tier.tierStars,

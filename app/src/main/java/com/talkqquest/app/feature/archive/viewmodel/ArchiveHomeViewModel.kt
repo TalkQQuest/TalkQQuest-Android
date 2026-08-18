@@ -31,7 +31,11 @@ data class RecentActivity(
     val rewardXp: Int? = null,
     val tags: List<String> = emptyList(),
     val summary: String? = null,
-    val reportType: String? = null
+    val reportType: String? = null,
+    // 정렬 전용 원본 시각(서버 createdAt, 시각 포함 ISO 문자열). date는 yyyy.MM.dd로 시각이
+    // 잘려 있어 정렬용으로 쓰면 같은 날 항목이 전부 동률이 된다. 화면 표시는 date 그대로 쓰고
+    // 정렬만 이 값으로 한다. 기본값 ""이라 다른 화면의 기존 생성 호출은 안 깨진다.
+    val createdAtRaw: String = ""
 )
 
 data class ArchiveHomeUiState(

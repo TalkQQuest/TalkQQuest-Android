@@ -151,25 +151,12 @@ private fun ArchiveWeeklyCompareReportContent(
         )
     )
 
-    // 💡 제목(title)에서 이번 주와 지난 주 텍스트를 추출하여 UI에 반영
-    val title = uiState.title
-    var prevLabel = "이전 주차"
-    var thisLabel = "선택 주차"
-
-    val regex = Regex("(\\d+월)\\s*(\\d+)-(\\d+)주차")
-    val match = regex.find(title)
-    if (match != null) {
-        val month = match.groupValues[1]
-        prevLabel = "$month ${match.groupValues[2]}주차"
-        thisLabel = "$month ${match.groupValues[3]}주차"
-    } else {
-        val regex2 = Regex("(\\d+월 \\d+주)-(\\d+월 \\d+주)차")
-        val match2 = regex2.find(title)
-        if (match2 != null) {
-            prevLabel = match2.groupValues[1] + "차"
-            thisLabel = match2.groupValues[2] + "차"
-        }
-    }
+    // 주차 라벨은 서버가 완성해 준 periodLabel을 ViewModel이 갈라 담아 준 값을 그대로 쓴다.
+    // 예전에는 제목 문자열을 정규식으로 되짚어 뽑았는데, 서버 제목 형식이 그 정규식과 달라
+    // 두 패턴 다 안 걸리면서 "이전 주차 / 선택 주차"라는 기본 문구가 그대로 노출됐다.
+    // 서버가 값을 못 준 경우에만 그 기본 문구로 떨어진다.
+    val prevLabel = uiState.prevWeekLabel.ifBlank { "이전 주차" }
+    val thisLabel = uiState.thisWeekLabel.ifBlank { "선택 주차" }
 
     Column(
         modifier = Modifier
@@ -240,6 +227,13 @@ private fun ArchiveWeeklyCompareReportContent(
             Spacer(Modifier.height(12.dp))
             HighlightCard(weeklyData.highlights)
 
+            // 시안 순서는 [지표] → [자주 연습한 주제] → [진행률]이다. 홈에서 들어가는 주간 비교
+            // 화면과 같은 순서이며, 이 화면만 진행률과 주제가 뒤바뀌어 있어 바로잡았다.
+            Spacer(Modifier.height(18.dp))
+            SectionTitle("자주 연습한 주제", color = Gray900)
+            Spacer(Modifier.height(12.dp))
+            TopicRow(weeklyData.topCategories)
+
             Spacer(Modifier.height(18.dp))
             SectionTitle("지금까지 얼마나 달려왔을까요?", color = Gray900)
             Spacer(Modifier.height(12.dp))
@@ -248,11 +242,6 @@ private fun ArchiveWeeklyCompareReportContent(
                 total = weeklyData.totalMissions,
                 onCompletedMissionsClick = onCompletedMissionsClick
             )
-
-            Spacer(Modifier.height(18.dp))
-            SectionTitle("자주 연습한 주제", color = Gray900)
-            Spacer(Modifier.height(12.dp))
-            TopicRow(weeklyData.topCategories)
 
             Spacer(Modifier.height(60.dp))
         }
@@ -274,16 +263,15 @@ private fun WeekSwitcher(
         horizontalArrangement = Arrangement.Center,
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        // 💡 [수정] 이전(과거) 리포트가 있을 때만 화살표 노출, 없으면 투명한 여백으로 중앙 정렬 유지
-        if (canGoPrev) {
-            WeekArrow(
-                iconRes = R.drawable.ic_weekly_prev,
-                description = "이전 주차",
-                onClick = onPrevWeek,
-            )
-        } else {
-            Spacer(modifier = Modifier.size(44.dp))
-        }
+        // 갈 리포트가 없어도 화살표를 지우지 않는다. 자리에 남기고 Gray/300으로 칠해
+        // 비활성 상태임을 보여준다 — 홈에서 들어가는 주간 비교 화면과 같은 규칙(사용자 결정).
+        // 예전에는 통째로 숨기고 빈 여백만 뒀는데, 화살표가 사라졌다 나타났다 해서 혼란스러웠다.
+        WeekArrow(
+            iconRes = R.drawable.ic_weekly_prev,
+            description = "이전 주차",
+            enabled = canGoPrev,
+            onClick = onPrevWeek,
+        )
 
         Row(
             verticalAlignment = Alignment.CenterVertically,
@@ -300,16 +288,12 @@ private fun WeekSwitcher(
             Text(text = thisWeekLabel, style = TqType.LabelL.figma(), color = Gray600)
         }
 
-        // 💡 [수정] 다음(최신) 리포트가 있을 때만 화살표 노출
-        if (canGoNext) {
-            WeekArrow(
-                iconRes = R.drawable.ic_weekly_next,
-                description = "다음 주차",
-                onClick = onNextWeek,
-            )
-        } else {
-            Spacer(modifier = Modifier.size(44.dp))
-        }
+        WeekArrow(
+            iconRes = R.drawable.ic_weekly_next,
+            description = "다음 주차",
+            enabled = canGoNext,
+            onClick = onNextWeek,
+        )
     }
 }
 
@@ -317,19 +301,23 @@ private fun WeekSwitcher(
 private fun WeekArrow(
     iconRes: Int,
     description: String,
+    enabled: Boolean,
     onClick: () -> Unit,
 ) {
     Box(
         modifier = Modifier
             .size(44.dp)
             .clip(CircleShape)
-            .clickable(onClick = onClick),
+            .clickable(enabled = enabled, onClick = onClick),
         contentAlignment = Alignment.Center,
     ) {
         Image(
             painter = painterResource(iconRes),
             contentDescription = description,
-            modifier = Modifier.size(width = 8.dp, height = 13.dp)
+            modifier = Modifier.size(width = 8.dp, height = 13.dp),
+            // 기본은 시안대로 Purple/600(벡터 자체 색). 갈 리포트가 없으면 Gray/300으로 덮어
+            // 비활성으로 보이게 한다 — 홈 주간 비교 화면과 같은 처리.
+            colorFilter = if (enabled) null else ColorFilter.tint(Gray300),
         )
     }
 }

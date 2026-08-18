@@ -25,7 +25,11 @@ data class ArchiveWeeklyCompareUiState(
     val canGoPrev: Boolean = false,
     val canGoNext: Boolean = false,
     val prevReportId: String? = null, // 💡 서버에서 받아온 이전 리포트 ID
-    val nextReportId: String? = null  // 💡 서버에서 받아온 다음 리포트 ID
+    val nextReportId: String? = null, // 💡 서버에서 받아온 다음 리포트 ID
+
+    // 주차 이동 줄의 좌·우 라벨. 서버 periodLabel에서 갈라 온 값이라 화면이 제목을 되짚을 필요가 없다.
+    val prevWeekLabel: String = "",
+    val thisWeekLabel: String = ""
 )
 
 @HiltViewModel
@@ -63,7 +67,9 @@ class ArchiveWeeklyCompareReportViewModel @Inject constructor(
                             canGoPrev = uiModel.prevReportId != null,
                             canGoNext = uiModel.nextReportId != null,
                             prevReportId = uiModel.prevReportId,
-                            nextReportId = uiModel.nextReportId
+                            nextReportId = uiModel.nextReportId,
+                            prevWeekLabel = uiModel.prevWeekLabel,
+                            thisWeekLabel = uiModel.thisWeekLabel
                         )
                     }
                 }

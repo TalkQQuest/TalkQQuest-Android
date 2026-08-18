@@ -50,10 +50,11 @@ class NotificationRepository @Inject constructor(
         // 실서버의 isRead=false 필터 응답은 읽은 알림까지 false로 내려주는 문제가 있어 사용하지 않는다.
         // 알림창과 동일한 일반 목록을 받고 각 항목의 실제 isRead 값을 직접 검사한다.
         val result = serverCall { notificationApi.getNotifications() }
-        return (result as? ApiResult.Success)
+        val serverHasUnread = (result as? ApiResult.Success)
             ?.data
             ?.notifications
             ?.any { !it.isRead && it.id !in locallyReadIds && it.id !in locallyDeletedIds } == true
+        return serverHasUnread
     }
 
     // 클릭한 알림 또는 화면을 닫을 때 현재 불러온 알림만 읽음 처리한다.
@@ -69,6 +70,25 @@ class NotificationRepository @Inject constructor(
                 serverCall { notificationApi.markRead(id) }
             }
         }
+    }
+
+    // 홈 요약의 newWeeklyCompareReport.available은 서버가 "안 읽은 weekly_compare_ready 알림이 있는지"로
+    // 계산한다(별도 플래그가 아니다). 모달을 띄우기만 하고 그 알림을 읽음 처리하지 않으면 사용자가
+    // 알림창을 직접 열지 않는 한 계속 안 읽음으로 남아, 홈에 돌아올 때마다 모달이 다시 뜬다.
+    // 그래서 모달을 본 순간(reportId 유무와 무관하게) 해당 알림을 읽음 처리해 서버 조건을 실제로 채운다.
+    suspend fun markWeeklyCompareRead(reportId: String?) {
+        val result = getNotifications()
+        if (result !is ApiResult.Success) return
+
+        val unreadWeeklyCompare = result.data.filter { it.hasLink && it.isUnread }
+        val idsToMark = if (!reportId.isNullOrBlank()) {
+            unreadWeeklyCompare.filter { it.linkReportId == reportId }.map { it.id }
+        } else {
+            unreadWeeklyCompare.map { it.id }
+        }
+        if (idsToMark.isEmpty()) return // 빈 리스트로 markRead를 부르지 않는다.
+
+        markRead(idsToMark)
     }
 
     // 2026-08-13 백엔드가 삭제 API를 만들어 줘 서버에서 실제로 지운다.

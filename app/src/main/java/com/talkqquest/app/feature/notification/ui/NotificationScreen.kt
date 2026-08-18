@@ -246,7 +246,8 @@ private fun NotificationScreen(
                 modifier = Modifier.align(Alignment.Center),
             )
             androidx.compose.animation.AnimatedVisibility(
-                visible = deleteTargetId != null,
+                // 길게 누르기와 무관하게 진입 즉시 보인다. 지울 알림이 없으면 감춘다.
+                visible = uiState.items.isNotEmpty(),
                 enter = fadeIn(tween(260, easing = FastOutSlowInEasing)),
                 exit = fadeOut(tween(260, easing = FastOutSlowInEasing)),
                 modifier = Modifier

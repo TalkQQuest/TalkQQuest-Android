@@ -44,8 +44,18 @@ data class BookmarkArchiveItem(
     val isSaved: Boolean = true,
     val memoKeywords: List<String> = emptyList(),
     val memoText: String = "",
-    val relatedConversationId: String? = null
-)
+    val relatedConversationId: String? = null,
+    // 리포트일 때 서버가 준 종류 — "growth" | "weekly_compare" (GET /archives 응답의 reportType).
+    // 예전에는 제목에 "주간 비교"가 들어있는지로 종류를 추측했는데, 서버 제목이
+    // "4주차 비교 리포트"라 판정이 전부 어긋나 필터·라벨·상세 이동이 다 성장 리포트로 갔다.
+    val reportType: String = "",
+    // 정렬 전용 원본 시각(서버 createdAt, 시각 포함 ISO 문자열). date는 yyyy.MM.dd로 시각이
+    // 잘려 있어 정렬용으로 쓰면 같은 날 항목이 전부 동률이 된다. 화면 표시는 date 그대로 쓰고
+    // 정렬만 이 값으로 한다. 기본값 ""이라 다른 화면의 기존 생성 호출은 안 깨진다.
+    val createdAtRaw: String = ""
+) {
+    val isWeeklyCompare: Boolean get() = reportType == "weekly_compare"
+}
 
 @Composable
 fun BookmarkCard(

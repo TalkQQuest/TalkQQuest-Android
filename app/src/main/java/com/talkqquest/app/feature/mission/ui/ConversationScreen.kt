@@ -8,7 +8,6 @@ import androidx.compose.animation.SizeTransform
 import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.animateDpAsState
-import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.CubicBezierEasing
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.LinearEasing
@@ -129,6 +128,8 @@ import com.talkqquest.app.core.designsystem.TalkQQuestTheme
 import com.talkqquest.app.core.designsystem.TqType
 import com.talkqquest.app.core.designsystem.White
 import com.talkqquest.app.core.designsystem.coverStatusBarCompensation
+import com.talkqquest.app.core.designsystem.component.bottomScrollMaskBrush
+import com.talkqquest.app.core.designsystem.component.scrollMaskHeight
 import com.talkqquest.app.core.designsystem.component.TqButton
 import com.talkqquest.app.core.designsystem.component.TqButtonSize
 import com.talkqquest.app.core.designsystem.softShadow
@@ -149,39 +150,13 @@ import kotlinx.coroutines.launch
 private val ChatText = Color(0xFF1C1C1C)
 private val TimeText = Color(0xFF999999) // CSS "Gray 400(푸터)" — 시스템 Gray400(#94A3B8)과 다른 값
 
-// 아래 스크롤 마스크: 메시지가 입력창 뒤로 내려갈 때만 배경에 자연스럽게 녹인다.
-// 시작점에 알파가 있으면 실기기에서 마스크 경계가 흐린 가로 띠처럼 보이므로
-// 완전 투명에서 시작해 아래로 갈수록 부드럽게 Gray50이 덮이도록 한다.
-private fun scrollMaskBrush(): Brush = Brush.verticalGradient(
-    0f to Gray50.copy(alpha = 0f),
-    0.25f to Gray50.copy(alpha = 0.12f),
-    0.65f to Gray50.copy(alpha = 0.52f),
-    1f to Gray50.copy(alpha = 0.8f),
-)
-
-// 위 스크롤 페이드 (CSS "대화 길어졌을 때_ 스크롤시 위 흐림 효과" Frame 427320986).
-//
-// CSS 원본은 직선 3토막이다 — 0~24% 알파 0.8 평평 / 24~62% 0.8→0.45 / 62~100% 0.45→0.
-// 이대로 옮겼더니 두 가지가 눈에 걸렸다(사용자 지적, 스크린샷 실측으로 확인):
-//   ① 24%·62%에서 기울기가 꺾여 그 지점이 경계선처럼 보인다(마흐 밴드)
-//   ② 맨 위 24%는 알파가 변하지 않아 "위쪽만 덜 흐린" 단계처럼 읽힌다
-// 실측 알파는 이론값과 소수점 셋째 자리까지 일치했으므로 구현 오류가 아니라 곡선 모양 문제다.
-//
-// 그래서 양 끝(시작 0.8 / 끝 0)은 CSS 그대로 두고 사이를 smoothstep(3p²-2p³)으로 잇는다.
-// 꺾이는 점도, 평평한 구간도 없어진다. 11스텝이면 계단이 눈에 보이지 않는다.
-private fun topFadeBrush(): Brush {
-    val stops = Array(11) { i ->
-        val p = i / 10f
-        val s = 3f * p * p - 2f * p * p * p
-        p to Gray50.copy(alpha = 0.8f * (1f - s))
-    }
-    return Brush.verticalGradient(*stops)
-}
-
 @Composable
 fun ConversationScreen(
     viewModel: ConversationViewModel = hiltViewModel(),
-    onExitConfirm: (durationSec: Long) -> Unit = {}, // 대화 완료 → 미션 완료&XP (대화 시간 전달)
+    // 대화 완료 → 미션 완료&XP. 대화 시간뿐 아니라 미션 제목도 함께 넘긴다 —
+    // 서버 피드백 응답엔 미션 제목이 없어(topic null) 리포트 저장 카드 제목이 비므로,
+    // 이 화면이 헤더에 이미 띄우고 있는 제목을 그대로 흘려보낸다.
+    onExitConfirm: (durationSec: Long, missionTitle: String) -> Unit = { _, _ -> },
     onBack: () -> Unit = {},                         // 뒤로가기 → 저장하지 않고 종료
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -206,7 +181,7 @@ fun ConversationScreen(
         onCompleteDismiss = { viewModel.setCompleteDialogVisible(false) },
         onCompleteConfirm = {
             if (uiState.messages.any { it.isFromUser }) {
-                onExitConfirm(viewModel.elapsedSeconds())
+                onExitConfirm(viewModel.elapsedSeconds(), uiState.missionTitle)
             } else {
                 // 사용자 발화가 없으면 완료·XP 화면으로 보내지 않고 대화만 종료한다.
                 // 서버도 같은 조건에서 미션 기록과 mission_completed 알림 생성을 막지만,
@@ -633,46 +608,44 @@ private fun ConversationContent(
                     }
                 }
             }
-            // 위 스크롤 마스크 (CSS "대화 길어졌을 때_ 스크롤시 위 흐림 효과" Frame 427320986):
-            //   393x65, top 92(=헤더 끝), 위 0.8 → 아래로 갈수록 투명. 옛 메시지가 헤더 밑으로
-            //   빨려 들어가며 배경색에 녹게 한다.
-            // ★"대화 시작" 프레임에는 이 밴드가 없고 이 프레임(스크롤된 상태)에만 있다 →
-            //   항상 깔지 않고 위쪽에 가려진 메시지가 있을 때만 보인다.
-            //   reverseLayout이라 index가 커지는 쪽(=화면 위쪽)이 canScrollForward.
-            // 나타나고 사라질 때 뚝 끊기지 않게 알파를 200ms로 보간 — CSS엔 없는 자작 처리.
-            val topMaskAlpha by animateFloatAsState(
-                targetValue = if (listState.canScrollForward) 1f else 0f,
-                animationSpec = tween(200),
-                label = "topMask",
-            )
-            Box(
-                modifier = Modifier
-                    .align(Alignment.TopCenter)
-                    .fillMaxWidth()
-                    // CSS 상자는 65지만 그라데이션이 130.71%에서야 0에 닿는다(65 x 1.3071 = 85).
-                    // 65에서 자르면 알파 0.28이 남아 가로줄이 생기므로 페이드가 끝나는 85까지 그린다.
-                    .height(85.dp)
-                    .graphicsLayer { alpha = topMaskAlpha }
-                    .background(topFadeBrush()),
-            )
         }
 
-        // ── 하단: 추천 답변 + 입력창 (시스템 네비 위 24 = CSS 입력창 바닥 780 → 네비존 804) ──
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                // 비행 도착점은 메시지 영역과 하단부가 맞닿는 현재 위치다.
-                .onGloballyPositioned {
-                    listBottomGlobalY[0] = it.positionInRoot().y
-                }
-                .padding(horizontal = 16.dp)
-                .navigationBarsPadding()
-                // 13차에서 하단 앱 네비가 이 화면에서 빠지고(헤더 "대화 완료"가 그 역할을 대신함)
-                // 입력창이 시스템 네비 바로 위 24까지 내려왔다. 키보드가 뜨면 8만 남긴다(딱 붙지 않게).
-                .padding(
-                    bottom = if (WindowInsets.ime.getBottom(LocalDensity.current) > 0) 8.dp else 24.dp,
-                ),
-        ) {
+        // 하단부(추천 답변·입력창) 바닥 여백. 마스크 위치도 이 값을 기준으로 잡으므로 한 곳에서 정한다.
+        // 13차에서 하단 앱 네비가 이 화면에서 빠지고(헤더 "대화 완료"가 그 역할을 대신함)
+        // 입력창이 시스템 네비 바로 위 24까지 내려왔다. 키보드가 뜨면 8만 남긴다(딱 붙지 않게).
+        val bottomInset = if (WindowInsets.ime.getBottom(LocalDensity.current) > 0) 8.dp else 24.dp
+
+        // ── 하단: 아래 스크롤 마스크 + 추천 답변 + 입력창 ──
+        // 마스크와 하단부를 한 Box에 넣어 마스크가 하단부 "아래 층"에 깔리게 한다(먼저 그려짐).
+        Box(modifier = Modifier.fillMaxWidth()) {
+            // 아래 스크롤 마스크 (CSS "스크롤 마스크" 393x88, top 653, 세로 반전 → 위 투명 아래 짙음).
+            // ★위치는 화면 기준 고정이다. CSS는 추천 답변이 열렸든(카드 top 566) 닫혔든(하단부 top 682)
+            //   마스크를 항상 653~741에 두고, 입력칸은 736~780이다 → 마스크 바닥 = 입력칸 바닥 - 39.
+            //   (메시지 영역 바닥에 붙이면 추천 카드가 열렸을 때 마스크가 100 넘게 위로 올라가
+            //    실제 말풍선을 흐리게 만든다 — 실기기에서 확인된 오배치, 2026-08-18 수정)
+            // matchParentSize 안에 넣어 마스크 높이가 하단부 크기에 영향을 주지 않게 한다.
+            Box(modifier = Modifier.matchParentSize()) {
+                Box(
+                    modifier = Modifier
+                        .align(Alignment.BottomCenter)
+                        .navigationBarsPadding()
+                        .padding(bottom = bottomInset + 39.dp)
+                        .fillMaxWidth()
+                        .height(scrollMaskHeight(88.dp))
+                        .background(bottomScrollMaskBrush()),
+                )
+            }
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    // 비행 도착점은 메시지 영역과 하단부가 맞닿는 현재 위치다.
+                    .onGloballyPositioned {
+                        listBottomGlobalY[0] = it.positionInRoot().y
+                    }
+                    .padding(horizontal = 16.dp)
+                    .navigationBarsPadding()
+                    .padding(bottom = bottomInset),
+            ) {
             // 입력창은 두 상태 모두 맨 아래 같은 자리 → 아래 고정층으로 분리해 전환 때 움직이지 않게.
             // 카드↔바 전환: 목록이 두루마리 말리듯 클립되며 사라지고/펼쳐지고, 높이가 이어져
             // 바가 함께 내려오고 올라감 (한 번에 딱 바뀌지 않게 — 사용자 요청, 타이밍은 자작 근사).
@@ -701,7 +674,8 @@ private fun ConversationContent(
                         },
                 )
             }
-        }
+            } // 하단부 Column
+        } // 마스크 + 하단부를 겹쳐 담은 Box
         } // 메시지+하단부 Column
     }
     // 비행 중인 말풍선 오버레이 (입력창·네비 위에 그려짐)

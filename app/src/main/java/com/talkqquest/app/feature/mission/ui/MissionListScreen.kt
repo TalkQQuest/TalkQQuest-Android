@@ -1,10 +1,5 @@
 package com.talkqquest.app.feature.mission.ui
 
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.expandVertically
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.shrinkVertically
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
@@ -47,11 +42,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
@@ -77,6 +70,8 @@ import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.talkqquest.app.core.designsystem.Error
 import com.talkqquest.app.core.designsystem.FitDesign
+import com.talkqquest.app.core.designsystem.component.ChipContentCrossfade
+import com.talkqquest.app.core.designsystem.component.rememberDebouncedChipSelection
 import com.talkqquest.app.core.designsystem.component.rememberHapticTick
 import com.talkqquest.app.core.designsystem.Gray1000
 import com.talkqquest.app.core.designsystem.Gray50
@@ -96,11 +91,22 @@ import com.talkqquest.app.feature.mission.data.model.MissionListItem
 import com.talkqquest.app.feature.mission.viewmodel.MissionListUiState
 import com.talkqquest.app.feature.mission.viewmodel.MissionListViewModel
 import com.talkqquest.app.feature.mission.viewmodel.missionFilters
-import kotlinx.coroutines.delay
 
 // ── 미션 목록 (UI 1차 v2.css 전사) ──
 // 화면 = 2단 분리(state hoisting): (1) viewModel 연결용 / (2) 값만 받아 그리는 부분(Preview용). 홈 패턴 동일.
 // 미션 카드·난이도 알약·로컬 도구는 MissionCard.kt로 분리(저장 시트와 공용).
+
+// MissionListViewModel의 difficultyFilters와 값이 같다(그쪽은 private라 못 가져다 씀).
+private val difficultyFilterChips = setOf("쉬움", "보통", "어려움")
+
+// 필터 칩 값 → 미션 목록 (순수 함수). MissionListUiState.filteredMissions와 같은 로직이지만,
+// ChipContentCrossfade의 content 람다가 "받은 필터 값"만으로 목록을 그리게 하기 위해 뽑아냈다.
+private fun filterMissionsByChip(missions: List<MissionListItem>, filter: String): List<MissionListItem> =
+    when {
+        filter == "전체" -> missions
+        filter in difficultyFilterChips -> missions.filter { it.difficulty == filter }
+        else -> missions.filter { it.category == filter }
+    }
 
 @Composable
 fun MissionListScreen(
@@ -252,29 +258,15 @@ private fun MissionListContent(
     homeContext: Boolean,
 ) {
     val tick = rememberHapticTick()
-    val targetMissions = uiState.filteredMissions
-    var animatedSlots by remember { mutableStateOf(targetMissions) }
-    var visibleSlotCount by remember { mutableIntStateOf(targetMissions.size) }
 
-    // 미션 id가 아니라 화면 위에서부터의 카드 슬롯을 유지한다. 결과가 줄면 위쪽 슬롯은
-    // 제자리에 둔 채 내용만 새 결과로 바꾸고, 초과한 아래 슬롯만 접는다. 결과가 늘면 기존
-    // 슬롯은 그대로 두고 새 아래 슬롯만 사라짐의 역순으로 펼친다.
-    // 북마크 변경은 필터 전환이 아니다. 저장 여부까지 포함한 MissionListItem 목록을 key로
-    // 쓰면 북마크를 누를 때도 카드 슬롯 전환이 다시 실행된다. 필터와 카드 구성(id)이
-    // 실제로 바뀔 때만 전환을 시작한다.
-    LaunchedEffect(uiState.selectedFilter, targetMissions.map { it.id }) {
-        val previousSlots = animatedSlots
-        val transitionSlotCount = maxOf(previousSlots.size, targetMissions.size)
-        animatedSlots = List(transitionSlotCount) { index ->
-            targetMissions.getOrNull(index) ?: previousSlots[index]
-        }
-
-        // 늘어나는 슬롯이 먼저 0 높이로 목록에 들어간 뒤 visible이 되어야 펼침이 보인다.
-        withFrameNanos { }
-        visibleSlotCount = targetMissions.size
-
-        delay(MissionFilterAnimationMillis.toLong())
-        animatedSlots = targetMissions
+    // 칩 강조는 누르는 즉시, 실제 목록 교체(페이드 스루)는 100ms 디바운스 — 연타해도 마지막 선택만 반영.
+    val filterSelection = rememberDebouncedChipSelection(
+        current = uiState.selectedFilter,
+        onCommit = onFilterSelect,
+    )
+    // 칩(실제 선택)이 바뀌면 스크롤을 애니메이션 없이 맨 위로 되돌린다.
+    LaunchedEffect(uiState.selectedFilter) {
+        listState.scrollToItem(0)
     }
 
     // 화면 좌우 스와이프로도 필터 전환 (칩 탭 선택은 그대로 유지). FlowRow가 칩을 missionFilters
@@ -346,49 +338,37 @@ private fun MissionListContent(
                     Spacer(Modifier.height(6.dp)) // 제목 → 칩 (UI 12 Frame 427321647 gap 6)
                 }
                 MissionFilterChips(
-                    selectedFilter = uiState.selectedFilter,
-                    onFilterSelect = onFilterSelect,
+                    selectedFilter = filterSelection.displayed,
+                    onFilterSelect = filterSelection.select,
                 )
                 Spacer(Modifier.height(10.dp)) // 칩 → 목록 24 = 10 + 카드간격 14
             }
         }
 
-        items(
-            count = animatedSlots.size,
-            key = { index -> "mission-filter-slot-$index" },
-        ) { index ->
-            val slotMission = animatedSlots[index]
-            // 슬롯의 제목·메타 전환 상태는 유지하되, 북마크는 최신 목록 값을 바로 사용한다.
-            // 따라서 저장 여부만 바뀌었을 때 카드 슬롯 애니메이션은 재실행되지 않는다.
-            val mission = targetMissions.firstOrNull { it.id == slotMission.id } ?: slotMission
-            AnimatedVisibility(
-                visible = index < visibleSlotCount,
-                enter = fadeIn(tween(MissionFilterAnimationMillis, easing = FastOutSlowInEasing)) +
-                    expandVertically(
-                        animationSpec = tween(MissionFilterAnimationMillis, easing = FastOutSlowInEasing),
-                        expandFrom = Alignment.Top,
-                    ),
-                exit = fadeOut(tween(MissionFilterAnimationMillis, easing = FastOutSlowInEasing)) +
-                    shrinkVertically(
-                        animationSpec = tween(MissionFilterAnimationMillis, easing = FastOutSlowInEasing),
-                        shrinkTowards = Alignment.Top,
-                    ),
-            ) {
-                MissionCard(
-                    mission = mission,
-                    onClick = { onMissionClick(mission.id) },
-                    onToggleSave = { onToggleSave(mission.id) },
-                    modifier = Modifier.padding(horizontal = 16.dp),
-                    animateContentChanges = true,
-                )
+        // 칩 전환(5-A): 카드별 등장/퇴장이 아니라 목록 전체를 한 덩어리로 페이드 스루 교체한다.
+        // 실제 선택(uiState.selectedFilter)이 바뀔 때만 재생 — 북마크만 바뀌었을 땐 재생되지 않는다.
+        item {
+            ChipContentCrossfade(targetState = uiState.selectedFilter) { selectedFilter ->
+                // 받은 selectedFilter로만 걸러 그린다 — 바깥 uiState.selectedFilter(지금 값)를
+                // 읽으면 전환 중 나가는 화면과 들어오는 화면이 같은 목록을 겹쳐 그리게 된다.
+                val displayMissions = filterMissionsByChip(uiState.missions, selectedFilter)
+                Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
+                    displayMissions.forEach { mission ->
+                        MissionCard(
+                            mission = mission,
+                            onClick = { onMissionClick(mission.id) },
+                            onToggleSave = { onToggleSave(mission.id) },
+                            modifier = Modifier.padding(horizontal = 16.dp),
+                            animateContentChanges = true,
+                        )
+                    }
+                }
             }
         }
 
         item { Spacer(Modifier.height(bottomBarClearance)) } // 목록 끝 여백 (네비바 위로 카드 간격만큼)
     }
 }
-
-private const val MissionFilterAnimationMillis = 260
 
 // 필터 칩 2줄 (CSS Frame 341: 줄 간격 10, 칩 간격 8). 폭 넘치면 자동 줄바꿈(FlowRow) — 디자인과 동일 배치.
 @OptIn(ExperimentalLayoutApi::class)

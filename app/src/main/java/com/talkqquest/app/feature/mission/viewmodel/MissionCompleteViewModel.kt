@@ -4,6 +4,7 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.talkqquest.app.core.network.ApiResult
+import com.talkqquest.app.feature.home.data.HomeRepository
 import com.talkqquest.app.feature.mission.data.MissionRepository
 import com.talkqquest.app.feature.mission.data.model.MissionCompleteResult
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -26,6 +27,7 @@ data class MissionCompleteUiState(
 @HiltViewModel
 class MissionCompleteViewModel @Inject constructor(
     private val missionRepository: MissionRepository,
+    private val homeRepository: HomeRepository, // 완료 직후 홈 요약을 미리 받아 티어 공유 저장소를 갱신해 둠
     savedStateHandle: SavedStateHandle,
 ) : ViewModel() {
 
@@ -47,8 +49,13 @@ class MissionCompleteViewModel @Inject constructor(
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true, errorMessage = null) }
             when (val result = missionRepository.completeMission(missionId, durationSec)) {
-                is ApiResult.Success -> _uiState.update {
-                    it.copy(isLoading = false, result = result.data)
+                is ApiResult.Success -> {
+                    _uiState.update { it.copy(isLoading = false, result = result.data) }
+                    // completeMission은 내부에서 피드백 생성(POST /feedback)까지 끝낸 뒤 반환하므로
+                    // 이 시점엔 서버의 능력치 누적 점수가 이미 올라가 있다. 여기서 홈 요약을 미리
+                    // 받아 TierStore를 갱신해 두면, 성장 리포트를 보지 않고 곧바로 홈으로 나가도
+                    // 홈이 첫 프레임부터 새 티어·별을 그린다. 실패해도 화면 흐름엔 영향 없음.
+                    launch { runCatching { homeRepository.getHomeSummary() } }
                 }
                 is ApiResult.Error -> _uiState.update {
                     it.copy(isLoading = false, errorMessage = result.message ?: "완료 처리에 실패했어요.")

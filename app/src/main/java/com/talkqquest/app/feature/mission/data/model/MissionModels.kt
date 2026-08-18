@@ -62,7 +62,7 @@ data class MissionPageInfo(
 )
 
 // 미션 상세 DTO — 백엔드 MissionDetailResponseDto와 1:1.
-// benefits(체크 ✓ 효과 문구)는 서버 응답에 없는 로컬 필드 — 화면(효과/보상 카드)이 쓰는 중.
+// benefits(체크 ✓ 효과 문구)는 서버 응답에 없는 로컬 필드 — 화면(효과 카드)이 쓰는 중.
 // TODO(백엔드): 효과 문구를 서버에서 줄지 확인. 당장은 stub이 채움.
 @Serializable
 data class MissionDetail(

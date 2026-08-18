@@ -1,7 +1,6 @@
 package com.talkqquest.app.feature.archive.data
 
 import com.talkqquest.app.core.network.ApiResult
-import com.talkqquest.app.core.util.TierProgress // 💡 추가됨: 공용 계산식 Import
 import com.talkqquest.app.feature.archive.data.model.ArchiveConversationDetailResponse
 import com.talkqquest.app.feature.archive.data.model.ArchiveConversationFeedbackDto
 import com.talkqquest.app.feature.archive.data.model.ArchiveConversationMessageDto
@@ -16,9 +15,6 @@ import com.talkqquest.app.feature.archive.data.model.PageInfo
 import com.talkqquest.app.feature.archive.data.model.ReviewChatMessage
 import com.talkqquest.app.feature.archive.data.model.SavePhraseRequest
 
-import com.talkqquest.app.feature.archive.data.model.Competency
-import com.talkqquest.app.feature.archive.data.model.CompetencyAxis
-import com.talkqquest.app.feature.archive.data.model.GrowthReport
 import com.talkqquest.app.feature.archive.data.model.HighlightItem
 import com.talkqquest.app.feature.archive.data.model.MetricChange
 import com.talkqquest.app.feature.archive.data.model.WeeklyCompareReport
@@ -27,6 +23,9 @@ import com.talkqquest.app.feature.archive.data.model.CategoryRank
 
 import com.talkqquest.app.feature.archive.ui.ArchiveMissionItem
 import com.talkqquest.app.feature.archive.ui.BookmarkArchiveItem
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
 import com.talkqquest.app.feature.archive.viewmodel.ActivityType
 import com.talkqquest.app.feature.archive.viewmodel.RecentActivity
 import javax.inject.Inject
@@ -61,25 +60,6 @@ class ArchiveRepository @Inject constructor(
         BookmarkArchiveItem(id = "report_w1", title = "8월 1-2주차 주간 비교 리포트", status = "주간 비교 리포트", date = "2026.08.10", isSaved = true),
         BookmarkArchiveItem(id = "report_w2", title = "7월 4주-8월 1주차 주간 비교 리포트", status = "주간 비교 리포트", date = "2026.08.06", isSaved = true),
         BookmarkArchiveItem(id = "report_w3", title = "7월 3주-4주차 주간 비교 리포트", status = "주간 비교 리포트", date = "2026.07.29", isSaved = true)
-    )
-
-    private val stubReportDetails = mapOf(
-        "report_g1" to Pair<GrowthReport?, WeeklyCompareReport?>(
-            GrowthReport("플래티넘", 2, 1, "다이아", listOf(
-                Competency(CompetencyAxis.KINDNESS, "친절한 태도", "친절한 태도", 300, 280, 85),
-                Competency(CompetencyAxis.INITIATIVE, "대화 주도", "대화 주도", 300, 250, 70),
-                Competency(CompetencyAxis.EMPATHY, "공감 표현", "공감 능력", 300, 210, 92),
-                Competency(CompetencyAxis.QUESTION_LINK, "질문 연결성", "질문 연결성", 300, 290, 88)
-            )), null
-        ),
-        "report_g2" to Pair<GrowthReport?, WeeklyCompareReport?>(
-            GrowthReport("골드", 1, 2, "플래티넘", listOf(
-                Competency(CompetencyAxis.KINDNESS, "친절한 태도", "친절한 태도", 300, 150, 60),
-                Competency(CompetencyAxis.INITIATIVE, "대화 주도", "대화 주도", 300, 280, 80),
-                Competency(CompetencyAxis.EMPATHY, "공감 표현", "공감 능력", 300, 120, 50),
-                Competency(CompetencyAxis.QUESTION_LINK, "질문 연결성", "질문 연결성", 300, 200, 75)
-            )), null
-        )
     )
 
     private val stubWeeklyCompareDetails = mapOf(
@@ -222,66 +202,25 @@ class ArchiveRepository @Inject constructor(
         }
     }
 
-    // --- 💡 성장 리포트 전용 로직 (TierProgress 연동 및 신규 recentScores 매핑) ---
-    suspend fun getArchiveReportDetail(id: String): ApiResult<Triple<String, GrowthReport?, WeeklyCompareReport?>> {
-        if (isMockMode) {
-            val title = stubReports.find { it.id == id }?.title ?: "성장 리포트"
-            val reports = stubReportDetails[id]
-            return if (reports != null) {
-                ApiResult.Success(Triple(title, reports.first, reports.second))
-            } else {
-                ApiResult.Error(null, "리포트를 불러오지 못했습니다.")
-            }
-        } else {
-            return try {
-                val response = archiveApi.getReportDetail(id)
-                val data = response.data
-                if (data != null) {
-                    val growth = data.growth?.let { g ->
-                        // 1. 서버에서 받은 누적 점수 (전체 기간 합산)
-                        val totals = g.growthTotals
-                        val kTotal = totals?.kindnessTotal ?: 0
-                        val iTotal = totals?.initiativeTotal ?: 0
-                        val eTotal = totals?.empathyTotal ?: 0
-                        val qTotal = totals?.questionLinkTotal ?: 0
+    // 목록 응답(GET /archives)에는 주차 범위가 없어 주간 비교 리포트 제목이 "4주차 비교 리포트"로만 온다.
+    // 그 항목만 골라 상세를 한 번씩 더 불러 "7월 4주차 → 8월 1주차 주간 비교 리포트"로 바꿔 끼운다.
+    // 성장 리포트는 제목이 이미 미션명이라 건드리지 않고 호출도 하지 않는다.
+    // 주간 비교는 주당 1건씩만 쌓이는 데다 저장한 것만 목록에 올라와서 호출 수가 적다(실측 13건 중 2건).
+    suspend fun withWeeklyCompareTitles(items: List<BookmarkArchiveItem>): List<BookmarkArchiveItem> {
+        val targets = items.filter { it.isWeeklyCompare }
+        if (targets.isEmpty()) return items
 
-                        // 💡 2. 서버에서 새로 추가해 준 이 리포트(대화)만의 획득 점수 스냅샷 (+점수로 사용)
-                        val recent = data.recentScores
-                        val kRecent = recent?.kindness ?: 0
-                        val iRecent = recent?.initiative ?: 0
-                        val eRecent = recent?.empathy ?: 0
-                        val qRecent = recent?.questionLink ?: 0
-
-                        // 3. 현재 티어와 별 상태를 알아내기 위해 공용 계산식(TierProgress) 호출
-                        val progress = TierProgress.of(kindness = kTotal, initiative = iTotal, empathy = eTotal, questionLink = qTotal)
-
-                        // 4. 공용 계산식에서 나온 UI용 점수(0~300)와 방금 얻은 스냅샷 점수(gain) 매핑
-                        val competencies = listOf(
-                            Competency(CompetencyAxis.KINDNESS, "친절한 태도", "친절한 태도", 300, progress.axisScores[0], kRecent),
-                            Competency(CompetencyAxis.INITIATIVE, "대화 주도", "대화 주도", 300, progress.axisScores[1], iRecent),
-                            Competency(CompetencyAxis.EMPATHY, "공감 표현", "공감 능력", 300, progress.axisScores[2], eRecent),
-                            Competency(CompetencyAxis.QUESTION_LINK, "질문 연결성", "질문 연결성", 300, progress.axisScores[3], qRecent)
-                        )
-
-                        GrowthReport(
-                            tierName = progress.tierName,
-                            tierStars = progress.tierStars,
-                            nextStarsNeeded = progress.nextStarsNeeded,
-                            nextTierName = progress.nextTierName,
-                            competencies = competencies
-                        )
-                    } ?: GrowthReport("브론즈", 0, 3, "실버", emptyList<Competency>())
-
-                    val displayTitle = data.title ?: data.period ?: "톡깨 리포트"
-
-                    ApiResult.Success(Triple(displayTitle, growth, null))
-                } else {
-                    ApiResult.Error(null, response.message ?: "오류가 발생했습니다.")
+        val titles: Map<String, String> = coroutineScope {
+            targets.map { item ->
+                async {
+                    val r = getWeeklyCompareReportDetail(item.id)
+                    item.id to (r as? ApiResult.Success)?.data?.title.orEmpty()
                 }
-            } catch (e: Exception) {
-                ApiResult.Exception(e)
-            }
-        }
+            }.awaitAll()
+        }.filter { it.second.isNotBlank() }.toMap()
+
+        // 상세를 못 받은 항목은 서버 제목을 그대로 둔다 — 빈 제목으로 덮어쓰지 않는다.
+        return items.map { item -> titles[item.id]?.let { item.copy(title = it) } ?: item }
     }
 
     suspend fun getWeeklyCompareReportDetail(id: String): ApiResult<WeeklyCompareReportUiModel> {
@@ -301,12 +240,24 @@ class ArchiveRepository @Inject constructor(
                         highlights = data.data.highlights.map {
                             HighlightItem(emphasis = "", rest = it)
                         },
-                        completedMissions = data.data.thisWeek.completedMissionCount,
-                        totalMissions = 0,
-                        topCategories = emptyList()
+                        // 진행률은 서버 missionProgress를 쓴다. 이 주에 완료한 대화 수
+                        // (thisWeek.completedMissionCount)와는 다른 값이라 섞으면 분자·분모가 어긋난다.
+                        completedMissions = data.data.missionProgress.completed,
+                        totalMissions = data.data.missionProgress.total,
+                        topCategories = data.data.topCategories.map {
+                            CategoryRank(name = it.category, count = it.count)
+                        }
                     )
 
-                    val title = "${data.weekIndex}주차 주간 비교 리포트"
+                    // 주차 문구는 서버가 완성해 준 periodLabel("7월 4주차 → 8월 1주차")을 쓴다.
+                    // 못 받으면 좌우 라벨을 비워 화면이 기존 기본 문구로 떨어지게 둔다.
+                    val periodLabel = data.periodLabel.orEmpty()
+                    val weekLabels = periodLabel.split("→").map { it.trim() }.filter { it.isNotEmpty() }
+                    val title = if (periodLabel.isNotBlank()) {
+                        "$periodLabel 주간 비교 리포트"
+                    } else {
+                        "${data.weekIndex}주차 주간 비교 리포트"
+                    }
 
                     ApiResult.Success(
                         WeeklyCompareReportUiModel(
@@ -315,7 +266,9 @@ class ArchiveRepository @Inject constructor(
                             isSaved = data.isSaved,
                             report = report,
                             prevReportId = data.previousReportId,
-                            nextReportId = data.nextReportId
+                            nextReportId = data.nextReportId,
+                            prevWeekLabel = weekLabels.getOrElse(0) { "" },
+                            thisWeekLabel = weekLabels.getOrElse(1) { "" }
                         )
                     )
                 } else {

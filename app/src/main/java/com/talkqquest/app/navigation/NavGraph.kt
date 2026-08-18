@@ -21,6 +21,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.talkqquest.app.feature.mission.viewmodel.ConversationSetupViewModel
 import androidx.navigation.NavBackStackEntry
@@ -82,7 +84,6 @@ import com.talkqquest.app.feature.archive.ui.ArchiveListScreen
 import com.talkqquest.app.feature.archive.ui.ArchiveSearchScreen
 import com.talkqquest.app.feature.archive.ui.ArchiveConversationDetailScreen
 import com.talkqquest.app.feature.archive.ui.ArchiveSavedPhraseScreen
-import com.talkqquest.app.feature.archive.ui.ArchiveReportScreen
 import com.talkqquest.app.feature.archive.ui.ArchiveWeeklyCompareReportScreen
 import com.talkqquest.app.feature.archive.viewmodel.ActivityType
 import com.talkqquest.app.navigation.Screen
@@ -607,6 +608,12 @@ fun NavGraph(
                 .getStateFlow(NOTIFICATION_READ_REFRESH_KEY, 0L)
                 .collectAsState()
             val homeViewModel: HomeViewModel = hiltViewModel(homeEntry)
+            // 여기서의 LocalLifecycleOwner는 homeEntry(홈 백스택 엔트리)라서,
+            // 다른 화면에 다녀와도 이 엔트리가 다시 RESUMED될 때마다 관측된다.
+            // 미션 완료 등으로 바뀐 티어·별·XP를 홈 복귀 시점에 반영하기 위함.
+            LifecycleEventEffect(Lifecycle.Event.ON_RESUME) {
+                homeViewModel.onScreenResumed()
+            }
             LaunchedEffect(notificationReadRefresh) {
                 if (notificationReadRefresh != 0L) {
                     // 알림 종료 직후에는 XP 복귀 모션과 별개로 홈의 새 알림 상태만 다시 조회한다.
@@ -644,6 +651,15 @@ fun NavGraph(
                 onClose = { navController.popBackStack() },
                 onCompletedMissionsClick = {
                     navController.navigate("${Screen.ARCHIVE_LIST}/1")
+                },
+                // 저장 시트의 "보관함 >" — 보관함 리포트 탭(3)으로 (성장 리포트 시트와 같은 목적지)
+                onArchiveClick = { navController.navigate("${Screen.ARCHIVE_LIST}/3") },
+                onReportClick = { reportId, isWeeklyCompare ->
+                    if (isWeeklyCompare) {
+                        navController.navigate("archive_weekly_compare_report/$reportId")
+                    } else {
+                        navController.navigate("archive_report/$reportId")
+                    }
                 },
             )
         }
@@ -707,7 +723,10 @@ fun NavGraph(
             arguments = listOf(navArgument("conversationId") { type = NavType.StringType })
         ) {
             ArchiveConversationDetailScreen(
-                onBackClick = { navController.popBackStack() }
+                onBackClick = { navController.popBackStack() },
+                onFeedbackDetailClick = { feedbackId, itemIndex ->
+                    navController.navigate("feedback_detail/$feedbackId?item=$itemIndex")
+                }
             )
         }
 
@@ -727,8 +746,20 @@ fun NavGraph(
             route = "archive_report/{reportId}",
             arguments = listOf(navArgument("reportId") { type = NavType.StringType })
         ) {
-            ArchiveReportScreen(
-                onBackClick = { navController.popBackStack() }
+            // 12-A: 보관함·저장 시트로 여는 성장 리포트도 홈과 같은 ReportScreen을 쓴다(같은 화면·
+            // 같은 모션·같은 마스터 만렙 규칙). route의 reportId를 ReportViewModel이 읽어 그 리포트를 연다.
+            ReportScreen(
+                onBack = { navController.popBackStack() },
+                onSheetTopChange = onOverlaySheetTop,
+                onArchiveClick = { navController.navigate("${Screen.ARCHIVE_LIST}/3") },
+                // 시트 카드의 종류(성장/주간)에 따라 갈 상세가 다르다 — 주간 비교 화면과 같은 라우팅(B).
+                onReportClick = { reportId, isWeeklyCompare ->
+                    if (isWeeklyCompare) {
+                        navController.navigate("archive_weekly_compare_report/$reportId")
+                    } else {
+                        navController.navigate("archive_report/$reportId")
+                    }
+                },
             )
         }
 
@@ -738,8 +769,10 @@ fun NavGraph(
         ) {
             ArchiveWeeklyCompareReportScreen(
                 onBackClick = { navController.popBackStack() },
+                // 완료한 미션 > 은 보관함 대화 탭(1)으로 보낸다. 홈에서 들어가는 주간 비교 화면도
+                // 같은 목적지라 두 화면이 일치한다(예전엔 여기만 미션 탭(0)이었다).
                 onCompletedMissionsClick = {
-                    navController.navigate("${Screen.ARCHIVE_LIST}/0")
+                    navController.navigate("${Screen.ARCHIVE_LIST}/1")
                 }
             )
         }
@@ -867,8 +900,12 @@ fun NavGraph(
         ) { backStackEntry ->
             val missionId = backStackEntry.arguments?.getString("conversationId").orEmpty()
             ConversationScreen(
-                onExitConfirm = { durationSec ->
-                    navController.navigate("mission_complete/$missionId?durationSec=$durationSec") {
+                onExitConfirm = { durationSec, missionTitle ->
+                    // 미션 제목을 여기서부터 실어 보낸다 — 서버 피드백엔 제목이 없어 화면이 들고 있는 값을 넘겨야 한다.
+                    navController.navigate(
+                        "mission_complete/$missionId?durationSec=$durationSec" +
+                                "&missionTitle=${Uri.encode(missionTitle)}",
+                    ) {
                         popUpTo(Screen.HOME)
                     }
                 },
@@ -877,24 +914,37 @@ fun NavGraph(
         }
 
         composable(
-            route = "${Screen.MISSION_COMPLETE}?durationSec={durationSec}",
+            route = "${Screen.MISSION_COMPLETE}?durationSec={durationSec}&missionTitle={missionTitle}",
             arguments = listOf(
                 navArgument("missionId") { type = NavType.StringType },
                 navArgument("durationSec") { type = NavType.LongType; defaultValue = 0L },
+                navArgument("missionTitle") { type = NavType.StringType; defaultValue = "" },
             ),
         ) { backStackEntry ->
             val missionId = backStackEntry.arguments?.getString("missionId").orEmpty()
+            // MissionCompleteScreen의 onContinue 시그니처는 그대로 두고, 이 화면 라우트 인자에서
+            // 받은 제목을 다음 목적지로 이어 붙인다.
+            val missionTitle = backStackEntry.arguments?.getString("missionTitle").orEmpty()
             MissionCompleteScreen(
-                onContinue = { feedbackId -> navController.navigate("feedback/${feedbackId ?: missionId}") },
+                onContinue = { feedbackId ->
+                    navController.navigate(
+                        "feedback/${feedbackId ?: missionId}?missionTitle=${Uri.encode(missionTitle)}",
+                    )
+                },
             )
         }
 
         composable(
-            route = Screen.FEEDBACK,
-            arguments = listOf(navArgument("feedbackId") { type = NavType.StringType }),
+            route = "${Screen.FEEDBACK}?missionTitle={missionTitle}",
+            arguments = listOf(
+                navArgument("feedbackId") { type = NavType.StringType },
+                navArgument("missionTitle") { type = NavType.StringType; defaultValue = "" },
+            ),
         ) { backStackEntry ->
             val feedbackId = backStackEntry.arguments?.getString("feedbackId").orEmpty()
+            val missionTitle = backStackEntry.arguments?.getString("missionTitle").orEmpty()
             FeedbackScreen(
+                missionTitle = missionTitle,
                 onBack = { navController.popBackStack() },
                 onItemClick = { index -> navController.navigate("feedback_detail/$feedbackId?item=$index") },
                 onDetailReport = { missionTitle, conversationId, scores ->
@@ -920,8 +970,13 @@ fun NavGraph(
                 onBack = { navController.popBackStack() },
                 onSheetTopChange = onOverlaySheetTop,
                 onArchiveClick = { navController.navigate("${Screen.ARCHIVE_LIST}/3") },
-                onReportClick = { reportId ->
-                    navController.navigate("archive_report/$reportId")
+                // 시트 카드의 종류(성장/주간)에 따라 갈 상세가 다르다 — 주간 비교 화면과 같은 라우팅(B).
+                onReportClick = { reportId, isWeeklyCompare ->
+                    if (isWeeklyCompare) {
+                        navController.navigate("archive_weekly_compare_report/$reportId")
+                    } else {
+                        navController.navigate("archive_report/$reportId")
+                    }
                 },
             )
         }
@@ -995,6 +1050,19 @@ fun NavGraph(
             ProfileRecentMissionScreen(
                 recentItems = profileUiState.archiveSummary?.recentItems.orEmpty(),
                 onBack = { navController.popBackStack() },
+                // 보관함 최근 활동과 같은 목적지로 보낸다. 리포트만 종류에 따라 갈린다.
+                onActivityClick = { type, referenceId, reportType ->
+                    when (type) {
+                        "mission" -> navController.navigate("mission_detail/$referenceId")
+                        "conversation" -> navController.navigate("archive_conversation_detail/$referenceId")
+                        "phrase" -> navController.navigate("archive_saved_phrase/$referenceId")
+                        "report" -> if (reportType == "weekly_compare") {
+                            navController.navigate("archive_weekly_compare_report/$referenceId")
+                        } else {
+                            navController.navigate("archive_report/$referenceId")
+                        }
+                    }
+                },
             )
         }
 
@@ -1025,6 +1093,7 @@ fun NavGraph(
 
             ProfileSettingsScreen(
                 nickname = nickname,
+                avatarUrl = dashboard?.avatarUrl ?: profile?.avatarUrl,
                 connectedAccount = connectedAccount,
                 initialPushEnabled = settings?.let { it.communityApproved || it.reportReady || it.marketing } ?: true,
                 initialReminderEnabled = settings?.missionReminder ?: false,
@@ -1034,6 +1103,14 @@ fun NavGraph(
                 onReminderTimeChange = profileViewModel::updateMissionReminderTime,
                 onBack = { navController.popBackStack() },
                 onEditProfileClick = { navController.navigate(Screen.PROFILE_INFO) },
+                onAvatarClick = { uri ->
+                    val imagePart = uri.toProfileImagePart(context)
+                    if (imagePart == null) {
+                        Toast.makeText(context, "이미지를 불러오지 못했어요.", Toast.LENGTH_SHORT).show()
+                    } else {
+                        profileViewModel.uploadProfileImage(imagePart)
+                    }
+                },
                 onConnectedAccountClick = { navController.navigate(Screen.PROFILE_CONNECTED_ACCOUNT) },
                 onTermsClick = { navController.navigate(Screen.PROFILE_TERMS) },
                 onSupportClick = { navController.navigate(Screen.PROFILE_SUPPORT) },

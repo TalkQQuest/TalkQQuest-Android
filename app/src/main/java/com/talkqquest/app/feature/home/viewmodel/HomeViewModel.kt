@@ -2,6 +2,7 @@ package com.talkqquest.app.feature.home.viewmodel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.talkqquest.app.core.datastore.TierStore
 import com.talkqquest.app.core.network.ApiResult
 import com.talkqquest.app.feature.home.data.HomeRepository
 import com.talkqquest.app.feature.home.data.HomeSummaryCache
@@ -36,11 +37,17 @@ data class HomeUiState(
 class HomeViewModel @Inject constructor(
     private val homeRepository: HomeRepository,
     private val homeSummaryCache: HomeSummaryCache, // 스플래시 프리페치 결과 — 있으면 스피너 없이 즉시 표시
+    private val tierStore: TierStore, // 성장 리포트가 갱신해 둔 티어를 구독 — 재조회 왕복 없이 즉시 반영
 ) : ViewModel() {
 
     // _uiState: 내부에서만 값을 바꾸는 원본(Mutable). 밖에는 읽기 전용(uiState)만 공개.
     private val _uiState = MutableStateFlow(HomeUiState())
     val uiState: StateFlow<HomeUiState> = _uiState.asStateFlow()
+
+    // 홈 화면 재진입(ON_RESUME) 판정용. 이 ViewModel은 홈 백스택 엔트리에 스코프돼 있어
+    // 다른 화면으로 이동했다가 돌아와도(컴포저블이 폐기·재생성돼도) 살아남는다.
+    // 그래서 remember가 아니라 여기 필드로 둬야 "최초 진입"과 "재진입"을 구분할 수 있다.
+    private var hasResumedOnce = false
 
     // 화면이 처음 뜰 때 자동으로 1번 불러옴.
     // 스플래시에서 방금 받아둔 요약이 있으면 그걸로 바로 그리고(스피너 생략), 뒤에서 조용히 최신화한다.
@@ -51,6 +58,24 @@ class HomeViewModel @Inject constructor(
             loadHome(showLoading = false)
         } else {
             loadHome()
+        }
+
+        // 티어 공유 저장소 구독. 홈이 화면 밖에 있는 동안 성장 리포트가 승급을 계산해 저장소를
+        // 갱신해 두면, 홈 재조회(loadHome)가 서버를 왕복하기 전에도 여기서 먼저 값을 받아
+        // 복귀 첫 프레임부터 새 티어·별을 그릴 수 있다.
+        viewModelScope.launch {
+            tierStore.tier.collect { snapshot ->
+                if (snapshot == null) return@collect
+                _uiState.update { state ->
+                    val summary = state.summary ?: return@update state
+                    state.copy(
+                        summary = summary.copy(
+                            tierName = snapshot.tierName,
+                            tierStars = snapshot.tierStars,
+                        ),
+                    )
+                }
+            }
         }
     }
 
@@ -72,6 +97,17 @@ class HomeViewModel @Inject constructor(
                 }
             }
         }
+    }
+
+    // 홈 백스택 엔트리가 ON_RESUME될 때마다 호출됨(NavGraph에서 연결).
+    // 최초 1회는 init에서 이미 로드했으므로 건너뛰고, 그 이후 재진입부터만
+    // 조용히(스피너 없이) 다시 조회해 미션 완료 등으로 바뀐 티어·별·XP를 반영한다.
+    fun onScreenResumed() {
+        if (!hasResumedOnce) {
+            hasResumedOnce = true
+            return
+        }
+        loadHome(showLoading = false)
     }
 
     fun refreshTodayMission() {

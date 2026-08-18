@@ -87,7 +87,9 @@ fun TqBottomBar(
 
     // 탭 4개 셸(MainTabsPager) 위: 선택 표시는 페이저 현재 페이지, 탭 클릭은 페이저 슬라이드.
     // 상세 화면 위: tabRouteOf로 부모 탭 표시 + 클릭 시 그 탭으로 navigate.
-    val onShell = currentRoute in entries.map { it.route }.toSet()
+    // 매 네비게이션마다 새로 만들지 않도록 탭 route 집합을 기억해 둔다.
+    val tabRouteSet = remember { entries.map { it.route }.toSet() }
+    val onShell = currentRoute in tabRouteSet
     val selectedRoute = if (onShell) entries[pagerState.currentPage].route else tabRouteOf(currentRoute)
     // 칩 위치(0f..3f). 셸에선 페이저 스크롤을 그대로 물려 스와이프엔 실시간 추종,
     // 탭 클릭엔 페이저 애니메이션과 동일한 시간으로 슬라이드. 상세 화면에선 부모 탭 인덱스.

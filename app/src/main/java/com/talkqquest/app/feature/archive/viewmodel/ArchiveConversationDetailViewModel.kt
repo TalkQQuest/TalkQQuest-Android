@@ -33,6 +33,7 @@ data class ArchiveConversationDetailUiState(
     val mainContentText: String = "", // (기존 코드와의 호환성을 위해 유지)
     val keyPoints: List<String> = emptyList(), // 💡 하단 '주요 내용' 불릿 리스트
     val feedbacks: List<AiFeedbackItem> = emptyList(),
+    val feedbackId: String = "", // 💡 AI 피드백 행 클릭 시 이동할 상세 화면 id
     val messages: List<ReviewChatMessage> = emptyList(),
     val isReviewMode: Boolean = false,
     val errorMessage: String? = null
@@ -118,6 +119,7 @@ class ArchiveConversationDetailViewModel @Inject constructor(
                             mainContentText = data.summary ?: "",
                             keyPoints = data.keyPoints, // 하단 주요 내용용(불릿)
                             feedbacks = mappedFeedbacks,
+                            feedbackId = data.feedback?.feedbackId.orEmpty(),
                             messages = mappedMessages
                         )
                     }

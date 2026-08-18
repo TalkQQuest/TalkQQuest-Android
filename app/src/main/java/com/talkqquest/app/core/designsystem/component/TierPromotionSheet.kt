@@ -34,11 +34,11 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -109,7 +109,12 @@ fun TierPromotionSheet(
         val peekOffset = hiddenOffset - with(density) { SheetPeekHeight.toPx() }
         val expandedOffset = WindowInsets.statusBars.getTop(density) + with(density) { 28.dp.toPx() }
 
-        var offsetY by remember { mutableFloatStateOf(hiddenOffset) }
+        // 시트 위치는 rememberSaveable에 둔다 — 끌어올린 시트에서 다른 화면에 갔다 뒤로 나와도
+        // 올려둔 자리가 그대로 유지되게 하기 위함(사용자 요청 2026-08-18, 위로 올라가는 시트 전부 해당).
+        // NavHost가 목적지마다 saveable 상태를 보관하므로 화면 이동엔 살아남고, 앱 재시작 시엔 초기화된다.
+        var offsetY by rememberSaveable { mutableStateOf(hiddenOffset) }
+        // 시트가 이미 떠 있었는지 표식 — 돌아왔을 때 살짝 올림(peek) 자리로 되돌리지 않기 위한 것.
+        var alreadyPresented by rememberSaveable { mutableStateOf(false) }
         // 자동 닫힘 판단용: 지금 손을 대고 있는지 + 마지막으로 만진 시각(만질 때마다 타이머 리셋).
         var sheetPressed by remember { mutableStateOf(false) }
         var lastTouchAt by remember { mutableLongStateOf(System.currentTimeMillis()) }
@@ -118,6 +123,8 @@ fun TierPromotionSheet(
         // 정착점으로 이동 — 올라올 땐 tween(300), 내려갈 땐 tween(600) (미션 북마크 시트와 동일).
         fun animateSheetTo(target: Float, onArrived: () -> Unit = {}) {
             animJob?.cancel()
+            // 완전히 내려간 순간 표식을 지운다 — 다음에 다시 열릴 땐 정상적으로 올라와야 한다.
+            if (target == hiddenOffset) alreadyPresented = false
             animJob = scope.launch {
                 val spec: AnimationSpec<Float> =
                     if (target > offsetY) tween(600, easing = FastOutSlowInEasing)
@@ -148,7 +155,11 @@ fun TierPromotionSheet(
         LaunchedEffect(visible) {
             if (visible) {
                 lastTouchAt = System.currentTimeMillis()
-                animateSheetTo(peekOffset)
+                // 표식이 살아 돌아왔다 = 다른 화면 갔다 뒤로 온 것 → 올려둔 위치를 그대로 둔다.
+                if (!alreadyPresented) {
+                    alreadyPresented = true
+                    animateSheetTo(peekOffset)
+                }
             } else {
                 animateSheetTo(hiddenOffset)
             }

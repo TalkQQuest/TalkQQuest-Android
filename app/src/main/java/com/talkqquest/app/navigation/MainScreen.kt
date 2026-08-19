@@ -191,9 +191,11 @@ fun MainScreen(
         val dimProgress = ModalDimBars.progress
         if (dimProgress > 0f) {
             val dimNavigationBarColor = ModalDimBars.navigationBarColor
+            val dimSystemBarColor = ModalDimBars.systemBarColor
             val statusBarHeight = with(density) { WindowInsets.statusBars.getTop(this).toDp() }
             val navigationBarHeight = with(density) { WindowInsets.navigationBars.getBottom(this).toDp() }
-            val dimColor = ModalDimColor.copy(alpha = ModalDimColor.alpha * dimProgress).compositeOver(Gray50)
+            val dimColor = dimSystemBarColor?.let { lerp(Gray50, it, dimProgress) }
+                ?: ModalDimColor.copy(alpha = ModalDimColor.alpha * dimProgress).compositeOver(Gray50)
             // 지정색이 있는 경우(예: 시트가 요구하는 흰색)도 진행도를 무시하고 통째로 칠하면 시트가
             // 도착하기 전에 하단이 먼저 번쩍인다. 배경(Gray50)에서 지정색으로 진행도만큼만 섞는다.
             val navigationBarDimColor = dimNavigationBarColor?.let { lerp(Gray50, it, dimProgress) } ?: dimColor

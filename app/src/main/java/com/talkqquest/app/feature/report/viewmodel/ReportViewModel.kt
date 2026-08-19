@@ -70,7 +70,11 @@ class ReportViewModel @Inject constructor(
     private val isArchiveEntry: Boolean = reportId.isNotBlank()
 
     private val _uiState = MutableStateFlow(
-        ReportUiState(missionTitle = missionTitle, isArchiveEntry = isArchiveEntry, isBookmarked = isArchiveEntry),
+        ReportUiState(
+            missionTitle = missionTitle,
+            isArchiveEntry = isArchiveEntry,
+            isBookmarked = isArchiveEntry,
+        ),
     )
     val uiState: StateFlow<ReportUiState> = _uiState.asStateFlow()
 

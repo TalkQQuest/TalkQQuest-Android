@@ -7,16 +7,18 @@ import androidx.compose.animation.core.LinearOutSlowInEasing
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.offset
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material3.Text
+import androidx.activity.compose.BackHandler
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -27,30 +29,43 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.rotate
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.style.LineHeightStyle
 import androidx.compose.ui.unit.dp
-import com.talkqquest.app.core.designsystem.ModalDimColor
 import com.talkqquest.app.core.designsystem.ModalSystemBars
+import com.talkqquest.app.core.designsystem.Gray50
 import com.talkqquest.app.core.designsystem.TqType
+import com.talkqquest.app.core.designsystem.component.TqButton
 import kotlin.math.cos
 import kotlin.math.sin
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
 // ── 승급 모션 ─────────────────────────────────────────────────────────────
 // 마름모 4꼭짓점이 중앙으로 모여 별 하나가 되고, 그 별이 위 티어 카드의 빈 별 자리로 날아가 박힌다.
 // 그 별로 3개가 차면(= 티어 승급) 딤이 깔리고 새 휘장이 등장한다.
 //
-// 딤은 "대화 이탈 팝업"과 같은 360ms · FastOutSlowInEasing · Gray700 23%를 쓴다.
+// 딤은 FastOutSlowInEasing으로 빠르게 전환된다.
 
 private val MotionStarYellow = Color(0xFFF9AC17)   // 티어 카드 별과 같은 값
 private val MotionStarLight = Color(0xFFFFD874)
+private val PromotionDimColor = Color(0xFF0F172A)
+// MainScreen의 인셋 기본 바탕(Gray50) 위에 본문 딤을 합성한 최종 불투명 색.
+private val PromotionSystemBarColor = PromotionDimColor.copy(alpha = 0.88f).compositeOver(Gray50)
+
+// RadarChart의 176dp 마름모 꼭짓점 계산과 중앙 morph가 공유하는 실제 반경값.
+internal val PromotionRadarVertexRadius = (176f * 0.028f).dp
+internal val PromotionConvergedDotRadius = (176f * 0.028f * 1.9f).dp
 
 private val MotionFullLeading = LineHeightStyle(
     alignment = LineHeightStyle.Alignment.Center,
@@ -65,10 +80,12 @@ internal class TierMotion {
     val converge = Animatable(0f)      // 0 = 마름모 그대로, 1 = 네 꼭짓점이 중앙 집결
     val starBirth = Animatable(0f)     // 중앙에서 별이 태어나는 진행
     val fly = Animatable(0f)           // 0 = 마름모 중앙, 1 = 티어 카드 별 자리
+    val handoff = Animatable(0f)       // 비행 별 → 슬롯 별 교차 페이드
     val landPunch = Animatable(0f)     // 별이 박히는 순간의 튕김
     val dim = Animatable(0f)
     val emblem = Animatable(0f)        // 새 휘장 등장
     val celebrateText = Animatable(0f)
+    val confirm = Animatable(0f)       // 휘장·문구 완료 뒤 확인 버튼 등장
 
     // 슬롯에 실제로 불이 들어온 별 개수. -1이면 모션 전이라 원래 값을 그대로 쓴다.
     var litStars by mutableStateOf(-1)
@@ -87,10 +104,12 @@ internal class TierMotion {
         converge.snapTo(0f)
         starBirth.snapTo(0f)
         fly.snapTo(0f)
+        handoff.snapTo(0f)
         landPunch.snapTo(0f)
         dim.snapTo(0f)
         emblem.snapTo(0f)
         celebrateText.snapTo(0f)
+        confirm.snapTo(0f)
         litStars = -1
         flyingStarVisible = false
     }
@@ -98,33 +117,59 @@ internal class TierMotion {
     // 꼭짓점 집결 → 별 탄생 → 비행 → 착지. 승급이면 이어서 딤 + 휘장.
     suspend fun play(slot: Int, isTierUp: Boolean, onTierSwap: () -> Unit) {
         targetSlot = slot
-        converge.animateTo(1f, tween(560, easing = FastOutSlowInEasing))
+        // 재생 중단 뒤 다시 시작해도 이전 별/펀치의 중간 프레임이 남지 않게 한다.
+        starBirth.snapTo(0f)
+        fly.snapTo(0f)
+        handoff.snapTo(0f)
+        landPunch.snapTo(0f)
+        confirm.snapTo(0f)
+        litStars = -1
+        flyingStarVisible = false
+        converge.animateTo(1f, tween(380, easing = FastOutSlowInEasing))
         flyingStarVisible = true
-        starBirth.animateTo(1f, tween(420, easing = LinearOutSlowInEasing))
-        fly.animateTo(1f, tween(660, easing = FastOutSlowInEasing))
+        // 별 생성 끝 90ms 전부터 비행을 시작한다. 생성 중후반의 별과 첫 비행 프레임은
+        // 같은 별/같은 좌표를 쓰므로 중앙에서 멈춰 서는 구간이 없다.
+        coroutineScope {
+            launch { starBirth.animateTo(1f, tween(300, easing = LinearOutSlowInEasing)) }
+            delay(210)
+            fly.animateTo(1f, tween(460, easing = FastOutSlowInEasing))
+        }
+        // 도착점에서 비행 별과 슬롯 별을 90ms 동안 같은 위치에서 교차시킨다.
+        handoff.animateTo(1f, tween(90, easing = FastOutSlowInEasing))
         flyingStarVisible = false
         litStars = slot + 1
-        landPunch.animateTo(1f, tween(300, easing = LinearOutSlowInEasing))
-        landPunch.animateTo(0f, tween(220, easing = FastOutSlowInEasing))
+        landPunch.animateTo(1f, tween(180, easing = LinearOutSlowInEasing))
+        if (!isTierUp) {
+            landPunch.animateTo(0f, tween(140, easing = FastOutSlowInEasing))
+            return
+        }
 
-        if (!isTierUp) return
-
-        dim.animateTo(1f, tween(360, easing = FastOutSlowInEasing))
+        // 펀치 복귀 시작 70ms 뒤부터 딤을 함께 올린다.
+        coroutineScope {
+            launch { landPunch.animateTo(0f, tween(140, easing = FastOutSlowInEasing)) }
+            delay(70)
+            dim.animateTo(1f, tween(240, easing = FastOutSlowInEasing))
+        }
         onTierSwap()
-        emblem.animateTo(1f, tween(760, easing = LinearOutSlowInEasing))
-        celebrateText.animateTo(1f, tween(420, easing = FastOutSlowInEasing))
+        // 휘장과 문구는 같은 프레임에 시작하고, 둘 다 끝난 뒤에만 확인을 노출한다.
+        coroutineScope {
+            launch { emblem.animateTo(1f, tween(520, easing = LinearOutSlowInEasing)) }
+            launch { celebrateText.animateTo(1f, tween(420, easing = FastOutSlowInEasing)) }
+        }
+        confirm.animateTo(1f, tween(180, easing = FastOutSlowInEasing))
     }
 
     suspend fun dismissCelebration() {
+        confirm.animateTo(0f, tween(120, easing = FastOutSlowInEasing))
         celebrateText.animateTo(0f, tween(200, easing = LinearEasing))
         emblem.animateTo(0f, tween(240, easing = FastOutSlowInEasing))
-        dim.animateTo(0f, tween(360, easing = FastOutSlowInEasing))
+        dim.animateTo(0f, tween(240, easing = FastOutSlowInEasing))
     }
 
     // 마무리 — 중심에 모여 있던 마름모가 새 마름모(리셋된 점수)로 다시 피어난다.
     // 이 단계가 없으면 왜 점수가 줄었는지가 화면에서 끊겨 보인다.
     suspend fun settle() {
-        converge.animateTo(0f, tween(520, easing = FastOutSlowInEasing))
+        converge.animateTo(0f, tween(360, easing = FastOutSlowInEasing))
     }
 }
 
@@ -144,24 +189,33 @@ internal fun TierPromotionOverlay(
     onDismiss: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    ModalSystemBars(motion.dim.value)
+    ModalSystemBars(
+        progress = motion.dim.value,
+        navigationBarColor = PromotionSystemBarColor,
+        systemBarColor = PromotionSystemBarColor,
+    )
     val density = LocalDensity.current
     val flyingStarPx = with(density) { 34.dp.toPx() }
     val slotStarPx = with(density) { 15.dp.toPx() }
+    val centralPointPx = with(density) { PromotionConvergedDotRadius.toPx() }
+    BackHandler(enabled = motion.dim.value > 0.01f) { }
 
     Box(modifier = modifier.fillMaxSize()) {
-        // 1) 딤 — 승급일 때만. 대화 팝업과 같은 결로 스르륵 올라온다.
+        // 1) 딤 — 이 승급 화면 전용 Gray/1000 88%, 240ms 진행값을 공유한다.
         if (motion.dim.value > 0f) {
             Canvas(
                 modifier = Modifier
                     .fillMaxSize()
-                    .clickable(
-                        interactionSource = remember { MutableInteractionSource() },
-                        indication = null,
-                        onClick = onDismiss,
-                    ),
+                    // 배경 탭은 닫지 않되, 아래 리포트의 터치도 통과시키지 않는다.
+                    .pointerInput(Unit) {
+                        awaitPointerEventScope {
+                            while (true) {
+                                awaitPointerEvent().changes.forEach { it.consume() }
+                            }
+                        }
+                    },
             ) {
-                drawRect(color = ModalDimColor.copy(alpha = ModalDimColor.alpha * motion.dim.value))
+                drawRect(color = PromotionDimColor.copy(alpha = 0.88f * motion.dim.value))
             }
         }
 
@@ -171,6 +225,8 @@ internal fun TierPromotionOverlay(
                 val from = motion.radarCenter
                 val to = motion.starSlots.getOrNull(motion.targetSlot) ?: return@Canvas
                 val t = motion.fly.value
+                val handoff = motion.handoff.value
+                val flightAlpha = 1f - handoff
                 // 위로 볼록한 2차 베지어 — 직선으로 가면 사이의 카드를 관통해 지나가 보인다.
                 val control = Offset(
                     x = (from.x + to.x) / 2f - 30f,
@@ -178,12 +234,25 @@ internal fun TierPromotionOverlay(
                 )
                 val pos = quadBezier(from, control, to, t)
                 val birth = motion.starBirth.value
-                // 태어날 때 살짝 커졌다가(1.28) 제자리로, 날아가면서 슬롯 크기까지 줄어든다.
-                val birthScale = if (birth < 0.62f) birth / 0.62f * 1.28f
-                else 1.28f - (birth - 0.62f) / 0.38f * 0.28f
+                // converge 끝의 노란 점이 같은 자리에서 별로 변한다. 별을 새로 만들지 않는다.
                 val flyScale = 1f - t * (1f - slotStarPx / flyingStarPx)
-                val r = flyingStarPx / 2f * birthScale * flyScale
+                val peakRadius = flyingStarPx / 2f * 1.28f
+                val finalBirthRadius = flyingStarPx / 2f
+                // 300ms 안에서 기존 peak(1.28)와 final(1.0)을 보존하며 중앙 점에서 연속 변형한다.
+                val bornRadius = if (birth < 0.62f) {
+                    centralPointPx + (peakRadius - centralPointPx) * (birth / 0.62f)
+                } else {
+                    peakRadius + (finalBirthRadius - peakRadius) * ((birth - 0.62f) / 0.38f)
+                }
+                val r = bornRadius * flyScale
                 if (r <= 0f) return@Canvas
+
+                if (t <= 0.001f) {
+                    // 첫 프레임은 converge 마지막 원과 정확히 같은 크기의 단일 점이다.
+                    drawCircle(MotionStarYellow.copy(alpha = (1f - birth) * flightAlpha), radius = r, center = pos)
+                    drawStar(pos, r, MotionStarYellow.copy(alpha = birth * flightAlpha), rotationDeg = 0f)
+                    return@Canvas
+                }
 
                 // 잔광 — 지나온 자리에 옅은 꼬리를 남긴다.
                 if (t > 0.04f) {
@@ -193,8 +262,8 @@ internal fun TierPromotionOverlay(
                         drawStar(
                             center = p,
                             outerRadius = r * (0.72f - i * 0.16f),
-                            color = MotionStarLight.copy(alpha = 0.30f - i * 0.09f),
-                            rotationDeg = t * 300f,
+                            color = MotionStarLight.copy(alpha = (0.30f - i * 0.09f) * flightAlpha),
+                            rotationDeg = t * 300f + handoff * 60f,
                         )
                     }
                 }
@@ -202,14 +271,14 @@ internal fun TierPromotionOverlay(
                 // 발광 헤일로
                 drawCircle(
                     brush = Brush.radialGradient(
-                        colors = listOf(MotionStarLight.copy(alpha = 0.55f), Color.Transparent),
+                        colors = listOf(MotionStarLight.copy(alpha = 0.55f * flightAlpha), Color.Transparent),
                         center = pos,
                         radius = r * 2.4f,
                     ),
                     radius = r * 2.4f,
                     center = pos,
                 )
-                drawStar(pos, r, MotionStarYellow, rotationDeg = t * 300f)
+                drawStar(pos, r, MotionStarYellow.copy(alpha = flightAlpha), rotationDeg = t * 300f + handoff * 60f)
             }
         }
 
@@ -219,12 +288,7 @@ internal fun TierPromotionOverlay(
             val textProgress = motion.celebrateText.value
             Box(
                 modifier = Modifier
-                    .fillMaxSize()
-                    .clickable(
-                        interactionSource = remember { MutableInteractionSource() },
-                        indication = null,
-                        onClick = onDismiss,
-                    ),
+                    .fillMaxSize(),
                 contentAlignment = Alignment.Center,
             ) {
                 // 문구까지 합쳐 화면 한가운데 오면 아래 범례 줄과 겹쳐 읽힌다.
@@ -322,6 +386,25 @@ internal fun TierPromotionOverlay(
                             color = Color.White.copy(alpha = 0.82f),
                         )
                     }
+                }
+
+                // 축하 본체의 레이아웃에는 참여하지 않는 하단 오버레이 버튼.
+                val confirmProgress = motion.confirm.value
+                if (confirmProgress > 0f) {
+                    TqButton(
+                        text = "확인",
+                        onClick = onDismiss,
+                        modifier = Modifier
+                            .align(Alignment.BottomCenter)
+                            .navigationBarsPadding()
+                            .offset(y = (-16).dp)
+                            .padding(horizontal = 16.dp)
+                            .fillMaxWidth()
+                            .graphicsLayer {
+                                alpha = confirmProgress
+                                translationY = (1f - confirmProgress) * 18f
+                            },
+                    )
                 }
             }
         }

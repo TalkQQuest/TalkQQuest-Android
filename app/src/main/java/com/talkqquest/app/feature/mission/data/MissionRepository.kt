@@ -47,6 +47,10 @@ class MissionRepository @Inject constructor(
     // 서버 목록에서 마지막으로 확인한 저장 상태 캐시 (토글의 현재값 판단 기준).
     private val serverSaved = mutableMapOf<String, Boolean>()
 
+    // 모든 페이지를 성공적으로 모은 마지막 서버 목록. 페이지 중간 호출이 실패하면 부분 결과
+    // 대신 이 완전한 목록을 계속 보여 준다. 새 조회가 성공했을 때만 통째로 교체한다.
+    private var lastCompleteMissionList: List<MissionListItem>? = null
+
     // 완료 처리 공유 — 서버 목록 응답엔 진행 상태 필드가 없어(실측) 완료 표시는 로컬 유지.
     private val statusOverrides = mutableMapOf<String, String>()
 
@@ -87,16 +91,39 @@ class MissionRepository @Inject constructor(
         return item
     }
 
-    // 미션 목록 — 실서버 GET /missions (2026-07-22 실측: data.missions[] + pageInfo).
-    // 서버 실패(오프라인 등) 시 stub 폴백 — 데모가 안 죽게.
-    suspend fun getMissions(): ApiResult<List<MissionListItem>> =
-        when (val r = serverCall { missionApi.getMissions() }) {
-            is ApiResult.Success -> {
-                r.data.missions.forEach { serverSaved[it.id] = it.isSaved }
-                ApiResult.Success(r.data.missions.map { it.applySaved() })
+    // 미션 목록 — 첫 응답의 pageInfo.totalPages를 기준으로 전 페이지를 순서대로 수집한다.
+    // 화면에는 전체 수집 성공본만 전달해 페이지별 재배치가 일어나지 않게 한다.
+    suspend fun getMissions(): ApiResult<List<MissionListItem>> {
+        val firstPage = serverCall { missionApi.getMissions(page = 1) }
+        if (firstPage !is ApiResult.Success) {
+            return lastCompleteMissionList?.let { cached ->
+                ApiResult.Success(cached.map { it.applySaved() })
             }
-            else -> ApiResult.Success(stubMissions.map { it.applySaved() })
+                ?: ApiResult.Success(stubMissions.map { it.applySaved() })
         }
+
+        val collected = firstPage.data.missions.orEmpty().toMutableList()
+        val totalPages = (firstPage.data.pageInfo?.totalPages ?: 1).coerceAtLeast(1)
+        for (page in 2..totalPages) {
+            when (val result = serverCall { missionApi.getMissions(page = page) }) {
+                is ApiResult.Success -> collected += result.data.missions.orEmpty()
+                is ApiResult.Error -> return lastCompleteMissionList?.let { cached ->
+                    ApiResult.Success(cached.map { it.applySaved() })
+                } ?: ApiResult.Success(stubMissions.map { it.applySaved() })
+                is ApiResult.Exception -> return lastCompleteMissionList?.let { cached ->
+                    ApiResult.Success(cached.map { it.applySaved() })
+                } ?: ApiResult.Success(stubMissions.map { it.applySaved() })
+            }
+        }
+
+        // LinkedHashMap은 먼저 받은 항목의 위치를 유지하면서 mission id 중복을 제거한다.
+        val completeServerList = LinkedHashMap<String, MissionListItem>().apply {
+            collected.forEach { mission -> putIfAbsent(mission.id, mission) }
+        }.values.toList()
+        completeServerList.forEach { serverSaved[it.id] = it.isSaved }
+        lastCompleteMissionList = completeServerList
+        return ApiResult.Success(completeServerList.map { it.applySaved() })
+    }
 
     // 미션 상세 — 실서버 GET /missions/{id} (실측: description·preparationTip·caution 포함).
     // benefits(효과 문구)는 서버 응답에 없어 기본 문구로 채움. 실패 시 stub 폴백.

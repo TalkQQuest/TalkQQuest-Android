@@ -50,15 +50,15 @@ data class TodayMissionResponse(
 // GET /api/v1/missions 응답 data — 백엔드 MissionListResponseDto { missions, pageInfo }.
 @Serializable
 data class MissionListResponse(
-    val missions: List<MissionListItem> = emptyList(),
-    val pageInfo: MissionPageInfo = MissionPageInfo(),
+    val missions: List<MissionListItem>? = null,
+    val pageInfo: MissionPageInfo? = null,
 )
 
 @Serializable
 data class MissionPageInfo(
-    val currentPage: Int = 1,
-    val totalPages: Int = 1,
-    val totalCount: Int = 0,
+    val currentPage: Int? = null,
+    val totalPages: Int? = null,
+    val totalCount: Int? = null,
 )
 
 // 미션 상세 DTO — 백엔드 MissionDetailResponseDto와 1:1.

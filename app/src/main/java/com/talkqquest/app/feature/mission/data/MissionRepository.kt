@@ -32,6 +32,19 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
+// 미션 목록 표시 순서용 하루 고정 시드 — KST 오늘 날짜 문자열 기준.
+// 같은 날엔 새로고침해도 순서가 유지되고, 날짜가 바뀌면 다시 섞인다.
+private fun displaySeed(): Long =
+    java.time.LocalDate.now(java.time.ZoneId.of("Asia/Seoul")).toString().hashCode().toLong()
+
+// 템플릿 미션을 앞세우고 나머지는 그날 고정 랜덤으로 섞는다.
+// 서버도 템플릿을 앞으로 끌어올리지만 "완료한 템플릿"은 개수를 줄여 뒤로 보내는데,
+// 그러면 사람이 만든 미션이 AI 생성 미션 뒤에 묻힌다. 앱에서 전부 앞으로 모은다.
+private fun orderForDisplay(missions: List<MissionListItem>): List<MissionListItem> {
+    val (templates, rest) = missions.partition { it.origin == "template" }
+    return templates + rest.shuffled(kotlin.random.Random(displaySeed()))
+}
+
 // 미션 Repository. ViewModel과 API 사이 계층 (홈 패턴과 동일).
 // @Singleton: 앱에 1개만 만들어 모든 화면이 같은 인스턴스를 씀 — 북마크 상태 공유의 전제.
 // id는 서버(UUID 문자열) 기준 String — stub도 "1".."7" 문자열 사용.
@@ -97,7 +110,7 @@ class MissionRepository @Inject constructor(
         val firstPage = serverCall { missionApi.getMissions(page = 1) }
         if (firstPage !is ApiResult.Success) {
             return lastCompleteMissionList?.let { cached ->
-                ApiResult.Success(cached.map { it.applySaved() })
+                ApiResult.Success(orderForDisplay(cached).map { it.applySaved() })
             }
                 ?: ApiResult.Success(stubMissions.map { it.applySaved() })
         }
@@ -108,10 +121,10 @@ class MissionRepository @Inject constructor(
             when (val result = serverCall { missionApi.getMissions(page = page) }) {
                 is ApiResult.Success -> collected += result.data.missions.orEmpty()
                 is ApiResult.Error -> return lastCompleteMissionList?.let { cached ->
-                    ApiResult.Success(cached.map { it.applySaved() })
+                    ApiResult.Success(orderForDisplay(cached).map { it.applySaved() })
                 } ?: ApiResult.Success(stubMissions.map { it.applySaved() })
                 is ApiResult.Exception -> return lastCompleteMissionList?.let { cached ->
-                    ApiResult.Success(cached.map { it.applySaved() })
+                    ApiResult.Success(orderForDisplay(cached).map { it.applySaved() })
                 } ?: ApiResult.Success(stubMissions.map { it.applySaved() })
             }
         }
@@ -122,7 +135,7 @@ class MissionRepository @Inject constructor(
         }.values.toList()
         completeServerList.forEach { serverSaved[it.id] = it.isSaved }
         lastCompleteMissionList = completeServerList
-        return ApiResult.Success(completeServerList.map { it.applySaved() })
+        return ApiResult.Success(orderForDisplay(completeServerList).map { it.applySaved() })
     }
 
     // 미션 상세 — 실서버 GET /missions/{id} (실측: description·preparationTip·caution 포함).

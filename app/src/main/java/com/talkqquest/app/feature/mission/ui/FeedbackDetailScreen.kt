@@ -44,7 +44,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import kotlin.math.roundToInt
 import com.talkqquest.app.R
@@ -343,7 +343,6 @@ private fun BestPhraseSection(
             }
             // 문장 저장 토글 (CSS 40x40 터치영역, favourite 20). 저장 = 보라 채움(자작).
             // 물결 없이 색 변화만으로 반응 표시 (사용자 결정).
-            // TODO(서버 연동): 저장 시 아카이브 '문장'으로 — 지금은 화면 토글만.
             Box(
                 modifier = Modifier
                     .offset(x = (-4).dp) // CSS 칩 margin -4: 버튼이 칩에 4 겹침

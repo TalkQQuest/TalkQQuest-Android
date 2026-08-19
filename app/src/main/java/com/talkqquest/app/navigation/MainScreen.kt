@@ -32,7 +32,7 @@ import com.talkqquest.app.core.designsystem.A2ZFamily
 import com.talkqquest.app.core.designsystem.ModalDimBars
 import com.talkqquest.app.core.designsystem.ModalDimColor
 import com.talkqquest.app.core.designsystem.PretendardFamily
-import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.talkqquest.app.core.designsystem.Gray50

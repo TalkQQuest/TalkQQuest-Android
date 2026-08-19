@@ -66,7 +66,7 @@ object Screen {
     // missionTitle = 이 리포트가 나온 미션 제목(저장 시트 카드 제목). conversationId = 그 대화 id.
     // gains = 마름모 꼭짓점 "+N"에 쓸 이번 대화 점수 4개(친절·주도·공감·질문 순, 쉼표 구분).
     // 서버 성장 리포트 응답엔 증가분이 없어, 방금 그 값을 받은 피드백 화면이 넘겨준다.
-    const val REPORT = "report?missionTitle={missionTitle}&conversationId={conversationId}&gains={gains}&promotionDemo={promotionDemo}"
+    const val REPORT = "report?missionTitle={missionTitle}&conversationId={conversationId}&gains={gains}"
 
     // WeeklyCompareScreen — 주간 비교 리포트(홈/알림창에서 진입).
     // ReportScreen(성장 리포트)과 다른 화면이다: 주차 이동·자주 연습한 주제·미션 진행률이 있고
@@ -74,7 +74,6 @@ object Screen {
     // reportId를 붙이면 그 리포트로 바로 들어간다(홈 도착 모달·알림). 없으면 가장 최근 주차.
     const val WEEKLY_COMPARE = "weekly_compare?reportId={reportId}"
 }
-
 
 
 

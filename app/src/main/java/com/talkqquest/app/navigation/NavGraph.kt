@@ -951,8 +951,7 @@ fun NavGraph(
                     navController.navigate(
                         "report?missionTitle=${Uri.encode(missionTitle)}" +
                                 "&conversationId=${Uri.encode(conversationId)}" +
-                                "&gains=${scores.joinToString(",")}" +
-                                "&promotionDemo=true",
+                                "&gains=${scores.joinToString(",")}",
                     )
                 },
                 onHome = { navController.popBackStack(Screen.HOME, inclusive = false) },
@@ -965,7 +964,6 @@ fun NavGraph(
                 navArgument("missionTitle") { type = NavType.StringType; defaultValue = "" },
                 navArgument("conversationId") { type = NavType.StringType; defaultValue = "" },
                 navArgument("gains") { type = NavType.StringType; defaultValue = "" },
-                navArgument("promotionDemo") { type = NavType.BoolType; defaultValue = false },
             ),
         ) {
             ReportScreen(

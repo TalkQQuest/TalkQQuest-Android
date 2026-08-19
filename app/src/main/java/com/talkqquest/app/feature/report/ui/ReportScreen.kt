@@ -237,7 +237,6 @@ private fun ReportScreen(
                 ) {
                     ReportContent(
                         growth = uiState.growth,
-                        isMissionCompletion = uiState.isPromotionDemoEntry,
                         onBack = onBack,
                         onSaveClick = onSaveReport,
                         showBookmarkIcon = uiState.isArchiveEntry,
@@ -253,7 +252,6 @@ private fun ReportScreen(
 @Composable
 private fun ReportContent(
     growth: GrowthTierReport,
-    isMissionCompletion: Boolean = false,
     onBack: () -> Unit,
     onSaveClick: (String) -> Unit = {},
     // 보관함·저장 시트로 특정 리포트를 열었을 때만 헤더에 북마크 아이콘을 더한다(12-A).
@@ -264,8 +262,6 @@ private fun ReportContent(
     // "리포트 저장하기" 버튼은 띄우지 않는다. 완료 연출(saveButtonVisible 전환)은 그대로 재생한다.
     isArchiveEntry: Boolean = false,
 ) {
-    // 임시 승급 데모는 미션 완료 직후 화면에서만 표시 모델을 바꾼다. 서버·저장 데이터는 그대로 둔다.
-    val displayedGrowth = if (isMissionCompletion) growth.asPromotionDemo() else growth
     val tick = rememberHapticTick()
     val scope = rememberCoroutineScope()
     // info 아이콘 → 티어 승급 안내 바텀시트
@@ -275,32 +271,32 @@ private fun ReportContent(
 
     // 승급 모션(꼭짓점 집결 → 별 → 비행 → 딤·휘장). 마름모를 완성한 회차에만 재생된다.
     val motion = rememberTierMotion()
-    val promotion = displayedGrowth.promotion
+    val promotion = growth.promotion
     // 마름모 중심과 별 자리는 서로 다른 카드에 있다. 오버레이가 쓰는 좌표계로 환산하려면
     // 두 좌표를 이 루트 Box 기준으로 옮겨야 한다.
     var motionRoot by remember { mutableStateOf<LayoutCoordinates?>(null) }
     // 모션이 끝나면 카드가 승급 후 상태로 갈아탄다(그 전까지는 직전 상태).
-    var swapped by remember(displayedGrowth) { mutableStateOf(false) }
+    var swapped by remember(growth) { mutableStateOf(false) }
     // 저장 버튼은 연출이 다 끝난 뒤에 등장한다. 승급이 있으면 승급 모션까지 끝나고,
     // 없으면 카드 연출(초과분 문장 접힘 포함)이 끝나는 시점이다.
-    var saveButtonVisible by remember(displayedGrowth) { mutableStateOf(false) }
-    val shownTierName = if (swapped && promotion != null) promotion.newTierName else displayedGrowth.tierName
+    var saveButtonVisible by remember(growth) { mutableStateOf(false) }
+    val shownTierName = if (swapped && promotion != null) promotion.newTierName else growth.tierName
     val shownStars = when {
         swapped && promotion != null -> promotion.newTierStars
         motion.litStars >= 0 -> motion.litStars
-        else -> displayedGrowth.tierStars
+        else -> growth.tierStars
     }
     val shownNextStarsNeeded =
-        if (swapped && promotion != null) promotion.newNextStarsNeeded else displayedGrowth.nextStarsNeeded
+        if (swapped && promotion != null) promotion.newNextStarsNeeded else growth.nextStarsNeeded
     val shownNextTierName =
-        if (swapped && promotion != null) promotion.newNextTierName else displayedGrowth.nextTierName
+        if (swapped && promotion != null) promotion.newNextTierName else growth.nextTierName
     // 승급 후에는 마름모도 리셋된 값으로 내려앉는다 — 왜 점수가 줄었는지가 눈에 보이게.
     val shownCompetencies = if (swapped && promotion != null) {
-        displayedGrowth.competencies.mapIndexed { i, c ->
+        growth.competencies.mapIndexed { i, c ->
             c.copy(score = promotion.afterScores.getOrElse(i) { c.score }, gain = 0, startScore = c.score)
         }
     } else {
-        displayedGrowth.competencies
+        growth.competencies
     }
     // 승급 직후의 리셋 점수만 중앙 점 군집 처리를 적용한다. 일반 리포트의 낮은 점수는
     // 기존처럼 각 축의 점으로 남아야 한다.
@@ -395,15 +391,15 @@ private fun ReportContent(
                 Spacer(Modifier.height(13.dp))
                 CompetencyCard(
                     competencies = shownCompetencies,
-                    completedDiamondThisReport = displayedGrowth.completedDiamondThisReport,
-                    masterMaxed = displayedGrowth.masterMaxed,
+                    completedDiamondThisReport = growth.completedDiamondThisReport,
+                    masterMaxed = growth.masterMaxed,
                     onCompletionAnimationFinished = {
                         tierAutoTrigger++
                         // 승급 모션이 별을 직접 날려 꽂으므로, 그때는 별이 제자리에서 튀어나오는
                         // 연출(completedDiamondTrigger)을 겹쳐 재생하지 않는다.
                         // 마스터 만렙에서도 재생하지 않는다 — 별 3개가 최종이라 켤 별이 없는데
                         // 마름모를 채울 때마다 별이 또 생기는 연출이 나오던 것을 막는다(사용자 결정).
-                        if (displayedGrowth.completedDiamondThisReport && promotion == null && !displayedGrowth.masterMaxed) {
+                        if (growth.completedDiamondThisReport && promotion == null && !growth.masterMaxed) {
                             completedDiamondTrigger++
                         }
                         // 승급 연출이 없는 회차는 여기서 연출이 끝나므로 버튼을 올린다.
@@ -469,7 +465,7 @@ private fun ReportContent(
             )
             // 만점 체크와 좌표 확보를 "안에서" 기다린다. 이 둘을 key로 두면 재생 도중 조건이
             // 다시 평가되며 코루틴이 취소돼 축하 화면이 걷히지 않은 채 멈춘다.
-            LaunchedEffect(displayedGrowth) {
+            LaunchedEffect(growth) {
                 val base = tierAutoTrigger // 이번 회차의 만점 체크가 끝나는 시점만 기다린다
                 motion.reset()
                 swapped = false
@@ -488,43 +484,6 @@ private fun ReportContent(
             }
         }
     }
-}
-
-private fun GrowthTierReport.asPromotionDemo(): GrowthTierReport {
-    val demoAxes = listOf(
-        Triple(CompetencyAxis.KINDNESS, "친절한 태도", 18),
-        Triple(CompetencyAxis.INITIATIVE, "대화 주도", 12),
-        Triple(CompetencyAxis.EMPATHY, "공감 능력", 9),
-        Triple(CompetencyAxis.QUESTION_LINK, "질문 연결성", 6),
-    )
-    return copy(
-        tierName = "브론즈",
-        tierStars = 2,
-        nextStarsNeeded = 1,
-        nextTierName = "실버",
-        completedDiamondThisReport = true,
-        masterMaxed = false,
-        competencies = demoAxes.map { (axis, label, surplus) ->
-            Competency(
-                axis = axis,
-                label = label,
-                legendLabel = label,
-                score = 300,
-                gain = 40 + surplus,
-                startScore = 260,
-                surplus = surplus,
-            )
-        },
-        promotion = com.talkqquest.app.feature.report.data.model.TierPromotion(
-            slotIndex = 2,
-            isTierUp = true,
-            newTierName = "실버",
-            newTierStars = 0,
-            newNextStarsNeeded = 3,
-            newNextTierName = "골드",
-            afterScores = listOf(18, 12, 9, 6),
-        ),
-    )
 }
 
 // ── 실전 티어 카드 (361x125) ──

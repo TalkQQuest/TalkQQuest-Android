@@ -92,7 +92,7 @@ class MissionListViewModel @Inject constructor(
         _uiState.update { it.copy(selectedFilter = filter) }
     }
 
-    // 북마크 토글. TODO(서버 연동): POST/DELETE /api/v1/missions/{id}/save 호출로 교체.
+    // 북마크 토글. 서버 반영은 MissionRepository.toggleSave가 POST/DELETE /missions/{id}/save로 처리한다.
     // 저장하는 순간에만 "저장됨" 시트를 띄움. 해제는 시트 없이 아이콘만 되돌림(피그마에 해제 장면 없음 — 합의된 동작).
     fun toggleSave(missionId: String) {
         missionRepository.toggleSave(missionId) // 공유 상태에 반영 (다른 화면·저장 목록에서도 보이게)

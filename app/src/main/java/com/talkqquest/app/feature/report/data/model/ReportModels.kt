@@ -6,7 +6,7 @@ import kotlinx.serialization.Serializable
 import kotlin.math.roundToInt
 
 // 리포트 화면 모델 (명세 E102 — 응답 필드가 명세에 없어 화면(UI CSS) 기준으로 정의.
-// TODO(서버 연동): GET /api/v1/reports/monthly · weekly-compare 응답 확정되면 필드 맞춤)
+// TODO(서버 연동): 서버에 monthly 리포트가 아직 없다. weekly-compare는 연동 완료 — 이 TODO는 monthly만 남은 것)
 
 // ── 성장 리포트(보관함에서 진입, C 담당 ArchiveReportScreen 재사용) — 옛 레벨/추이/카테고리 형태 ──
 data class GrowthReport(

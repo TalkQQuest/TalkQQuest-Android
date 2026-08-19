@@ -42,7 +42,8 @@ class ConversationViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
 ) : ViewModel() {
 
-    // route 인자 conversation/{conversationId}. 서버 전이라 미션 id를 그대로 씀(TODO 서버: 대화 세션 id).
+    // route 인자 이름은 conversationId지만 실제로 넘어오는 값은 미션 id다(NavGraph가 "conversation/$missionId"로 이동).
+    // 서버 대화 세션 id는 MissionRepository가 createConversation 응답에서 받아 activeConversationId로 들고 있다.
     private val conversationId: String = checkNotNull(savedStateHandle["conversationId"])
 
     private val _uiState = MutableStateFlow(ConversationUiState())

@@ -81,7 +81,7 @@ class MissionDetailViewModel @Inject constructor(
         }
     }
 
-    // 북마크 토글. TODO(서버 연동): POST/DELETE /api/v1/missions/{id}/save 호출로 교체.
+    // 북마크 토글. 서버 반영은 MissionRepository.toggleSave가 POST/DELETE /missions/{id}/save로 처리한다.
     // 저장하는 순간에만 시트를 띄움. 해제는 시트 없이 아이콘만 되돌림(목록 화면과 동일 합의).
     fun toggleSave() {
         _uiState.value.detail?.let { missionRepository.toggleSave(it.id) } // 공유 상태 반영
@@ -98,7 +98,7 @@ class MissionDetailViewModel @Inject constructor(
     // 시트 "저장 목록"의 다른 미션 북마크 토글. 해제해도 즉시 빼지 않고 isSaved만 바꿈 —
     // 시트가 보라 풀림 → 가라앉는 퇴장 연출을 그리고, 연출 중 재저장하면 카드가 복귀함(시트 담당).
     // (즉시 filter하면 재저장 때 항목을 못 찾아 복귀가 안 됨. 목록 화면은 파생 계산이라 이미 동일 동작)
-    // TODO(서버 연동): POST/DELETE /api/v1/missions/{id}/save 호출로 교체. (지금은 로컬 상태만 갱신)
+    // 서버 반영은 MissionRepository.toggleSave가 POST/DELETE /missions/{id}/save로 처리한다.
     fun toggleSaveInList(missionId: String) {
         val nowSaved = missionRepository.toggleSave(missionId) // 공유 상태 반영
         _uiState.update { state ->

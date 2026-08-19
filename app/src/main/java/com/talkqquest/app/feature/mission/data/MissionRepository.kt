@@ -342,8 +342,7 @@ class MissionRepository @Inject constructor(
 
     // AI 피드백 조회 (E101). 응답은 피드백당 1세트(항목별 아님) — 문구는 UI CSS 목업 그대로
     // (4개 상세 프레임 내용 동일, 사용자 결정 2026-07-11: 길이 검증용 자작 4종 → 원문 환원).
-    // TODO(서버 연동): 백엔드 피드백 API 미구현(이슈도 없음) — 이슈 생성 요청 상태.
-    //     stub은 missionId를 feedbackId로 받음.
+    // stub은 missionId를 feedbackId로 받음.
     suspend fun getFeedback(feedbackId: String): ApiResult<FeedbackResult> {
         // 서버 우선(GET /feedback/{id}). 피드백 생성이 비동기(pending)라 ready까지 폴링(최대 6회·1.5s).
         // 데모 스위치/네트워크 오류·실패·타임아웃이면 아래 목업으로 폴백 — 화면 공백 방지.

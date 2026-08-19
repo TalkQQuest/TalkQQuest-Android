@@ -18,6 +18,23 @@ val missionFilters = listOf("전체", "쉬움", "보통", "어려움", "짧은 �
 
 private val difficultyFilters = setOf("쉬움", "보통", "어려움")
 
+// 카테고리 칩 중 "정확히 일치"로 거르는 대상. 서버 category는 enum이 아니라 자유 문자열이라
+// 이 둘에 해당하지 않는 나머지는 전부 "일상 대화"로 흡수한다(그래야 새 카테고리가 생겨도
+// 빈 칩이 다시 생기지 않는다 — 2026-08-20 실서버 실측: 친목/학교생활이 어떤 칩으로도 안 걸리던 문제).
+private val exactCategoryFilters = setOf("짧은 대화", "친구 만들기")
+
+// 필터 칩 값 → 미션 목록 (순수 함수, uiState를 참조하지 않음).
+// MissionListUiState.filteredMissions와 MissionListScreen의 ChipContentCrossfade 콜백이
+// 같은 로직을 각자 들고 있던 걸 여기 하나로 합쳐 양쪽이 호출하게 한다.
+fun filterMissionsForChip(missions: List<MissionListItem>, filter: String): List<MissionListItem> =
+    when {
+        filter == "전체" -> missions
+        filter in difficultyFilters -> missions.filter { it.difficulty == filter }
+        filter in exactCategoryFilters -> missions.filter { it.category == filter }
+        // "일상 대화" = 짧은 대화도 친구 만들기도 아닌 전부.
+        else -> missions.filter { it.category !in exactCategoryFilters }
+    }
+
 // 미션 목록 화면 상태 (CONVENTIONS 6번: [화면이름]UiState)
 data class MissionListUiState(
     val isLoading: Boolean = false,
@@ -27,13 +44,9 @@ data class MissionListUiState(
     val errorMessage: String? = null,
     val saveSheetMissionId: String? = null, // 방금 북마크로 저장해 시트에 띄울 미션 (null = 시트 닫힘)
 ) {
-    // 선택된 칩 기준으로 걸러낸 목록. 난이도 칩이면 난이도로, 아니면 카테고리로 비교.
+    // 선택된 칩 기준으로 걸러낸 목록.
     val filteredMissions: List<MissionListItem>
-        get() = when {
-            selectedFilter == "전체" -> missions
-            selectedFilter in difficultyFilters -> missions.filter { it.difficulty == selectedFilter }
-            else -> missions.filter { it.category == selectedFilter }
-        }
+        get() = filterMissionsForChip(missions, selectedFilter)
 
     // 시트에 보여줄 "저장됨" 미션. 해제돼도 미션은 그대로 넘겨서(isSaved=false)
     // 시트가 회색으로 바뀐 아이콘을 보여준 뒤 내려갈 수 있게 함.

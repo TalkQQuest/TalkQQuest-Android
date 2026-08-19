@@ -16,6 +16,7 @@ data class MissionListItem(
     // 진행 상태(완료/진행중/미완료) — 서버 목록 응답엔 없는 로컬 필드 (저장 목록 필터용).
     // TODO(백엔드): 저장 목록에 상태 필터가 필요하면 서버 필드 요청.
     val status: String = "미완료",
+    val origin: String = "ai",   // 서버: "template"(운영이 만든 기본 미션) | "ai"(생성된 미션)
 )
 
 // GET /api/v1/missions/today 응답 data — 백엔드 TodayMissionResponseDto.

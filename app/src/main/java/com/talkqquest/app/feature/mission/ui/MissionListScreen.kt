@@ -90,23 +90,12 @@ import com.talkqquest.app.core.designsystem.component.rememberHapticTick
 import com.talkqquest.app.feature.mission.data.model.MissionListItem
 import com.talkqquest.app.feature.mission.viewmodel.MissionListUiState
 import com.talkqquest.app.feature.mission.viewmodel.MissionListViewModel
+import com.talkqquest.app.feature.mission.viewmodel.filterMissionsForChip
 import com.talkqquest.app.feature.mission.viewmodel.missionFilters
 
 // ── 미션 목록 (UI 1차 v2.css 전사) ──
 // 화면 = 2단 분리(state hoisting): (1) viewModel 연결용 / (2) 값만 받아 그리는 부분(Preview용). 홈 패턴 동일.
 // 미션 카드·난이도 알약·로컬 도구는 MissionCard.kt로 분리(저장 시트와 공용).
-
-// MissionListViewModel의 difficultyFilters와 값이 같다(그쪽은 private라 못 가져다 씀).
-private val difficultyFilterChips = setOf("쉬움", "보통", "어려움")
-
-// 필터 칩 값 → 미션 목록 (순수 함수). MissionListUiState.filteredMissions와 같은 로직이지만,
-// ChipContentCrossfade의 content 람다가 "받은 필터 값"만으로 목록을 그리게 하기 위해 뽑아냈다.
-private fun filterMissionsByChip(missions: List<MissionListItem>, filter: String): List<MissionListItem> =
-    when {
-        filter == "전체" -> missions
-        filter in difficultyFilterChips -> missions.filter { it.difficulty == filter }
-        else -> missions.filter { it.category == filter }
-    }
 
 @Composable
 fun MissionListScreen(
@@ -351,7 +340,7 @@ private fun MissionListContent(
             ChipContentCrossfade(targetState = uiState.selectedFilter) { selectedFilter ->
                 // 받은 selectedFilter로만 걸러 그린다 — 바깥 uiState.selectedFilter(지금 값)를
                 // 읽으면 전환 중 나가는 화면과 들어오는 화면이 같은 목록을 겹쳐 그리게 된다.
-                val displayMissions = filterMissionsByChip(uiState.missions, selectedFilter)
+                val displayMissions = filterMissionsForChip(uiState.missions, selectedFilter)
                 Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
                     displayMissions.forEach { mission ->
                         MissionCard(

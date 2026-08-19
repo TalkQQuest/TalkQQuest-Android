@@ -25,6 +25,8 @@ data class ReportUiState(
     // 이 리포트가 나온 미션의 제목 — 저장 카드의 제목으로 들어감(CSS 목업이 미션명).
     // 리포트는 미션 대화의 AI 피드백에서 진입하므로, 피드백 화면이 route 인자로 넘겨준다.
     val missionTitle: String = "",
+    // 피드백 상세 리포트에서만 켜지는 QA용 승급 데모 표시 신호. 제목 전달 여부와 독립적이다.
+    val isPromotionDemoEntry: Boolean = false,
     // 리포트 저장 시트: "리포트 저장하기"를 누르면 saveSheetReport가 생기며 시트가 올라옴
     val saveSheetReport: SavedReportItem? = null,
     // 보관함(저장된 리포트) — 진입 시 GET /archives?type=report로 교체됨.
@@ -52,6 +54,10 @@ class ReportViewModel @Inject constructor(
     // 피드백 요약 "성장 리포트"에서 넘겨준 미션 제목 (route 인자). 직접 진입 시엔 빈 값.
     private val missionTitle: String = savedStateHandle["missionTitle"] ?: ""
 
+    // 미션 완료 → 피드백 → 상세 성장 리포트 경로만 명시적으로 true를 넘긴다.
+    // 보관함과 일반 조회 route에는 인자가 없으므로 false가 기본값이다.
+    private val isPromotionDemoEntry: Boolean = savedStateHandle["promotionDemo"] ?: false
+
     // 이 리포트가 나온 대화 id (route 인자). POST /reports가 2026-08-10부터 conversationId를 받는다.
     // 피드백 응답(FeedbackDetailResponse.conversationId)에서 받아 피드백 화면이 넘겨준다.
     // 직접 진입(아카이브 등)이면 빈 값 → 저장은 화면 표시만 되고 서버 저장은 건너뛴다.
@@ -70,7 +76,12 @@ class ReportViewModel @Inject constructor(
     private val isArchiveEntry: Boolean = reportId.isNotBlank()
 
     private val _uiState = MutableStateFlow(
-        ReportUiState(missionTitle = missionTitle, isArchiveEntry = isArchiveEntry, isBookmarked = isArchiveEntry),
+        ReportUiState(
+            missionTitle = missionTitle,
+            isPromotionDemoEntry = isPromotionDemoEntry,
+            isArchiveEntry = isArchiveEntry,
+            isBookmarked = isArchiveEntry,
+        ),
     )
     val uiState: StateFlow<ReportUiState> = _uiState.asStateFlow()
 

@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
@@ -27,10 +28,8 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
-import androidx.compose.animation.shrinkVertically
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.FastOutSlowInEasing
@@ -51,6 +50,7 @@ import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.BlendMode
@@ -73,6 +73,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.TextUnit
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -121,6 +122,9 @@ private val StarYellow = Color(0xFFF9AC17) // YELLOW_star
 // 범례 행(LegendRow)의 체크 원 크기 + 원↔라벨 간격 — 초과분 문장 들여쓰기(8번)가 이 값을 그대로 쓴다.
 private val LegendCircleSize = 19.dp
 private val LegendCircleLabelGap = 8.dp
+// 제목·레이더 묶음 뒤의 CSS 간격까지 포함한 범례의 원래 top. 범례는 이 좌표에
+// 오버레이로 놓아야, 안내가 열려도 고정 높이 카드의 남은 Column 제약으로 잘리지 않는다.
+private val CompetencyLegendTop = 336.dp
 
 private val FullLeading = LineHeightStyle(
     alignment = LineHeightStyle.Alignment.Center,
@@ -233,6 +237,7 @@ private fun ReportScreen(
                 ) {
                     ReportContent(
                         growth = uiState.growth,
+                        isMissionCompletion = uiState.isPromotionDemoEntry,
                         onBack = onBack,
                         onSaveClick = onSaveReport,
                         showBookmarkIcon = uiState.isArchiveEntry,
@@ -248,6 +253,7 @@ private fun ReportScreen(
 @Composable
 private fun ReportContent(
     growth: GrowthTierReport,
+    isMissionCompletion: Boolean = false,
     onBack: () -> Unit,
     onSaveClick: (String) -> Unit = {},
     // 보관함·저장 시트로 특정 리포트를 열었을 때만 헤더에 북마크 아이콘을 더한다(12-A).
@@ -258,6 +264,8 @@ private fun ReportContent(
     // "리포트 저장하기" 버튼은 띄우지 않는다. 완료 연출(saveButtonVisible 전환)은 그대로 재생한다.
     isArchiveEntry: Boolean = false,
 ) {
+    // 임시 승급 데모는 미션 완료 직후 화면에서만 표시 모델을 바꾼다. 서버·저장 데이터는 그대로 둔다.
+    val displayedGrowth = if (isMissionCompletion) growth.asPromotionDemo() else growth
     val tick = rememberHapticTick()
     val scope = rememberCoroutineScope()
     // info 아이콘 → 티어 승급 안내 바텀시트
@@ -267,33 +275,36 @@ private fun ReportContent(
 
     // 승급 모션(꼭짓점 집결 → 별 → 비행 → 딤·휘장). 마름모를 완성한 회차에만 재생된다.
     val motion = rememberTierMotion()
-    val promotion = growth.promotion
+    val promotion = displayedGrowth.promotion
     // 마름모 중심과 별 자리는 서로 다른 카드에 있다. 오버레이가 쓰는 좌표계로 환산하려면
     // 두 좌표를 이 루트 Box 기준으로 옮겨야 한다.
     var motionRoot by remember { mutableStateOf<LayoutCoordinates?>(null) }
     // 모션이 끝나면 카드가 승급 후 상태로 갈아탄다(그 전까지는 직전 상태).
-    var swapped by remember(growth) { mutableStateOf(false) }
+    var swapped by remember(displayedGrowth) { mutableStateOf(false) }
     // 저장 버튼은 연출이 다 끝난 뒤에 등장한다. 승급이 있으면 승급 모션까지 끝나고,
     // 없으면 카드 연출(초과분 문장 접힘 포함)이 끝나는 시점이다.
-    var saveButtonVisible by remember(growth) { mutableStateOf(false) }
-    val shownTierName = if (swapped && promotion != null) promotion.newTierName else growth.tierName
+    var saveButtonVisible by remember(displayedGrowth) { mutableStateOf(false) }
+    val shownTierName = if (swapped && promotion != null) promotion.newTierName else displayedGrowth.tierName
     val shownStars = when {
         swapped && promotion != null -> promotion.newTierStars
         motion.litStars >= 0 -> motion.litStars
-        else -> growth.tierStars
+        else -> displayedGrowth.tierStars
     }
     val shownNextStarsNeeded =
-        if (swapped && promotion != null) promotion.newNextStarsNeeded else growth.nextStarsNeeded
+        if (swapped && promotion != null) promotion.newNextStarsNeeded else displayedGrowth.nextStarsNeeded
     val shownNextTierName =
-        if (swapped && promotion != null) promotion.newNextTierName else growth.nextTierName
+        if (swapped && promotion != null) promotion.newNextTierName else displayedGrowth.nextTierName
     // 승급 후에는 마름모도 리셋된 값으로 내려앉는다 — 왜 점수가 줄었는지가 눈에 보이게.
     val shownCompetencies = if (swapped && promotion != null) {
-        growth.competencies.mapIndexed { i, c ->
+        displayedGrowth.competencies.mapIndexed { i, c ->
             c.copy(score = promotion.afterScores.getOrElse(i) { c.score }, gain = 0, startScore = c.score)
         }
     } else {
-        growth.competencies
+        displayedGrowth.competencies
     }
+    // 승급 직후의 리셋 점수만 중앙 점 군집 처리를 적용한다. 일반 리포트의 낮은 점수는
+    // 기존처럼 각 축의 점으로 남아야 한다.
+    val isPostPromotionReset = swapped && promotion != null
 
     Box(
         modifier = Modifier
@@ -368,8 +379,14 @@ private fun ReportContent(
                     onInfoClick = { showTierHelp = true },
                     autoTrigger = tierAutoTrigger,
                     completedDiamondTrigger = completedDiamondTrigger,
-                    landPunchSlot = if (motion.litStars > 0) motion.litStars - 1 else -1,
+                    landPunchSlot = when {
+                        motion.flyingStarVisible || motion.landPunch.value > 0f -> motion.targetSlot
+                        motion.litStars > 0 -> motion.litStars - 1
+                        else -> -1
+                    },
                     landPunch = motion.landPunch.value,
+                    handoffSlot = if (motion.flyingStarVisible || motion.handoff.value > 0f) motion.targetSlot else -1,
+                    handoff = motion.handoff.value,
                     onStarSlotsPositioned = { slots, coords ->
                         val root = motionRoot ?: return@TierCard
                         motion.starSlots = slots.map { root.localPositionOf(coords, it) }
@@ -378,15 +395,15 @@ private fun ReportContent(
                 Spacer(Modifier.height(13.dp))
                 CompetencyCard(
                     competencies = shownCompetencies,
-                    completedDiamondThisReport = growth.completedDiamondThisReport,
-                    masterMaxed = growth.masterMaxed,
+                    completedDiamondThisReport = displayedGrowth.completedDiamondThisReport,
+                    masterMaxed = displayedGrowth.masterMaxed,
                     onCompletionAnimationFinished = {
                         tierAutoTrigger++
                         // 승급 모션이 별을 직접 날려 꽂으므로, 그때는 별이 제자리에서 튀어나오는
                         // 연출(completedDiamondTrigger)을 겹쳐 재생하지 않는다.
                         // 마스터 만렙에서도 재생하지 않는다 — 별 3개가 최종이라 켤 별이 없는데
                         // 마름모를 채울 때마다 별이 또 생기는 연출이 나오던 것을 막는다(사용자 결정).
-                        if (growth.completedDiamondThisReport && promotion == null && !growth.masterMaxed) {
+                        if (displayedGrowth.completedDiamondThisReport && promotion == null && !displayedGrowth.masterMaxed) {
                             completedDiamondTrigger++
                         }
                         // 승급 연출이 없는 회차는 여기서 연출이 끝나므로 버튼을 올린다.
@@ -394,6 +411,9 @@ private fun ReportContent(
                         if (promotion == null) saveButtonVisible = true
                     },
                     convergeProgress = motion.converge.value,
+                    starBirthProgress = motion.starBirth.value,
+                    flyProgress = motion.fly.value,
+                    isPostPromotionReset = isPostPromotionReset,
                     onRadarCenterPositioned = { center, coords ->
                         val root = motionRoot ?: return@CompetencyCard
                         motion.radarCenter = root.localPositionOf(coords, center)
@@ -439,7 +459,9 @@ private fun ReportContent(
                 onDismiss = {
                     scope.launch {
                         motion.dismissCelebration()
+                        swapped = true
                         motion.settle()
+                        saveButtonVisible = true
                     }
                 },
                 // FitDesign이 위쪽에 넣어 둔 상태바 보정분까지 딤이 덮게 한다(승급 안내 시트와 동일).
@@ -447,7 +469,7 @@ private fun ReportContent(
             )
             // 만점 체크와 좌표 확보를 "안에서" 기다린다. 이 둘을 key로 두면 재생 도중 조건이
             // 다시 평가되며 코루틴이 취소돼 축하 화면이 걷히지 않은 채 멈춘다.
-            LaunchedEffect(growth) {
+            LaunchedEffect(displayedGrowth) {
                 val base = tierAutoTrigger // 이번 회차의 만점 체크가 끝나는 시점만 기다린다
                 motion.reset()
                 swapped = false
@@ -458,17 +480,51 @@ private fun ReportContent(
                     isTierUp = promotion.isTierUp,
                     onTierSwap = { swapped = true },
                 )
-                if (promotion.isTierUp) {
-                    delay(1800) // 휘장을 보고 있을 시간(탭하면 바로 닫힌다)
-                    motion.dismissCelebration()
-                } else {
+                if (!promotion.isTierUp) {
                     swapped = true
+                    motion.settle()
+                    saveButtonVisible = true
                 }
-                motion.settle() // 새 마름모가 다시 피어나며 끝난다
-                saveButtonVisible = true // 연출이 완전히 끝난 뒤에야 버튼이 올라온다
             }
         }
     }
+}
+
+private fun GrowthTierReport.asPromotionDemo(): GrowthTierReport {
+    val demoAxes = listOf(
+        Triple(CompetencyAxis.KINDNESS, "친절한 태도", 18),
+        Triple(CompetencyAxis.INITIATIVE, "대화 주도", 12),
+        Triple(CompetencyAxis.EMPATHY, "공감 능력", 9),
+        Triple(CompetencyAxis.QUESTION_LINK, "질문 연결성", 6),
+    )
+    return copy(
+        tierName = "브론즈",
+        tierStars = 2,
+        nextStarsNeeded = 1,
+        nextTierName = "실버",
+        completedDiamondThisReport = true,
+        masterMaxed = false,
+        competencies = demoAxes.map { (axis, label, surplus) ->
+            Competency(
+                axis = axis,
+                label = label,
+                legendLabel = label,
+                score = 300,
+                gain = 40 + surplus,
+                startScore = 260,
+                surplus = surplus,
+            )
+        },
+        promotion = com.talkqquest.app.feature.report.data.model.TierPromotion(
+            slotIndex = 2,
+            isTierUp = true,
+            newTierName = "실버",
+            newTierStars = 0,
+            newNextStarsNeeded = 3,
+            newNextTierName = "골드",
+            afterScores = listOf(18, 12, 9, 6),
+        ),
+    )
 }
 
 // ── 실전 티어 카드 (361x125) ──
@@ -484,6 +540,8 @@ private fun TierCard(
     // 승급 모션용 — 방금 별이 박힌 자리(-1이면 없음)와 그 튕김 진행값.
     landPunchSlot: Int = -1,
     landPunch: Float = 0f,
+    handoffSlot: Int = -1,
+    handoff: Float = 0f,
     // 별 3칸의 중심 좌표를 이 Row 기준으로 올려 준다(오버레이가 루트 좌표로 환산).
     onStarSlotsPositioned: (List<Offset>, LayoutCoordinates) -> Unit = { _, _ -> },
 ) {
@@ -654,14 +712,16 @@ private fun TierCard(
                     repeat(3) { i ->
                         val isNewlyCompletedStar = i == tierStars - 1
                         // 날아온 별이 박히는 칸은 한 번 크게 튕긴다.
-                        val punch = if (i == landPunchSlot) 1f + landPunch * 0.55f else 1f
+                        val punch = if (i == landPunchSlot) 1f + landPunch * 0.20f else 1f
+                        val slotHandoff = if (i == handoffSlot) handoff else 0f
                         Icon(
                             painter = painterResource(R.drawable.ic_tier_star),
                             contentDescription = null,
-                            tint = if (i < tierStars) StarYellow else Gray300,
+                            tint = if (i < tierStars || slotHandoff > 0f) StarYellow else Gray300,
                             modifier = Modifier
                                 .size(15.dp)
                                 .graphicsLayer {
+                                    alpha = if (slotHandoff > 0f && i >= tierStars) slotHandoff else 1f
                                     if (isNewlyCompletedStar) {
                                         scaleX = completedStarScale.value
                                         scaleY = completedStarScale.value
@@ -890,6 +950,9 @@ private fun CompetencyCard(
     masterMaxed: Boolean = false,
     // 승급 모션 — 1이면 네 꼭짓점이 마름모 중심으로 모인다.
     convergeProgress: Float = 0f,
+    starBirthProgress: Float = 0f,
+    flyProgress: Float = 0f,
+    isPostPromotionReset: Boolean = false,
     onRadarCenterPositioned: (Offset, LayoutCoordinates) -> Unit = { _, _ -> },
 ) {
     val byAxis = competencies.associateBy { it.axis }
@@ -901,8 +964,11 @@ private fun CompetencyCard(
     var gainsVisible by remember { mutableStateOf(false) }
     var legendScoresVisible by remember { mutableStateOf(false) }
     var completionChecksVisible by remember { mutableStateOf(false) }
-    // 지금 문장이 펼쳐져 있는 축들. 초과분이 있는 축은 전부 동시에 들어왔다가 한꺼번에 빠진다(시차 없음).
-    var surplusExpandedAxes by remember { mutableStateOf(emptySet<CompetencyAxis>()) }
+    // 모든 초과 안내가 하나의 높이 progress를 공유한다. 접는 중에도 축을 남겨야 고정
+    // 컨테이너가 끊기지 않고 줄어든다.
+    var surplusAxes by remember { mutableStateOf(emptySet<CompetencyAxis>()) }
+    var surplusTextExpanded by remember { mutableStateOf(false) }
+    val surplusExpansion = remember { Animatable(0f) }
     // 초과분 문장이 한 줄에 들어갈 크기(9번). 네 축 모두 같은 크기를 써야 하므로 이 카드에서
     // 한 번만 재서(rememberTextMeasurer) 네 문장에 동일 적용한다 — 축마다 다르게 줄이지 않는다.
     val surplusTextMeasurer = rememberTextMeasurer()
@@ -913,6 +979,14 @@ private fun CompetencyCard(
     val surplusFontSize = remember(surplusColumnWidthPx, surplusIndentPx) {
         surplusFontSizeFor(surplusTextMeasurer, surplusColumnWidthPx - surplusIndentPx)
     }
+    val legendTopPx = with(LocalDensity.current) { CompetencyLegendTop.roundToPx() }
+    val noticeHeightPx = with(LocalDensity.current) { 26.dp.roundToPx() }
+    // 첫 행은 안내 한 줄만큼 위로 떠오르고, 이후 행은 각 행의 안내가 열리며 자연스럽게
+    // 아래로 밀린다. 따라서 카드 증가는 첫 안내가 만든 위쪽 여유를 제외한 나머지뿐이다.
+    val activeSurplusCount = surplusAxes.size
+    val extraCardHeight = 26.dp *
+        ((activeSurplusCount - 1).coerceAtLeast(0).toFloat() * surplusExpansion.value)
+    val legendLiftPx = (noticeHeightPx * surplusExpansion.value).toInt()
     val completionEnergy = remember { Animatable(0f) }
     val radarScale by animateFloatAsState(
         targetValue = if (radarEntered) 1f else 0f,
@@ -947,7 +1021,9 @@ private fun CompetencyCard(
         gainsVisible = false
         legendScoresVisible = false
         completionChecksVisible = false
-        surplusExpandedAxes = emptySet()
+        surplusAxes = emptySet()
+        surplusTextExpanded = false
+        surplusExpansion.snapTo(0f)
         completionEnergy.snapTo(0f)
         withFrameNanos { }
         radarEntered = true
@@ -961,13 +1037,17 @@ private fun CompetencyCard(
 
         // 체크가 뜬 바로 이 시점에 초과분이 있는 축의 문장을 전부 동시에 펼친다(축별 시차 없음).
         // 다 펼쳐 보여준 뒤 접고, 카드가 원래 높이로 돌아간 다음에야 승급·별 연출로 넘어간다.
-        val surplusAxes = competencies.filter { it.surplus > 0 }.map { it.axis }
-        if (surplusAxes.isNotEmpty()) {
-            surplusExpandedAxes = surplusAxes.toSet()
-            delay(520) // 공백 열림(260) + 문장 페이드인(260, 260 지연 뒤 시작)이 끝날 때까지
+        val axesWithSurplus = competencies.filter { it.surplus > 0 }.map { it.axis }
+        if (axesWithSurplus.isNotEmpty()) {
+            surplusAxes = axesWithSurplus.toSet()
+            surplusTextExpanded = true
+            surplusExpansion.animateTo(1f, tween(260, easing = FastOutSlowInEasing))
+            delay(260) // 공백 열림 뒤 문장 페이드인(260ms)이 끝날 때까지
             delay(1500) // 다 나온 문장을 읽을 틈(페이드인이 끝난 시점부터)
-            surplusExpandedAxes = emptySet()
-            delay(380) // 문장 퇴장(200) + 공백 닫힘(260, 지연 120 뒤 시작)이 다 끝날 때까지
+            surplusTextExpanded = false
+            delay(120)
+            surplusExpansion.animateTo(0f, tween(260, easing = FastOutSlowInEasing))
+            surplusAxes = emptySet()
         }
 
         // 체크 직후 별도로 꼭짓점을 모으던 completionEnergy 연출은 제거한다.
@@ -979,13 +1059,15 @@ private fun CompetencyCard(
         playCompletionSequence()
     }
 
-    Column(
+    Box(
         modifier = Modifier
             .fillMaxWidth()
+            // CSS Frame 427321737의 기본 높이는 그대로다. 초과 안내가 열리면 첫 행의 26dp
+            // 상승분을 제외한 문장 높이만큼 아래로 자라므로, 4개면 최종 562dp가 된다.
+            .height(484.dp + extraCardHeight)
             .clip(RoundedCornerShape(20.dp))
             .background(White)
             .padding(vertical = 12.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         // CSS Frame 427321736: 제목과 레이더 묶음 사이 간격 16dp.
         Column(
@@ -1022,6 +1104,9 @@ private fun CompetencyCard(
                         completionEnergy = completionEnergy.value,
                         showCompletionEnergy = completedDiamondThisReport,
                         convergeProgress = convergeProgress,
+                        starBirthProgress = starBirthProgress,
+                        flyProgress = flyProgress,
+                        isPostPromotionReset = isPostPromotionReset,
                         modifier = Modifier
                             .size(176.dp)
                             .onGloballyPositioned { coords ->
@@ -1037,13 +1122,18 @@ private fun CompetencyCard(
             }
         }
 
-        // 범례 4행. 초과분이 있는 축은 그 줄 아래로 안내 문장이 잠깐 펼쳐졌다 접힌다.
+        // collapsed top은 기존 Column 배치(제목·레이더 324 + gap 12)의 CSS 좌표와 같다.
+        // 초과분이 열릴 때는 전체 범례를 overflow만큼 옮기지 않고 첫 행만 한 줄 높이로
+        // 끌어올린다. 각 행의 notice가 flow로 열려 뒤 행을 차례로 아래에 배치한다.
         Column(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(horizontal = 16.dp)
+                .offset { IntOffset(0, legendTopPx - legendLiftPx) }
                 // 초과분 문장이 실제로 놓이는 폭(카드 폭 − 좌우 16dp씩) — 폰트 크기 계산의 기준.
-                .onGloballyPositioned { surplusColumnWidthPx = it.size.width },
+                .onGloballyPositioned {
+                    surplusColumnWidthPx = it.size.width
+                },
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             competencies.forEach { c ->
@@ -1057,7 +1147,9 @@ private fun CompetencyCard(
                     )
                     SurplusNotice(
                         competency = c,
-                        expanded = surplusExpandedAxes.contains(c.axis),
+                        active = surplusAxes.contains(c.axis),
+                        textExpanded = surplusTextExpanded,
+                        expansionProgress = surplusExpansion.value,
                         fontSize = surplusFontSize,
                     )
                 }
@@ -1072,27 +1164,28 @@ private fun CompetencyCard(
 @Composable
 private fun SurplusNotice(
     competency: Competency,
-    expanded: Boolean,
+    active: Boolean,
+    textExpanded: Boolean,
+    expansionProgress: Float,
     fontSize: TextUnit = 14.sp,
 ) {
-    if (competency.surplus <= 0) return
+    if (competency.surplus <= 0 || !active) return
     // 문장 자체의 등장/퇴장 — 공백(아래 AnimatedVisibility)과 타이밍이 달라 따로 돌린다.
     // 등장: 공백이 다 열린(260ms) 뒤 260ms 지연돼 시작. 퇴장: 지연 없이 바로 200ms.
     val textProgress by animateFloatAsState(
-        targetValue = if (expanded) 1f else 0f,
+        targetValue = if (textExpanded) 1f else 0f,
         animationSpec = tween(
-            durationMillis = if (expanded) 260 else 200,
-            delayMillis = if (expanded) 260 else 0,
+            durationMillis = if (textExpanded) 260 else 200,
+            delayMillis = if (textExpanded) 260 else 0,
             easing = FastOutSlowInEasing,
         ),
         label = "surplusTextProgress",
     )
-    AnimatedVisibility(
-        visible = expanded,
-        // 여기의 expandVertically/shrinkVertically는 "빈 공백" 컨테이너에 대한 것이지 문장에
-        // 거는 게 아니다 — 문장은 위 textProgress로 알파/스케일만 바뀐다(세로 이동 없음).
-        enter = expandVertically(tween(260, easing = FastOutSlowInEasing)),
-        exit = shrinkVertically(tween(260, delayMillis = 120, easing = FastOutSlowInEasing)),
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(26.dp * expansionProgress.coerceIn(0f, 1f))
+            .clipToBounds(),
     ) {
         Column {
             Spacer(Modifier.height(6.dp)) // 위 줄에 붙는 간격(아래 줄과의 12보다 좁게)
@@ -1210,6 +1303,9 @@ private fun RadarChart(
     showCompletionEnergy: Boolean = false,
     // 승급 모션 — 1이면 네 꼭짓점이 중심으로 빨려 들어가고 보라 마름모는 사라진다.
     convergeProgress: Float = 0f,
+    starBirthProgress: Float = 0f,
+    flyProgress: Float = 0f,
+    isPostPromotionReset: Boolean = false,
     modifier: Modifier = Modifier,
 ) {
     Canvas(modifier = modifier) {
@@ -1248,23 +1344,67 @@ private fun RadarChart(
         drawPath(data, color = Primary200.copy(alpha = faceAlpha))
         drawPath(data, color = Primary600.copy(alpha = faceAlpha), style = Stroke(width = 1.dp.toPx()))
 
-        // 꼭짓점 점 (Purple/600) — 모이는 동안 조금 굵어지며 노란빛으로 물든다.
-        val dotColor = androidx.compose.ui.graphics.lerp(Primary600, StarYellow, convergeProgress)
-        val dotScale = dataScale * (1f + convergeProgress * 0.9f)
-        listOf(pTop, pRight, pBottom, pLeft).forEach {
-            drawCircle(dotColor, radius = dot * dotScale, center = it)
-        }
-        // 다 모이면 중심에서 빛이 한 번 터진다(별이 태어나는 자리).
-        if (convergeProgress > 0.55f) {
-            val burst = (convergeProgress - 0.55f) / 0.45f
-            val burstR = r * 0.55f * burst + 1f
+        val vertexPoints = listOf(pTop, pRight, pBottom, pLeft)
+        if (isPostPromotionReset) {
+            // 리셋 점수가 중앙 근처에 몰린 경우 실제 캔버스 좌표에서 원들이 겹친다.
+            // 네 원을 포개지 않고 중앙의 일반 크기 점 하나로 그린다. 거리 기반 blend는
+            // settle 중 점들이 충분히 갈라질 때만 자연스럽게 네 점으로 전환한다.
+            val maxCenterDistance = vertexPoints.indices.flatMap { first ->
+                (first + 1 until vertexPoints.size).map { second ->
+                    (vertexPoints[first] - vertexPoints[second]).getDistance()
+                }
+            }.maxOrNull() ?: 0f
+            val normalDotRadius = dot * dataScale
+            val overlapDistance = normalDotRadius * 2f
+            val crossfadeDistance = (normalDotRadius * 0.6f).coerceAtLeast(1f)
+            val separateAlpha = ((maxCenterDistance - overlapDistance) / crossfadeDistance).coerceIn(0f, 1f)
+
             drawCircle(
-                brush = Brush.radialGradient(
-                    colors = listOf(Color(0xFFFFD874).copy(alpha = 0.75f * burst), Color.Transparent),
-                    center = Offset(cx, cy),
+                color = Primary600.copy(alpha = 1f - separateAlpha),
+                radius = normalDotRadius,
+                center = Offset(cx, cy),
+            )
+            vertexPoints.forEach { point ->
+                drawCircle(
+                    color = Primary600.copy(alpha = separateAlpha),
+                    radius = normalDotRadius,
+                    center = point,
+                )
+            }
+        } else {
+            // 꼭짓점은 이동 대부분 Primary/600을 유지하고, 중앙 합류 직전에만 노랗게 전환한다.
+            val yellowProgress = ((convergeProgress - 0.92f) / 0.08f).coerceIn(0f, 1f)
+            val dotColor = androidx.compose.ui.graphics.lerp(Primary600, StarYellow, yellowProgress)
+            val dotScale = dataScale * (1f + convergeProgress * 0.9f)
+            if (convergeProgress < 0.999f) {
+                vertexPoints.forEach {
+                    drawCircle(dotColor, radius = dot * dotScale, center = it)
+                }
+            } else if (starBirthProgress <= 0f && flyProgress <= 0f) {
+                drawCircle(StarYellow, radius = PromotionConvergedDotRadius.toPx(), center = Offset(cx, cy))
+            }
+            // 다 모이면 중심에서 빛이 한 번 터진다(별이 태어나는 자리).
+            if (convergeProgress > 0.55f && convergeProgress < 0.999f) {
+                val burst = (convergeProgress - 0.55f) / 0.45f
+                val burstR = r * 0.55f * burst + 1f
+                drawCircle(
+                    brush = Brush.radialGradient(
+                        colors = listOf(Color(0xFFFFD874).copy(alpha = 0.75f * burst), Color.Transparent),
+                        center = Offset(cx, cy),
+                        radius = burstR,
+                    ),
                     radius = burstR,
-                ),
-                radius = burstR,
+                    center = Offset(cx, cy),
+                )
+            }
+        }
+
+        // 별이 출발하면 다음 0/0/0/0 마름모의 중심점을 먼저 남긴다.
+        // settle에서 converge가 풀리며 새 네 점이 이 점에서 자연스럽게 펼쳐진다.
+        if (!isPostPromotionReset && flyProgress > 0f && convergeProgress > 0f) {
+            drawCircle(
+                color = Primary600.copy(alpha = convergeProgress),
+                radius = PromotionRadarVertexRadius.toPx(),
                 center = Offset(cx, cy),
             )
         }

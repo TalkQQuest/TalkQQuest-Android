@@ -44,23 +44,26 @@ object ModalDimBars {
         private set
     var navigationBarColor by mutableStateOf<Color?>(null)
         private set
+    var systemBarColor by mutableStateOf<Color?>(null)
+        private set
 
-    private val entries = mutableMapOf<Any, Pair<Float, Color?>>()
+    private val entries = mutableMapOf<Any, Triple<Float, Color?, Color?>>()
 
     // 부동소수점 잔차(예: 인셋이 프레임 사이에 미세하게 흔들려 0으로 정확히 떨어지지 않는 경우) 때문에
     // 딤이 사실상 끝났는데도 항목이 계속 등록돼 있는 것을 막기 위한 최소 임계값.
     // 이 값 이하는 "닫힘"으로 보고 등록 대신 해제한다.
     private const val MinVisibleProgress = 0.001f
 
-    fun update(key: Any, progress: Float, navigationBarColor: Color?) {
+    fun update(key: Any, progress: Float, navigationBarColor: Color?, systemBarColor: Color?) {
         if (progress > MinVisibleProgress) {
-            entries[key] = progress to navigationBarColor
+            entries[key] = Triple(progress, navigationBarColor, systemBarColor)
         } else {
             entries.remove(key)
         }
         val winner = entries.values.maxByOrNull { it.first }
         this.progress = winner?.first ?: 0f
         this.navigationBarColor = winner?.second
+        this.systemBarColor = winner?.third
     }
 }
 
@@ -93,17 +96,17 @@ fun ModalDimOverlay(
 }
 
 @Composable
-fun ModalSystemBars(visible: Boolean, navigationBarColor: Color? = null) {
+fun ModalSystemBars(visible: Boolean, navigationBarColor: Color? = null, systemBarColor: Color? = null) {
     val progress = androidx.compose.animation.core.animateFloatAsState(
         targetValue = if (visible) 1f else 0f,
         animationSpec = ModalDimAnimation,
         label = "modalSystemBarDim",
     ).value
-    ModalSystemBars(progress, navigationBarColor)
+    ModalSystemBars(progress, navigationBarColor, systemBarColor)
 }
 
 @Composable
-fun ModalSystemBars(progress: Float, navigationBarColor: Color? = null) {
+fun ModalSystemBars(progress: Float, navigationBarColor: Color? = null, systemBarColor: Color? = null) {
     val activity = LocalContext.current.findActivity() ?: return
     val window = activity.window
     val controller = remember(window) { WindowCompat.getInsetsController(window, window.decorView) }
@@ -117,18 +120,18 @@ fun ModalSystemBars(progress: Float, navigationBarColor: Color? = null) {
         // 실제 딤 색은 MainScreen.kt가 ModalDimBars.progress를 읽어 인셋 영역에 직접 그린다.
         if (progress > 0f) {
             ownsSystemBars[0] = true
-            if (navigationBarColor != null) {
+            if (navigationBarColor != null || systemBarColor != null) {
                 controller.isAppearanceLightNavigationBars = false
             } else {
                 controller.isAppearanceLightNavigationBars = originalLightNavigation
             }
-            controller.isAppearanceLightStatusBars = originalLightStatus
+            controller.isAppearanceLightStatusBars = if (systemBarColor != null) false else originalLightStatus
         } else if (ownsSystemBars[0]) {
             controller.isAppearanceLightStatusBars = originalLightStatus
             controller.isAppearanceLightNavigationBars = originalLightNavigation
             ownsSystemBars[0] = false
         }
-        ModalDimBars.update(dimKey, progress.coerceIn(0f, 1f), navigationBarColor)
+        ModalDimBars.update(dimKey, progress.coerceIn(0f, 1f), navigationBarColor, systemBarColor)
     }
     DisposableEffect(window) {
         onDispose {
@@ -137,7 +140,7 @@ fun ModalSystemBars(progress: Float, navigationBarColor: Color? = null) {
                 controller.isAppearanceLightNavigationBars = originalLightNavigation
                 ownsSystemBars[0] = false
             }
-            ModalDimBars.update(dimKey, 0f, null)
+            ModalDimBars.update(dimKey, 0f, null, null)
         }
     }
 }

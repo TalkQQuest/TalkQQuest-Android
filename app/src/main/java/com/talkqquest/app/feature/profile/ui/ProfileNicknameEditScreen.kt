@@ -24,6 +24,7 @@ import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import com.talkqquest.app.core.designsystem.figma
 import com.talkqquest.app.core.designsystem.FitDesign
 import com.talkqquest.app.core.designsystem.Gray400
 import com.talkqquest.app.core.designsystem.Gray50
@@ -54,7 +55,7 @@ fun ProfileNicknameEditScreen(
 
         Text(
             text = "어떤 이름으로\n불러드릴까요?",
-            style = TqType.HeadingL,
+            style = TqType.HeadingL.figma(),
             color = Gray800,
             modifier = Modifier
                 .offset(x = 23.dp, y = 122.dp)
@@ -78,7 +79,7 @@ fun ProfileNicknameEditScreen(
             )
             Text(
                 text = "(${nickname.length}/$ProfileNicknameMaxLength)",
-                style = TqType.LabelL,
+                style = TqType.LabelL.figma(),
                 color = Gray400,
                 modifier = Modifier
                     .offset(x = 12.dp, y = 96.dp)
@@ -117,7 +118,7 @@ private fun ProfileNicknameInputCard(
     ) {
         Text(
             text = "닉네임",
-            style = TqType.LabelM,
+            style = TqType.LabelM.figma(),
             color = Gray500,
             modifier = Modifier
                 .align(Alignment.TopStart)
@@ -127,7 +128,7 @@ private fun ProfileNicknameInputCard(
             value = value,
             onValueChange = onValueChange,
             singleLine = true,
-            textStyle = TqType.TitleL.copy(color = if (value.isBlank()) Gray400 else Gray800),
+            textStyle = TqType.TitleL.figma().copy(color = if (value.isBlank()) Gray400 else Gray800),
             cursorBrush = SolidColor(Primary600),
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Text),
             modifier = Modifier
@@ -138,7 +139,7 @@ private fun ProfileNicknameInputCard(
                     if (value.isBlank()) {
                         Text(
                             text = placeholder,
-                            style = TqType.TitleL,
+                            style = TqType.TitleL.figma(),
                             color = Gray400,
                         )
                     }

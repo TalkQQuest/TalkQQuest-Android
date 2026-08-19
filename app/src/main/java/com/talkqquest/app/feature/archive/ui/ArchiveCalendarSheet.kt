@@ -126,12 +126,12 @@ fun TqCalendarBottomSheet(
                     Box(modifier = Modifier.size(width = 30.dp, height = 20.dp), contentAlignment = Alignment.Center) {
                         Text(
                             text = day,
-                            style = TqType.BodyS.copy(
+                            style = TqType.BodyS.figma().copy(
                                 fontSize = 10.sp,
                                 lineHeight = 12.sp,
                                 fontWeight = FontWeight.Medium,
                                 letterSpacing = 1.5.sp,
-                            ).figma(),
+                            ),
                             color = Gray40
                         )
                     }

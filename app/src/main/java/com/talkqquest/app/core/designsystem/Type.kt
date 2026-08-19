@@ -5,6 +5,7 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.LineHeightStyle
 import androidx.compose.ui.unit.em
 import androidx.compose.ui.unit.sp
 import com.talkqquest.app.R
@@ -37,6 +38,16 @@ object TqType {
     val LabelM = TextStyle(fontFamily = PretendardFamily, fontWeight = FontWeight.Medium, fontSize = 12.sp, lineHeight = 18.sp)
     val Caption = TextStyle(fontFamily = PretendardFamily, fontWeight = FontWeight.Normal, fontSize = 12.sp, lineHeight = 18.sp)
 }
+
+// 피그마 line-height 박스처럼 위아래 여백을 살린다.
+// Compose는 첫 줄 위·마지막 줄 아래 여백을 잘라내(Trim) 글자가 상자 안에서 위로 뜨는데,
+// Figma는 자르지 않아 글자가 상자 한가운데 앉는다. 그 차이를 없애는 설정.
+val FigmaLineHeight = LineHeightStyle(
+    alignment = LineHeightStyle.Alignment.Center,
+    trim = LineHeightStyle.Trim.None,
+)
+
+fun TextStyle.figma(): TextStyle = copy(lineHeightStyle = FigmaLineHeight)
 
 val Typography = Typography(
     displayLarge = TqType.Display,

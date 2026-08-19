@@ -22,6 +22,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import com.talkqquest.app.core.designsystem.figma
 import com.talkqquest.app.core.designsystem.FitDesign
 import com.talkqquest.app.core.designsystem.Gray50
 import com.talkqquest.app.core.designsystem.Gray500
@@ -117,8 +118,8 @@ private fun ProfileConcernRow(
     group: MenuRippleGroupState? = null,
 ) {
     TqAnchoredMenuRow(modifier = modifier, group = group, onClick = onClick) { anchor ->
-        val labelLayout = rememberMenuRowTextLayoutCallback(anchor, "label", label, TqType.BodyM)
-        val valueStyle = TqType.BodyL.copy(fontWeight = FontWeight.Medium)
+        val labelLayout = rememberMenuRowTextLayoutCallback(anchor, "label", label, TqType.BodyM.figma())
+        val valueStyle = TqType.BodyL.figma().copy(fontWeight = FontWeight.Medium)
         val valueLayout = rememberMenuRowTextLayoutCallback(anchor, "value", value, valueStyle)
         Row(
             modifier = contentModifier,
@@ -129,7 +130,7 @@ private fun ProfileConcernRow(
         ) {
             Text(
                 text = label,
-                style = TqType.BodyM,
+                style = TqType.BodyM.figma(),
                 color = Gray500,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,

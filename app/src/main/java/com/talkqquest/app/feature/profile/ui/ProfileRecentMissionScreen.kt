@@ -43,6 +43,7 @@ import androidx.compose.ui.unit.em
 import androidx.compose.ui.unit.sp
 import com.talkqquest.app.R
 import com.talkqquest.app.core.designsystem.FitDesign
+import com.talkqquest.app.core.designsystem.figma
 import com.talkqquest.app.core.designsystem.Gray100
 import com.talkqquest.app.core.designsystem.Gray200
 import com.talkqquest.app.core.designsystem.Gray300
@@ -96,35 +97,35 @@ private val RecentTitleStyle = TextStyle(
     fontWeight = FontWeight.Normal,
     fontSize = 16.sp,
     lineHeight = 24.sp,
-)
+).figma()
 
 private val RecentBodyMediumStyle = TextStyle(
     fontFamily = PretendardFamily,
     fontWeight = FontWeight.Medium,
     fontSize = 16.sp,
     lineHeight = 24.sp,
-)
+).figma()
 
 private val RecentSummaryValueStyle = TextStyle(
     fontFamily = PretendardFamily,
     fontWeight = FontWeight.SemiBold,
     fontSize = 18.sp,
     lineHeight = 28.sp,
-)
+).figma()
 
 private val RecentCaptionStyle = TextStyle(
     fontFamily = PretendardFamily,
     fontWeight = FontWeight.Normal,
     fontSize = 12.sp,
     lineHeight = 18.sp,
-)
+).figma()
 
 private val RecentLabelStyle = TextStyle(
     fontFamily = PretendardFamily,
     fontWeight = FontWeight.Medium,
     fontSize = 12.sp,
     lineHeight = 18.sp,
-)
+).figma()
 
 private val RecentActivities = listOf(
     ProfileActivityItem(

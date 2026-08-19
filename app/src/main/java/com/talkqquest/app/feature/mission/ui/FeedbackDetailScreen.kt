@@ -457,7 +457,7 @@ private fun OtherMissionsButton(nickname: String, onClick: () -> Unit) {
             Spacer(Modifier.width(12.dp)) // 이미지 ↔ 글자 (CSS gap 12)
             Text(
                 text = "${nickname}님을 위한 다른 미션 보러가기",
-                style = TqType.BodyL.copy(fontWeight = FontWeight.SemiBold), // CSS 16/24 600
+                style = TqType.BodyL.figma().copy(fontWeight = FontWeight.SemiBold), // CSS 16/24 600
                 color = Gray100,
             )
             Spacer(Modifier.weight(1f))

@@ -47,6 +47,7 @@ import com.talkqquest.app.core.designsystem.Primary600
 import com.talkqquest.app.core.designsystem.Success
 import com.talkqquest.app.core.designsystem.TqType
 import com.talkqquest.app.core.designsystem.White
+import com.talkqquest.app.core.designsystem.figma
 @Composable
 internal fun AuthScreenFrame(
     title: String,
@@ -79,7 +80,7 @@ internal fun AuthScreenFrame(
             }
             Text(
                 text = title,
-                style = TqType.LabelL,
+                style = TqType.LabelL.figma(),
                 color = Gray600,
                 modifier = Modifier.align(Alignment.Center),
             )
@@ -93,7 +94,7 @@ internal fun AuthScreenFrame(
 internal fun AuthHeadline(text: String, modifier: Modifier = Modifier) {
     Text(
         text = text,
-        style = TqType.HeadingL,
+        style = TqType.HeadingL.figma(),
         color = Gray800,
         modifier = modifier,
     )
@@ -124,13 +125,13 @@ internal fun AuthInputCard(
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Column(modifier = Modifier.weight(1f)) {
-            Text(text = label, style = TqType.Caption, color = Gray500)
+            Text(text = label, style = TqType.Caption.figma(), color = Gray500)
             Spacer(Modifier.height(10.dp))
             BasicTextField(
                 value = value,
                 onValueChange = onValueChange,
                 singleLine = true,
-                textStyle = TqType.TitleL.copy(color = Gray900),
+                textStyle = TqType.TitleL.figma().copy(color = Gray900),
                 keyboardOptions = KeyboardOptions(keyboardType = keyboardType),
                 visualTransformation = visualTransformation,
                 decorationBox = { innerTextField ->
@@ -138,7 +139,7 @@ internal fun AuthInputCard(
                         if (value.isBlank()) {
                             Text(
                                 text = placeholder,
-                                style = TqType.TitleL,
+                                style = TqType.TitleL.figma(),
                                 color = Gray300,
                             )
                         }
@@ -175,7 +176,7 @@ internal fun SmallAuthButton(
             .clickable(enabled = enabled, onClick = onClick),
         contentAlignment = Alignment.Center,
     ) {
-        Text(text = text, style = TqType.LabelL, color = Gray50)
+        Text(text = text, style = TqType.LabelL.figma(), color = Gray50)
     }
 }
 
@@ -186,7 +187,7 @@ internal fun RequirementItem(text: String, satisfied: Boolean) {
         horizontalArrangement = Arrangement.spacedBy(5.dp),
     ) {
         RequirementIcon(satisfied = satisfied)
-        Text(text = text, style = TqType.LabelL, color = Gray500)
+        Text(text = text, style = TqType.LabelL.figma(), color = Gray500)
     }
 }
 

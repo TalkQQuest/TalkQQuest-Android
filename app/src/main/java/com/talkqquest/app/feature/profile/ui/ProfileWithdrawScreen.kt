@@ -40,6 +40,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.talkqquest.app.R
+import com.talkqquest.app.core.designsystem.figma
 import com.talkqquest.app.core.designsystem.FitDesign
 import com.talkqquest.app.core.designsystem.Gray200
 import com.talkqquest.app.core.designsystem.Gray50
@@ -82,21 +83,21 @@ fun ProfileWithdrawScreen(
         ) {
             Text(
                 text = "회원 탈퇴 전 주의사항",
-                style = TqType.TitleL.copy(fontWeight = FontWeight.SemiBold),
+                style = TqType.TitleL.figma().copy(fontWeight = FontWeight.SemiBold),
                 color = Color.Black,
                 modifier = Modifier.size(width = 346.dp, height = 28.dp),
             )
             Spacer(Modifier.height(12.dp))
             Text(
                 text = "탈퇴 시 모든 서비스 이용내역이 삭제되며 복구가 불가능합니다.\n또한 같은 계정 정보로 재가입이 7일 동안 불가능 합니다.",
-                style = TqType.BodyM,
+                style = TqType.BodyM.figma(),
                 color = Gray700,
                 modifier = Modifier.size(width = 346.dp, height = 44.dp),
             )
             Spacer(Modifier.height(24.dp))
             Text(
                 text = "삭제 사항",
-                style = TqType.TitleL.copy(fontWeight = FontWeight.SemiBold),
+                style = TqType.TitleL.figma().copy(fontWeight = FontWeight.SemiBold),
                 color = Color(0xFF1E293B),
                 modifier = Modifier.size(width = 214.dp, height = 28.dp),
             )
@@ -137,7 +138,7 @@ fun ProfileWithdrawScreen(
             Spacer(Modifier.size(width = 8.dp, height = 1.dp))
             Text(
                 text = "위 주의 사항을 모두 확인했으며, 탈퇴에 동의합니다.",
-                style = TqType.BodyL.copy(fontWeight = FontWeight.Medium),
+                style = TqType.BodyL.figma().copy(fontWeight = FontWeight.Medium),
                 color = Color(0xFFF14444),
                 modifier = Modifier.size(width = 322.dp, height = 24.dp),
             )
@@ -153,7 +154,7 @@ fun ProfileWithdrawScreen(
         ) {
             Text(
                 text = "탈퇴하기",
-                style = TqType.BodyL.copy(fontWeight = FontWeight.SemiBold),
+                style = TqType.BodyL.figma().copy(fontWeight = FontWeight.SemiBold),
                 color = Gray50,
             )
         }
@@ -181,9 +182,9 @@ private fun WithdrawBullet(text: String) {
         modifier = Modifier.size(width = 214.dp, height = 24.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Text(text = "·", style = TqType.BodyL, color = Gray700)
+        Text(text = "·", style = TqType.BodyL.figma(), color = Gray700)
         Spacer(Modifier.size(width = 10.dp, height = 1.dp))
-        Text(text = text, style = TqType.BodyL, color = Gray700)
+        Text(text = text, style = TqType.BodyL.figma(), color = Gray700)
     }
 }
 

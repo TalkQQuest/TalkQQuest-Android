@@ -52,6 +52,7 @@ import com.talkqquest.app.core.designsystem.Primary600
 import com.talkqquest.app.core.designsystem.TalkQQuestTheme
 import com.talkqquest.app.core.designsystem.TqType
 import com.talkqquest.app.core.designsystem.White
+import com.talkqquest.app.core.designsystem.figma
 import com.talkqquest.app.core.designsystem.component.TqButton
 import com.talkqquest.app.core.designsystem.component.PasswordVisibilityToggle
 import com.talkqquest.app.core.designsystem.component.ContentAnchoredPillRipple
@@ -70,7 +71,7 @@ fun EmailLoginScreen(
     var passwordVisible by remember { mutableStateOf(false) }
 
     val findPasswordInteractionSource = remember { MutableInteractionSource() }
-    val findPasswordTextStyle = TqType.BodyM
+    val findPasswordTextStyle = TqType.BodyM.figma()
     var findPasswordContentPos by remember { mutableStateOf(Offset.Zero) }
     var findPasswordContentSize by remember { mutableStateOf(IntSize.Zero) }
 
@@ -95,7 +96,7 @@ fun EmailLoginScreen(
 
         Text(
             text = "\uB85C\uADF8\uC778",
-            style = TqType.BodyM,
+            style = TqType.BodyM.figma(),
             color = Gray700,
             modifier = Modifier
                 .fillMaxWidth()
@@ -117,7 +118,7 @@ fun EmailLoginScreen(
             ) {
                 Text(
                     text = "\uC774\uBA54\uC77C\uB85C \uB85C\uADF8\uC778",
-                    style = TqType.HeadingL,
+                    style = TqType.HeadingL.figma(),
                     color = Gray800,
                 )
             }
@@ -145,7 +146,7 @@ fun EmailLoginScreen(
             if (errorMessage != null) {
                 Text(
                     text = errorMessage,
-                    style = TqType.BodyM,
+                    style = TqType.BodyM.figma(),
                     color = Error,
                     modifier = Modifier
                         .offset(x = 8.dp, y = 208.dp),
@@ -200,7 +201,7 @@ private fun LoginTextField(
             .fillMaxWidth()
             .height(61.dp),
         singleLine = true,
-        textStyle = TqType.TitleL.copy(color = textColor, fontWeight = FontWeight.SemiBold),
+        textStyle = TqType.TitleL.figma().copy(color = textColor, fontWeight = FontWeight.SemiBold),
         cursorBrush = SolidColor(Primary600),
         keyboardOptions = KeyboardOptions(keyboardType = keyboardType),
         visualTransformation = when (passwordVisible) {
@@ -226,7 +227,7 @@ private fun LoginTextField(
                     if (value.isBlank()) {
                         Text(
                             text = placeholder,
-                            style = TqType.TitleL,
+                            style = TqType.TitleL.figma(),
                             color = Gray300,
                         )
                     }

@@ -4,6 +4,9 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.unit.Density
 
 // 앱 전역 테마. dynamicColor 미사용(브랜드 색 유지), 디자인이 라이트 전용이라 라이트로 통일.
 
@@ -46,9 +49,16 @@ fun TalkQQuestTheme(
     darkTheme: Boolean = false,
     content: @Composable () -> Unit
 ) {
-    MaterialTheme(
-        colorScheme = if (darkTheme) DarkColorScheme else LightColorScheme,
-        typography = Typography,
-        content = content
-    )
+    // 시스템 글꼴 크기 설정을 앱 안에서는 따르지 않는다(사용자 결정).
+    // 화면 크기 대응은 FitDesign이 계속 담당하므로 density는 그대로 두고 fontScale만 1로 고정한다.
+    val base = LocalDensity.current
+    CompositionLocalProvider(
+        LocalDensity provides Density(base.density, 1f),
+    ) {
+        MaterialTheme(
+            colorScheme = if (darkTheme) DarkColorScheme else LightColorScheme,
+            typography = Typography,
+            content = content
+        )
+    }
 }

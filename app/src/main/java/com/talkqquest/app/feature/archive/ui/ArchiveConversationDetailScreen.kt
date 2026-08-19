@@ -529,13 +529,13 @@ private fun ChatBubbleRow(
             Text(
                 text = message.text,
                 // 어절(띄어쓰기 덩어리) 중간에서 끊기지 않게 — 대화 진행 화면(ConversationScreen)과 동일 설정
-                style = TqType.BodyM.copy(
+                style = TqType.BodyM.figma().copy(
                     lineBreak = LineBreak(
                         strategy = LineBreak.Strategy.Simple,
                         strictness = LineBreak.Strictness.Normal,
                         wordBreak = LineBreak.WordBreak.Phrase,
                     ),
-                ).figma(),
+                ),
                 color = if (message.isFromUser) Gray50 else ChatText
             )
         }
@@ -564,14 +564,14 @@ private fun ConversationSummarySection(keywords: List<String>, summaryText: Stri
         }
         Text(
             text = summaryText,
-            style = TqType.BodyM.copy(
+            style = TqType.BodyM.figma().copy(
                 lineHeight = 22.sp,
                 lineBreak = LineBreak(
                     strategy = LineBreak.Strategy.Simple,
                     strictness = LineBreak.Strictness.Normal,
                     wordBreak = LineBreak.WordBreak.Phrase
                 )
-            ).figma(),
+            ),
             color = Gray600,
             modifier = Modifier.padding(horizontal = 2.dp)
         )
@@ -604,14 +604,14 @@ private fun ConversationMainContentSection(keyPoints: List<String>) {
                     )
                     Text(
                         text = point,
-                        style = TqType.BodyM.copy(
+                        style = TqType.BodyM.figma().copy(
                             lineHeight = 22.sp,
                             lineBreak = LineBreak(
                                 strategy = LineBreak.Strategy.Simple,
                                 strictness = LineBreak.Strictness.Normal,
                                 wordBreak = LineBreak.WordBreak.Phrase
                             )
-                        ).figma(),
+                        ),
                         color = Gray600
                     )
                 }

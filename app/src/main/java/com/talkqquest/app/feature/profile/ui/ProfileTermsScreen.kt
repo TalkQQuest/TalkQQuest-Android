@@ -30,6 +30,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.talkqquest.app.core.designsystem.figma
 import com.talkqquest.app.core.designsystem.FitDesign
 import com.talkqquest.app.core.designsystem.Gray50
 import com.talkqquest.app.core.designsystem.Gray500
@@ -80,7 +81,7 @@ fun ProfileTermsScreen(
             MenuRippleLayer(termsGroup, Modifier.matchParentSize())
             Text(
                 text = "상세 내용을 확인할 수 있어요",
-                style = TqType.BodyM,
+                style = TqType.BodyM.figma(),
                 color = Gray500,
                 modifier = Modifier
                     .offset(x = 16.dp, y = 12.dp)
@@ -120,7 +121,7 @@ private fun TermsMenuRow(
     group: MenuRippleGroupState? = null,
 ) {
     TqAnchoredMenuRow(modifier = modifier, group = group, onClick = onClick) { anchor ->
-        val titleStyle = TqType.BodyL.copy(fontWeight = FontWeight.Medium)
+        val titleStyle = TqType.BodyL.figma().copy(fontWeight = FontWeight.Medium)
         val titleLayout = rememberMenuRowTextLayoutCallback(anchor, "title", title, titleStyle)
         Row(
             modifier = contentModifier,
@@ -206,21 +207,21 @@ private val TermsDetailTitleStyle = TextStyle(
     fontWeight = FontWeight.SemiBold,
     fontSize = 18.sp,
     lineHeight = 28.sp,
-)
+).figma()
 
 private val TermsDetailSectionTitleStyle = TextStyle(
     fontFamily = PretendardFamily,
     fontWeight = FontWeight.Medium,
     fontSize = 14.sp,
     lineHeight = 20.sp,
-)
+).figma()
 
 private val TermsDetailBodyStyle = TextStyle(
     fontFamily = PretendardFamily,
     fontWeight = FontWeight.Normal,
     fontSize = 12.sp,
     lineHeight = 18.sp,
-)
+).figma()
 
 val ServiceTermsSections = listOf(
     TermsSection(

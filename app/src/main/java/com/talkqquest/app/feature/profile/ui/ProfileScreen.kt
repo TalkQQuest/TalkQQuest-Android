@@ -52,6 +52,7 @@ import coil3.compose.AsyncImage
 import kotlinx.coroutines.launch
 import com.talkqquest.app.R
 import com.talkqquest.app.core.designsystem.FitDesign
+import com.talkqquest.app.core.designsystem.figma
 import com.talkqquest.app.core.designsystem.Gray100
 import com.talkqquest.app.core.designsystem.Gray300
 import com.talkqquest.app.core.designsystem.Gray400
@@ -80,7 +81,7 @@ private val ProfileTitleStyle = TextStyle(
     fontSize = 18.sp,
     lineHeight = 28.sp,
     letterSpacing = (-0.01).em,
-)
+).figma()
 
 private val HeadingStyle = TextStyle(
     fontFamily = PretendardFamily,
@@ -88,35 +89,35 @@ private val HeadingStyle = TextStyle(
     fontSize = 20.sp,
     lineHeight = 30.sp,
     letterSpacing = (-0.01).em,
-)
+).figma()
 
 private val BodyLargeMediumStyle = TextStyle(
     fontFamily = PretendardFamily,
     fontWeight = FontWeight.Medium,
     fontSize = 16.sp,
     lineHeight = 24.sp,
-)
+).figma()
 
 private val BodyMediumStyle = TextStyle(
     fontFamily = PretendardFamily,
     fontWeight = FontWeight.Normal,
     fontSize = 14.sp,
     lineHeight = 22.sp,
-)
+).figma()
 
 private val BodySmallStyle = TextStyle(
     fontFamily = PretendardFamily,
     fontWeight = FontWeight.Normal,
     fontSize = 13.sp,
     lineHeight = 20.sp,
-)
+).figma()
 
 private val LabelMediumStyle = TextStyle(
     fontFamily = PretendardFamily,
     fontWeight = FontWeight.Medium,
     fontSize = 12.sp,
     lineHeight = 18.sp,
-)
+).figma()
 
 // 홈 화면과 동일하게, 모든 내용이 들어오는 기기에서도 마이페이지를 조금 위로 올릴 수 있게 한다.
 private val ProfileScrollableContentHeight = 902.dp
@@ -348,15 +349,17 @@ private fun LevelCard(
                 .offset(x = 16.dp, y = 41.dp)
                 .size(width = 23.dp, height = 22.dp),
         )
-        Text(
-            text = "$xp / $nextLevelXp XP",
-            style = LabelMediumStyle,
-            color = Gray400,
-            textAlign = TextAlign.End,
+        // CSS Frame 331: row, gap 6 — "30" 과 "/ 100XP" 가 별도 텍스트 노드다("100"과 "XP" 사이 공백 없음).
+        Row(
             modifier = Modifier
                 .offset(x = 236.dp, y = 41.dp)
                 .size(width = 110.dp, height = 22.dp),
-        )
+            horizontalArrangement = Arrangement.spacedBy(6.dp, Alignment.End),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(text = "$xp", style = LabelMediumStyle, color = Gray400)
+            Text(text = "/ ${nextLevelXp}XP", style = LabelMediumStyle, color = Gray400)
+        }
         Box(
             modifier = Modifier
                 .offset(x = 16.dp, y = 67.dp)

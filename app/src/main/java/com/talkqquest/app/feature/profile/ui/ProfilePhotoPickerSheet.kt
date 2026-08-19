@@ -76,6 +76,7 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import coil3.compose.AsyncImage
+import com.talkqquest.app.core.designsystem.figma
 import com.talkqquest.app.core.designsystem.Gray300
 import com.talkqquest.app.core.designsystem.Gray500
 import com.talkqquest.app.core.designsystem.Gray700
@@ -240,9 +241,9 @@ private fun ProfilePhotoPickerContent(
         val cellSize = (maxWidth - 8.dp) / 3
         val gridHeight = cellSize * 2 + 4.dp
         Column(Modifier.fillMaxWidth()) {
-        // The 16dp spacers plus HeadingM's 30dp line box make the visible gaps from
-        // handle → title and title → grid symmetric. The 44dp header centers HeadingM's
-        // 30dp line box, so each visible gap is the shared spacer plus 7dp.
+        // 16dp 스페이서와 HeadingM의 30dp 줄 상자 덕분에 핸들→제목, 제목→그리드 사이의
+        // 보이는 간격이 대칭을 이룬다. 44dp 헤더가 HeadingM의 30dp 줄 상자를 가운데 정렬하므로,
+        // 보이는 각 간격은 공유 스페이서에 7dp를 더한 값이 된다.
         val opticalGap = 16.dp
         Spacer(Modifier.height(14.dp))
         Box(Modifier.fillMaxWidth().height(4.dp)) {
@@ -258,7 +259,7 @@ private fun ProfilePhotoPickerContent(
         Box(Modifier.fillMaxWidth().height(44.dp)) {
             Text(
                 "프로필 사진 선택",
-                style = TqType.HeadingM,
+                style = TqType.HeadingM.figma(),
                 color = Gray900,
                 modifier = Modifier.align(Alignment.Center),
             )
@@ -275,7 +276,7 @@ private fun ProfilePhotoPickerContent(
                 isLoading -> CircularProgressIndicator(Modifier.align(Alignment.Center), color = Primary600)
                 failedToLoad -> FailedPhotoContent(onRetry)
                 photos.isEmpty() -> Text(
-                    "선택할 수 있는 사진이 없어요.", style = TqType.BodyM, color = Gray500,
+                    "선택할 수 있는 사진이 없어요.", style = TqType.BodyM.figma(), color = Gray500,
                     modifier = Modifier.align(Alignment.Center), textAlign = TextAlign.Center,
                 )
                 else -> LazyVerticalGrid(
@@ -298,7 +299,7 @@ private fun ProfilePhotoPickerContent(
                 .background(if (enabled) Primary600 else Gray300)
                 .clickable(enabled = enabled, onClick = onConfirm),
             contentAlignment = Alignment.Center,
-        ) { Text("선택하기", style = TqType.BodyL.copy(fontWeight = FontWeight.SemiBold), color = White) }
+        ) { Text("선택하기", style = TqType.BodyL.figma().copy(fontWeight = FontWeight.SemiBold), color = White) }
         }
     }
 }
@@ -306,13 +307,13 @@ private fun ProfilePhotoPickerContent(
 @Composable
 private fun FailedPhotoContent(onRetry: () -> Unit) {
     Column(Modifier.fillMaxSize(), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
-        Text("사진을 불러오지 못했어요.", style = TqType.BodyM, color = Gray500)
+        Text("사진을 불러오지 못했어요.", style = TqType.BodyM.figma(), color = Gray500)
         Spacer(Modifier.height(16.dp))
         Box(
             Modifier.height(44.dp).clip(RoundedCornerShape(12.dp)).background(Primary600)
                 .clickable(onClick = onRetry).padding(horizontal = 18.dp),
             contentAlignment = Alignment.Center,
-        ) { Text("다시 시도", style = TqType.BodyM.copy(fontWeight = FontWeight.SemiBold), color = White) }
+        ) { Text("다시 시도", style = TqType.BodyM.figma().copy(fontWeight = FontWeight.SemiBold), color = White) }
     }
 }
 
@@ -326,14 +327,14 @@ private fun PermissionContent(
         Text(
             if (permissionRequested) "사진 접근 권한이 허용되지 않았어요.\n설정에서 권한을 허용한 뒤 다시 시도해 주세요."
             else "사진을 불러오려면 접근 권한이 필요해요.",
-            style = TqType.BodyM, color = Gray500, textAlign = TextAlign.Center,
+            style = TqType.BodyM.figma(), color = Gray500, textAlign = TextAlign.Center,
         )
         Spacer(Modifier.height(16.dp))
         Box(
             Modifier.height(44.dp).clip(RoundedCornerShape(12.dp)).background(Primary600)
                 .clickable(onClick = if (permissionRequested) onOpenSettings else onRequestPermission).padding(horizontal = 18.dp),
             contentAlignment = Alignment.Center,
-        ) { Text(if (permissionRequested) "설정으로 이동" else "권한 허용하기", style = TqType.BodyM.copy(fontWeight = FontWeight.SemiBold), color = White) }
+        ) { Text(if (permissionRequested) "설정으로 이동" else "권한 허용하기", style = TqType.BodyM.figma().copy(fontWeight = FontWeight.SemiBold), color = White) }
     }
 }
 

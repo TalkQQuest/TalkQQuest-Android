@@ -41,6 +41,7 @@ import com.talkqquest.app.core.designsystem.Primary600
 import com.talkqquest.app.core.designsystem.TalkQQuestTheme
 import com.talkqquest.app.core.designsystem.TqType
 import com.talkqquest.app.core.designsystem.White
+import com.talkqquest.app.core.designsystem.figma
 
 private val SignupStartBackground = Color(0xFFF8F6FF)
 private val SignupLogoTextStyle = TextStyle(
@@ -49,14 +50,14 @@ private val SignupLogoTextStyle = TextStyle(
     fontSize = 36.sp,
     lineHeight = 43.sp,
     letterSpacing = 0.72.sp,
-)
+).figma()
 private val SignupDescriptionStyle = TextStyle(
     fontFamily = PretendardFamily,
     fontWeight = FontWeight.Bold,
     fontSize = 24.sp,
     lineHeight = 34.sp,
     letterSpacing = (-0.24).sp,
-)
+).figma()
 
 @Composable
 fun SignupStartScreen(
@@ -132,7 +133,7 @@ fun SignupStartScreen(
             horizontalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             Box(modifier = Modifier.weight(1f).height(1.dp).background(Gray300))
-            Text(text = "또는", style = TqType.Caption, color = Gray400)
+            Text(text = "또는", style = TqType.Caption.figma(), color = Gray400)
             Box(modifier = Modifier.weight(1f).height(1.dp).background(Gray300))
         }
         Row(
@@ -176,7 +177,7 @@ private fun SocialStartButton(
     ) {
         icon()
         Box(Modifier.width(12.dp))
-        Text(text = text, style = TqType.TitleL, color = contentColor)
+        Text(text = text, style = TqType.TitleL.figma(), color = contentColor)
     }
 }
 
@@ -194,7 +195,7 @@ private fun EmailStartButton(
             .clickable(onClick = onClick),
         contentAlignment = Alignment.Center,
     ) {
-        Text(text = text, style = TqType.TitleL, color = Gray500)
+        Text(text = text, style = TqType.TitleL.figma(), color = Gray500)
     }
 }
 

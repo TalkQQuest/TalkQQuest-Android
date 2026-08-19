@@ -23,6 +23,7 @@ import com.talkqquest.app.R
 import com.talkqquest.app.core.designsystem.A2ZFamily
 import com.talkqquest.app.core.designsystem.FitDesign
 import com.talkqquest.app.core.designsystem.TalkQQuestTheme
+import com.talkqquest.app.core.designsystem.figma
 
 private val SplashBackground = Color(0xFF6353F0)
 private val SplashContentColor = Color(0xFFF8FAFC)
@@ -31,7 +32,7 @@ private val SplashLogoTextStyle = TextStyle(
     fontWeight = FontWeight.Bold,
     fontSize = 24.sp,
     lineHeight = 29.sp,
-)
+).figma()
 
 @Composable
 fun SplashScreen(alpha: Float = 1f) = FitDesign(compensateStatusBar = false) {

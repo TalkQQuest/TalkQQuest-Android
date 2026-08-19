@@ -43,6 +43,7 @@ import androidx.compose.foundation.layout.widthIn
 import androidx.compose.runtime.mutableStateOf
 import coil3.compose.AsyncImage
 import com.talkqquest.app.R
+import com.talkqquest.app.core.designsystem.figma
 import com.talkqquest.app.core.designsystem.FitDesign
 import com.talkqquest.app.core.designsystem.Gray50
 import com.talkqquest.app.core.designsystem.Gray500
@@ -195,7 +196,7 @@ private fun NicknamePillClick(
         ) {
             Text(
                 text = "$nickname 님",
-                style = TqType.HeadingM.copy(fontWeight = FontWeight.SemiBold),
+                style = TqType.HeadingM.figma().copy(fontWeight = FontWeight.SemiBold),
                 color = Color(0xFF1E293B),
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
@@ -243,9 +244,9 @@ private fun ProfileInfoRow(
         group = group,
         onClick = onClick,
     ) { anchor ->
-        val titleLayout = rememberMenuRowTextLayoutCallback(anchor, "title", title, TqType.BodyL)
+        val titleLayout = rememberMenuRowTextLayoutCallback(anchor, "title", title, TqType.BodyL.figma())
         val trailingLayout = trailing?.let {
-            rememberMenuRowTextLayoutCallback(anchor, "trailing", it, TqType.BodyL)
+            rememberMenuRowTextLayoutCallback(anchor, "trailing", it, TqType.BodyL.figma())
         }
         Row(
             modifier = contentModifier,
@@ -260,7 +261,7 @@ private fun ProfileInfoRow(
         }
         Text(
             text = title,
-            style = TqType.BodyL,
+            style = TqType.BodyL.figma(),
             color = Gray800,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
@@ -273,7 +274,7 @@ private fun ProfileInfoRow(
         if (trailing != null) {
             Text(
                 text = trailing,
-                style = TqType.BodyL,
+                style = TqType.BodyL.figma(),
                 color = Gray500,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,

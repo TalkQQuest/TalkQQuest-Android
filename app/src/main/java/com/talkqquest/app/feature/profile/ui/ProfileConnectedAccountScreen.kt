@@ -22,6 +22,7 @@ import androidx.compose.ui.text.style.LineHeightStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import com.talkqquest.app.core.designsystem.figma
 import com.talkqquest.app.core.designsystem.FitDesign
 import com.talkqquest.app.core.designsystem.Gray400
 import com.talkqquest.app.core.designsystem.Gray50
@@ -102,14 +103,14 @@ fun ProfileConnectedAccountScreen(
             ) {
                 Text(
                     text = "로그아웃",
-                    style = TqType.BodyL.copy(fontWeight = FontWeight.SemiBold),
+                    style = TqType.BodyL.figma().copy(fontWeight = FontWeight.SemiBold),
                     color = Gray50,
                 )
             }
             Spacer(Modifier.size(width = 1.dp, height = 12.dp))
             Text(
                 text = "계정 변경이 필요하다면 로그아웃 후 새로운 계정으로 로그인할 수 있어요",
-                style = TqType.LabelM,
+                style = TqType.LabelM.figma(),
                 color = Gray400,
                 modifier = Modifier
                     .offset(x = 4.dp)

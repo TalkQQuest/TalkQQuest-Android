@@ -2117,7 +2117,7 @@ private fun HomeMissionCard(
                     Text(
                         text = if (remaining != null) "새로고침 ($remaining)" else "새로고침",
                         style = TqType.BodyS.figma(),
-                        color = if (hasQuota) Gray600 else Gray400,
+                        color = if (hasQuota) Gray600 else Gray300,
                     )
                 }
             }

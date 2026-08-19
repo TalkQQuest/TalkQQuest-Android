@@ -31,6 +31,7 @@ import com.talkqquest.app.core.designsystem.Gray50
 import com.talkqquest.app.core.designsystem.Gray800
 import com.talkqquest.app.core.designsystem.TalkQQuestTheme
 import com.talkqquest.app.core.designsystem.TqType
+import com.talkqquest.app.core.designsystem.figma
 import kotlinx.coroutines.delay
 
 @Composable
@@ -59,7 +60,7 @@ fun OnboardingWelcomeScreen(
 
         Text(
             text = "\uBC18\uAC00\uC6CC\uC694,\n${displayNickname}\uB2D8!",
-            style = TqType.HeadingXL,
+            style = TqType.HeadingXL.figma(),
             color = Gray800,
             textAlign = TextAlign.Center,
             modifier = Modifier

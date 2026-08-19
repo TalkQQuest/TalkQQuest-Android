@@ -207,14 +207,14 @@ private fun PhraseHighlightCard(
         Text(
             // 💡 [핵심 수정] 글자 사이가 끊어지지 않도록 확장 함수 적용
             text = phraseText.glueShortWords().keepWordsIntact(),
-            style = TqType.BodyL.copy(
+            style = TqType.BodyL.figma().copy(
                 fontWeight = FontWeight.Medium,
                 lineBreak = LineBreak(
                     strategy = LineBreak.Strategy.Simple,
                     strictness = LineBreak.Strictness.Normal,
                     wordBreak = LineBreak.WordBreak.Phrase
                 )
-            ).figma(),
+            ),
             color = Gray900,
             maxLines = 4,
             overflow = TextOverflow.Ellipsis,
@@ -277,14 +277,14 @@ private fun MemoSection(keywords: List<String>, memoText: String) {
         Text(
             // 💡 [핵심 수정] 메모 내용도 단어가 쪼개지지 않도록 확장 함수 적용
             text = memoText.glueShortWords().keepWordsIntact(),
-            style = TqType.BodyM.copy(
+            style = TqType.BodyM.figma().copy(
                 lineHeight = 22.sp,
                 lineBreak = LineBreak(
                     strategy = LineBreak.Strategy.Simple,
                     strictness = LineBreak.Strictness.Normal,
                     wordBreak = LineBreak.WordBreak.Phrase
                 )
-            ).figma(),
+            ),
             color = Gray600,
             modifier = Modifier.padding(horizontal = 2.dp)
         )

@@ -659,7 +659,7 @@ fun ConversationSetup3Screen(
     val tick = rememberHapticTick()
     SetupStepScaffold(step = 3, onBack = onBack, nextEnabled = gender != null && age != null, onNext = onNext) {
         SetupHeader("어떤 상대와 대화해볼까요?", "대화할 상대의 성별과 나이대를 선택해주세요.")
-        Spacer(Modifier.height(36.dp))
+        Spacer(Modifier.height(24.dp)) // CSS: 헤더 Frame427321656 top122+h60=182, 본문 Frame427321698 top206 → 24
         val density = LocalDensity.current
         Column(
             modifier = Modifier.padding(start = 6.dp),
@@ -1008,7 +1008,7 @@ fun ConversationSetup4Screen(
     var tone by remember(initialFormality) { mutableIntStateOf(initialFormality.coerceIn(0, 4)) }
     SetupStepScaffold(step = 4, onBack = onBack, nextEnabled = !isSaving, onNext = onNext, nextText = "대화 시작하기") {
         SetupHeader("마지막으로,\n관계를 조금 더 정해볼까요?", "친밀도와 말투를 선택하면 준비가 끝나요.") // CSS 수동 줄바꿈: "마지막으로," 뒤 개행(2줄)
-        Spacer(Modifier.height(36.dp))
+        Spacer(Modifier.height(24.dp)) // CSS: 헤더 top122+h94=216, 본문 top240 → 24
         Column(
             modifier = Modifier.padding(start = 6.dp, end = 6.dp),
             verticalArrangement = Arrangement.spacedBy(36.dp),

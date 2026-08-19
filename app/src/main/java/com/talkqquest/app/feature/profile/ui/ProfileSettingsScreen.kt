@@ -61,6 +61,7 @@ import androidx.compose.ui.unit.em
 import androidx.compose.ui.unit.sp
 import com.talkqquest.app.R
 import com.talkqquest.app.core.designsystem.FitDesign
+import com.talkqquest.app.core.designsystem.figma
 import com.talkqquest.app.core.designsystem.Gray200
 import com.talkqquest.app.core.designsystem.Gray300
 import com.talkqquest.app.core.designsystem.Gray400
@@ -97,28 +98,28 @@ private val SettingsTitleStyle = TextStyle(
     fontSize = 18.sp,
     lineHeight = 28.sp,
     letterSpacing = (-0.01).em,
-)
+).figma()
 
 private val SettingsBodyLargeStyle = TextStyle(
     fontFamily = PretendardFamily,
     fontWeight = FontWeight.Normal,
     fontSize = 16.sp,
     lineHeight = 24.sp,
-)
+).figma()
 
 private val SettingsBodyMediumStyle = TextStyle(
     fontFamily = PretendardFamily,
     fontWeight = FontWeight.Normal,
     fontSize = 14.sp,
     lineHeight = 22.sp,
-)
+).figma()
 
 private val SettingsBodySmallStyle = TextStyle(
     fontFamily = PretendardFamily,
     fontWeight = FontWeight.Normal,
     fontSize = 13.sp,
     lineHeight = 20.sp,
-)
+).figma()
 
 @Composable
 fun ProfileSettingsScreen(
@@ -851,7 +852,7 @@ private fun TimePickerValue(
             fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Medium,
             fontSize = 20.sp,
             lineHeight = 24.sp,
-        ),
+        ).figma(),
         color = color,
         textAlign = TextAlign.Center,
         maxLines = 1,

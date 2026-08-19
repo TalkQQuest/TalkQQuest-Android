@@ -65,6 +65,7 @@ import com.talkqquest.app.core.designsystem.Primary500
 import com.talkqquest.app.core.designsystem.TalkQQuestTheme
 import com.talkqquest.app.core.designsystem.TqType
 import com.talkqquest.app.core.designsystem.White
+import com.talkqquest.app.core.designsystem.figma
 import kotlinx.coroutines.delay
 import java.util.concurrent.atomic.AtomicBoolean
 
@@ -163,7 +164,7 @@ fun SignupVerifyScreen(
         }
         Text(
             text = "\uD68C\uC6D0\uAC00\uC785",
-            style = TqType.BodyM,
+            style = TqType.BodyM.figma(),
             color = Gray700,
             modifier = Modifier
                 .fillMaxWidth()
@@ -172,7 +173,7 @@ fun SignupVerifyScreen(
         )
         Text(
             text = "\uC774\uBA54\uC77C\uC744\n\uC785\uB825\uD574\uC8FC\uC138\uC694",
-            style = TqType.HeadingL,
+            style = TqType.HeadingL.figma(),
             color = Gray800,
             modifier = Modifier.offset(x = 23.dp, y = 122.dp),
         )
@@ -228,7 +229,7 @@ fun SignupVerifyScreen(
             ) {
                 Text(
                     text = "6\uC790\uB9AC \uC804\uC1A1\uB428",
-                    style = TqType.BodyM,
+                    style = TqType.BodyM.figma(),
                     color = Gray400,
                     modifier = Modifier.width(73.dp).height(22.dp),
                 )
@@ -256,7 +257,7 @@ fun SignupVerifyScreen(
                                 .height(44.dp),
                             contentAlignment = Alignment.Center,
                         ) {
-                            Text(text = timerText, style = TqType.BodyM, color = Primary500)
+                            Text(text = timerText, style = TqType.BodyM.figma(), color = Primary500)
                         }
                         Box(
                             modifier = Modifier
@@ -270,7 +271,7 @@ fun SignupVerifyScreen(
                                 .height(44.dp),
                             contentAlignment = Alignment.Center,
                         ) {
-                            Text(text = "\uC7AC\uC694\uCCAD", style = TqType.BodyM, color = Gray500)
+                            Text(text = "\uC7AC\uC694\uCCAD", style = TqType.BodyM.figma(), color = Gray500)
                         }
                     }
                 }
@@ -285,7 +286,7 @@ fun SignupVerifyScreen(
                     if (digits.length == 6) onVerifyCode(digits) { dismiss(onVerificationSuccess) }
                 },
                 singleLine = true,
-                textStyle = TqType.HeadingXL.copy(
+                textStyle = TqType.HeadingXL.figma().copy(
                     color = codeColor,
                     fontWeight = FontWeight.Bold,
                     textAlign = TextAlign.Start,
@@ -301,7 +302,7 @@ fun SignupVerifyScreen(
                         if (code.isBlank()) {
                             Text(
                                 text = "\uC778\uC99D\uBC88\uD638 \uC785\uB825",
-                                style = TqType.HeadingXL.copy(fontWeight = FontWeight.Bold),
+                                style = TqType.HeadingXL.figma().copy(fontWeight = FontWeight.Bold),
                                 color = Gray300,
                             )
                         }

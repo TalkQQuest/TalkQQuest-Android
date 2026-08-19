@@ -14,6 +14,7 @@ import com.talkqquest.app.core.designsystem.Gray400
 import com.talkqquest.app.core.designsystem.Primary600
 import com.talkqquest.app.core.designsystem.TqType
 import com.talkqquest.app.core.designsystem.White
+import com.talkqquest.app.core.designsystem.figma
 
 // 공통 버튼 (CONVENTIONS.md 8번). Large=52/radius16, Medium=44/radius12. 폭은 호출부 modifier로.
 enum class TqButtonSize { Large, Medium }
@@ -42,6 +43,6 @@ fun TqButton(
             disabledContentColor = Gray400,
         ),
     ) {
-        Text(text = text, style = TqType.BodyL.copy(fontWeight = FontWeight.SemiBold))
+        Text(text = text, style = TqType.BodyL.figma().copy(fontWeight = FontWeight.SemiBold))
     }
 }

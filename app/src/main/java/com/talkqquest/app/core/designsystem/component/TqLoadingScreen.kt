@@ -44,7 +44,6 @@ import androidx.compose.ui.graphics.drawscope.clipPath
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.translate
 import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.text.style.LineHeightStyle
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -55,6 +54,7 @@ import com.talkqquest.app.core.designsystem.Gray500
 import com.talkqquest.app.core.designsystem.Gray800
 import com.talkqquest.app.core.designsystem.Primary500
 import com.talkqquest.app.core.designsystem.TqType
+import com.talkqquest.app.core.designsystem.figma
 import kotlin.math.PI
 import kotlin.math.sin
 import kotlinx.coroutines.isActive
@@ -75,11 +75,6 @@ private val SPINNER_TEXT_GAP = 24.dp
 private val CONTENT_TOP = 310.dp
 private val TEXT_BLOCK_WIDTH = 167.dp
 private val TEXT_BLOCK_HEIGHT = 80.dp
-
-private val FullLeading = LineHeightStyle(
-    alignment = LineHeightStyle.Alignment.Center,
-    trim = LineHeightStyle.Trim.None,
-)
 
 /**
  * 무언가를 준비하는 동안 잠깐 보여주는 화면.
@@ -132,7 +127,7 @@ fun TqLoadingScreen(
             TqLoadingHammer(onFinished = onAnimationFinished)
             Text(
                 text = message,
-                style = TqType.HeadingXL.copy(lineHeightStyle = FullLeading),
+                style = TqType.HeadingXL.figma(),
                 color = Gray800,
                 textAlign = TextAlign.Center,
                 modifier = Modifier.height(TEXT_BLOCK_HEIGHT),

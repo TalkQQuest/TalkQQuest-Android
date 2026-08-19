@@ -75,6 +75,7 @@ import com.talkqquest.app.core.designsystem.Primary700
 import com.talkqquest.app.core.designsystem.TalkQQuestTheme
 import com.talkqquest.app.core.designsystem.TqType
 import com.talkqquest.app.core.designsystem.White
+import com.talkqquest.app.core.designsystem.figma
 import com.talkqquest.app.core.designsystem.component.TqButton
 import com.talkqquest.app.core.designsystem.component.rememberHapticTick
 import kotlin.math.roundToInt
@@ -157,12 +158,12 @@ fun OnboardingPersonalityScreen(
         ) {
             Text(
                 text = "\uD3C9\uC18C \uB300\uD654\uD560 \uB54C\n${displayNickname}\uB2D8\uC758 \uBAA8\uC2B5\uC740",
-                style = TqType.HeadingL,
+                style = TqType.HeadingL.figma(),
                 color = Gray800,
             )
             Text(
                 text = "\uBA87 \uAC00\uC9C0\uB9CC \uC54C\uB824\uC8FC\uC2DC\uBA74\n\uB9DE\uCDA4\uD615 \uB300\uD654\uB97C \uC900\uBE44\uD574\uB4DC\uB9B4\uAC8C\uC694.",
-                style = TqType.BodyM,
+                style = TqType.BodyM.figma(),
                 color = Gray500,
                 modifier = Modifier.offset(y = 76.dp),
             )
@@ -309,12 +310,12 @@ fun OnboardingDifficultyScreen(
         ) {
             Text(
                 text = "\uB300\uD654\uC5D0\uC11C \uAC00\uC7A5\n\uC5B4\uB824\uC6B4 \uC810\uC774 \uBB58\uAC00\uC694?",
-                style = TqType.HeadingL,
+                style = TqType.HeadingL.figma(),
                 color = Gray800,
             )
             Text(
                 text = "\uCD5C\uB300 2\uAC1C\uAE4C\uC9C0 \uC120\uD0DD\uD560 \uC218 \uC788\uC5B4\uC694.",
-                style = TqType.BodyM,
+                style = TqType.BodyM.figma(),
                 color = Gray500,
                 modifier = Modifier.offset(y = 76.dp),
             )
@@ -391,7 +392,7 @@ fun OnboardingDifficultyScreen(
         ) {
             Text(
                 text = "\uC9C1\uC811 \uC785\uB825\uD574\uC8FC\uC2DC\uBA74 \uB354 \uC54C\uB9DE\uC740 \uC5F0\uC2B5\uC744 \uC900\uBE44\uD574\uB4DC\uB9B4\uAC8C\uC694. (\uC120\uD0DD)",
-                style = TqType.BodyM,
+                style = TqType.BodyM.figma(),
                 color = Gray500,
                 modifier = Modifier.offset(x = 7.dp, y = 0.dp),
             )
@@ -477,12 +478,12 @@ fun OnboardingGoalScreen(
         ) {
             Text(
                 text = "\uC5B4\uB5A4 \uB300\uD654\uB97C\n\uC5F0\uC2B5\uD558\uACE0 \uC2F6\uC73C\uC2E0\uAC00\uC694?",
-                style = TqType.HeadingL,
+                style = TqType.HeadingL.figma(),
                 color = Gray800,
             )
             Text(
                 text = "\uCD5C\uB300 2\uAC1C\uAE4C\uC9C0 \uC120\uD0DD\uD560 \uC218 \uC788\uC5B4\uC694.",
-                style = TqType.BodyM,
+                style = TqType.BodyM.figma(),
                 color = Gray500,
                 modifier = Modifier.offset(y = 76.dp),
             )
@@ -733,13 +734,13 @@ private fun PersonalityOptionCardFixed(
     ) {
         Text(
             text = title,
-            style = TqType.TitleL,
+            style = TqType.TitleL.figma(),
             color = titleColor,
             modifier = Modifier.offset(x = 20.dp, y = 18.dp),
         )
         Text(
             text = description,
-            style = TqType.BodyS,
+            style = TqType.BodyS.figma(),
             color = descriptionColor,
             modifier = Modifier.offset(x = 20.dp, y = 50.dp),
         )
@@ -790,7 +791,7 @@ private fun OnboardingChoiceChipFixed(
     ) {
         Text(
             text = text,
-            style = TqType.BodyL.copy(fontWeight = if (selected) FontWeight.Medium else FontWeight.Normal),
+            style = TqType.BodyL.figma().copy(fontWeight = if (selected) FontWeight.Medium else FontWeight.Normal),
             color = textColor,
             textAlign = TextAlign.Center,
             modifier = Modifier.padding(horizontal = 16.dp),
@@ -809,7 +810,7 @@ private fun OnboardingOptionalInputFixed(
         value = value,
         onValueChange = onValueChange,
         singleLine = true,
-        textStyle = TqType.BodyL.copy(color = Gray800),
+        textStyle = TqType.BodyL.figma().copy(color = Gray800),
         cursorBrush = SolidColor(Primary600),
         modifier = modifier
             .fillMaxWidth()
@@ -822,7 +823,7 @@ private fun OnboardingOptionalInputFixed(
                 if (value.isBlank()) {
                     Text(
                         text = placeholder,
-                        style = TqType.BodyL,
+                        style = TqType.BodyL.figma(),
                         color = Gray400,
                     )
                 }
@@ -927,7 +928,7 @@ private fun OnboardingChatIcon() {
 private fun OnboardingHeadline(text: String) {
     Text(
         text = text,
-        style = TqType.HeadingL.copy(fontWeight = FontWeight.Bold),
+        style = TqType.HeadingL.figma().copy(fontWeight = FontWeight.Bold),
         color = Gray800,
     )
 }
@@ -936,7 +937,7 @@ private fun OnboardingHeadline(text: String) {
 private fun OnboardingHelperText(text: String) {
     Text(
         text = text,
-        style = TqType.BodyS,
+        style = TqType.BodyS.figma(),
         color = Gray500,
     )
 }
@@ -965,13 +966,13 @@ private fun PersonalityOptionCard(
         Column(modifier = Modifier.weight(1f)) {
             Text(
                 text = title,
-                style = TqType.TitleL.copy(fontWeight = FontWeight.Bold),
+                style = TqType.TitleL.figma().copy(fontWeight = FontWeight.Bold),
                 color = Gray700,
             )
             Spacer(Modifier.height(6.dp))
             Text(
                 text = description,
-                style = TqType.BodyS,
+                style = TqType.BodyS.figma(),
                 color = Gray500,
             )
         }
@@ -1023,7 +1024,7 @@ private fun OnboardingChoiceChip(
 ) {
     Text(
         text = text,
-        style = TqType.BodyM.copy(fontWeight = FontWeight.Medium),
+        style = TqType.BodyM.figma().copy(fontWeight = FontWeight.Medium),
         color = if (selected) Primary600 else Gray700,
         textAlign = TextAlign.Center,
         modifier = Modifier
@@ -1046,7 +1047,7 @@ private fun OnboardingOptionalInput(
         value = value,
         onValueChange = onValueChange,
         singleLine = true,
-        textStyle = TqType.BodyM.copy(color = Gray800),
+        textStyle = TqType.BodyM.figma().copy(color = Gray800),
         cursorBrush = SolidColor(Primary600),
         modifier = Modifier
             .fillMaxWidth()
@@ -1059,7 +1060,7 @@ private fun OnboardingOptionalInput(
                 if (value.isBlank()) {
                     Text(
                         text = placeholder,
-                        style = TqType.BodyM,
+                        style = TqType.BodyM.figma(),
                         color = Gray300,
                     )
                 }

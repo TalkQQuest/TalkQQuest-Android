@@ -59,6 +59,7 @@ import com.talkqquest.app.core.designsystem.Primary500
 import com.talkqquest.app.core.designsystem.Primary600
 import com.talkqquest.app.core.designsystem.TalkQQuestTheme
 import com.talkqquest.app.core.designsystem.White
+import com.talkqquest.app.core.designsystem.figma
 import com.talkqquest.app.core.designsystem.component.ContentAnchoredPillRipple
 import com.talkqquest.app.navigation.NavigationMotion
 
@@ -68,14 +69,14 @@ private val SignupTermsTitleStyle = TextStyle(
     fontSize = 20.sp,
     lineHeight = 30.sp,
     letterSpacing = (-0.2).sp,
-)
+).figma()
 
 private val SignupTermsBodyStyle = TextStyle(
     fontFamily = PretendardFamily,
     fontWeight = FontWeight.Normal,
     fontSize = 16.sp,
     lineHeight = 24.sp,
-)
+).figma()
 
 private val SignupTermsButtonStyle = TextStyle(
     fontFamily = PretendardFamily,
@@ -83,28 +84,28 @@ private val SignupTermsButtonStyle = TextStyle(
     fontSize = 18.sp,
     lineHeight = 28.sp,
     letterSpacing = (-0.18).sp,
-)
+).figma()
 
 private val SignupTermsTopBarStyle = TextStyle(
     fontFamily = PretendardFamily,
     fontWeight = FontWeight.Normal,
     fontSize = 16.sp,
     lineHeight = 24.sp,
-)
+).figma()
 
 private val SignupTermsDetailTitleStyle = TextStyle(
     fontFamily = PretendardFamily,
     fontWeight = FontWeight.SemiBold,
     fontSize = 18.sp,
     lineHeight = 28.sp,
-)
+).figma()
 
 private val SignupTermsDetailBodyStyle = TextStyle(
     fontFamily = PretendardFamily,
     fontWeight = FontWeight.Normal,
     fontSize = 12.sp,
     lineHeight = 18.sp,
-)
+).figma()
 
 @Composable
 fun SignupTermsScreen(

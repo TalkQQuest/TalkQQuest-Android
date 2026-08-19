@@ -32,6 +32,7 @@ import com.talkqquest.app.core.designsystem.Gray700
 import com.talkqquest.app.core.designsystem.Gray800
 import com.talkqquest.app.core.designsystem.TalkQQuestTheme
 import com.talkqquest.app.core.designsystem.TqType
+import com.talkqquest.app.core.designsystem.figma
 import com.talkqquest.app.core.designsystem.component.TqButton
 
 private const val NicknameMaxLength = 10
@@ -51,7 +52,7 @@ fun SignupNicknameScreen(
     ) {
         Text(
             text = "\uB2C9\uB124\uC784",
-            style = TqType.BodyM,
+            style = TqType.BodyM.figma(),
             color = Gray700,
             modifier = Modifier
                 .fillMaxWidth()
@@ -75,7 +76,7 @@ fun SignupNicknameScreen(
 
         Text(
             text = "\uC5B4\uB5A4 \uC774\uB984\uC73C\uB85C\n\uBD88\uB7EC\uB4DC\uB9B4\uAE4C\uC694?",
-            style = TqType.HeadingL,
+            style = TqType.HeadingL.figma(),
             color = Gray800,
             modifier = Modifier
                 .offset(x = 23.dp, y = 122.dp)
@@ -101,7 +102,7 @@ fun SignupNicknameScreen(
             )
             Text(
                 text = "(${nickname.length}/$NicknameMaxLength)",
-                style = TqType.LabelL,
+                style = TqType.LabelL.figma(),
                 color = Gray400,
                 modifier = Modifier
                     .offset(x = 12.dp, y = 96.dp)

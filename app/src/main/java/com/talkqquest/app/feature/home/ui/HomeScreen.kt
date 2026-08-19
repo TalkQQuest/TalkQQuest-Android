@@ -216,7 +216,7 @@ private fun HomeScreen(
 
             uiState.errorMessage != null -> {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text(text = uiState.errorMessage, style = TqType.BodyM, color = Error)
+                    Text(text = uiState.errorMessage, style = TqType.BodyM.figma(), color = Error)
                     Spacer(Modifier.height(16.dp))
                     TqButton(text = "다시 시도", onClick = onRetry, size = TqButtonSize.Medium)
                 }

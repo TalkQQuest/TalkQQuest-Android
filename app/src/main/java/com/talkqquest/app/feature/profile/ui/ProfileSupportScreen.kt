@@ -23,6 +23,7 @@ import androidx.compose.ui.layout.positionInRoot
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import com.talkqquest.app.core.designsystem.figma
 import com.talkqquest.app.core.designsystem.FitDesign
 import com.talkqquest.app.core.designsystem.Gray50
 import com.talkqquest.app.core.designsystem.Gray500
@@ -51,7 +52,7 @@ fun ProfileSupportScreen(
         ProfileSimpleTopBar(title = "문의하기", onBack = onBack)
         Text(
             text = "무엇을 도와드릴까요?",
-            style = TqType.TitleL.copy(fontWeight = FontWeight.SemiBold),
+            style = TqType.TitleL.figma().copy(fontWeight = FontWeight.SemiBold),
             color = Color(0xFF1E293B),
             modifier = Modifier
                 .offset(x = 20.dp, y = 111.dp)
@@ -78,7 +79,7 @@ fun ProfileSupportScreen(
             MenuRippleLayer(supportGroup, Modifier.matchParentSize())
             Text(
                 text = "고객 지원",
-                style = TqType.BodyM,
+                style = TqType.BodyM.figma(),
                 color = Gray500,
                 modifier = Modifier
                     .offset(x = 16.dp, y = 12.dp)
@@ -117,9 +118,9 @@ private fun SupportRow(
     group: MenuRippleGroupState? = null,
 ) {
     TqAnchoredMenuRow(modifier = modifier, group = group, onClick = {}) { anchor ->
-        val titleLayout = rememberMenuRowTextLayoutCallback(anchor, "title", title, TqType.BodyL)
+        val titleLayout = rememberMenuRowTextLayoutCallback(anchor, "title", title, TqType.BodyL.figma())
         val trailingLayout = trailing?.let {
-            rememberMenuRowTextLayoutCallback(anchor, "trailing", it, TqType.BodyM)
+            rememberMenuRowTextLayoutCallback(anchor, "trailing", it, TqType.BodyM.figma())
         }
         Row(
             modifier = contentModifier,
@@ -127,7 +128,7 @@ private fun SupportRow(
     ) {
         Text(
             text = title,
-            style = TqType.BodyL,
+            style = TqType.BodyL.figma(),
             color = Gray800,
             onTextLayout = titleLayout,
             modifier = Modifier
@@ -137,7 +138,7 @@ private fun SupportRow(
         if (trailing != null) {
             Text(
                 text = trailing,
-                style = TqType.BodyM,
+                style = TqType.BodyM.figma(),
                 color = Gray500,
                 onTextLayout = trailingLayout!!,
                 modifier = Modifier.menuRowTextRippleAnchor(anchor, "trailing"),

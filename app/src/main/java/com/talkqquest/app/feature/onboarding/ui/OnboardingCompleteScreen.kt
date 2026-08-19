@@ -33,6 +33,7 @@ import com.talkqquest.app.core.designsystem.Gray50
 import com.talkqquest.app.core.designsystem.Gray800
 import com.talkqquest.app.core.designsystem.TalkQQuestTheme
 import com.talkqquest.app.core.designsystem.TqType
+import com.talkqquest.app.core.designsystem.figma
 import kotlinx.coroutines.delay
 
 @Composable
@@ -57,7 +58,7 @@ fun OnboardingCompleteScreen(
         )
         Text(
             text = "\uB531 \uB9DE\uB294 \uBBF8\uC158\uC744\n\uC900\uBE44\uD574\uB4DC\uB9B4\uAC8C\uC694",
-            style = TqType.HeadingXL,
+            style = TqType.HeadingXL.figma(),
             color = Gray800,
             textAlign = TextAlign.Center,
             modifier = Modifier

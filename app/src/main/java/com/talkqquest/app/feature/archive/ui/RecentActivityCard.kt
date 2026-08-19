@@ -39,6 +39,7 @@ import com.talkqquest.app.core.designsystem.Gray900
 import com.talkqquest.app.core.designsystem.Success
 import com.talkqquest.app.core.designsystem.TqType
 import com.talkqquest.app.core.designsystem.White
+import com.talkqquest.app.core.designsystem.figma
 import com.talkqquest.app.core.designsystem.softShadow
 import com.talkqquest.app.feature.archive.viewmodel.ActivityType
 import com.talkqquest.app.feature.archive.viewmodel.RecentActivity
@@ -110,7 +111,7 @@ internal fun RecentActivityCard(
                 fontWeight = FontWeight.Medium,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
-                style = TqType.BodyL
+                style = TqType.BodyL.figma()
             )
 
             if (isMission) {
@@ -136,7 +137,7 @@ internal fun RecentActivityCard(
                         horizontalArrangement = Arrangement.spacedBy(4.dp),
                         modifier = Modifier.padding(start = 0.dp, top = 2.dp, end = 10.dp, bottom = 2.dp)
                     ) {
-                        Text(text = activity.status, style = TqType.Caption, color = Gray500)
+                        Text(text = activity.status, style = TqType.Caption.figma(), color = Gray500)
                     }
 
                     Box(
@@ -148,7 +149,7 @@ internal fun RecentActivityCard(
                         horizontalArrangement = Arrangement.spacedBy(2.dp),
                         modifier = Modifier.padding(start = 10.dp, top = 2.dp, end = 0.dp, bottom = 2.dp)
                     ) {
-                        Text(text = activity.date, style = TqType.Caption, color = Gray500)
+                        Text(text = activity.date, style = TqType.Caption.figma(), color = Gray500)
                     }
                 }
             }
@@ -194,7 +195,7 @@ private fun DifficultyLabel(difficulty: String) {
             .padding(horizontal = 12.dp, vertical = 4.dp),
         contentAlignment = Alignment.Center
     ) {
-        Text(text = difficulty, style = TqType.LabelM, color = textColor)
+        Text(text = difficulty, style = TqType.LabelM.figma(), color = textColor)
     }
 }
 
@@ -207,7 +208,7 @@ private fun CategoryTag(category: String) {
             .padding(horizontal = 12.dp, vertical = 4.dp),
         contentAlignment = Alignment.Center
     ) {
-        Text(text = category, style = TqType.Caption, color = Gray500)
+        Text(text = category, style = TqType.Caption.figma(), color = Gray500)
     }
 }
 
@@ -224,7 +225,7 @@ private fun TimeXpRow(minutes: Int, xp: Int) {
                 contentDescription = null,
                 modifier = Modifier.size(9.dp),
             )
-            Text(text = "${minutes}분", style = TqType.Caption, color = Gray500, softWrap = false)
+            Text(text = "${minutes}분", style = TqType.Caption.figma(), color = Gray500, softWrap = false)
         }
         Box(
             modifier = Modifier
@@ -241,7 +242,7 @@ private fun TimeXpRow(minutes: Int, xp: Int) {
                 painter = painterResource(R.drawable.ic_mission_xp),
                 contentDescription = null
             )
-            Text(text = "${xp}XP", style = TqType.Caption, color = Gray500, softWrap = false)
+            Text(text = "${xp}XP", style = TqType.Caption.figma(), color = Gray500, softWrap = false)
         }
     }
 }

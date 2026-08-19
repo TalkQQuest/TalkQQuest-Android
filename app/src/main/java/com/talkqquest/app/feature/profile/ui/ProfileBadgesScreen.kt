@@ -53,6 +53,7 @@ import com.talkqquest.app.R
 import com.talkqquest.app.core.designsystem.component.pagerAxisLock
 import com.talkqquest.app.core.designsystem.component.rememberPagerAxisLockState
 import com.talkqquest.app.core.designsystem.FitDesign
+import com.talkqquest.app.core.designsystem.figma
 import com.talkqquest.app.core.designsystem.Gray300
 import com.talkqquest.app.core.designsystem.Gray400
 import com.talkqquest.app.core.designsystem.Gray50
@@ -107,7 +108,7 @@ private val BadgeTitleStyle = TextStyle(
     fontWeight = FontWeight.Normal,
     fontSize = 16.sp,
     lineHeight = 24.sp,
-)
+).figma()
 
 private val BadgeTabStyle = TextStyle(
     fontFamily = PretendardFamily,
@@ -115,21 +116,21 @@ private val BadgeTabStyle = TextStyle(
     fontSize = 18.sp,
     lineHeight = 28.sp,
     letterSpacing = (-0.01).em,
-)
+).figma()
 
 private val BadgeBodyLargeMediumStyle = TextStyle(
     fontFamily = PretendardFamily,
     fontWeight = FontWeight.Medium,
     fontSize = 16.sp,
     lineHeight = 24.sp,
-)
+).figma()
 
 private val BadgeBodyLargeStyle = TextStyle(
     fontFamily = PretendardFamily,
     fontWeight = FontWeight.Normal,
     fontSize = 16.sp,
     lineHeight = 24.sp,
-)
+).figma()
 
 private val BadgeHeadingStyle = TextStyle(
     fontFamily = PretendardFamily,
@@ -137,14 +138,14 @@ private val BadgeHeadingStyle = TextStyle(
     fontSize = 20.sp,
     lineHeight = 30.sp,
     letterSpacing = (-0.01).em,
-)
+).figma()
 
 private val BadgeBodyMediumStyle = TextStyle(
     fontFamily = PretendardFamily,
     fontWeight = FontWeight.Normal,
     fontSize = 14.sp,
     lineHeight = 22.sp,
-)
+).figma()
 
 @Composable
 fun ProfileBadgesScreen(

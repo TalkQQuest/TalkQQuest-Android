@@ -41,6 +41,7 @@ import com.talkqquest.app.core.designsystem.Gray800
 import com.talkqquest.app.core.designsystem.Primary600
 import com.talkqquest.app.core.designsystem.TalkQQuestTheme
 import com.talkqquest.app.core.designsystem.TqType
+import com.talkqquest.app.core.designsystem.figma
 import com.talkqquest.app.core.designsystem.component.PasswordVisibilityToggle
 
 @Composable
@@ -74,7 +75,7 @@ fun SignupPasswordScreen(
         }
         Text(
             text = "회원가입",
-            style = TqType.BodyM,
+            style = TqType.BodyM.figma(),
             color = Gray700,
             modifier = Modifier
                 .fillMaxWidth()
@@ -83,7 +84,7 @@ fun SignupPasswordScreen(
         )
         Text(
             text = "비밀번호를\n설정해주세요",
-            style = TqType.HeadingL,
+            style = TqType.HeadingL.figma(),
             color = Gray800,
             modifier = Modifier.offset(x = 23.dp, y = 122.dp),
         )
@@ -136,7 +137,7 @@ fun SignupPasswordScreen(
                 .clickable { if (canContinue) onNextClick(password) },
             contentAlignment = Alignment.Center,
         ) {
-            Text(text = "다음", style = TqType.BodyL, color = Gray50)
+            Text(text = "다음", style = TqType.BodyL.figma(), color = Gray50)
         }
     }
 }

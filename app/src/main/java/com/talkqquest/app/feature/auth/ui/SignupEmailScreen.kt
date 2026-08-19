@@ -32,6 +32,7 @@ import com.talkqquest.app.core.designsystem.Gray700
 import com.talkqquest.app.core.designsystem.Gray800
 import com.talkqquest.app.core.designsystem.TalkQQuestTheme
 import com.talkqquest.app.core.designsystem.TqType
+import com.talkqquest.app.core.designsystem.figma
 
 @Composable
 fun SignupEmailScreen(
@@ -67,7 +68,7 @@ fun SignupEmailScreen(
         }
         Text(
             text = "회원가입",
-            style = TqType.BodyM,
+            style = TqType.BodyM.figma(),
             color = Gray700,
             modifier = Modifier
                 .fillMaxWidth()
@@ -76,7 +77,7 @@ fun SignupEmailScreen(
         )
         Text(
             text = "이메일을\n입력해주세요",
-            style = TqType.HeadingL,
+            style = TqType.HeadingL.figma(),
             color = Gray800,
             modifier = Modifier.offset(x = 23.dp, y = 122.dp),
         )

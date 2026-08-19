@@ -33,9 +33,9 @@ class TqMessagingService : FirebaseMessagingService() {
         val type = message.data[EXTRA_NOTIFICATION_TYPE].orEmpty()
         val reportId = message.data[EXTRA_REFERENCE_ID]
 
-        // 휴대폰 실제 알림은 주간 비교 리포트 도착 안내만 표시한다.
+        // 휴대폰 실제 알림은 주간 비교 리포트·미션 리마인드 등 정해진 타입만 표시한다.
         // 미션 완료 등 나머지 알림은 서버 목록에 남아 앱 내부 알림창에서만 확인한다.
-        if (type != WEEKLY_COMPARE_NOTIFICATION_TYPE &&
+        if (type !in SYSTEM_NOTIFICATION_TYPES &&
             !title.contains(WEEKLY_COMPARE_NOTIFICATION_TEXT) &&
             !body.contains(WEEKLY_COMPARE_NOTIFICATION_TEXT)
         ) {
@@ -43,20 +43,24 @@ class TqMessagingService : FirebaseMessagingService() {
             return
         }
 
-        showNotification(title, body, reportId)
+        showNotification(title, body, reportId, type)
     }
 
-    private fun showNotification(title: String, body: String, reportId: String?) {
+    private fun showNotification(title: String, body: String, reportId: String?, type: String) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
             ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED
         ) {
             return
         }
 
+        // type이 비어 있는데 여기까지 왔다면 위 보조 조건("주간 비교 리포트" 문구)으로 통과한 것이므로
+        // 주간 비교로 본다.
+        val resolvedType = type.ifBlank { WEEKLY_COMPARE_NOTIFICATION_TYPE }
+
         val notificationId = Random.nextInt()
         val intent = Intent(this, MainActivity::class.java).apply {
             flags = Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP
-            putExtra(EXTRA_NOTIFICATION_TYPE, WEEKLY_COMPARE_NOTIFICATION_TYPE)
+            putExtra(EXTRA_NOTIFICATION_TYPE, resolvedType)
             reportId?.takeIf { it.isNotBlank() }?.let { putExtra(EXTRA_REFERENCE_ID, it) }
         }
         val pending = PendingIntent.getActivity(
@@ -80,7 +84,14 @@ class TqMessagingService : FirebaseMessagingService() {
         private const val TAG = "TqMessaging"
         private const val WEEKLY_COMPARE_NOTIFICATION_TEXT = "주간 비교 리포트"
         const val WEEKLY_COMPARE_NOTIFICATION_TYPE = "weekly_compare_ready"
+        const val MISSION_REMINDER_NOTIFICATION_TYPE = "mission_reminder"
         const val EXTRA_NOTIFICATION_TYPE = "type"
         const val EXTRA_REFERENCE_ID = "referenceId"
+
+        // 휴대폰 시스템 알림으로 띄우는 타입. 미션 완료 등 나머지는 앱 내부 알림창에만 남는다.
+        private val SYSTEM_NOTIFICATION_TYPES = setOf(
+            WEEKLY_COMPARE_NOTIFICATION_TYPE,
+            MISSION_REMINDER_NOTIFICATION_TYPE,
+        )
     }
 }

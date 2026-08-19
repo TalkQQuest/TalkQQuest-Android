@@ -16,6 +16,7 @@ import com.talkqquest.app.core.designsystem.Gray700
 import com.talkqquest.app.core.designsystem.Primary600
 import com.talkqquest.app.core.designsystem.TqType
 import com.talkqquest.app.core.designsystem.White
+import com.talkqquest.app.core.designsystem.figma
 
 // 선택형 칩 (CONVENTIONS.md 8번). 선택 시 색 반전.
 @Composable
@@ -42,7 +43,7 @@ fun TqChip(
             contentAlignment = Alignment.Center,
             modifier = Modifier.padding(horizontal = 16.dp),
         ) {
-            Text(text = text, style = TqType.LabelL)
+            Text(text = text, style = TqType.LabelL.figma())
         }
     }
 }

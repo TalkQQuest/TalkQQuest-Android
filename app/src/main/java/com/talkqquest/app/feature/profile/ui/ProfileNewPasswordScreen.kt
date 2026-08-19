@@ -31,6 +31,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.talkqquest.app.core.designsystem.Error
+import com.talkqquest.app.core.designsystem.figma
 import com.talkqquest.app.core.designsystem.FitDesign
 import com.talkqquest.app.core.designsystem.Gray300
 import com.talkqquest.app.core.designsystem.Gray400
@@ -78,7 +79,7 @@ fun ProfileNewPasswordScreen(
 
         Text(
             text = "새로운 비밀번호를\n설정해주세요",
-            style = TqType.HeadingL,
+            style = TqType.HeadingL.figma(),
             color = Gray800,
             modifier = Modifier
                 .offset(x = 23.dp, y = 122.dp)
@@ -165,7 +166,7 @@ private fun ProfileNewPasswordCompleteDialog(
         ) {
             Text(
                 text = "비밀번호 변경 완료",
-                style = TqType.HeadingM,
+                style = TqType.HeadingM.figma(),
                 color = Gray900,
                 textAlign = TextAlign.Center,
                 modifier = Modifier
@@ -174,7 +175,7 @@ private fun ProfileNewPasswordCompleteDialog(
             )
             Text(
                 text = "새로운 비밀번호가 저장되었습니다.",
-                style = TqType.BodyL,
+                style = TqType.BodyL.figma(),
                 color = Gray500,
                 textAlign = TextAlign.Center,
                 modifier = Modifier
@@ -194,7 +195,7 @@ private fun ProfileNewPasswordCompleteDialog(
             ) {
                 Text(
                     text = "확인",
-                    style = TqType.TitleL,
+                    style = TqType.TitleL.figma(),
                     color = Gray50,
                     textAlign = TextAlign.Center,
                 )
@@ -222,7 +223,7 @@ private fun ProfileNewPasswordInputCard(
     ) {
         Text(
             text = "비밀번호",
-            style = TqType.Caption,
+            style = TqType.Caption.figma(),
             color = Gray500,
             modifier = Modifier.size(width = 263.dp, height = 18.dp),
         )
@@ -231,7 +232,7 @@ private fun ProfileNewPasswordInputCard(
             value = value,
             onValueChange = onValueChange,
             singleLine = true,
-            textStyle = TqType.TitleL.copy(
+            textStyle = TqType.TitleL.figma().copy(
                 color = when {
                     samePasswordError -> Gray300
                     value.isBlank() -> Gray300
@@ -249,7 +250,7 @@ private fun ProfileNewPasswordInputCard(
                     if (value.isBlank()) {
                         Text(
                             text = placeholder,
-                            style = TqType.TitleL,
+                            style = TqType.TitleL.figma(),
                             color = Gray300,
                         )
                     }
@@ -293,7 +294,7 @@ private fun ProfilePasswordRequirement(
         }
         Text(
             text = text,
-            style = TqType.LabelL,
+            style = TqType.LabelL.figma(),
             color = Gray500,
             modifier = Modifier
                 .offset(x = 24.dp, y = 2.dp)
@@ -314,7 +315,7 @@ private fun ProfileNewPasswordMessage(
         )
         Text(
             text = text,
-            style = TqType.LabelL,
+            style = TqType.LabelL.figma(),
             color = Gray500,
             modifier = Modifier
                 .offset(x = 24.dp, y = 2.dp)

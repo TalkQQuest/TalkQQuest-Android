@@ -282,7 +282,7 @@ private fun FeedbackContent(
             ) {
                 Text(
                     text = "홈으로",
-                    style = TqType.BodyL.copy(fontWeight = FontWeight.SemiBold), // TqButton과 동일 타이포
+                    style = TqType.BodyL.figma().copy(fontWeight = FontWeight.SemiBold), // TqButton과 동일 타이포
                     color = Gray600,
                 )
             }

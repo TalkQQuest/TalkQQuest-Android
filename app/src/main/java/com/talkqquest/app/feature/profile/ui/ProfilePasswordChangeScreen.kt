@@ -32,6 +32,7 @@ import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.talkqquest.app.core.designsystem.Error
+import com.talkqquest.app.core.designsystem.figma
 import com.talkqquest.app.core.designsystem.FitDesign
 import com.talkqquest.app.core.designsystem.Gray300
 import com.talkqquest.app.core.designsystem.Gray400
@@ -73,7 +74,7 @@ fun ProfilePasswordChangeScreen(
 
         Text(
             text = "현재 비밀번호를\n입력해주세요",
-            style = TqType.HeadingL,
+            style = TqType.HeadingL.figma(),
             color = Gray800,
             modifier = Modifier
                 .offset(x = 23.dp, y = 122.dp)
@@ -114,7 +115,7 @@ fun ProfilePasswordChangeScreen(
                     )
                     Text(
                         text = "현재 비밀번호와 일치하지 않습니다",
-                        style = TqType.LabelL,
+                        style = TqType.LabelL.figma(),
                         color = Gray500,
                         modifier = Modifier
                             .offset(x = 24.dp, y = 2.dp)
@@ -158,7 +159,7 @@ private fun ProfilePasswordInputCard(
     ) {
         Text(
             text = "비밀번호",
-            style = TqType.Caption,
+            style = TqType.Caption.figma(),
             color = Gray500,
             modifier = Modifier.size(width = 263.dp, height = 18.dp),
         )
@@ -167,7 +168,7 @@ private fun ProfilePasswordInputCard(
             value = value,
             onValueChange = onValueChange,
             singleLine = true,
-            textStyle = TqType.TitleL.copy(
+            textStyle = TqType.TitleL.figma().copy(
                 color = when {
                     isError -> Error
                     value.isBlank() -> Gray300
@@ -185,7 +186,7 @@ private fun ProfilePasswordInputCard(
                     if (value.isBlank()) {
                         Text(
                             text = placeholder,
-                            style = TqType.TitleL,
+                            style = TqType.TitleL.figma(),
                             color = Gray300,
                         )
                     }

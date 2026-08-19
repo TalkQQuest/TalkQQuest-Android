@@ -200,7 +200,7 @@ private fun ArchiveHomeScreen(
                     }
                 }
 
-                item { Spacer(modifier = Modifier.height(24.dp)) }
+                item { Spacer(modifier = Modifier.height(30.dp)) } // CSS: 헤더 top69+h74=143, 카테고리 Frame427321172 top173 → 30
 
                 // [카테고리 영역]
                 item {
@@ -208,7 +208,7 @@ private fun ArchiveHomeScreen(
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(horizontal = 16.dp)
-                            .height(93.dp),
+                            .height(95.dp), // CSS Frame427321172 height 95
                         horizontalArrangement = Arrangement.spacedBy(24.dp, Alignment.CenterHorizontally),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
@@ -242,7 +242,7 @@ private fun ArchiveHomeScreen(
                     }
                 }
 
-                item { Spacer(modifier = Modifier.height(36.dp)) }
+                item { Spacer(modifier = Modifier.height(28.dp)) } // CSS: 카테고리 바닥 268, 최근 활동 top296 → 28
 
                 // [최근 활동 리스트 영역]
                 item {

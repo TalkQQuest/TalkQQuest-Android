@@ -181,7 +181,7 @@ private fun NotificationScreen(
     val deleteAllInteractionSource = remember { MutableInteractionSource() }
     val deleteAllTextBounds = rememberTextPillRippleBounds()
     val deleteAllGlyphBounds = rememberTextPillRippleGlyphBounds()
-    val deleteAllTextStyle = TqType.BodyS.copy(fontWeight = FontWeight.Medium)
+    val deleteAllTextStyle = TqType.BodyS.figma().copy(fontWeight = FontWeight.Medium)
     val deleteAllOnTextLayout = rememberTextPillRippleGlyphBoundsUpdater(
         deleteAllGlyphBounds,
         "전체 삭제",
@@ -241,7 +241,7 @@ private fun NotificationScreen(
             }
             Text(
                 text = "알림",
-                style = TqType.BodyL, // CSS Body/L weight 400 (이전 Medium에서 시안 값으로 정정)
+                style = TqType.BodyL.figma(), // CSS Body/L weight 400 (이전 Medium에서 시안 값으로 정정)
                 color = Gray800,
                 modifier = Modifier.align(Alignment.Center),
             )
@@ -407,10 +407,10 @@ private fun NotificationDeleteAllDialog(
                         horizontalAlignment = Alignment.CenterHorizontally,
                         verticalArrangement = Arrangement.spacedBy(4.dp),
                     ) {
-                        Text(text = "알림을 전체 삭제하시겠어요?", style = TqType.HeadingM, color = Gray900)
+                        Text(text = "알림을 전체 삭제하시겠어요?", style = TqType.HeadingM.figma(), color = Gray900)
                         Text(
                             text = "삭제한 알림은 다시 복구할 수 없어요.",
-                            style = TqType.BodyM,
+                            style = TqType.BodyM.figma(),
                             color = Gray600,
                             textAlign = TextAlign.Center,
                         )
@@ -424,7 +424,7 @@ private fun NotificationDeleteAllDialog(
                                 .clickable(onClick = onDismiss),
                             contentAlignment = Alignment.Center,
                         ) {
-                            Text(text = "취소하기", style = TqType.TitleL, color = Gray500)
+                            Text(text = "취소하기", style = TqType.TitleL.figma(), color = Gray500)
                         }
                         Box(
                             modifier = Modifier
@@ -434,7 +434,7 @@ private fun NotificationDeleteAllDialog(
                                 .clickable(onClick = onConfirm),
                             contentAlignment = Alignment.Center,
                         ) {
-                            Text(text = "삭제하기", style = TqType.TitleL, color = Gray50)
+                            Text(text = "삭제하기", style = TqType.TitleL.figma(), color = Gray50)
                         }
                     }
                 }
@@ -480,7 +480,7 @@ private fun NotificationSettingBanner(onClick: () -> Unit = {}) {
             // = 시안에 수동 줄바꿈이 들어있다는 뜻 → 같은 위치에서 끊는다.
             Text(
                 text = "알림 받기를 설정하고 유용한 알림들을\n받아보세요.",
-                style = TqType.BodyM, // CSS 14/22 Gray600
+                style = TqType.BodyM.figma(), // CSS 14/22 Gray600
                 color = Gray600,
                 modifier = Modifier.weight(1f),
             )
@@ -655,7 +655,7 @@ private fun NotificationCard(
                     )
                     Text(
                         text = "삭제",
-                        style = TqType.BodyL.copy(fontWeight = FontWeight.Medium),
+                        style = TqType.BodyL.figma().copy(fontWeight = FontWeight.Medium),
                         color = Gray800,
                     )
                 }

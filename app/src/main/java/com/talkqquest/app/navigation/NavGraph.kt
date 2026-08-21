@@ -1,5 +1,8 @@
 package com.talkqquest.app.navigation
 
+import android.app.Activity
+import android.content.Context
+import android.content.ContextWrapper
 import android.net.Uri
 import android.widget.Toast
 import androidx.compose.animation.AnimatedContentTransitionScope
@@ -104,6 +107,17 @@ fun NavGraph(
     val tabRoutes = BottomNavItem.entries.map { it.route }.toSet()
     fun AnimatedContentTransitionScope<NavBackStackEntry>.isTabSwitch() =
         initialState.destination.route in tabRoutes && targetState.destination.route in tabRoutes
+    // 온보딩 단계들은 상단 프레임(진행바·아이콘·헤딩 위치)이 동일해서 좌우 슬라이드로 밀면
+    // 큰 한글 헤딩이 이동 레이어 안에서 지글거린다. 단계 간 전환만 크로스페이드로 바꿔 흐림을 없앤다.
+    val onboardingStepRoutes = setOf(
+        Screen.ONBOARDING_WELCOME,
+        Screen.ONBOARDING_PERSONALITY,
+        Screen.ONBOARDING_DIFFICULTY,
+        Screen.ONBOARDING_GOAL,
+        Screen.ONBOARDING_COMPLETE,
+    )
+    fun AnimatedContentTransitionScope<NavBackStackEntry>.isOnboardingStep() =
+        initialState.destination.route in onboardingStepRoutes && targetState.destination.route in onboardingStepRoutes
     val slideSpec = NavigationMotion.intOffsetSpec
     var isConcernEditMode by remember { mutableStateOf(false) }
     var concernPersonalityType by remember { mutableStateOf("introvert") }
@@ -118,22 +132,22 @@ fun NavGraph(
         enterTransition = {
             if (initialState.destination.route == Screen.SPLASH)
                 fadeIn(NavigationMotion.floatSpec) + scaleIn(initialScale = 0.96f, animationSpec = NavigationMotion.floatSpec)
-            else if (isTabSwitch()) fadeIn(NavigationMotion.floatSpec)
+            else if (isTabSwitch() || isOnboardingStep()) fadeIn(NavigationMotion.floatSpec)
             else slideIntoContainer(AnimatedContentTransitionScope.SlideDirection.Left, slideSpec)
         },
         exitTransition = {
             if (initialState.destination.route == Screen.SPLASH) fadeOut(NavigationMotion.floatSpec)
-            else if (isTabSwitch()) fadeOut(NavigationMotion.floatSpec)
+            else if (isTabSwitch() || isOnboardingStep()) fadeOut(NavigationMotion.floatSpec)
             else if (targetState.destination.route == Screen.SIGNUP_VERIFY) ExitTransition.None
             else slideOutOfContainer(AnimatedContentTransitionScope.SlideDirection.Left, slideSpec)
         },
         popEnterTransition = {
-            if (isTabSwitch()) fadeIn(NavigationMotion.floatSpec)
+            if (isTabSwitch() || isOnboardingStep()) fadeIn(NavigationMotion.floatSpec)
             else if (initialState.destination.route == Screen.SIGNUP_VERIFY) EnterTransition.None
             else slideIntoContainer(AnimatedContentTransitionScope.SlideDirection.Right, slideSpec)
         },
         popExitTransition = {
-            if (isTabSwitch()) fadeOut(NavigationMotion.floatSpec)
+            if (isTabSwitch() || isOnboardingStep()) fadeOut(NavigationMotion.floatSpec)
             else slideOutOfContainer(AnimatedContentTransitionScope.SlideDirection.Right, slideSpec)
         },
     ) {
@@ -443,8 +457,10 @@ fun NavGraph(
                 nickname = nickname,
                 onFinished = { displayNickname ->
                     isConcernEditMode = false
+                    // 온보딩 첫 단계를 스택 뿌리로 만든다. 회원가입(이메일/인증/비번) 잔재를 모두 비워
+                    // 첫 단계에서 뒤로가기 시 이전 인증 화면으로 되돌아가지 않고 앱이 종료되게 한다.
                     navController.navigate(Screen.ONBOARDING_PERSONALITY) {
-                        popUpTo(Screen.ONBOARDING_WELCOME) { inclusive = true }
+                        popUpTo(navController.graph.id) { inclusive = true }
                         launchSingleTop = true
                     }
                     navController.getBackStackEntry(Screen.ONBOARDING_PERSONALITY).savedStateHandle.set("onboarding_nickname", displayNickname)
@@ -476,8 +492,13 @@ fun NavGraph(
                 nickname = nickname,
                 initialPersonalityType = if (isConcernEditMode) concernPersonalityType else "introvert",
                 onBack = {
-                    if (isConcernEditMode) isConcernEditMode = false
-                    navController.popBackStack()
+                    if (isConcernEditMode) {
+                        isConcernEditMode = false
+                        navController.popBackStack()
+                    } else if (!navController.popBackStack()) {
+                        // 온보딩 첫 단계에선 되돌아갈 화면이 없다. 뒤로가기로 앱을 종료한다.
+                        context.findActivity()?.finish()
+                    }
                 },
                 onNextClick = { personalityType ->
                     if (isConcernEditMode) {
@@ -1413,4 +1434,12 @@ fun NavGraph(
 private fun NavHostController.conversationSetupViewModel(missionId: String): ConversationSetupViewModel {
     val firstStep = remember(missionId) { getBackStackEntry("conversation_setup_1/$missionId") }
     return hiltViewModel(firstStep)
+}
+
+// LocalContext에서 호스트 Activity를 찾는다(ContextWrapper 중첩 대비). 온보딩 첫 단계에서
+// 뒤로가기로 앱을 종료할 때 사용한다.
+private tailrec fun Context.findActivity(): Activity? = when (this) {
+    is Activity -> this
+    is ContextWrapper -> baseContext.findActivity()
+    else -> null
 }

@@ -35,6 +35,15 @@
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:theme="@style/Theme.TalkQQuest">
+        <provider
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="${applicationId}.fileprovider"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/file_paths" />
+        </provider>
         <!-- adjustResize 명시: 미지정이면 시스템이 adjustPan(화면 통째로 밀기)을 골라
              키보드 시 헤더가 밀려나가고 imePadding과 이중 보정돼 입력창 위 빈 공간이 생김 -->
         <activity

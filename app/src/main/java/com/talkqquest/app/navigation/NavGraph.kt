@@ -354,7 +354,10 @@ fun NavGraph(
                 },
                 onVerificationSuccess = {
                     navController.currentBackStackEntry?.savedStateHandle?.set("signup_email", email)
-                    navController.navigate(Screen.SIGNUP_PASSWORD)
+                    navController.navigate(Screen.SIGNUP_PASSWORD) {
+                        popUpTo(Screen.SIGNUP_VERIFY) { inclusive = true }
+                        launchSingleTop = true
+                    }
                 },
                 onCodeChange = {
                     isVerificationCodeError = false
@@ -398,11 +401,11 @@ fun NavGraph(
                 onBack = { navController.popBackStack() },
                 onCompleteClick = { nickname ->
                     authViewModel.signupWithEmail(email = email, password = password, nickname = nickname) {
-                        navController.currentBackStackEntry?.savedStateHandle?.set("onboarding_nickname", nickname.trim())
                         navController.navigate(Screen.ONBOARDING_WELCOME) {
                             popUpTo(Screen.SIGNUP_NICKNAME) { inclusive = true }
                             launchSingleTop = true
                         }
+                        navController.getBackStackEntry(Screen.ONBOARDING_WELCOME).savedStateHandle.set("onboarding_nickname", nickname.trim())
                     }
                 },
             )
@@ -427,15 +430,15 @@ fun NavGraph(
                 },
                 onCompleteClick = { nickname ->
                     authViewModel.updateSocialNickname(nickname) {
-                        navController.currentBackStackEntry?.savedStateHandle?.set("onboarding_nickname", nickname.trim())
                         navController.navigate(Screen.ONBOARDING_WELCOME)
+                        navController.getBackStackEntry(Screen.ONBOARDING_WELCOME).savedStateHandle.set("onboarding_nickname", nickname.trim())
                     }
                 },
             )
         }
 
         composable(Screen.ONBOARDING_WELCOME) {
-            val nickname = navController.previousBackStackEntry?.savedStateHandle?.get<String>("onboarding_nickname").orEmpty()
+            val nickname = navController.currentBackStackEntry?.savedStateHandle?.get<String>("onboarding_nickname").orEmpty()
             OnboardingWelcomeScreen(
                 nickname = nickname,
                 onFinished = { displayNickname ->
@@ -444,7 +447,7 @@ fun NavGraph(
                         popUpTo(Screen.ONBOARDING_WELCOME) { inclusive = true }
                         launchSingleTop = true
                     }
-                    navController.currentBackStackEntry?.savedStateHandle?.set("onboarding_nickname", displayNickname)
+                    navController.getBackStackEntry(Screen.ONBOARDING_PERSONALITY).savedStateHandle.set("onboarding_nickname", displayNickname)
                 },
             )
         }

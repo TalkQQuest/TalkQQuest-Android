@@ -216,7 +216,12 @@ fun SignupVerifyScreen(
                 .fillMaxWidth()
                 .height(428.dp)
                 .clip(RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp))
-                .background(White),
+                .background(White)
+                .clickable(
+                    interactionSource = remember { MutableInteractionSource() },
+                    indication = null,
+                    onClick = {},
+                ),
         ) {
             Row(
                 modifier = Modifier

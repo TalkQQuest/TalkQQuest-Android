@@ -35,6 +35,7 @@ import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.TextStyle
@@ -155,7 +156,9 @@ fun ProfileBadgesScreen(
     val pagerState = rememberPagerState(pageCount = { 3 })
     val axisLock = rememberPagerAxisLockState()
     val scope = rememberCoroutineScope()
+    val context = LocalContext.current
     var selectedBadge by remember { mutableStateOf<ProfileBadgeUi?>(null) }
+    var isSharingBadge by remember { mutableStateOf(false) }
 
     LaunchedEffect(pagerState.settledPage) {
         selectedBadge = null
@@ -233,6 +236,18 @@ fun ProfileBadgesScreen(
             BadgeDetailDialog(
                 badge = it,
                 onClose = { selectedBadge = null },
+                onShare = { shareBadge ->
+                    if (!isSharingBadge) {
+                        scope.launch {
+                            isSharingBadge = true
+                            try {
+                                shareEarnedBadge(context, shareBadge)
+                            } finally {
+                                isSharingBadge = false
+                            }
+                        }
+                    }
+                },
                 modifier = Modifier.graphicsLayer {
                     alpha = cardProgress
                     scaleX = 0.86f + 0.14f * cardProgress
@@ -484,6 +499,7 @@ private fun BadgeItem(
 private fun BadgeDetailDialog(
     badge: ProfileBadgeUi,
     onClose: () -> Unit,
+    onShare: (ProfileBadgeUi) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val dialogHeight = if (badge.isEarned) 446.dp else 401.dp
@@ -570,7 +586,8 @@ private fun BadgeDetailDialog(
                     .offset(x = 24.dp, y = 374.dp)
                     .size(width = 236.dp, height = 48.dp)
                     .clip(RoundedCornerShape(16.dp))
-                    .background(Primary600),
+                    .background(Primary600)
+                    .profileItemClick(onClick = { onShare(badge) }),
                 contentAlignment = Alignment.Center,
             ) {
                 Text(

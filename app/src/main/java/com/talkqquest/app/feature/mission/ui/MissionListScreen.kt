@@ -3,7 +3,6 @@ package com.talkqquest.app.feature.mission.ui
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
-import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.animateIntOffsetAsState
 import androidx.compose.animation.core.animateIntSizeAsState
 import androidx.compose.animation.core.snap
@@ -61,7 +60,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.layout.onGloballyPositioned
-import androidx.compose.ui.layout.positionInWindow
+import androidx.compose.ui.layout.positionInParent
 import androidx.compose.ui.platform.LocalDensity
 import kotlin.math.roundToInt
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
@@ -70,8 +69,6 @@ import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.talkqquest.app.core.designsystem.Error
 import com.talkqquest.app.core.designsystem.FitDesign
-import com.talkqquest.app.core.designsystem.component.ChipContentCrossfade
-import com.talkqquest.app.core.designsystem.component.rememberDebouncedChipSelection
 import com.talkqquest.app.core.designsystem.component.rememberHapticTick
 import com.talkqquest.app.core.designsystem.Gray1000
 import com.talkqquest.app.core.designsystem.Gray50
@@ -86,11 +83,9 @@ import com.talkqquest.app.core.designsystem.White
 import com.talkqquest.app.core.designsystem.softShadow
 import com.talkqquest.app.core.designsystem.component.TqButton
 import com.talkqquest.app.core.designsystem.component.TqButtonSize
-import com.talkqquest.app.core.designsystem.component.rememberHapticTick
 import com.talkqquest.app.feature.mission.data.model.MissionListItem
 import com.talkqquest.app.feature.mission.viewmodel.MissionListUiState
 import com.talkqquest.app.feature.mission.viewmodel.MissionListViewModel
-import com.talkqquest.app.feature.mission.viewmodel.filterMissionsForChip
 import com.talkqquest.app.feature.mission.viewmodel.missionFilters
 
 // ── 미션 목록 (UI 1차 v2.css 전사) ──
@@ -110,10 +105,17 @@ fun MissionListScreen(
     homeContext: Boolean = false,
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    var hasConsumedInitialResume by remember { mutableStateOf(false) }
     // 다른 화면(상세·저장 목록)에서 바꾼 북마크가 돌아왔을 때 반영되도록, 복귀마다 조용히 재조회.
     // 동시에 "저장됨" 시트도 닫음 — 시트 뒤 목록 카드로 상세 갔다 오면 시트가 재등장하던 버그 방지.
     LifecycleEventEffect(Lifecycle.Event.ON_RESUME) {
-        viewModel.loadMissions(showLoading = false)
+        // ViewModel init의 최초 로드 직후에도 ON_RESUME이 한 번 오므로 그 한 번만 건너뛴다.
+        // 이후 상세·저장 목록에서 돌아오는 resume에서는 북마크 최신 상태를 다시 읽는다.
+        if (hasConsumedInitialResume) {
+            viewModel.loadMissions(showLoading = false)
+        } else {
+            hasConsumedInitialResume = true
+        }
         viewModel.dismissSaveSheet()
     }
     MissionListScreen(
@@ -248,11 +250,6 @@ private fun MissionListContent(
 ) {
     val tick = rememberHapticTick()
 
-    // 칩 강조는 누르는 즉시, 실제 목록 교체(페이드 스루)는 100ms 디바운스 — 연타해도 마지막 선택만 반영.
-    val filterSelection = rememberDebouncedChipSelection(
-        current = uiState.selectedFilter,
-        onCommit = onFilterSelect,
-    )
     // 칩(실제 선택)이 바뀌면 스크롤을 애니메이션 없이 맨 위로 되돌린다.
     LaunchedEffect(uiState.selectedFilter) {
         listState.scrollToItem(0)
@@ -327,32 +324,27 @@ private fun MissionListContent(
                     Spacer(Modifier.height(6.dp)) // 제목 → 칩 (UI 12 Frame 427321647 gap 6)
                 }
                 MissionFilterChips(
-                    selectedFilter = filterSelection.displayed,
-                    onFilterSelect = filterSelection.select,
+                    selectedFilter = uiState.selectedFilter,
+                    onFilterSelect = { filter ->
+                        if (filter != uiState.selectedFilter) {
+                            tick()
+                            onFilterSelect(filter)
+                        }
+                    },
                 )
                 Spacer(Modifier.height(10.dp)) // 칩 → 목록 24 = 10 + 카드간격 14
             }
         }
 
-        // 칩 전환(5-A): 카드별 등장/퇴장이 아니라 목록 전체를 한 덩어리로 페이드 스루 교체한다.
-        // 실제 선택(uiState.selectedFilter)이 바뀔 때만 재생 — 북마크만 바뀌었을 땐 재생되지 않는다.
-        item {
-            ChipContentCrossfade(targetState = uiState.selectedFilter) { selectedFilter ->
-                // 받은 selectedFilter로만 걸러 그린다 — 바깥 uiState.selectedFilter(지금 값)를
-                // 읽으면 전환 중 나가는 화면과 들어오는 화면이 같은 목록을 겹쳐 그리게 된다.
-                val displayMissions = filterMissionsForChip(uiState.missions, selectedFilter)
-                Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
-                    displayMissions.forEach { mission ->
-                        MissionCard(
-                            mission = mission,
-                            onClick = { onMissionClick(mission.id) },
-                            onToggleSave = { onToggleSave(mission.id) },
-                            modifier = Modifier.padding(horizontal = 16.dp),
-                            animateContentChanges = true,
-                        )
-                    }
-                }
-            }
+        // 실제 lazy item으로만 구성해 필터 전환 때 현재 보이는 카드만 측정·그린다.
+        items(items = uiState.filteredMissions, key = { it.id }) { mission ->
+            MissionCard(
+                mission = mission,
+                onClick = { onMissionClick(mission.id) },
+                onToggleSave = { onToggleSave(mission.id) },
+                modifier = Modifier.padding(horizontal = 16.dp),
+                animateContentChanges = false,
+            )
         }
 
         item { Spacer(Modifier.height(bottomBarClearance)) } // 목록 끝 여백 (네비바 위로 카드 간격만큼)
@@ -366,9 +358,7 @@ private fun MissionFilterChips(
     selectedFilter: String,
     onFilterSelect: (String) -> Unit,
 ) {
-    val tick = rememberHapticTick()
     var bounds by remember { mutableStateOf<Map<String, Pair<IntOffset, IntSize>>>(emptyMap()) }
-    var parentOffset by remember { mutableStateOf(IntOffset.Zero) }
     var hasMovedSelection by remember { mutableStateOf(false) }
     val density = LocalDensity.current
     val selectedBounds = bounds[selectedFilter]
@@ -390,10 +380,6 @@ private fun MissionFilterChips(
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .onGloballyPositioned { coordinates ->
-                val position = coordinates.positionInWindow()
-                parentOffset = IntOffset(position.x.roundToInt(), position.y.roundToInt())
-            },
     ) {
         bounds.values.forEach { (offset, size) ->
             Box(
@@ -437,21 +423,19 @@ private fun MissionFilterChips(
                     selectionOverlay = true,
                     onClick = {
                         if (filter != selectedFilter) {
-                            tick()
                             hasMovedSelection = true
                         }
                         onFilterSelect(filter)
                     },
                     modifier = Modifier.onGloballyPositioned { coordinates ->
-                        val position = coordinates.positionInWindow()
-                        bounds = bounds + (
-                            filter to (
-                                IntOffset(
-                                    position.x.roundToInt() - parentOffset.x,
-                                    position.y.roundToInt() - parentOffset.y,
-                                ) to coordinates.size
-                            )
-                        )
+                        val position = coordinates.positionInParent()
+                        val newBounds = IntOffset(
+                            position.x.roundToInt(),
+                            position.y.roundToInt(),
+                        ) to coordinates.size
+                        if (bounds[filter] != newBounds) {
+                            bounds = bounds + (filter to newBounds)
+                        }
                     },
                 )
             }

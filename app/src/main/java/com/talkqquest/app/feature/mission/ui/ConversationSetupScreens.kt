@@ -12,7 +12,10 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectHorizontalDragGestures
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -858,6 +861,35 @@ private fun DotScale(
         if (!isMoving) displayedValue = value
     }
 
+    // 트랙 위 x좌표를 가장 가까운 눈금(0~4)으로 환산한다. 점 반지름만큼 좌우 여백을 빼고 4등분.
+    val selectedRadiusPx = with(LocalDensity.current) { 14.5.dp.toPx() }
+    fun indexFromX(xPx: Float, widthPx: Float): Int {
+        val stepPx = (widthPx - selectedRadiusPx * 2f) / 4f
+        if (stepPx <= 0f) return displayedValue
+        return ((xPx - selectedRadiusPx) / stepPx).roundToInt().coerceIn(0, 4)
+    }
+    // 탭: 기존 이동 애니메이션 그대로 재생.
+    fun animateSelect(i: Int) {
+        if (isMoving || i in disabledValues || i == displayedValue) return
+        motionStart = displayedValue
+        motionTarget = i
+        isMoving = true
+        scope.launch {
+            progress.snapTo(0f)
+            progress.animateTo(1f, animationSpec = tween(300, easing = FastOutSlowInEasing))
+            displayedValue = i
+            onValueChange(i)
+            isMoving = false
+        }
+    }
+    // 드래그: 손을 따라 가장 가까운 점으로 즉시 스냅(긴 애니메이션 없이).
+    fun dragSelect(i: Int) {
+        if (i in disabledValues || i == displayedValue) return
+        isMoving = false
+        displayedValue = i
+        onValueChange(i)
+    }
+
     Column(
         modifier = Modifier.fillMaxWidth(),
         horizontalAlignment = Alignment.CenterHorizontally, // CSS Frame 427321679 align center (트랙 313을 349 안 가운데)
@@ -956,37 +988,27 @@ private fun DotScale(
                 }
             }
 
-            Row(modifier = Modifier.fillMaxSize(), verticalAlignment = Alignment.CenterVertically) {
-                for (i in 0 until 5) {
-                    Box(
-                        modifier = Modifier
-                            .weight(1f)
-                            .fillMaxSize()
-                            .clickable(
-                                enabled = i !in disabledValues,
-                                interactionSource = remember { MutableInteractionSource() },
-                                indication = null,
-                                onClick = {
-                                    if (!isMoving && i != displayedValue) {
-                                        motionStart = displayedValue
-                                        motionTarget = i
-                                        isMoving = true
-                                        scope.launch {
-                                            progress.snapTo(0f)
-                                            progress.animateTo(
-                                                1f,
-                                                animationSpec = tween(300, easing = FastOutSlowInEasing),
-                                            )
-                                            displayedValue = i
-                                            onValueChange(i)
-                                            isMoving = false
-                                        }
-                                    }
-                                },
-                            ),
-                    )
-                }
-            }
+            // 탭(가까운 점으로 애니메이션 이동) + 드래그(손을 따라 즉시 스냅) 둘 다 처리.
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .pointerInput(disabledValues) {
+                        detectTapGestures { offset ->
+                            animateSelect(indexFromX(offset.x, size.width.toFloat()))
+                        }
+                    }
+                    .pointerInput(disabledValues) {
+                        detectHorizontalDragGestures(
+                            onDragStart = { offset ->
+                                dragSelect(indexFromX(offset.x, size.width.toFloat()))
+                            },
+                            onHorizontalDrag = { change, _ ->
+                                change.consume()
+                                dragSelect(indexFromX(change.position.x, size.width.toFloat()))
+                            },
+                        )
+                    },
+            )
         }
     }
 }

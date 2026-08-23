@@ -36,9 +36,11 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -479,18 +481,33 @@ private fun BadgeItem(
             contentDescription = null,
             modifier = Modifier.size(100.dp),
         )
-        val labelWidth = badge.labelWidthDp().dp
+        // 라벨 폭을 배지 그림(100dp)에 고정하고, 이름이 그 폭을 넘으면 한 줄에 딱 들어갈
+        // 만큼만 폰트를 비례 축소한다(최대 25%까지). 이전의 이름별 하드코딩 폭 테이블 대신
+        // 어떤 길이의 새 배지 이름도 자동으로 맞는다.
+        val nameMeasurer = rememberTextMeasurer()
+        val density = LocalDensity.current
+        val nameStyle = remember(badge.name) {
+            val maxWidthPx = with(density) { 100.dp.toPx() }
+            val measured = nameMeasurer.measure(
+                text = badge.name,
+                style = BadgeBodyLargeMediumStyle,
+                softWrap = false,
+                maxLines = 1,
+            )
+            val factor = (maxWidthPx / measured.size.width.toFloat()).coerceIn(0.75f, 1f)
+            BadgeBodyLargeMediumStyle.copy(fontSize = BadgeBodyLargeMediumStyle.fontSize * factor)
+        }
         Text(
             text = badge.name,
-            style = BadgeBodyLargeMediumStyle,
+            style = nameStyle,
             color = if (badge.isEarned) Gray900 else Gray500,
             textAlign = TextAlign.Center,
             maxLines = 1,
             softWrap = false,
             overflow = TextOverflow.Visible,
             modifier = Modifier
-                .offset(x = ((100 - badge.labelWidthDp()) / 2f).dp, y = 100.dp)
-                .size(width = labelWidth, height = 24.dp),
+                .offset(y = 100.dp)
+                .size(width = 100.dp, height = 24.dp),
         )
     }
 }
@@ -622,12 +639,6 @@ private fun ProfileBadgesScreenPreview() {
     TalkQQuestTheme {
         ProfileBadgesScreen()
     }
-}
-
-private fun ProfileBadgeUi.labelWidthDp(): Int = when (name) {
-    "\uAFB8\uC900\uD55C \uB300\uD654 \uC2B5\uAD00" -> 105
-    "\uC77C\uC8FC\uC77C\uC758 \uBCC0\uD654" -> 87
-    else -> 100
 }
 
 private fun badgeTabIndicatorOffset(pagePosition: Float) = when {

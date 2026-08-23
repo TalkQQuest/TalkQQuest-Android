@@ -38,6 +38,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
@@ -48,6 +49,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.LineBreak
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
@@ -533,26 +535,30 @@ private fun ProgressDonut(percent: Int) {
 private fun TopicRow(topics: List<CategoryRank>) {
     Box(modifier = Modifier.fillMaxWidth().height(100.dp)) {
         LazyRow(
-            modifier = Modifier.fillMaxWidth(),
-            contentPadding = PaddingValues(start = 17.dp, end = 15.dp),
+            modifier = Modifier
+                .fillMaxWidth()
+                // 그라데이션은 별도 레이아웃으로 올리지 않아 LazyRow의 드래그를 가로막지 않는다.
+                .drawWithContent {
+                    drawContent()
+                    val gradientStartX = 15.dp.toPx()
+                    drawRect(
+                        brush = Brush.horizontalGradient(
+                            colorStops = arrayOf(
+                                0.8413f to Gray50.copy(alpha = 0f),
+                                1f to Gray50,
+                            ),
+                            startX = gradientStartX,
+                            endX = size.width,
+                        ),
+                        topLeft = Offset(gradientStartX, 0f),
+                        size = Size(size.width - gradientStartX, size.height),
+                    )
+                },
+            contentPadding = PaddingValues(start = 17.dp, end = 75.dp),
             horizontalArrangement = Arrangement.spacedBy(16.dp),
         ) {
             itemsIndexed(topics) { index, topic -> TopicChip(rank = index + 1, topic = topic) }
         }
-        Box(
-            modifier = Modifier
-                .padding(start = 15.dp)
-                .fillMaxWidth()
-                .height(100.dp)
-                .background(
-                    Brush.horizontalGradient(
-                        colorStops = arrayOf(
-                            0.8413f to Gray50.copy(alpha = 0f),
-                            1f to Gray50,
-                        ),
-                    ),
-                ),
-        )
     }
 }
 
@@ -561,7 +567,7 @@ private fun TopicChip(rank: Int, topic: CategoryRank) {
     val isTop = rank == 1
     Column(
         modifier = Modifier
-            .width(89.dp)
+            .widthIn(min = 89.dp, max = 361.dp)
             .height(100.dp)
             .softShadow(
                 color = Primary600.copy(alpha = 0.04f),
@@ -571,7 +577,7 @@ private fun TopicChip(rank: Int, topic: CategoryRank) {
                 cornerRadius = 12.dp,
             )
             .background(White, RoundedCornerShape(12.dp))
-            .padding(top = 14.dp, bottom = 10.dp),
+            .padding(start = 16.dp, top = 14.dp, end = 16.dp, bottom = 10.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         Box(
@@ -592,6 +598,8 @@ private fun TopicChip(rank: Int, topic: CategoryRank) {
             style = TqType.BodyL.copy(fontWeight = FontWeight.Medium).figma(),
             color = if (isTop) Primary600 else Gray600,
             maxLines = 1,
+            softWrap = false,
+            overflow = TextOverflow.Ellipsis,
             textAlign = TextAlign.Center,
         )
         Spacer(Modifier.height(2.dp))
